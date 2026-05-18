@@ -24,6 +24,7 @@ namespace VisorSingularity
     public partial class MainWindow : Window
     {
         // ── Win32 API Imports para el Incrustado Nativo ──
+        // ── Win32 API Imports para el Incrustado Nativo ──
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string lpszWindow);
 
@@ -32,6 +33,23 @@ namespace VisorSingularity
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        private const int GWL_STYLE = -16;
+        private const int WS_VISIBLE = 0x10000000;
+        private const int WS_CHILD = 0x40000000;
 
         // ── Datos de la Sesión Actual y Helpers ──
         private HardwareFingerprint _fingerprint = null!;
@@ -746,15 +764,15 @@ namespace VisorSingularity
             // Obtenemos el handle destino directamente del panel nativo
             IntPtr parentHwnd = WfGamePanel.Handle;
 
-            // Argumentos de línea de comandos para inicializar a Godot incrustado en el Visor usando --wid nativo
-            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --wid {(long)parentHwnd} --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            // Argumentos de línea de comandos para inicializar a Godot
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --resolution 1280x720 -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = godotExe,
                 Arguments = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle = ProcessWindowStyle.Normal, // Godot se ancla automáticamente, no necesita iniciar oculto
+                WindowStyle = ProcessWindowStyle.Hidden, // Ocultar para evitar el parpadeo de pantalla externa al iniciar
                 UseShellExecute = false
             };
 
@@ -772,41 +790,87 @@ namespace VisorSingularity
                 }
                 catch { }
 
-                TxtFooterStatus.Text = "¡Metaverso cargado de forma nativa! Firma de conexión P2P activa.";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+                TxtFooterStatus.Text = "Motor 3D cargando. Acoplando al visor...";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
 
-                // Bucle asíncrono súper rápido para redimensionar Godot tan pronto como inyecte su ventana hija
-                Task.Run(() => {
-                    IntPtr childHwnd = IntPtr.Zero;
-                    int retries = 50; // Hasta 5 segundos
-                    while (childHwnd == IntPtr.Zero && retries > 0 && !_isClosing)
-                    {
-                        Dispatcher.Invoke(() => {
-                            childHwnd = FindWindowEx(WfGamePanel.Handle, IntPtr.Zero, null, null);
-                            if (childHwnd != IntPtr.Zero)
-                            {
-                                MoveWindow(childHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
-                            }
-                        });
-                        Thread.Sleep(100);
-                        retries--;
-                    }
-                });
-
-                // Auto-redimensionar al cambiar el tamaño del panel WPF buscando directamente el Handle hijo de Godot
-                WfGamePanel.Resize += (s, e) => {
-                    IntPtr godotHwnd = FindWindowEx(WfGamePanel.Handle, IntPtr.Zero, null, null);
-                    if (godotHwnd != IntPtr.Zero)
-                    {
-                        MoveWindow(godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
-                    }
-                };
+                // Buscar e incrustar la ventana asíncronamente
+                Task.Run(() => ScanAndEmbed(_godotProcess.Id));
             }
             catch (Exception ex)
             {
                 TxtFooterStatus.Text = $"Error al iniciar el metaverso: {ex.Message}";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
             }
+        }
+
+        private void ScanAndEmbed(int processId)
+        {
+            IntPtr hwnd = IntPtr.Zero;
+            int retries = 40; // 20 segundos máximo
+
+            while (hwnd == IntPtr.Zero && retries > 0 && !_isClosing)
+            {
+                hwnd = FindWindowForProcess(processId);
+                if (hwnd != IntPtr.Zero) break;
+
+                Thread.Sleep(500);
+                retries--;
+            }
+
+            if (hwnd != IntPtr.Zero && !_isClosing)
+            {
+                _godotHwnd = hwnd;
+                
+                // Docking e Incrustado usando el Dispatcher de WPF
+                Dispatcher.Invoke(() => {
+                    SetParent(_godotHwnd, WfGamePanel.Handle);
+                    SetWindowLong(_godotHwnd, GWL_STYLE, WS_VISIBLE | WS_CHILD);
+                    MoveWindow(_godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
+
+                    TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Firma de conexión P2P activa.";
+                    TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+
+                    // Auto-redimensionar al cambiar el tamaño del panel WPF
+                    WfGamePanel.Resize += (s, e) => {
+                        if (_godotHwnd != IntPtr.Zero)
+                        {
+                            MoveWindow(_godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
+                        }
+                    };
+                });
+            }
+            else
+            {
+                Dispatcher.Invoke(() => {
+                    TxtFooterStatus.Text = "Error: Tiempo de espera agotado al incrustar el metaverso.";
+                    TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
+                });
+            }
+        }
+
+        private IntPtr FindWindowForProcess(int processId)
+        {
+            IntPtr result = IntPtr.Zero;
+            IntPtr selfHwnd = IntPtr.Zero;
+
+            Dispatcher.Invoke(() => {
+                selfHwnd = new WindowInteropHelper(this).Handle;
+            });
+
+            EnumWindows((hwnd, lParam) =>
+            {
+                if (hwnd == selfHwnd) return true;
+
+                GetWindowThreadProcessId(hwnd, out uint pid);
+                if (pid == processId)
+                {
+                    result = hwnd;
+                    return false; // Parar enumeración
+                }
+                return true; // Continuar enumeración
+            }, IntPtr.Zero);
+
+            return result;
         }
 
 
