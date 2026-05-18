@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "E:\\CryptoMetaVersoP2P_WoldVirtual3D\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj": {}
+    "D:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj": {}
   },
   "projects": {
-    "E:\\CryptoMetaVersoP2P_WoldVirtual3D\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj": {
+    "D:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\CryptoMetaVersoP2P_WoldVirtual3D\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj",
+        "projectUniqueName": "D:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj",
         "projectName": "VisorSingularity",
-        "projectPath": "E:\\CryptoMetaVersoP2P_WoldVirtual3D\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj",
+        "projectPath": "D:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj",
         "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-        "outputPath": "E:\\CryptoMetaVersoP2P_WoldVirtual3D\\WoldVirtual3Dp2p\\Capa3_Visor\\obj\\",
+        "outputPath": "D:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
