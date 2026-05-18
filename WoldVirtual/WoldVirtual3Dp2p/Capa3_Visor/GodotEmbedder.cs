@@ -208,7 +208,6 @@ namespace VisorSingularity
         public void Resize(int widthPx, int heightPx)
         {
             if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1) return;
-            MoveWindow(_containerHwnd, 0, 0, widthPx, heightPx, false);
             
             IntPtr godotHwnd = GetGodotHwnd();
             if (godotHwnd != IntPtr.Zero)
