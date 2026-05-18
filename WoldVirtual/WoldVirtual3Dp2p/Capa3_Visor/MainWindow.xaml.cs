@@ -92,9 +92,6 @@ namespace VisorSingularity
                 // Iniciar el HTTP Bridge en puerto 8080 para MetaMask
                 StartHttpBridge();
 
-                // Agregar el filtro de hilos de WPF para reenviar teclado a Godot
-                ComponentDispatcher.ThreadFilterMessage += ThreadFilterMessage;
-
                 // Comprobar si esta máquina ya tiene una cuenta registrada
                 _hasAccount = _db.CheckHardwareExists(_fingerprint.UniqueHash, out string? registeredUser);
                 if (_hasAccount && !string.IsNullOrEmpty(registeredUser))
@@ -758,16 +755,16 @@ namespace VisorSingularity
             // Para el visor incrustado, cargamos SIEMPRE la escena principal del Metaverso de forma directa
             string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
 
-            // Argumentos de línea de comandos para inicializar a Godot como ventana externa de alto rendimiento
+            // Argumentos de línea de comandos para inicializar a Godot incrustado en el Visor
             // Agregamos --disable-vsync para evitar conflictos con la composición DWM de Windows en ventanas hijas
-            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --disable-vsync --resolution 1280x720 -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --disable-vsync --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = godotExe,
                 Arguments = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle = ProcessWindowStyle.Normal, // Ventana normal externa
+                WindowStyle = ProcessWindowStyle.Hidden, // Ocultar para evitar el parpadeo de pantalla externa al iniciar
                 UseShellExecute = false
             };
 
@@ -786,33 +783,17 @@ namespace VisorSingularity
                 }
                 catch { }
 
-                // Habilitar eventos de salida para restaurar la ventana del Visor de forma automática
-                _godotProcess.EnableRaisingEvents = true;
-                _godotProcess.Exited += (s, ev) => {
-                    Dispatcher.Invoke(() => {
-                        this.Show();
-                        TxtFooterStatus.Text = "Sesión finalizada. Volviendo al Visor de Control.";
-                        TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
-                    });
-                };
+                TxtFooterStatus.Text = "Motor 3D cargando en el visor. Buscando ventana de renderizado...";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
 
-                TxtFooterStatus.Text = "Metaverso 3D iniciado en ventana dedicada de alto rendimiento.";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-
-                // Ocultar la ventana del Visor temporalmente para dar máxima inmersión y rendimiento
-                this.Hide();
+                // Buscar e incrustar la ventana en un hilo secundario asíncrono
+                Task.Run(() => ScanAndEmbed(_godotProcess.Id));
             }
             catch (Exception ex)
             {
                 TxtFooterStatus.Text = $"Error al iniciar el metaverso: {ex.Message}";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
             }
-        }
-
-        // ───── BOTÓN DE LANZAMIENTO DESDE EL CENTRO DE CONTROL DEL VISOR ─────
-        private void BtnLaunchExternalGodot_Click(object sender, RoutedEventArgs e)
-        {
-            LaunchGodot(_wallet, _username, _islandId);
         }
 
         private void ScanAndEmbed(int processId)
@@ -947,9 +928,6 @@ namespace VisorSingularity
 
         private void Cleanup()
         {
-            // Remover el filtro de mensajes
-            ComponentDispatcher.ThreadFilterMessage -= ThreadFilterMessage;
-
             // Cerrar el servidor HTTP local
             if (_httpListener != null)
             {

@@ -390,45 +390,11 @@
                         </Grid>
                     </Border>
 
-                    <!-- Host Container for Godot Window Rendering (Collapsed to support high-performance external window) -->
-                    <wfi:WindowsFormsHost Grid.Row="1" x:Name="WfHost" Background="Black" Focusable="True" Visibility="Collapsed">
+                    <!-- Host Container for Godot Window Rendering -->
+                    <wfi:WindowsFormsHost Grid.Row="1" x:Name="WfHost" Background="Black" Focusable="True">
                         <!-- Panel WinForms Embebido de Destino -->
                         <wf:Panel x:Name="WfGamePanel" BackColor="Black"/>
                     </wfi:WindowsFormsHost>
-
-                    <!-- Gorgeous Cyberpunk Launch HUD -->
-                    <Grid Grid.Row="1" x:Name="GridLaunchControl" Background="#070A10" Margin="30">
-                        <Border Background="#0E1524" CornerRadius="16" BorderBrush="#00E5FF" BorderThickness="1.5" Padding="40" MaxWidth="750" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <StackPanel>
-                                <TextBlock Text="⬢  CENTRO DE LANZAMIENTO CIBERNÉTICO WOLD  ⬢" Foreground="#00E5FF" FontSize="19" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                <TextBlock Text="DASHBOARD DE TELEMETRÍA Y CONTROL DE NODO P2P" Foreground="#8E9AA8" FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,25"/>
-
-                                <!-- Status Cards Row -->
-                                <UniformGrid Columns="2" Margin="0,0,0,25">
-                                    <Border Background="#121B2D" BorderBrush="#2000E5FF" BorderThickness="1" CornerRadius="8" Padding="15" Margin="5">
-                                        <StackPanel>
-                                            <TextBlock Text="ESTADO DE LA RED" Foreground="#8E9AA8" FontSize="10" FontWeight="Bold"/>
-                                            <TextBlock Text="● CONEXIÓN P2P ONLINE" Foreground="#00FF8C" FontSize="13.5" FontWeight="Bold" Margin="0,5,0,0"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Background="#121B2D" BorderBrush="#2000E5FF" BorderThickness="1" CornerRadius="8" Padding="15" Margin="5">
-                                        <StackPanel>
-                                            <TextBlock Text="RENDIMIENTO GRÁFICO" Foreground="#8E9AA8" FontSize="10" FontWeight="Bold"/>
-                                            <TextBlock Text="NATIVO DIRECTO GPU" Foreground="#00E5FF" FontSize="13.5" FontWeight="Bold" Margin="0,5,0,0"/>
-                                        </StackPanel>
-                                    </Border>
-                                </UniformGrid>
-
-                                <TextBlock Text="Tu nodo 3D e identidad digital han sido vinculados y asegurados con éxito. Para garantizar la máxima inmersión con aceleración de GPU directa de hardware, físicas de alta frecuencia de 60Hz y cero vibraciones, el metaverso se ejecuta en una ventana externa dedicada ultra-optimizada."
-                                           Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" LineHeight="19" Margin="0,0,0,25" TextAlignment="Center"/>
-
-                                <!-- Launch Button -->
-                                <Button Content="⬢  INICIAR METAVERSO 3D (ALTO RENDIMIENTO NATIVO)  ⬢" 
-                                        Style="{StaticResource EmeraldButton}" Height="52" FontSize="14" FontWeight="Bold"
-                                        Click="BtnLaunchExternalGodot_Click"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
                 </Grid>
 
                 <!-- ───── PANTALLA DE ESPERA HTTP METAMASK ───── -->
