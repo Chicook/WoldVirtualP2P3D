@@ -44,6 +44,9 @@ namespace VisorSingularity
         private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
@@ -864,8 +867,13 @@ namespace VisorSingularity
                 GetWindowThreadProcessId(hwnd, out uint pid);
                 if (pid == processId)
                 {
-                    result = hwnd;
-                    return false; // Parar enumeración
+                    var sb = new StringBuilder(256);
+                    GetWindowText(hwnd, sb, sb.Capacity);
+                    if (sb.ToString().StartsWith("WoldVirtual", StringComparison.OrdinalIgnoreCase))
+                    {
+                        result = hwnd;
+                        return false; // Parar enumeración
+                    }
                 }
                 return true; // Continuar enumeración
             }, IntPtr.Zero);
