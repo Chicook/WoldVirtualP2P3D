@@ -6,11 +6,14 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UseWPF>true</UseWPF>
+        <UseWindowsForms>true</UseWindowsForms>
         <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
         <DefaultItemExcludes>$(DefaultItemExcludes);jsonDeEstado\**;servidor_interno\**;DTBSINT\**</DefaultItemExcludes>
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
+        <PackageReference Include="System.Management" Version="8.0.0" />
     </ItemGroup>
 
 </Project>
