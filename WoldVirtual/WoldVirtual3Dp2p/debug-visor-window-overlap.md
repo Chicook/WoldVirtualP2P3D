@@ -28,7 +28,14 @@ El usuario reporta que:
 5. Analizar dimensiones reales vs esperadas
 
 ## 📊 Logs Collected
-*No logs collected yet*
+**Observación 1:** Los logs no se generaron porque la aplicación no llegó a ejecutar EnterDashboard()
+**Observación 2:** EnterDashboard() solo se llama después de completar el wizard de 4 pasos o después de autenticación exitosa
+**Observación 3:** El usuario reporta que Godot ya está tapando elementos, lo que sugiere que el viewport ya está activo
+
+**Hipótesis revisada:**
+1. **H1a:** GodotPlaceholder tiene dimensiones incorrectas desde el inicio
+2. **H1b:** El contenedor de Godot no respeta los límites del Grid
+3. **H1c:** Hay elementos del wizard que permanecen visibles y Godot se superpone sobre ellos
 
 ## 🔧 Fixes Applied
 *No fixes applied yet*
