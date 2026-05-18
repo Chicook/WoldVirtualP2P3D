@@ -474,9 +474,8 @@ namespace VisorSingularity
             // Mostrar Viewport 3D
             PanViewportContainer.Visibility = Visibility.Visible;
 
-            // Configurar Header
-            TxtHeaderCryptoInfo.Text = $"{_username.ToUpper()}  -  0.000 WCVcoin  wallet: {(_wallet.Length > 20 ? _wallet.Substring(0, 8) + "..." + _wallet.Substring(_wallet.Length - 6) : _wallet)}";
-            TxtHeaderCryptoInfo.Visibility = Visibility.Visible;
+            // Configurar Header (Ocultado para reubicar la información dentro de la escena 3D de Godot)
+            TxtHeaderCryptoInfo.Visibility = Visibility.Collapsed;
 
             // Configurar datos Sidebar
             TxtSidebarUsername.Text = _username.ToUpper();
