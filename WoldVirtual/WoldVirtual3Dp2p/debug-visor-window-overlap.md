@@ -28,14 +28,20 @@ El usuario reporta que:
 5. Analizar dimensiones reales vs esperadas
 
 ## 📊 Logs Collected
-**Observación 1:** Los logs no se generaron porque la aplicación no llegó a ejecutar EnterDashboard()
-**Observación 2:** EnterDashboard() solo se llama después de completar el wizard de 4 pasos o después de autenticación exitosa
-**Observación 3:** El usuario reporta que Godot ya está tapando elementos, lo que sugiere que el viewport ya está activo
+**Evidencia 1:** La ventana tiene dimensiones 1600x950 (nuestros cambios funcionaron)
+**Evidencia 2:** GodotPlaceholder tiene dimensiones 0x0 al cargar (normal porque PanViewportContainer está Collapsed)
+**Evidencia 3:** Los logs de GodotEmbedder.cs muestran: `Resize: widthPx = 1266, heightPx = 790`
+**Evidencia 4:** Esto es aproximadamente 79% del ancho y 83% del alto de la ventana
 
-**Hipótesis revisada:**
-1. **H1a:** GodotPlaceholder tiene dimensiones incorrectas desde el inicio
-2. **H1b:** El contenedor de Godot no respeta los límites del Grid
-3. **H1c:** Hay elementos del wizard que permanecen visibles y Godot se superpone sobre ellos
+**Análisis:**
+1. **DPI Scaling:** Las dimensiones 1266x790 sugieren scaling de DPI (~1.25x)
+2. **Layout Issue:** GodotPlaceholder no está llenando todo el espacio disponible
+3. **Superposición:** Si Godot se renderiza a 1266x790 pero otros elementos están posicionados incorrectamente, podría haber superposición
+
+**Hipótesis confirmada/refutada:**
+- ✅ **H1a confirmada:** GodotPlaceholder tiene dimensiones incorrectas (1266x790 vs espacio disponible)
+- 🔄 **H1b pendiente:** Necesito verificar si Godot respeta los límites del Grid
+- 🔄 **H1c pendiente:** Necesito verificar si elementos del wizard permanecen visibles
 
 ## 🔧 Fixes Applied
 *No fixes applied yet*
