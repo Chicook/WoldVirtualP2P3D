@@ -94,6 +94,12 @@ namespace VisorSingularity
         private static extern IntPtr FindWindowExW(
             IntPtr hwndParent, IntPtr hwndChildAfter, string? lpszClass, string? lpszWindow);
 
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumChildWindows(IntPtr hwndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr GetModuleHandleW(string? name);
 
@@ -144,7 +150,13 @@ namespace VisorSingularity
             if (_godotHwnd != IntPtr.Zero) return _godotHwnd;
             if (_containerHwnd != IntPtr.Zero)
             {
-                _godotHwnd = FindWindowExW(_containerHwnd, IntPtr.Zero, null, null);
+                IntPtr foundHwnd = IntPtr.Zero;
+                EnumChildWindows(_containerHwnd, (hWnd, lParam) =>
+                {
+                    foundHwnd = hWnd;
+                    return false; // Detener la enumeración al encontrar la primera ventana hija
+                }, IntPtr.Zero);
+                _godotHwnd = foundHwnd;
             }
             return _godotHwnd;
         }
@@ -231,13 +243,13 @@ namespace VisorSingularity
             _godotHwnd = godotHwnd;
         }
 
-        /// <summary>Redimensiona y posiciona el contenedor y Godot en píxeles físicos de pantalla.</summary>
-        public void Resize(int x, int y, int widthPx, int heightPx)
+        /// <summary>Redimensiona el contenedor y Godot en píxeles físicos de pantalla.</summary>
+        public void Resize(int widthPx, int heightPx)
         {
             if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1) return;
             
-            // 1. Redimensionar y reposicionar el contenedor nativo
-            MoveWindow(_containerHwnd, x, y, widthPx, heightPx, true);
+            // 1. Redimensionar y reposicionar el contenedor nativo en su origen local
+            MoveWindow(_containerHwnd, 0, 0, widthPx, heightPx, true);
             
             // 2. Redimensionar el hijo de Godot
             IntPtr godotHwnd = GetGodotHwnd();

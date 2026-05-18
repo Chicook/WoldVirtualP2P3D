@@ -65,18 +65,10 @@ namespace VisorSingularity
             {
                 if (_viewer?.IsReady == true)
                 {
-                    try
-                    {
-                        var transform = GodotPlaceholder.TransformToAncestor(this);
-                        var location = transform.Transform(new System.Windows.Point(0, 0));
-                        var dpi = GetDpi();
-                        _viewer.Resize(
-                            (int)(location.X * dpi.X),
-                            (int)(location.Y * dpi.Y),
-                            (int)(GodotPlaceholder.ActualWidth  * dpi.X),
-                            (int)(GodotPlaceholder.ActualHeight * dpi.Y));
-                    }
-                    catch { }
+                    var dpi = GetDpi();
+                    _viewer.Resize(
+                        (int)(GodotPlaceholder.ActualWidth  * dpi.X),
+                        (int)(GodotPlaceholder.ActualHeight * dpi.Y));
                 }
             };
         }
@@ -731,26 +723,15 @@ namespace VisorSingularity
                 return;
             }
 
-            // Obtener tamaño y posición en píxeles físicos
+            // Obtener tamaño en píxeles físicos
             var dpi    = GetDpi();
             int width  = (int)(GodotPlaceholder.ActualWidth  * dpi.X);
             int height = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
             if (width  < 100) width  = 1280;
             if (height < 100) height = 720;
 
-            int posX = 0;
-            int posY = 0;
-            try
-            {
-                var transform = GodotPlaceholder.TransformToAncestor(this);
-                var location = transform.Transform(new System.Windows.Point(0, 0));
-                posX = (int)(location.X * dpi.X);
-                posY = (int)(location.Y * dpi.Y);
-            }
-            catch { }
-
             // Redimensionar el contenedor al tamaño real
-            _viewer.Resize(posX, posY, width, height);
+            _viewer.Resize(width, height);
 
             // Escribir JSON de perfil del usuario para Godot
             try
@@ -815,20 +796,9 @@ namespace VisorSingularity
                             if (_viewer != null)
                             {
                                 var dpi = GetDpi();
-                                int posX = 0;
-                                int posY = 0;
-                                try
-                                {
-                                    var transform = GodotPlaceholder.TransformToAncestor(this);
-                                    var location = transform.Transform(new System.Windows.Point(0, 0));
-                                    posX = (int)(location.X * dpi.X);
-                                    posY = (int)(location.Y * dpi.Y);
-                                }
-                                catch { }
-
                                 int w = (int)(GodotPlaceholder.ActualWidth * dpi.X);
                                 int h = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
-                                _viewer.Resize(posX, posY, w, h);
+                                _viewer.Resize(w, h);
                                 _viewer.FocusGodot();
                             }
                         });
