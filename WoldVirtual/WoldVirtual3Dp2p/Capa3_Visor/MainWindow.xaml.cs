@@ -23,37 +23,15 @@ namespace VisorSingularity
 {
     public partial class MainWindow : Window
     {
-        // ── Win32 API Imports para el Incrustado de Ventanas ──
+        // ── Win32 API Imports para el Incrustado Nativo ──
         [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+        private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string lpszWindow);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
 
-        [DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-        private const int GWL_STYLE = -16;
-        private const int WS_VISIBLE = 0x10000000;
-        private const int WS_CHILD = 0x40000000;
-        private const int WS_CLIPCHILDREN = 0x02000000;
-        private const int WS_CLIPSIBLINGS = 0x04000000;
 
         // ── Datos de la Sesión Actual y Helpers ──
         private HardwareFingerprint _fingerprint = null!;
@@ -75,13 +53,8 @@ namespace VisorSingularity
         {
             InitializeComponent();
 
-            // Reemplazar el panel por el AntiFlickerPanel para evitar parpadeos
-            var customPanel = new AntiFlickerPanel
-            {
-                BackColor = System.Drawing.Color.Black,
-                Dock = System.Windows.Forms.DockStyle.Fill
-            };
-            WfGamePanel = customPanel;
+            // Usar panel WinForms nativo sin AntiFlickerPanel (gestionado nativamente por Godot --wid)
+            WfGamePanel = new System.Windows.Forms.Panel { BackColor = System.Drawing.Color.Black, Dock = System.Windows.Forms.DockStyle.Fill };
             WfHost.Child = WfGamePanel;
             
             this.Loaded += MainWindow_Loaded;
@@ -769,16 +742,18 @@ namespace VisorSingularity
             // Para el visor incrustado, cargamos SIEMPRE la escena principal del Metaverso de forma directa
             string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
 
-            // Argumentos de línea de comandos para inicializar a Godot incrustado en el Visor
-            // Agregamos --disable-vsync para evitar conflictos con la composición DWM de Windows en ventanas hijas
-            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --disable-vsync --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            // Obtenemos el handle destino directamente del panel nativo
+            IntPtr parentHwnd = WfGamePanel.Handle;
+
+            // Argumentos de línea de comandos para inicializar a Godot incrustado en el Visor usando --wid nativo
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --wid {(long)parentHwnd} --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = godotExe,
                 Arguments = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle = ProcessWindowStyle.Hidden, // Ocultar para evitar el parpadeo de pantalla externa al iniciar
+                WindowStyle = ProcessWindowStyle.Normal, // Godot se ancla automáticamente, no necesita iniciar oculto
                 UseShellExecute = false
             };
 
@@ -790,18 +765,23 @@ namespace VisorSingularity
                     throw new Exception("El sistema operativo denegó la ejecución.");
                 }
 
-                // Ajustar prioridad del proceso a Alta para evitar la ralentización/throttling de Windows
                 try
                 {
                     _godotProcess.PriorityClass = ProcessPriorityClass.High;
                 }
                 catch { }
 
-                TxtFooterStatus.Text = "Motor 3D cargando en el visor. Buscando ventana de renderizado...";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
+                TxtFooterStatus.Text = "¡Metaverso cargado de forma nativa! Firma de conexión P2P activa.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
-                // Buscar e incrustar la ventana en un hilo secundario asíncrono
-                Task.Run(() => ScanAndEmbed(_godotProcess.Id));
+                // Auto-redimensionar al cambiar el tamaño del panel WPF buscando directamente el Handle hijo de Godot
+                WfGamePanel.Resize += (s, e) => {
+                    IntPtr godotHwnd = FindWindowEx(WfGamePanel.Handle, IntPtr.Zero, null, null);
+                    if (godotHwnd != IntPtr.Zero)
+                    {
+                        MoveWindow(godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
+                    }
+                };
             }
             catch (Exception ex)
             {
@@ -810,106 +790,6 @@ namespace VisorSingularity
             }
         }
 
-        private void ScanAndEmbed(int processId)
-        {
-            IntPtr hwnd = IntPtr.Zero;
-            int retries = 40; // 20 segundos máximo
-
-            while (hwnd == IntPtr.Zero && retries > 0 && !_isClosing)
-            {
-                hwnd = FindWindowForProcess(processId);
-                if (hwnd != IntPtr.Zero) break;
-
-                Thread.Sleep(500);
-                retries--;
-            }
-
-            if (hwnd != IntPtr.Zero && !_isClosing)
-            {
-                _godotHwnd = hwnd;
-                
-                // Docking e Incrustado usando el Dispatcher de WPF
-                Dispatcher.Invoke(() => {
-                    WfGamePanel.Controls.Clear();
-
-                    SetParent(_godotHwnd, WfGamePanel.Handle);
-                    SetWindowLong(_godotHwnd, GWL_STYLE, WS_VISIBLE | WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
-                    MoveWindow(_godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
-
-                    // Aplicar WS_CLIPCHILDREN al propio host de WindowsForms para evitar parpadeo del contenedor superior
-                    try
-                    {
-                        IntPtr hostHwnd = WfHost.Handle;
-                        int hostStyle = GetWindowLong(hostHwnd, GWL_STYLE);
-                        SetWindowLong(hostHwnd, GWL_STYLE, hostStyle | WS_CLIPCHILDREN);
-                    }
-                    catch { }
-
-                    TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Firma de conexión P2P activa.";
-                    TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-
-                    // Auto-redimensionar al cambiar el tamaño del panel WPF
-                    WfGamePanel.Resize += (s, e) => {
-                        if (_godotHwnd != IntPtr.Zero)
-                        {
-                            MoveWindow(_godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
-                        }
-                    };
-                });
-            }
-            else
-            {
-                Dispatcher.Invoke(() => {
-                    TxtFooterStatus.Text = "Error: Tiempo de espera agotado al incrustar el metaverso.";
-                    TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
-                });
-            }
-        }
-
-        private IntPtr FindWindowForProcess(int processId)
-        {
-            IntPtr result = IntPtr.Zero;
-            IntPtr selfHwnd = IntPtr.Zero;
-
-            // Obtener el Handle del propio visor WPF
-            Dispatcher.Invoke(() => {
-                selfHwnd = new WindowInteropHelper(this).Handle;
-            });
-
-            EnumWindows((hwnd, lParam) =>
-            {
-                if (hwnd == selfHwnd)
-                    return true;
-
-                GetWindowThreadProcessId(hwnd, out uint pid);
-
-                try
-                {
-                    using (var proc = Process.GetProcessById((int)pid))
-                    {
-                        string procName = proc.ProcessName;
-
-                        if (procName.Contains("Godot", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var sb = new StringBuilder(256);
-                            GetWindowText(hwnd, sb, sb.Capacity);
-                            string title = sb.ToString();
-
-                            if (title.StartsWith("WoldVirtual", StringComparison.OrdinalIgnoreCase))
-                            {
-                                result = hwnd;
-                                return false; // Parar enumeración
-                            }
-                        }
-                    }
-                }
-                catch { }
-
-                return true; // Continuar enumeración
-            }, IntPtr.Zero);
-
-            return result;
-        }
 
         // ───── FILTRADO DE MENSAJES DE TECLADO PARA REDIRECCIÓN A GODOT ─────
         private void ThreadFilterMessage(ref MSG msg, ref bool handled)
@@ -919,6 +799,11 @@ namespace VisorSingularity
             const int WM_CHAR = 0x0102;
             const int WM_SYSKEYDOWN = 0x0104;
             const int WM_SYSKEYUP = 0x0105;
+
+            if (_godotHwnd == IntPtr.Zero)
+            {
+                _godotHwnd = FindWindowEx(WfGamePanel.Handle, IntPtr.Zero, null, null);
+            }
 
             if (_godotHwnd != IntPtr.Zero)
             {
@@ -976,21 +861,5 @@ namespace VisorSingularity
         }
     }
 
-    public class AntiFlickerPanel : System.Windows.Forms.Panel
-    {
-        protected override System.Windows.Forms.CreateParams CreateParams
-        {
-            get
-            {
-                var cp = base.CreateParams;
-                cp.Style |= 0x02000000; // WS_CLIPCHILDREN
-                return cp;
-            }
-        }
 
-        protected override void OnPaintBackground(System.Windows.Forms.PaintEventArgs e)
-        {
-            // Do not paint background to prevent flickering
-        }
-    }
 }
