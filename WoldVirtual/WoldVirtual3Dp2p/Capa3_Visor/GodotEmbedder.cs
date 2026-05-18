@@ -139,7 +139,7 @@ namespace VisorSingularity
         /// <summary>
         /// Obtiene dinámicamente el HWND de Godot buscando la ventana hija del contenedor.
         /// </summary>
-        private IntPtr GetGodotHwnd()
+        public IntPtr GetGodotHwnd()
         {
             if (_godotHwnd != IntPtr.Zero) return _godotHwnd;
             if (_containerHwnd != IntPtr.Zero)

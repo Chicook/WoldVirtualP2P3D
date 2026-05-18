@@ -772,11 +772,37 @@ namespace VisorSingularity
                 TxtFooterStatus.Text = "¡Metaverso cargado! Motor 3D activo dentro del visor.";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
-                // Dar foco a Godot después de que cargue
-                Task.Run(() =>
+                // Esperar de forma asíncrona a que el HWND de Godot se cree, y redimensionarlo / enfocarlo
+                Task.Run(async () =>
                 {
-                    Thread.Sleep(3000);
-                    Dispatcher.Invoke(() => _viewer?.FocusGodot());
+                    IntPtr hwnd = IntPtr.Zero;
+                    for (int i = 0; i < 50; i++) // Esperar hasta 5 segundos (50 * 100ms)
+                    {
+                        await Task.Delay(100);
+                        Dispatcher.Invoke(() =>
+                        {
+                            if (_viewer != null)
+                            {
+                                hwnd = _viewer.GetGodotHwnd();
+                            }
+                        });
+                        if (hwnd != IntPtr.Zero) break;
+                    }
+
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            if (_viewer != null)
+                            {
+                                var dpi = GetDpi();
+                                int w = (int)(GodotPlaceholder.ActualWidth * dpi.X);
+                                int h = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
+                                _viewer.Resize(w, h);
+                                _viewer.FocusGodot();
+                            }
+                        });
+                    }
                 });
             }
             catch (Exception ex)
