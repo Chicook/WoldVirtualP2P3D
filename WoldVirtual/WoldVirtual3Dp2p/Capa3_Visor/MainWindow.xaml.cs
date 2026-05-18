@@ -31,6 +31,9 @@ namespace VisorSingularity
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
         [DllImport("user32.dll", SetLastError = true)]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", SetLastError = true)]
         private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
 
         [DllImport("user32.dll")]
@@ -49,6 +52,8 @@ namespace VisorSingularity
         private const int GWL_STYLE = -16;
         private const int WS_VISIBLE = 0x10000000;
         private const int WS_CHILD = 0x40000000;
+        private const int WS_CLIPCHILDREN = 0x02000000;
+        private const int WS_CLIPSIBLINGS = 0x04000000;
 
         // ── Datos de la Sesión Actual y Helpers ──
         private HardwareFingerprint _fingerprint = null!;
@@ -69,6 +74,15 @@ namespace VisorSingularity
         public MainWindow()
         {
             InitializeComponent();
+
+            // Reemplazar el panel por el AntiFlickerPanel para evitar parpadeos
+            var customPanel = new AntiFlickerPanel
+            {
+                BackColor = System.Drawing.Color.Black,
+                Dock = System.Windows.Forms.DockStyle.Fill
+            };
+            WfGamePanel = customPanel;
+            WfHost.Child = WfGamePanel;
             
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
@@ -819,8 +833,17 @@ namespace VisorSingularity
                     WfGamePanel.Controls.Clear();
 
                     SetParent(_godotHwnd, WfGamePanel.Handle);
-                    SetWindowLong(_godotHwnd, GWL_STYLE, WS_VISIBLE | WS_CHILD);
+                    SetWindowLong(_godotHwnd, GWL_STYLE, WS_VISIBLE | WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
                     MoveWindow(_godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
+
+                    // Aplicar WS_CLIPCHILDREN al propio host de WindowsForms para evitar parpadeo del contenedor superior
+                    try
+                    {
+                        IntPtr hostHwnd = WfHost.Handle;
+                        int hostStyle = GetWindowLong(hostHwnd, GWL_STYLE);
+                        SetWindowLong(hostHwnd, GWL_STYLE, hostStyle | WS_CLIPCHILDREN);
+                    }
+                    catch { }
 
                     TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Firma de conexión P2P activa.";
                     TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
@@ -950,6 +973,24 @@ namespace VisorSingularity
                 catch { }
                 _godotProcess = null;
             }
+        }
+    }
+
+    public class AntiFlickerPanel : System.Windows.Forms.Panel
+    {
+        protected override System.Windows.Forms.CreateParams CreateParams
+        {
+            get
+            {
+                var cp = base.CreateParams;
+                cp.Style |= 0x02000000; // WS_CLIPCHILDREN
+                return cp;
+            }
+        }
+
+        protected override void OnPaintBackground(System.Windows.Forms.PaintEventArgs e)
+        {
+            // Do not paint background to prevent flickering
         }
     }
 }
