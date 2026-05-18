@@ -90,6 +90,10 @@ namespace VisorSingularity
         [DllImport("user32.dll")]
         private static extern IntPtr SetFocus(IntPtr hWnd);
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr FindWindowExW(
+            IntPtr hwndParent, IntPtr hwndChildAfter, string? lpszClass, string? lpszWindow);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr GetModuleHandleW(string? name);
 
@@ -104,6 +108,19 @@ namespace VisorSingularity
         private IntPtr _godotHwnd     = IntPtr.Zero;
 
         private const string WndClass = "GodotViewer_v1";
+
+        /// <summary>
+        /// Obtiene dinámicamente el HWND de Godot buscando la ventana hija del contenedor.
+        /// </summary>
+        private IntPtr GetGodotHwnd()
+        {
+            if (_godotHwnd != IntPtr.Zero) return _godotHwnd;
+            if (_containerHwnd != IntPtr.Zero)
+            {
+                _godotHwnd = FindWindowExW(_containerHwnd, IntPtr.Zero, null, null);
+            }
+            return _godotHwnd;
+        }
 
         // ──────────────────────────────────────────────────────────────────
         // Propiedades públicas
@@ -160,12 +177,16 @@ namespace VisorSingularity
         protected override IntPtr WndProc(
             IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            if ((uint)msg == WM_SIZE && _godotHwnd != IntPtr.Zero)
+            if ((uint)msg == WM_SIZE)
             {
-                int w = (int)(lParam.ToInt64() & 0xFFFF);
-                int h = (int)((lParam.ToInt64() >> 16) & 0xFFFF);
-                if (w > 0 && h > 0)
-                    MoveWindow(_godotHwnd, 0, 0, w, h, false);
+                IntPtr godotHwnd = GetGodotHwnd();
+                if (godotHwnd != IntPtr.Zero)
+                {
+                    int w = (int)(lParam.ToInt64() & 0xFFFF);
+                    int h = (int)((lParam.ToInt64() >> 16) & 0xFFFF);
+                    if (w > 0 && h > 0)
+                        MoveWindow(godotHwnd, 0, 0, w, h, false);
+                }
             }
             return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
         }
@@ -188,8 +209,10 @@ namespace VisorSingularity
         {
             if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1) return;
             MoveWindow(_containerHwnd, 0, 0, widthPx, heightPx, false);
-            if (_godotHwnd != IntPtr.Zero)
-                MoveWindow(_godotHwnd, 0, 0, widthPx, heightPx, false);
+            
+            IntPtr godotHwnd = GetGodotHwnd();
+            if (godotHwnd != IntPtr.Zero)
+                MoveWindow(godotHwnd, 0, 0, widthPx, heightPx, false);
         }
 
         /// <summary>
@@ -198,7 +221,8 @@ namespace VisorSingularity
         /// </summary>
         public void FocusGodot()
         {
-            if (_godotHwnd != IntPtr.Zero) SetFocus(_godotHwnd);
+            IntPtr godotHwnd = GetGodotHwnd();
+            if (godotHwnd != IntPtr.Zero) SetFocus(godotHwnd);
             else if (_containerHwnd != IntPtr.Zero) SetFocus(_containerHwnd);
         }
 
