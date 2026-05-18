@@ -190,11 +190,22 @@
         document.getElementById('lblIsland').innerText = islandId;
 
         async function connectWallet() {
-            // Verificar si MetaMask está instalado en el navegador
+            // Detectar el proveedor específico de MetaMask ante conflictos con Coinbase u otras wallets
+            let provider = null;
             if (typeof window.ethereum !== 'undefined') {
+                if (window.ethereum.providers && window.ethereum.providers.length > 0) {
+                    // Buscar en la lista de proveedores inyectados el que sea MetaMask
+                    provider = window.ethereum.providers.find(p => p.isMetaMask);
+                } else if (window.ethereum.isMetaMask) {
+                    provider = window.ethereum;
+                }
+            }
+
+            // Si se detecta MetaMask específicamente
+            if (provider) {
                 try {
-                    // 1. Solicitar acceso a las cuentas de MetaMask
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    // 1. Solicitar acceso a las cuentas utilizando únicamente el proveedor de MetaMask
+                    const accounts = await provider.request({ method: 'eth_requestAccounts' });
                     if (accounts && accounts.length > 0) {
                         const walletAddress = accounts[0];
                         
@@ -212,8 +223,8 @@
                             .map(b => b.toString(16).padStart(2, '0'))
                             .join('');
                         
-                        // 3. Solicitar la firma real de MetaMask
-                        const signature = await window.ethereum.request({
+                        // 3. Solicitar la firma real usando únicamente MetaMask
+                        const signature = await provider.request({
                             method: 'personal_sign',
                             params: [hexMessage, walletAddress]
                         });
@@ -229,7 +240,7 @@
             }
             
             // Fallback: Generar una wallet simulada con firma de desarrollo si no tiene MetaMask
-            alert("MetaMask no detectado o bloqueado. Usando firma de desarrollo simulada.");
+            alert("MetaMask específico no detectado (o bloqueado por otra extensión como Coinbase). Usando firma de desarrollo simulada.");
             const characters = '0123456789abcdef';
             let randomWallet = '0x';
             for (let i = 0; i < 40; i++) {
