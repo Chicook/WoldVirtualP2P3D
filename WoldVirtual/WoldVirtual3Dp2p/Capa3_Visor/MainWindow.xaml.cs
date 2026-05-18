@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Diagnostics;
@@ -173,6 +174,63 @@ namespace VisorSingularity
             }
         }
 
+        // Helper para Generar Backup de Identidad .ZIP con JSON dentro
+        private void GenerateIdentityZip(string recoveryHash)
+        {
+            try
+            {
+                // 1. Estructurar el contenido JSON con formato estético indentado
+                string jsonContent = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    FirmaDigital = _fingerprint.UniqueHash,
+                    HashRecuperacion = recoveryHash,
+                    DetalleCPU = _fingerprint.ProcessorId,
+                    DetallePlacaBase = _fingerprint.MotherboardId,
+                    DetalleOS = _fingerprint.OsId,
+                    FechaVinculacion = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+                // 2. Obtener ruta del Escritorio de Windows del Usuario
+                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string zipFileName = $"Wold_Firma_Digital_{recoveryHash.Substring(0, 8)}.zip";
+                string zipFilePath = Path.Combine(desktopPath, zipFileName);
+
+                // 3. Crear el archivo ZIP y empaquetar el JSON dentro
+                using (var fileStream = new FileStream(zipFilePath, FileMode.Create))
+                {
+                    using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create))
+                    {
+                        var zipEntry = archive.CreateEntry("identidad_wold.json");
+                        using (var writer = new StreamWriter(zipEntry.Open()))
+                        {
+                            writer.Write(jsonContent);
+                        }
+                    }
+                }
+
+                // 4. Mostrar alerta visual premium de confirmación cuántica
+                MessageBox.Show(
+                    $"¡FIRMA DIGITAL Y HASH DE RECUPERACIÓN GENERADOS CON ÉXITO!\n\n" +
+                    $"Se ha creado y guardado tu llave cuántica de identidad segura en tu Escritorio:\n" +
+                    $"📄 {zipFileName}\n\n" +
+                    $"IMPORTANTE: Conserva este archivo .zip. Contiene tu firma digital de hardware única:\n" +
+                    $"{_fingerprint.UniqueHash.ToUpper()}\n\n" +
+                    $"Tu llave de recuperación cuántica es:\n" +
+                    $"{recoveryHash}",
+                    "Criptografía WOLD VIRTUAL P2P",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information
+                );
+
+                TxtFooterStatus.Text = $"Backup de Firma guardado en Escritorio: {zipFileName}";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al generar el backup ZIP de identidad: {ex.Message}", "Error Criptográfico", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         // STEP 1 Action: Hardware link OR Login
         private void BtnStep1Next_Click(object sender, RoutedEventArgs e)
         {
@@ -204,6 +262,13 @@ namespace VisorSingularity
             }
             else
             {
+                // Generar llave y backup ZIP antes de avanzar
+                string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
+                GenerateIdentityZip(recoveryHash);
+
+                // Auto-rellenar la casilla UUID del Paso 2
+                TxtUuid.Text = recoveryHash;
+
                 // Avanzar al Registro
                 TxtFooterStatus.Text = "Firma de hardware vinculada con éxito. Crea tu usuario.";
                 ShowStep(2);
