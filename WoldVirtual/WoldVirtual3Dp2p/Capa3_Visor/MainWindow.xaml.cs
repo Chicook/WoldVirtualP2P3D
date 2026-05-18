@@ -49,7 +49,7 @@ namespace VisorSingularity
         // ── Componentes de Ejecución ──
         private HttpListener?  _httpListener;
         private Process?       _godotProcess;
-        private GodotEmbedder? _embedder;
+        private GodotViewer?   _viewer;
 
         public MainWindow()
         {
@@ -57,16 +57,16 @@ namespace VisorSingularity
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
 
-            // Redirigir foco a Godot cuando el usuario haga clic en el área 3D
-            GodotPlaceholder.MouseDown += (s, e) => _embedder?.FocusGodot();
+            // Foco a Godot al hacer clic en el área 3D
+            GodotPlaceholder.MouseDown += (s, e) => _viewer?.FocusGodot();
 
-            // Redimensionar Godot cuando cambie el tamaño del placeholder
+            // Redimensionar Godot cuando cambie el placeholder
             GodotPlaceholder.SizeChanged += (s, e) =>
             {
-                if (_embedder?.IsAttached == true)
+                if (_viewer?.IsReady == true)
                 {
                     var dpi = GetDpi();
-                    _embedder.Resize(
+                    _viewer.Resize(
                         (int)(GodotPlaceholder.ActualWidth  * dpi.X),
                         (int)(GodotPlaceholder.ActualHeight * dpi.Y));
                 }
@@ -706,130 +706,84 @@ namespace VisorSingularity
                 return;
             }
 
-            // Obtener tamaño inicial del placeholder en píxeles físicos
+            // ── PASO 1: Crear el visor nativo ANTES de lanzar Godot ──
+            // GodotViewer.BuildWindowCore() se ejecuta al asignarlo al árbol visual.
+            // Esto crea el contenedor Win32 y expone su HWND.
+            _viewer = new GodotViewer();
+            GodotPlaceholder.Child = _viewer;
+
+            // Esperar a que WPF procese el layout y cree el HWND
+            GodotPlaceholder.UpdateLayout();
+
+            IntPtr containerHwnd = _viewer.ContainerHandle;
+            if (containerHwnd == IntPtr.Zero)
+            {
+                TxtFooterStatus.Text = "Error: no se pudo crear el contenedor del visor.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
+                return;
+            }
+
+            // Obtener tamaño en píxeles físicos
             var dpi    = GetDpi();
             int width  = (int)(GodotPlaceholder.ActualWidth  * dpi.X);
             int height = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
             if (width  < 100) width  = 1280;
             if (height < 100) height = 720;
 
-            // REGISTRO DE AVATAR POR FUERA (EXTERNO) SIN TOCAR LA ESCENA DE GODOT
+            // Redimensionar el contenedor al tamaño real
+            _viewer.Resize(width, height);
+
+            // Escribir JSON de perfil del usuario para Godot
             try
             {
                 string usersDir = Path.Combine(godotProjectDir, @"woldvirtual\scene\MTC\users3D");
-                if (!Directory.Exists(usersDir))
-                {
-                    Directory.CreateDirectory(usersDir);
-                }
-                string userJsonPath = Path.Combine(usersDir, "current_user.json");
-
-                // Generar JSON de perfil idéntico al formato esperado por el motor 3D de Godot
+                Directory.CreateDirectory(usersDir);
                 string jsonContent = $"{{\n\t\"username\": \"{user}\",\n\t\"gender\": \"male\",\n\t\"wallet\": \"{wallet}\",\n\t\"timestamp\": {(long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds}\n}}";
-
-                File.WriteAllText(userJsonPath, jsonContent, Encoding.UTF8);
+                File.WriteAllText(Path.Combine(usersDir, "current_user.json"), jsonContent, Encoding.UTF8);
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error al escribir current_user.json de forma externa: {ex.Message}");
-            }
+            catch (Exception ex) { Debug.WriteLine($"current_user.json: {ex.Message}"); }
 
-            // Para el visor incrustado, cargamos SIEMPRE la escena principal del Metaverso de forma directa
+            // ── PASO 2: Lanzar Godot con --wid apuntando al contenedor ──
+            // Godot crea su contexto OpenGL directamente como hijo del contenedor.
+            // No hay SetParent a posteriori. No hay conflicto de renderizado.
             string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
-
-            // Argumentos: Godot arranca sin bordes, libre. El Visor lo posiciona encima del placeholder.
-            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";          
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} "
+                              + $"--rendering-driver opengl3 "
+                              + $"--wid {containerHwnd} "
+                              + $"-- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
-                FileName        = godotExe,
-                Arguments       = arguments,
+                FileName         = godotExe,
+                Arguments        = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle     = ProcessWindowStyle.Normal,
-                UseShellExecute = false
+                WindowStyle      = ProcessWindowStyle.Hidden,
+                UseShellExecute  = false
             };
 
             try
             {
                 _godotProcess = Process.Start(startInfo);
                 if (_godotProcess == null)
+                    throw new Exception("El sistema operativo deneó la ejecución.");
+
+                try { _godotProcess.PriorityClass = ProcessPriorityClass.High; } catch { }
+
+                TxtFooterStatus.Text = "¡Metaverso cargado! Motor 3D activo dentro del visor.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+
+                // Dar foco a Godot después de que cargue
+                Task.Run(() =>
                 {
-                    throw new Exception("El sistema operativo denegó la ejecución.");
-                }
-
-                try
-                {
-                    _godotProcess.PriorityClass = ProcessPriorityClass.High;
-                }
-                catch { }
-
-                TxtFooterStatus.Text = "Motor 3D cargando. Acoplando al visor...";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
-
-                // Localizar e incrustar la ventana de Godot de forma asíncrona
-                Task.Run(() => ScanAndDock(_godotProcess.Id, width, height));
+                    Thread.Sleep(3000);
+                    Dispatcher.Invoke(() => _viewer?.FocusGodot());
+                });
             }
             catch (Exception ex)
             {
                 TxtFooterStatus.Text = $"Error al iniciar el metaverso: {ex.Message}";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
             }
-        }
-
-        // ── Localiza la ventana de Godot y la incrusta con GodotEmbedder ──
-        private void ScanAndDock(int processId, int width, int height)
-        {
-            IntPtr hwnd = IntPtr.Zero;
-            for (int i = 0; i < 40 && !_isClosing; i++)
-            {
-                hwnd = FindGodotWindow(processId);
-                if (hwnd != IntPtr.Zero) break;
-                Thread.Sleep(500);
-            }
-
-            if (hwnd == IntPtr.Zero || _isClosing)
-            {
-                Dispatcher.Invoke(() => TxtFooterStatus.Text =
-                    "Error: no se encontró la ventana de Godot.");
-                return;
-            }
-
-            Dispatcher.Invoke(() =>
-            {
-                // Crear y montar el embedder limpio
-                _embedder = new GodotEmbedder();
-                GodotPlaceholder.Child = _embedder;
-
-                // Anclar Godot dentro del contenedor nativo
-                _embedder.AttachGodotWindow(hwnd, width, height);
-
-                // Dar foco inicial a Godot
-                _embedder.FocusGodot();
-
-                TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Conexión P2P activa.";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-            });
-        }
-
-        // ── Localiza la ventana principal de Godot por PID ──
-        private IntPtr FindGodotWindow(int processId)
-        {
-            IntPtr result   = IntPtr.Zero;
-            IntPtr selfHwnd = IntPtr.Zero;
-            Dispatcher.Invoke(() => selfHwnd = new WindowInteropHelper(this).Handle);
-
-            EnumWindows((hwnd, _) =>
-            {
-                if (hwnd == selfHwnd) return true;
-                GetWindowThreadProcessId(hwnd, out uint pid);
-                if (pid != (uint)processId) return true;
-
-                var sb = new StringBuilder(256);
-                GetWindowText(hwnd, sb, sb.Capacity);
-                if (sb.Length > 0) { result = hwnd; return false; }
-                return true;
-            }, IntPtr.Zero);
-
-            return result;
         }
 
         // ── Devuelve el factor de escala DPI de la pantalla principal ──
@@ -851,11 +805,10 @@ namespace VisorSingularity
             try { if (_godotProcess?.HasExited == false) _godotProcess.Kill(); } catch { }
             _godotProcess = null;
 
-            // El GodotEmbedder se destruye al eliminarlo del árbol visual
-            if (_embedder != null)
+            if (_viewer != null)
             {
                 GodotPlaceholder.Child = null;
-                _embedder = null;
+                _viewer = null;
             }
         }
     }
