@@ -399,7 +399,15 @@ namespace VisorSingularity
             }
 
             _wallet = w;
-            TxtFooterStatus.Text = "Wallet vinculada. Configura la isla espacial.";
+
+            // GENERACIÓN DETERMINISTA DE COORDENADAS DE ISLA ÚNICA
+            int hash = _username.GetHashCode();
+            int x = Math.Abs(hash % 900) + 100; // Coordenada X entre 100 y 1000
+            int z = Math.Abs((hash / 1000) % 900) + 100; // Coordenada Z entre 100 y 1000
+            string generatedIsland = $"{x} : {z}.1.0";
+            TxtIslandCoordinates.Text = generatedIsland;
+
+            TxtFooterStatus.Text = "Wallet vinculada. Tu isla espacial única ha sido generada.";
             TxtFooterStatus.Foreground = new SolidColorBrush(Colors.White);
             ShowStep(4);
         }

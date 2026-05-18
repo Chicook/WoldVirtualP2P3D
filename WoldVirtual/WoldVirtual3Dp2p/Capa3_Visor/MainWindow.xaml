@@ -365,12 +365,12 @@
 
                             <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
 
-                            <TextBlock Text="Introduce las coordenadas espaciales de la Isla en la que deseas aparecer por defecto en la red P2P del metaverso."
+                            <TextBlock Text="Se han generado coordenadas espaciales únicas para tu nodo 3D. Tu isla cuántica quedará fija y asegurada de por vida en la red P2P."
                                        Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,20" LineHeight="18"/>
 
                             <!-- Fields -->
-                            <TextBlock Text="COORDENADAS ESPACIALES" Style="{StaticResource CyberLabel}"/>
-                            <TextBox x:Name="TxtIslandCoordinates" Style="{StaticResource CyberTextBox}" Text="137 : 190.1.0" Margin="0,0,0,25"/>
+                            <TextBlock Text="COORDENADAS DE TU ISLA UNICA (GENERADA POR DEFECTO)" Style="{StaticResource CyberLabel}"/>
+                            <TextBox x:Name="TxtIslandCoordinates" Style="{StaticResource CyberTextBox}" IsReadOnly="True" Background="#0A0F1A" BorderBrush="#1A80A3" Foreground="#8E9AA8" Margin="0,0,0,25"/>
 
                             <Button Content="FINALIZAR REGISTRO Y LANZAR METAVERSO" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnFinalizeRegister_Click"/>
                         </StackPanel>
