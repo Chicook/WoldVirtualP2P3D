@@ -735,12 +735,32 @@ namespace VisorSingularity
             int width = WfGamePanel.Width > 100 ? WfGamePanel.Width : 1100;
             int height = WfGamePanel.Height > 100 ? WfGamePanel.Height : 700;
 
-            // Seleccionar escena inicial de Godot (Registro de avatar en EscenaPrincipal.tscn o Metaverso directo)
-            string initialScene = isNewRegistration ? "res://EscenaPrincipal.tscn" : "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
+            // REGISTRO DE AVATAR POR FUERA (EXTERNO) SIN TOCAR LA ESCENA DE GODOT
+            try
+            {
+                string usersDir = Path.Combine(godotProjectDir, @"woldvirtual\scene\MTC\users3D");
+                if (!Directory.Exists(usersDir))
+                {
+                    Directory.CreateDirectory(usersDir);
+                }
+                string userJsonPath = Path.Combine(usersDir, "current_user.json");
+
+                // Generar JSON de perfil idéntico al formato esperado por el motor 3D de Godot
+                string jsonContent = $"{{\n\t\"username\": \"{user}\",\n\t\"gender\": \"male\",\n\t\"wallet\": \"{wallet}\",\n\t\"timestamp\": {(long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds}\n}}";
+
+                File.WriteAllText(userJsonPath, jsonContent, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error al escribir current_user.json de forma externa: {ex.Message}");
+            }
+
+            // Para el visor incrustado, cargamos SIEMPRE la escena principal del Metaverso de forma directa
+            string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
 
             // Argumentos de línea de comandos para inicializar a Godot incrustado en el Visor
             // Agregamos --disable-vsync para evitar conflictos con la composición DWM de Windows en ventanas hijas
-            string arguments = $"--path \"{godotProjectDir}\" {initialScene} --rendering-driver opengl3 --windowed --disable-vsync --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --disable-vsync --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {

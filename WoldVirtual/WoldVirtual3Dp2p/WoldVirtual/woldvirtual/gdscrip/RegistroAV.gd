@@ -28,11 +28,10 @@ func _ready():
 		if username_arg == "" and args[i] == "--user-id" and i + 1 < args.size():
 			username_arg = args[i+1].replace("\"", "").strip_edges()
 
-	# Pre-rellenar y bloquear el campo de nombre para que esté 100% vinculado a su nik
+	# Pre-rellenar el campo de nombre si viene de los argumentos
 	if username_arg != "":
 		input_name.text = username_arg
-		input_name.editable = false
-		status_label.text = "Identidad vinculada: " + username_arg
+		status_label.text = "Identidad: " + username_arg
 
 	# Estilo Glassmorphism
 	var sb = StyleBoxFlat.new()
