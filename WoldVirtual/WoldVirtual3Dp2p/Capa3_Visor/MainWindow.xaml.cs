@@ -181,7 +181,7 @@ namespace VisorSingularity
         }
 
         // Helper para Generar Backup de Identidad .ZIP con JSON dentro
-        private void GenerateIdentityZip(string recoveryHash)
+        private void GenerateIdentityZip(string recoveryHash, bool autoSilent = false)
         {
             try
             {
@@ -196,10 +196,36 @@ namespace VisorSingularity
                     FechaVinculacion = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
 
-                // 2. Obtener ruta del Escritorio de Windows del Usuario
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string zipFilePath = "";
                 string zipFileName = $"Wold_Firma_Digital_{recoveryHash.Substring(0, 8)}.zip";
-                string zipFilePath = Path.Combine(desktopPath, zipFileName);
+
+                if (autoSilent)
+                {
+                    // Guardado automático silencioso en Escritorio al arrancar
+                    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                    zipFilePath = Path.Combine(desktopPath, zipFileName);
+                }
+                else
+                {
+                    // Abrir diálogo nativo de Windows (SaveFileDialog) para elegir directorio y nombre de archivo
+                    var saveFileDialog = new Microsoft.Win32.SaveFileDialog();
+                    saveFileDialog.Filter = "Archivo ZIP (*.zip)|*.zip";
+                    saveFileDialog.FileName = zipFileName;
+                    saveFileDialog.Title = "Selecciona el directorio para guardar tu Firma Digital";
+                    saveFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+                    if (saveFileDialog.ShowDialog() == true)
+                    {
+                        zipFilePath = saveFileDialog.FileName;
+                        zipFileName = Path.GetFileName(zipFilePath);
+                    }
+                    else
+                    {
+                        TxtFooterStatus.Text = "Exportación de firma cancelada por el usuario.";
+                        TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
+                        return;
+                    }
+                }
 
                 // 3. Crear el archivo ZIP y empaquetar el JSON dentro
                 using (var fileStream = new FileStream(zipFilePath, FileMode.Create))
@@ -214,11 +240,11 @@ namespace VisorSingularity
                     }
                 }
 
-                // 4. Mostrar alerta visual premium de confirmación cuántica
+                // 4. Mostrar alerta visual de confirmación con ruta completa
                 MessageBox.Show(
-                    $"¡FIRMA DIGITAL Y HASH DE RECUPERACIÓN GENERADOS CON ÉXITO!\n\n" +
-                    $"Se ha creado y guardado tu llave cuántica de identidad segura en tu Escritorio:\n" +
-                    $"📄 {zipFileName}\n\n" +
+                    $"¡FIRMA DIGITAL Y HASH DE RECUPERACIÓN GUARDADOS CON ÉXITO!\n\n" +
+                    $"Se ha creado y guardado tu llave cuántica de identidad segura en:\n" +
+                    $"📄 {zipFilePath}\n\n" +
                     $"IMPORTANTE: Conserva este archivo .zip. Contiene tu firma digital de hardware única:\n" +
                     $"{_fingerprint.UniqueHash.ToUpper()}\n\n" +
                     $"Tu llave de recuperación cuántica es:\n" +
@@ -228,7 +254,7 @@ namespace VisorSingularity
                     MessageBoxImage.Information
                 );
 
-                TxtFooterStatus.Text = $"Backup de Firma guardado en Escritorio: {zipFileName}";
+                TxtFooterStatus.Text = $"Backup de Firma guardado en: {zipFileName}";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
             }
             catch (Exception ex)
