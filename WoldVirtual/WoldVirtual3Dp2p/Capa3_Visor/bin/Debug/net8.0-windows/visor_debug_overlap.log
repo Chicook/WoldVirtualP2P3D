@@ -156,3 +156,51 @@
 [01:48:09.601] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
 [01:48:09.604] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
 [01:48:09.617] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[01:51:36.317] MainWindow constructor started
+[01:51:36.457] InitializeComponent completed
+[01:51:36.601] MainWindow_Loaded started
+[01:51:36.937] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[01:51:36.940] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[01:51:36.940] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[01:52:07.811] EnterDashboard called - isNewRegistration: True
+[01:52:07.811] Window dimensions: Width=1600, Height=950
+[01:52:07.811] Grid dimensions: ActualWidth=1600, ActualHeight=950
+[01:52:07.811] Wizard visibility check:
+[01:52:07.813]   Step1_PC: Collapsed, IsVisible: False
+[01:52:07.813]   Step2_User: Collapsed, IsVisible: False
+[01:52:07.813]   Step3_Metamask: Collapsed, IsVisible: False
+[01:52:07.813]   Step4_Island: Collapsed, IsVisible: False
+[01:52:07.813]   PanWaitHttp: Collapsed, IsVisible: False
+[01:52:07.813] Sidebar HIDDEN - Width: 0, Visibility: Collapsed (giving full space to Godot viewport)
+[01:52:07.813] PanSidebar dimensions: ActualWidth=0, ActualHeight=0
+[01:52:07.814] Viewport container shown - Visibility: Visible
+[01:52:07.816] GodotPlaceholder SizeChanged - ActualWidth=1586, ActualHeight=790,04
+[01:52:07.816] ColSidebar Width=0, GridUnitType=Pixel
+[01:52:07.817] PanViewportContainer dimensions: ActualWidth=1586, ActualHeight=831
+[01:52:07.817] Step1_PC visibility: Collapsed, dimensions: ActualWidth=0, ActualHeight=0
+[01:52:07.817] PanViewportContainer dimensions: ActualWidth=1586, ActualHeight=831
+[01:52:07.817] GodotPlaceholder dimensions: ActualWidth=1586, ActualHeight=790,04
+[01:52:22.649] MainWindow constructor started
+[01:52:22.788] InitializeComponent completed
+[01:52:22.929] MainWindow_Loaded started
+[01:52:23.195] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[01:52:23.197] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[01:52:23.197] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[01:53:18.863] EnterDashboard called - isNewRegistration: True
+[01:53:18.863] Window dimensions: Width=1600, Height=950
+[01:53:18.864] Grid dimensions: ActualWidth=1600, ActualHeight=950
+[01:53:18.864] Wizard visibility check:
+[01:53:18.865]   Step1_PC: Collapsed, IsVisible: False
+[01:53:18.866]   Step2_User: Collapsed, IsVisible: False
+[01:53:18.866]   Step3_Metamask: Collapsed, IsVisible: False
+[01:53:18.866]   Step4_Island: Collapsed, IsVisible: False
+[01:53:18.866]   PanWaitHttp: Collapsed, IsVisible: False
+[01:53:18.866] Sidebar HIDDEN - Width: 0, Visibility: Collapsed (giving full space to Godot viewport)
+[01:53:18.866] PanSidebar dimensions: ActualWidth=0, ActualHeight=0
+[01:53:18.866] Viewport container shown - Visibility: Visible
+[01:53:18.868] GodotPlaceholder SizeChanged - ActualWidth=1586, ActualHeight=790,04
+[01:53:18.869] ColSidebar Width=0, GridUnitType=Pixel
+[01:53:18.869] PanViewportContainer dimensions: ActualWidth=1586, ActualHeight=831
+[01:53:18.869] Step1_PC visibility: Collapsed, dimensions: ActualWidth=0, ActualHeight=0
+[01:53:18.869] PanViewportContainer dimensions: ActualWidth=1586, ActualHeight=831
+[01:53:18.869] GodotPlaceholder dimensions: ActualWidth=1586, ActualHeight=790,04
