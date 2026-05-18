@@ -73,7 +73,7 @@ namespace VisorSingularity
             this.Closed += MainWindow_Closed;
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -117,7 +117,7 @@ namespace VisorSingularity
             }
         }
 
-        private void MainWindow_Closed(object sender, EventArgs e)
+        private void MainWindow_Closed(object? sender, EventArgs e)
         {
             _isClosing = true;
             Cleanup();
