@@ -876,6 +876,13 @@ namespace VisorSingularity
             {
                 if (this.IsActive)
                 {
+                    // Si el teclado ya está enfocado dentro de la zona 3D de Godot, Windows le envía los mensajes directamente.
+                    // NO duplicamos los mensajes con PostMessage para evitar que el avatar vibre al andar debido a doble pulsación.
+                    if (WfHost.IsKeyboardFocusWithin)
+                    {
+                        return;
+                    }
+
                     if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP || msg.message == WM_CHAR || msg.message == WM_SYSKEYDOWN || msg.message == WM_SYSKEYUP)
                     {
                         // Enviar la pulsación de teclado de forma directa y asíncrona a la ventana interna de Godot
