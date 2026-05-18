@@ -80,7 +80,7 @@ namespace VisorSingularity
                 LogDebug($"ColSidebar Width={ColSidebar.Width.Value}, GridUnitType={ColSidebar.Width.GridUnitType}");
                 LogDebug($"PanViewportContainer dimensions: ActualWidth={PanViewportContainer.ActualWidth}, ActualHeight={PanViewportContainer.ActualHeight}");
                 LogDebug($"Step1_PC visibility: {Step1_PC.Visibility}, dimensions: ActualWidth={Step1_PC.ActualWidth}, ActualHeight={Step1_PC.ActualHeight}");
-                
+
                 if (_viewer?.IsReady == true)
                 {
                     var dpi = GetDpi();
@@ -466,23 +466,39 @@ namespace VisorSingularity
             LogDebug($"Window dimensions: Width={Width}, Height={Height}");
             LogDebug($"Grid dimensions: ActualWidth={ActualWidth}, ActualHeight={ActualHeight}");
 
-            // Ocultar todos los wizards
+            // Ocultar todos los wizards COMPLETAMENTE
             Step1_PC.Visibility = Visibility.Collapsed;
             Step2_User.Visibility = Visibility.Collapsed;
             Step3_Metamask.Visibility = Visibility.Collapsed;
             Step4_Island.Visibility = Visibility.Collapsed;
             PanWaitHttp.Visibility = Visibility.Collapsed;
 
-            // Mostrar el Sidebar y configurar tamaño
-            ColSidebar.Width = new GridLength(320);
-            PanSidebar.Visibility = Visibility.Visible;
-            LogDebug($"Sidebar configured - Width: 320, Visibility: Visible");
+            // Verificar que todos los wizards estén realmente ocultos
+            LogDebug($"Wizard visibility check:");
+            LogDebug($"  Step1_PC: {Step1_PC.Visibility}, IsVisible: {Step1_PC.IsVisible}");
+            LogDebug($"  Step2_User: {Step2_User.Visibility}, IsVisible: {Step2_User.IsVisible}");
+            LogDebug($"  Step3_Metamask: {Step3_Metamask.Visibility}, IsVisible: {Step3_Metamask.IsVisible}");
+            LogDebug($"  Step4_Island: {Step4_Island.Visibility}, IsVisible: {Step4_Island.IsVisible}");
+            LogDebug($"  PanWaitHttp: {PanWaitHttp.Visibility}, IsVisible: {PanWaitHttp.IsVisible}");
+
+            // Ocultar Sidebar para dar TODO el espacio al viewport de Godot
+            ColSidebar.Width = new GridLength(0);
+            PanSidebar.Visibility = Visibility.Collapsed;
+            LogDebug($"Sidebar HIDDEN - Width: 0, Visibility: Collapsed (giving full space to Godot viewport)");
             LogDebug($"PanSidebar dimensions: ActualWidth={PanSidebar.ActualWidth}, ActualHeight={PanSidebar.ActualHeight}");
 
             // Mostrar Viewport 3D
             PanViewportContainer.Visibility = Visibility.Visible;
             LogDebug($"Viewport container shown - Visibility: Visible");
+
+            // Forzar actualización del layout para obtener dimensiones reales
+            PanViewportContainer.UpdateLayout();
+            GodotPlaceholder.UpdateLayout();
+
             LogDebug($"PanViewportContainer dimensions: ActualWidth={PanViewportContainer.ActualWidth}, ActualHeight={PanViewportContainer.ActualHeight}");
+            LogDebug($"GodotPlaceholder dimensions: ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
+            LogDebug($"Main Grid column 1 width: {((Grid)PanViewportContainer.Parent).ColumnDefinitions[1].Width}");
+            LogDebug($"Window client area: {ActualWidth}x{ActualHeight}");
 
             // Configurar Header (Ocultado para reubicar la información dentro de la escena 3D de Godot)
             TxtHeaderCryptoInfo.Visibility = Visibility.Collapsed;
