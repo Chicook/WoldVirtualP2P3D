@@ -818,6 +818,9 @@ namespace VisorSingularity
                 if (_godotProcess == null)
                     throw new Exception("El sistema operativo deneó la ejecución.");
 
+                _viewer.GodotProcessId = (uint)_godotProcess.Id; // Asignar el PID de Godot al viewer
+                LogDebug($"Godot Process ID: {_viewer.GodotProcessId}");
+
                 try { _godotProcess.PriorityClass = ProcessPriorityClass.High; } catch { }
 
                 TxtFooterStatus.Text = "¡Metaverso cargado! Motor 3D activo dentro del visor.";

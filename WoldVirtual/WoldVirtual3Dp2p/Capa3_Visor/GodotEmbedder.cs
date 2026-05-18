@@ -147,8 +147,9 @@ namespace VisorSingularity
         private static bool _registered;
         private static WndProcDel? _wndProcDelegate; // evita que GC lo recoja
 
-        private IntPtr _containerHwnd = IntPtr.Zero;
-        private IntPtr _godotHwnd = IntPtr.Zero;
+        private IntPtr _containerHwnd;
+        private IntPtr _godotHwnd;
+        private uint _godotProcessId; // Nuevo: para almacenar el PID de Godot
 
         private const string WndClass = "GodotViewer_v1";
 
@@ -178,12 +179,15 @@ namespace VisorSingularity
                     GetWindowText(hWnd, title, title.Capacity);
                     StringBuilder className = new StringBuilder(256);
                     GetClassName(hWnd, className, className.Capacity);
-                    Log($"GetGodotHwnd: Encontrado hijo HWND = {hWnd.ToInt64():X}, Title = '{title}', Class = '{className}'");
-
-                    // Asumimos que Godot es la primera ventana hija o la única que nos interesa
-                    if (foundHwnd == IntPtr.Zero)
+                    uint processId;
+                    GetWindowThreadProcessId(hWnd, out processId);
+                    Log($"GetGodotHwnd: Encontrado hijo HWND = {hWnd.ToInt64():X}, Title = '{title}', Class = '{className}', PID = {processId}");
+                    
+                    // Si el PID coincide, esta es nuestra ventana de Godot
+                    if (_godotProcessId != 0 && processId == _godotProcessId)
                     {
                         foundHwnd = hWnd;
+                        return false; // Detener la enumeración
                     }
                     return true; // Continuar enumerando para ver todos los hijos
                 }, IntPtr.Zero);
@@ -204,7 +208,8 @@ namespace VisorSingularity
         public IntPtr ContainerHandle => _containerHwnd;
 
         /// <summary>True cuando el contenedor está listo para recibir Godot.</summary>
-        public bool IsReady => _containerHwnd != IntPtr.Zero;
+        public bool IsReady => _godotHwnd != IntPtr.Zero;
+        public uint GodotProcessId { get => _godotProcessId; set => _godotProcessId = value; }
 
         // ──────────────────────────────────────────────────────────────────
         // HwndHost
