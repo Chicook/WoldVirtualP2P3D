@@ -23,3 +23,11 @@ D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\
 D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\App.baml
 D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\App.g.cs
 D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity_MarkupCompile.cache
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\MainWindow.baml
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\MainWindow.g.cs
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.g.resources
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.GeneratedMSBuildEditorConfig.editorconfig
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.AssemblyInfoInputs.cache
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.AssemblyInfo.cs
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.csproj.CoreCompileInputs.cache
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.sourcelink.json
