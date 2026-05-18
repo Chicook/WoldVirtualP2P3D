@@ -231,11 +231,15 @@ namespace VisorSingularity
             _godotHwnd = godotHwnd;
         }
 
-        /// <summary>Redimensiona el contenedor y Godot en píxeles físicos de pantalla.</summary>
-        public void Resize(int widthPx, int heightPx)
+        /// <summary>Redimensiona y posiciona el contenedor y Godot en píxeles físicos de pantalla.</summary>
+        public void Resize(int x, int y, int widthPx, int heightPx)
         {
             if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1) return;
             
+            // 1. Redimensionar y reposicionar el contenedor nativo
+            MoveWindow(_containerHwnd, x, y, widthPx, heightPx, true);
+            
+            // 2. Redimensionar el hijo de Godot
             IntPtr godotHwnd = GetGodotHwnd();
             if (godotHwnd != IntPtr.Zero)
             {
