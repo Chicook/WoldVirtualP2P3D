@@ -437,6 +437,11 @@ namespace VisorSingularity
         // ───── CORE DASHBOARD TRANSITION ─────
         private void EnterDashboard(bool isNewRegistration = false)
         {
+            // DEBUG: Log dashboard entry
+            LogDebug($"EnterDashboard called - isNewRegistration: {isNewRegistration}");
+            LogDebug($"Window dimensions: Width={Width}, Height={Height}");
+            LogDebug($"Grid dimensions: ActualWidth={ActualWidth}, ActualHeight={ActualHeight}");
+            
             // Ocultar todos los wizards
             Step1_PC.Visibility = Visibility.Collapsed;
             Step2_User.Visibility = Visibility.Collapsed;
