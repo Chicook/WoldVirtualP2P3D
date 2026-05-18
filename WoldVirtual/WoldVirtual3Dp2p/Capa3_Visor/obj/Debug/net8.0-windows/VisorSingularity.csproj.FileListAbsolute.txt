@@ -19,3 +19,7 @@ E:\CryptoMetaVersoP2P_WoldVirtual3D\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.
 E:\CryptoMetaVersoP2P_WoldVirtual3D\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.pdb
 E:\CryptoMetaVersoP2P_WoldVirtual3D\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.genruntimeconfig.cache
 E:\CryptoMetaVersoP2P_WoldVirtual3D\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\ref\VisorSingularity.dll
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity.csproj.AssemblyReference.cache
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\App.baml
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\App.g.cs
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net8.0-windows\VisorSingularity_MarkupCompile.cache
