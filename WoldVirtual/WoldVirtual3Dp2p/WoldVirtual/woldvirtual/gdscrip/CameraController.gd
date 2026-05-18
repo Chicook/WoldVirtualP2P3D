@@ -39,7 +39,7 @@ func _input(event):
 	else:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-func _process(delta):
+func _physics_process(delta):
 	if !is_instance_valid(target_node): return
 	
 	match current_profile:

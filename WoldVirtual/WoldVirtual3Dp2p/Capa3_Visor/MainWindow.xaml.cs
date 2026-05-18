@@ -739,7 +739,8 @@ namespace VisorSingularity
             string initialScene = isNewRegistration ? "res://EscenaPrincipal.tscn" : "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
 
             // Argumentos de línea de comandos para inicializar a Godot incrustado en el Visor
-            string arguments = $"--path \"{godotProjectDir}\" {initialScene} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            // Agregamos --disable-vsync para evitar conflictos con la composición DWM de Windows en ventanas hijas
+            string arguments = $"--path \"{godotProjectDir}\" {initialScene} --rendering-driver opengl3 --windowed --disable-vsync --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
@@ -757,6 +758,13 @@ namespace VisorSingularity
                 {
                     throw new Exception("El sistema operativo denegó la ejecución.");
                 }
+
+                // Ajustar prioridad del proceso a Alta para evitar la ralentización/throttling de Windows en modo WS_CHILD
+                try
+                {
+                    _godotProcess.PriorityClass = ProcessPriorityClass.High;
+                }
+                catch { }
 
                 TxtFooterStatus.Text = "Motor 3D cargando. Buscando ventana de renderizado...";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
