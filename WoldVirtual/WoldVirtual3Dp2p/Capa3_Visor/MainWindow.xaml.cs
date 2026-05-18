@@ -758,16 +758,16 @@ namespace VisorSingularity
             // Para el visor incrustado, cargamos SIEMPRE la escena principal del Metaverso de forma directa
             string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
 
-            // Argumentos de línea de comandos para inicializar a Godot incrustado en el Visor
+            // Argumentos de línea de comandos para inicializar a Godot como ventana externa de alto rendimiento
             // Agregamos --disable-vsync para evitar conflictos con la composición DWM de Windows en ventanas hijas
-            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --disable-vsync --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --disable-vsync --resolution 1280x720 -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = godotExe,
                 Arguments = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle = ProcessWindowStyle.Hidden, // Ocultar para evitar el parpadeo de pantalla externa
+                WindowStyle = ProcessWindowStyle.Normal, // Ventana normal externa
                 UseShellExecute = false
             };
 
@@ -779,24 +779,40 @@ namespace VisorSingularity
                     throw new Exception("El sistema operativo denegó la ejecución.");
                 }
 
-                // Ajustar prioridad del proceso a Alta para evitar la ralentización/throttling de Windows en modo WS_CHILD
+                // Ajustar prioridad del proceso a Alta para evitar la ralentización/throttling de Windows
                 try
                 {
                     _godotProcess.PriorityClass = ProcessPriorityClass.High;
                 }
                 catch { }
 
-                TxtFooterStatus.Text = "Motor 3D cargando. Buscando ventana de renderizado...";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
+                // Habilitar eventos de salida para restaurar la ventana del Visor de forma automática
+                _godotProcess.EnableRaisingEvents = true;
+                _godotProcess.Exited += (s, ev) => {
+                    Dispatcher.Invoke(() => {
+                        this.Show();
+                        TxtFooterStatus.Text = "Sesión finalizada. Volviendo al Visor de Control.";
+                        TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
+                    });
+                };
 
-                // Buscar e incrustar la ventana en un hilo secundario asíncrono
-                Task.Run(() => ScanAndEmbed(_godotProcess.Id));
+                TxtFooterStatus.Text = "Metaverso 3D iniciado en ventana dedicada de alto rendimiento.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+
+                // Ocultar la ventana del Visor temporalmente para dar máxima inmersión y rendimiento
+                this.Hide();
             }
             catch (Exception ex)
             {
                 TxtFooterStatus.Text = $"Error al iniciar el metaverso: {ex.Message}";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
             }
+        }
+
+        // ───── BOTÓN DE LANZAMIENTO DESDE EL CENTRO DE CONTROL DEL VISOR ─────
+        private void BtnLaunchExternalGodot_Click(object sender, RoutedEventArgs e)
+        {
+            LaunchGodot(_wallet, _username, _islandId);
         }
 
         private void ScanAndEmbed(int processId)
