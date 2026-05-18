@@ -185,7 +185,7 @@ namespace VisorSingularity
                     int w = (int)(lParam.ToInt64() & 0xFFFF);
                     int h = (int)((lParam.ToInt64() >> 16) & 0xFFFF);
                     if (w > 0 && h > 0)
-                        MoveWindow(godotHwnd, 0, 0, w, h, false);
+                        MoveWindow(godotHwnd, 0, 0, w, h, true);
                 }
             }
             return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
@@ -211,7 +211,7 @@ namespace VisorSingularity
             
             IntPtr godotHwnd = GetGodotHwnd();
             if (godotHwnd != IntPtr.Zero)
-                MoveWindow(godotHwnd, 0, 0, widthPx, heightPx, false);
+                MoveWindow(godotHwnd, 0, 0, widthPx, heightPx, true);
         }
 
         /// <summary>
