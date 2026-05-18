@@ -13,6 +13,11 @@ using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Collections.Generic;
 
+using Color = System.Windows.Media.Color;
+using Button = System.Windows.Controls.Button;
+using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
+
 namespace VisorSingularity
 {
     public partial class MainWindow : Window
