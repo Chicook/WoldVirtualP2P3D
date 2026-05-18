@@ -663,8 +663,11 @@ namespace VisorSingularity
                             TxtFooterStatus.Text = "¡Firma de MetaMask recibida con éxito por el puente HTTP!";
                             TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
-                            // Generar la isla fija única al confirmar
-                            GenerateUniqueIslandCoordinates();
+                            // Generar la isla fija única al confirmar (SÓLO si es usuario nuevo)
+                            if (!_hasAccount || _islandId == "137 : 190.1.0" || string.IsNullOrEmpty(_islandId))
+                            {
+                                GenerateUniqueIslandCoordinates();
+                            }
 
                             // Avanzar al paso 4
                             ShowStep(4);

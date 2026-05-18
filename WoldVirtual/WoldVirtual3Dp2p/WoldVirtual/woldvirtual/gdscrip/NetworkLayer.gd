@@ -33,9 +33,10 @@ func _ready() -> void:
 	_initial_sync()
 
 func _setup_identity():
-	for i in OS.get_cmdline_args().size():
-		if OS.get_cmdline_args()[i] == "--user-id":
-			local_id = OS.get_cmdline_args()[i+1]
+	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
+	for i in args.size():
+		if args[i] == "--user-id" and i + 1 < args.size():
+			local_id = args[i+1]
 			break
 	if local_id == "":
 		local_id = str(Time.get_ticks_usec() + OS.get_process_id()).md5_text().substr(0, 8)

@@ -22,7 +22,7 @@ var _local_island_data: Dictionary = {}
 var _persistent_island_id: String = ""
 
 func _parse_cmdline_args():
-	var args = OS.get_cmdline_args()
+	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
 	for i in args.size():
 		if args[i] == "--island-id" and i + 1 < args.size():
 			_persistent_island_id = args[i+1]
