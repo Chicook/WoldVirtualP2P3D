@@ -105,9 +105,9 @@ func _on_network_updated(state: Dictionary):
 
 		var me_data = {
 			"ix": slot.x, "iz": slot.y,
-			"x": slot.x * spacing + randf_range(-2.0, 2.0),
-			"y": HEIGHT, # 🔥 Usar HEIGHT corregida
-			"z": slot.y * spacing + randf_range(-2.0, 2.0),
+			"x": slot.x * spacing,
+			"y": HEIGHT,
+			"z": slot.y * spacing,
 			"r": 0.0, "t": Time.get_unix_time_from_system()
 		}
 		var island_name = "Isla de " + lid.substr(0, 4)
