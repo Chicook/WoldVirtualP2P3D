@@ -16,17 +16,17 @@ func _ready():
 	
 	for i in range(user_args.size()):
 		if user_args[i] == "--wallet" and i + 1 < user_args.size():
-			wallet_full = user_args[i+1]
+			wallet_full = user_args[i+1].replace("\"", "").strip_edges()
 		elif user_args[i] == "--user-id" and i + 1 < user_args.size():
-			username_arg = user_args[i+1]
+			username_arg = user_args[i+1].replace("\"", "").strip_edges()
 
 	# Si no vienen ahí, intentar de los argumentos generales (como fallback)
 	var args = OS.get_cmdline_args()
 	for i in range(args.size()):
 		if (wallet_full == "" or wallet_full == "No Wallet Address") and args[i] == "--wallet" and i + 1 < args.size():
-			wallet_full = args[i+1]
+			wallet_full = args[i+1].replace("\"", "").strip_edges()
 		if username_arg == "" and args[i] == "--user-id" and i + 1 < args.size():
-			username_arg = args[i+1]
+			username_arg = args[i+1].replace("\"", "").strip_edges()
 
 	# Pre-rellenar y bloquear el campo de nombre para que esté 100% vinculado a su nik
 	if username_arg != "":

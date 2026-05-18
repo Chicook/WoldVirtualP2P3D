@@ -13,7 +13,7 @@ func _ready():
 	var user_args = OS.get_cmdline_user_args()
 	for i in range(user_args.size()):
 		if user_args[i] == "--wallet" and i + 1 < user_args.size():
-			_full_wallet = user_args[i+1]
+			_full_wallet = user_args[i+1].replace("\"", "").strip_edges()
 			break
 
 	# 2. Si no viene ahí, intentar de los argumentos generales (como fallback)
@@ -21,7 +21,7 @@ func _ready():
 		var args = OS.get_cmdline_args()
 		for i in range(args.size()):
 			if args[i] == "--wallet" and i + 1 < args.size():
-				_full_wallet = args[i+1]
+				_full_wallet = args[i+1].replace("\"", "").strip_edges()
 				break
 
 	# 3. Si no viene en los argumentos, intentar leer del perfil JSON

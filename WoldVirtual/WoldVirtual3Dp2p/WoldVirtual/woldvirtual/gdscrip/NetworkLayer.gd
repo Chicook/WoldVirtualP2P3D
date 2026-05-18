@@ -36,14 +36,14 @@ func _setup_identity():
 	var user_args = OS.get_cmdline_user_args()
 	for i in range(user_args.size()):
 		if user_args[i] == "--user-id" and i + 1 < user_args.size():
-			local_id = user_args[i+1]
+			local_id = user_args[i+1].replace("\"", "").strip_edges()
 			break
 
 	if local_id == "":
 		var args = OS.get_cmdline_args()
 		for i in range(args.size()):
 			if args[i] == "--user-id" and i + 1 < args.size():
-				local_id = args[i+1]
+				local_id = args[i+1].replace("\"", "").strip_edges()
 				break
 
 	if local_id == "":
