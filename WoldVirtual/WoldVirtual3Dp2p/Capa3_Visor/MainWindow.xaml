@@ -257,7 +257,20 @@
                                 </StackPanel>
                             </Border>
 
-                            <Button Content="VINCULAR MAQUINA / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnStep1Next_Click"/>
+                            <!-- Optional Password / Login Panel for registered users -->
+                            <StackPanel x:Name="PanStep1Login" Visibility="Collapsed" Margin="0,0,0,20">
+                                <TextBlock Text="IDENTIDAD DE CUENTA DETECTADA EN ESTE PC" Style="{StaticResource CyberLabel}" Margin="0,0,0,5"/>
+                                <Border Background="#121B2D" BorderBrush="#00E5FF" BorderThickness="1" Padding="12" CornerRadius="4" Margin="0,0,0,12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="USUARIO: " Foreground="#8E9AA8" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TxtStep1LoggedUser" Text="CHICOOK" Foreground="#00E5FF" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Text="CONTRASEÑA DE SEGURIDAD" Style="{StaticResource CyberLabel}"/>
+                                <PasswordBox x:Name="TxtStep1Password" Style="{StaticResource CyberPasswordBox}"/>
+                            </StackPanel>
+
+                            <Button x:Name="BtnStep1Action" Content="VINCULAR MAQUINA / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnStep1Next_Click"/>
                         </StackPanel>
                     </Border>
                 </Grid>
