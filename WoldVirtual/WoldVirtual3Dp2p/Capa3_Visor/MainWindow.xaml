@@ -143,7 +143,7 @@
                 <!-- Logo/Title -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="⬢" Foreground="#00E5FF" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBlock Text="WOLD VIRTUAL P2P 3D" Foreground="#00E5FF" FontSize="16" FontWeight="Bold" CharacterSpacing="100" VerticalAlignment="Center"/>
+                    <TextBlock Text="WOLD VIRTUAL P2P 3D" Foreground="#00E5FF" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Token & Wallet Info (Dashboard Mode Only) -->
