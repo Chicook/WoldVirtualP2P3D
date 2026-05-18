@@ -22,18 +22,11 @@ var _local_island_data: Dictionary = {}
 var _persistent_island_id: String = ""
 
 func _parse_cmdline_args():
-	var user_args = OS.get_cmdline_user_args()
-	for i in range(user_args.size()):
-		if user_args[i] == "--island-id" and i + 1 < user_args.size():
-			_persistent_island_id = user_args[i+1].replace("\"", "").strip_edges()
+	var args = OS.get_cmdline_args()
+	for i in args.size():
+		if args[i] == "--island-id" and i + 1 < args.size():
+			_persistent_island_id = args[i+1]
 			break
-
-	if _persistent_island_id == "":
-		var args = OS.get_cmdline_args()
-		for i in range(args.size()):
-			if args[i] == "--island-id" and i + 1 < args.size():
-				_persistent_island_id = args[i+1].replace("\"", "").strip_edges()
-				break
 
 func get_persistent_coords() -> Vector2:
 	if _persistent_island_id == "" or not ":" in _persistent_island_id:

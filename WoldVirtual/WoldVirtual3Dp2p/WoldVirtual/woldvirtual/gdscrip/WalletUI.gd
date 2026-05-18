@@ -9,34 +9,26 @@ extends Control
 var _full_wallet := ""
 
 func _ready():
-	# 1. Intentar leer de los argumentos de usuario de Godot 4 (después de '--')
-	var user_args = OS.get_cmdline_user_args()
-	for i in range(user_args.size()):
-		if user_args[i] == "--wallet" and i + 1 < user_args.size():
-			_full_wallet = user_args[i+1].replace("\"", "").strip_edges()
-			break
-
-	# 2. Si no viene ahí, intentar de los argumentos generales (como fallback)
-	if _full_wallet == "" or _full_wallet == "No Wallet Address":
+	# Leer wallet del perfil JSON
+	var user_path = "res://woldvirtual/scene/MTC/users3D/current_user.json"
+	var file = FileAccess.open(user_path, FileAccess.READ)
+	
+	if file:
+		var json_text = file.get_as_text()
+		file.close()
+		var json = JSON.new()
+		if json.parse(json_text) == OK:
+			var data = json.data
+			if data.has("wallet") and data["wallet"] != "":
+				_full_wallet = data["wallet"]
+			else:
+				_full_wallet = ""
+	else:
 		var args = OS.get_cmdline_args()
 		for i in range(args.size()):
 			if args[i] == "--wallet" and i + 1 < args.size():
-				_full_wallet = args[i+1].replace("\"", "").strip_edges()
+				_full_wallet = args[i+1]
 				break
-
-	# 3. Si no viene en los argumentos, intentar leer del perfil JSON
-	if _full_wallet == "" or _full_wallet == "No Wallet Address":
-		var user_path = "res://woldvirtual/scene/MTC/users3D/current_user.json"
-		var file = FileAccess.open(user_path, FileAccess.READ)
-		
-		if file:
-			var json_text = file.get_as_text()
-			file.close()
-			var json = JSON.new()
-			if json.parse(json_text) == OK:
-				var data = json.data
-				if data.has("wallet") and data["wallet"] != "":
-					_full_wallet = data["wallet"]
 
 	# Mostrar wallet TRUNCADA (profesional)
 	if _full_wallet.length() > 10:
