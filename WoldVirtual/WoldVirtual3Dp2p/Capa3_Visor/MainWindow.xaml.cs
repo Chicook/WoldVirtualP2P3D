@@ -10,86 +10,53 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Collections.Generic;
 
 using Color = System.Windows.Media.Color;
 using Button = System.Windows.Controls.Button;
-using System.Windows.Interop;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 
 namespace VisorSingularity
 {
-    public class GodotHwndHost : HwndHost
-    {
-        private IntPtr _godotHwnd;
-
-        public GodotHwndHost(IntPtr godotHwnd)
-        {
-            _godotHwnd = godotHwnd;
-        }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        protected override HandleRef BuildWindowCore(HandleRef hwndParent)
-        {
-            const int GWL_STYLE = -16;
-            const int WS_CHILD = 0x40000000;
-            const int WS_VISIBLE = 0x10000000;
-
-            SetParent(_godotHwnd, hwndParent.Handle);
-            SetWindowLong(_godotHwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE);
-
-            return new HandleRef(this, _godotHwnd);
-        }
-
-        protected override void DestroyWindowCore(HandleRef hwnd)
-        {
-            // Opcional: desconectar Godot si se destruye el Host
-        }
-    }
-
     public partial class MainWindow : Window
     {
-        // ── Win32 API Imports para el Incrustado Nativo ──
-        // ── Win32 API Imports para el Incrustado Nativo ──
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string lpszWindow);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+        // ── Win32 API (Fake Embedding) ──
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         [DllImport("user32.dll")]
         private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
-        [DllImport("user32.dll")]
-        private static extern bool EnumChildWindows(IntPtr hwndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
-        [DllImport("user32.dll", SetLastError = true)]
+        [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-        private const int GWL_STYLE = -16;
-        private const int WS_VISIBLE = 0x10000000;
-        private const int WS_CHILD = 0x40000000;
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        private static readonly IntPtr HWND_TOPMOST   = new IntPtr(-1);
+        private static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
+        private const uint SWP_SHOWWINDOW = 0x0040;
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_FRAMECHANGED = 0x0020;
+        private const int  GWL_STYLE  = -16;
+        private const int  WS_CAPTION = 0x00C00000;
+        private const int  WS_THICKFRAME = 0x00040000;
+        private const int  WS_POPUP   = unchecked((int)0x80000000);
+        private const int  WS_VISIBLE = 0x10000000;
 
         // ── Datos de la Sesión Actual y Helpers ──
         private HardwareFingerprint _fingerprint = null!;
@@ -104,19 +71,18 @@ namespace VisorSingularity
 
         // ── Componentes de Ejecución ──
         private HttpListener? _httpListener;
-        private Process? _godotProcess;
-        private IntPtr _godotHwnd = IntPtr.Zero;
+        private Process?      _godotProcess;
+        private IntPtr        _godotHwnd  = IntPtr.Zero;
+        private DispatcherTimer? _syncTimer;
 
         public MainWindow()
         {
             InitializeComponent();
-
-            // Usar panel WinForms nativo sin AntiFlickerPanel (gestionado nativamente por Godot --wid)
-            WfGamePanel = new System.Windows.Forms.Panel { BackColor = System.Drawing.Color.Black, Dock = System.Windows.Forms.DockStyle.Fill };
-            WfHost.Child = WfGamePanel;
-            
-            this.Loaded += MainWindow_Loaded;
-            this.Closed += MainWindow_Closed;
+            this.Loaded      += MainWindow_Loaded;
+            this.Closed      += MainWindow_Closed;
+            this.LocationChanged += (s, e) => SyncGodotWindow();
+            this.SizeChanged     += (s, e) => SyncGodotWindow();
+            this.StateChanged    += (s, e) => SyncGodotWindow();
         }
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
@@ -753,13 +719,10 @@ namespace VisorSingularity
                 return;
             }
 
-            // Limpiar controles internos del viewport WPF
-            WfGamePanel.Controls.Clear();
-
-            // Configurar resolución inicial de renderizado. 
-            // WfGamePanel puede medir 200px por defecto antes de que WPF finalice el layout.
-            int width = WfGamePanel.Width > 500 ? WfGamePanel.Width : 1280;
-            int height = WfGamePanel.Height > 400 ? WfGamePanel.Height : 720;
+            // Obtener tamaño inicial del placeholder
+            var rect = GetPlaceholderScreenRect();
+            int width  = rect.Width  > 100 ? (int)rect.Width  : 1280;
+            int height = rect.Height > 100 ? (int)rect.Height : 720;
 
             // REGISTRO DE AVATAR POR FUERA (EXTERNO) SIN TOCAR LA ESCENA DE GODOT
             try
@@ -784,11 +747,8 @@ namespace VisorSingularity
             // Para el visor incrustado, cargamos SIEMPRE la escena principal del Metaverso de forma directa
             string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
 
-            // Obtenemos el handle destino simulado (ahora se aloja en el Border)
-            IntPtr parentHwnd = IntPtr.Zero; // No lo pasamos a Godot directamente por CLI
-
-            // Argumentos de línea de comandos para inicializar a Godot (como ventana normal)
-            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --resolution 1280x720 -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            // Argumentos: Godot arranca sin bordes, libre. El Visor lo posiciona encima del placeholder.
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";          
 
             var startInfo = new ProcessStartInfo
             {
@@ -816,8 +776,8 @@ namespace VisorSingularity
                 TxtFooterStatus.Text = "Motor 3D cargando. Acoplando al visor...";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
 
-                // Buscar e incrustar la ventana asíncronamente
-                Task.Run(() => ScanAndEmbed(_godotProcess.Id));
+                // Localizar y acoplar la ventana de Godot de forma asíncrona
+                Task.Run(() => ScanAndDock(_godotProcess.Id));
             }
             catch (Exception ex)
             {
@@ -826,135 +786,138 @@ namespace VisorSingularity
             }
         }
 
-        private void ScanAndEmbed(int processId)
+        // Busca la ventana de Godot y la acopla visualmente sobre el placeholder
+        private void ScanAndDock(int processId)
         {
             IntPtr hwnd = IntPtr.Zero;
-            int retries = 40; // 20 segundos máximo
-
-            while (hwnd == IntPtr.Zero && retries > 0 && !_isClosing)
+            for (int i = 0; i < 40 && !_isClosing; i++)
             {
-                hwnd = FindWindowForProcess(processId);
+                hwnd = FindGodotWindow(processId);
                 if (hwnd != IntPtr.Zero) break;
-
                 Thread.Sleep(500);
-                retries--;
             }
 
-            if (hwnd != IntPtr.Zero && !_isClosing)
-            {
-                _godotHwnd = hwnd;
-                
-                // Docking e Incrustado usando HwndHost puro de WPF
-                Dispatcher.Invoke(() => {
-                    var host = new GodotHwndHost(_godotHwnd);
-                    GodotPlaceholder.Child = host;
+            if (hwnd == IntPtr.Zero || _isClosing) {
+                Dispatcher.Invoke(() => TxtFooterStatus.Text = "Error: tiempo de espera agotado al localizar Godot.");
+                return;
+            }
 
-                    TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Firma de conexión P2P activa.";
-                    TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-                });
-            }
-            else
+            _godotHwnd = hwnd;
+
+            Dispatcher.Invoke(() =>
             {
-                Dispatcher.Invoke(() => {
-                    TxtFooterStatus.Text = "Error: Tiempo de espera agotado al incrustar el metaverso.";
-                    TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
-                });
-            }
+                // Quitar bordes/título de la ventana de Godot para que parezca incrustada
+                int style = GetWindowLong(_godotHwnd, GWL_STYLE);
+                style &= ~WS_CAPTION;
+                style &= ~WS_THICKFRAME;
+                SetWindowLong(_godotHwnd, GWL_STYLE, style);
+
+                // Primera sincronización de posición
+                SyncGodotWindow();
+
+                // Timer a 60fps para mantener Godot siempre sobre el placeholder
+                _syncTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+                _syncTimer.Tick += (s, e) => SyncGodotWindow();
+                _syncTimer.Start();
+
+                TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Conexión P2P activa.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+            });
         }
 
-        private IntPtr FindWindowForProcess(int processId)
+        // Sincroniza posición y tamaño de Godot con el Border placeholder del Visor
+        private void SyncGodotWindow()
         {
-            IntPtr result = IntPtr.Zero;
+            if (_godotHwnd == IntPtr.Zero) return;
+            var r = GetPlaceholderScreenRect();
+            if (r.Width < 10 || r.Height < 10) return;
+
+            SetWindowPos(
+                _godotHwnd,
+                HWND_TOPMOST,
+                (int)r.X, (int)r.Y,
+                (int)r.Width, (int)r.Height,
+                SWP_SHOWWINDOW | SWP_NOACTIVATE
+            );
+        }
+
+        // Obtiene las coordenadas absolutas de pantalla del placeholder
+        private Rect GetPlaceholderScreenRect()
+        {
+            try
+            {
+                var origin = GodotPlaceholder.PointToScreen(new System.Windows.Point(0, 0));
+                return new Rect(origin.X, origin.Y,
+                                GodotPlaceholder.ActualWidth,
+                                GodotPlaceholder.ActualHeight);
+            }
+            catch { return Rect.Empty; }
+        }
+
+        private IntPtr FindGodotWindow(int processId)
+        {
+            IntPtr result   = IntPtr.Zero;
             IntPtr selfHwnd = IntPtr.Zero;
+            Dispatcher.Invoke(() => selfHwnd = new WindowInteropHelper(this).Handle);
 
-            Dispatcher.Invoke(() => {
-                selfHwnd = new WindowInteropHelper(this).Handle;
-            });
-
-            EnumWindows((hwnd, lParam) =>
+            EnumWindows((hwnd, _) =>
             {
                 if (hwnd == selfHwnd) return true;
-
                 GetWindowThreadProcessId(hwnd, out uint pid);
-                if (pid == processId)
+                if (pid != (uint)processId) return true;
+
+                var sb = new StringBuilder(256);
+                GetWindowText(hwnd, sb, sb.Capacity);
+                if (sb.Length > 0)          // cualquier ventana visible del proceso
                 {
-                    var sb = new StringBuilder(256);
-                    GetWindowText(hwnd, sb, sb.Capacity);
-                    if (sb.ToString().StartsWith("WoldVirtual", StringComparison.OrdinalIgnoreCase))
-                    {
-                        result = hwnd;
-                        return false; // Parar enumeración
-                    }
+                    result = hwnd;
+                    return false;
                 }
-                return true; // Continuar enumeración
+                return true;
             }, IntPtr.Zero);
 
             return result;
         }
 
 
-        // ───── FILTRADO DE MENSAJES DE TECLADO PARA REDIRECCIÓN A GODOT ─────
+        // ── Redirección de teclado a Godot (fake-embedding) ──
         private void ThreadFilterMessage(ref MSG msg, ref bool handled)
         {
-            const int WM_KEYDOWN = 0x0100;
-            const int WM_KEYUP = 0x0101;
-            const int WM_CHAR = 0x0102;
+            if (_godotHwnd == IntPtr.Zero || !this.IsActive) return;
+
+            const int WM_KEYDOWN    = 0x0100;
+            const int WM_KEYUP      = 0x0101;
+            const int WM_CHAR       = 0x0102;
             const int WM_SYSKEYDOWN = 0x0104;
-            const int WM_SYSKEYUP = 0x0105;
+            const int WM_SYSKEYUP   = 0x0105;
 
-            if (_godotHwnd != IntPtr.Zero)
+            if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP ||
+                msg.message == WM_CHAR    || msg.message == WM_SYSKEYDOWN ||
+                msg.message == WM_SYSKEYUP)
             {
-                if (this.IsActive)
+                PostMessage(_godotHwnd, (uint)msg.message, msg.wParam, msg.lParam);
+
+                var key = KeyInterop.KeyFromVirtualKey((int)msg.wParam);
+                if (key == Key.W || key == Key.A || key == Key.S || key == Key.D ||
+                    key == Key.Up || key == Key.Down || key == Key.Left || key == Key.Right ||
+                    key == Key.Space)
                 {
-                    // Si el teclado ya está enfocado dentro de la zona 3D de Godot, Windows le envía los mensajes directamente.
-                    // NO duplicamos los mensajes con PostMessage para evitar que el avatar vibre al andar debido a doble pulsación.
-                    if (WfHost.IsKeyboardFocusWithin)
-                    {
-                        return;
-                    }
-
-                    if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP || msg.message == WM_CHAR || msg.message == WM_SYSKEYDOWN || msg.message == WM_SYSKEYUP)
-                    {
-                        // Enviar la pulsación de teclado de forma directa y asíncrona a la ventana interna de Godot
-                        PostMessage(_godotHwnd, (uint)msg.message, msg.wParam, msg.lParam);
-
-                        // Si es una tecla del avatar (WASD, flechas, espacio), la consumimos para evitar parpadeos en los controles de WPF
-                        var key = KeyInterop.KeyFromVirtualKey((int)msg.wParam);
-                        if (key == Key.W || key == Key.A || key == Key.S || key == Key.D || 
-                            key == Key.Space || key == Key.Up || key == Key.Down || 
-                            key == Key.Left || key == Key.Right)
-                        {
-                            handled = true;
-                        }
-                    }
+                    handled = true; // Evitar que WPF consuma la tecla dos veces
                 }
             }
         }
 
         private void Cleanup()
         {
-            // Cerrar el servidor HTTP local
-            if (_httpListener != null)
-            {
-                try
-                {
-                    _httpListener.Stop();
-                    _httpListener.Close();
-                }
-                catch { }
-                _httpListener = null;
-            }
+            _syncTimer?.Stop();
+            _syncTimer = null;
 
-            // Apagar proceso de Godot
-            if (_godotProcess != null && !_godotProcess.HasExited)
-            {
-                try
-                {
-                    _godotProcess.Kill();
-                }
-                catch { }
-                _godotProcess = null;
-            }
+            try { _httpListener?.Stop(); _httpListener?.Close(); } catch { }
+            _httpListener = null;
+
+            try { if (_godotProcess?.HasExited == false) _godotProcess.Kill(); } catch { }
+            _godotProcess = null;
+            _godotHwnd = IntPtr.Zero;
         }
     }
 
