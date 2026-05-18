@@ -142,6 +142,16 @@ namespace VisorSingularity
 
         private const string WndClass = "GodotViewer_v1";
 
+        private static void Log(string message)
+        {
+            try
+            {
+                string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "visor_debug.log");
+                System.IO.File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] {message}\r\n");
+            }
+            catch { }
+        }
+
         /// <summary>
         /// Obtiene dinámicamente el HWND de Godot buscando la ventana hija del contenedor.
         /// </summary>
@@ -150,13 +160,16 @@ namespace VisorSingularity
             if (_godotHwnd != IntPtr.Zero) return _godotHwnd;
             if (_containerHwnd != IntPtr.Zero)
             {
+                Log($"GetGodotHwnd: Escaneando hijos de _containerHwnd ({_containerHwnd.ToInt64():X})...");
                 IntPtr foundHwnd = IntPtr.Zero;
                 EnumChildWindows(_containerHwnd, (hWnd, lParam) =>
                 {
+                    Log($"GetGodotHwnd: Encontrado hijo HWND = {hWnd.ToInt64():X}");
                     foundHwnd = hWnd;
                     return false; // Detener la enumeración al encontrar la primera ventana hija
                 }, IntPtr.Zero);
                 _godotHwnd = foundHwnd;
+                Log($"GetGodotHwnd: Resultado = {_godotHwnd.ToInt64():X}");
             }
             return _godotHwnd;
         }
@@ -180,6 +193,7 @@ namespace VisorSingularity
 
         protected override HandleRef BuildWindowCore(HandleRef hwndParent)
         {
+            Log("BuildWindowCore: Inicializando...");
             RegisterWindowClass();
 
             _containerHwnd = CreateWindowExW(
@@ -195,14 +209,19 @@ namespace VisorSingularity
             );
 
             if (_containerHwnd == IntPtr.Zero)
+            {
+                Log("BuildWindowCore: ERROR al crear _containerHwnd.");
                 throw new InvalidOperationException(
                     $"CreateWindowExW falló (Win32 error {Marshal.GetLastWin32Error()}).");
+            }
 
+            Log($"BuildWindowCore: Contenedor _containerHwnd creado con HWND = {_containerHwnd.ToInt64():X}");
             return new HandleRef(this, _containerHwnd);
         }
 
         protected override void DestroyWindowCore(HandleRef hwnd)
         {
+            Log($"DestroyWindowCore: Destruyendo HWND = {hwnd.Handle.ToInt64():X}");
             if (_containerHwnd != IntPtr.Zero)
             {
                 DestroyWindow(_containerHwnd);
@@ -218,13 +237,17 @@ namespace VisorSingularity
         {
             if ((uint)msg == WM_SIZE)
             {
-                IntPtr godotHwnd = GetGodotHwnd();
-                if (godotHwnd != IntPtr.Zero)
+                int w = (int)(lParam.ToInt64() & 0xFFFF);
+                int h = (int)((lParam.ToInt64() >> 16) & 0xFFFF);
+                Log($"WndProc WM_SIZE: w = {w}, h = {h}");
+                if (w > 0 && h > 0)
                 {
-                    int w = (int)(lParam.ToInt64() & 0xFFFF);
-                    int h = (int)((lParam.ToInt64() >> 16) & 0xFFFF);
-                    if (w > 0 && h > 0)
-                        MoveWindow(godotHwnd, 0, 0, w, h, true);
+                    IntPtr godotHwnd = GetGodotHwnd();
+                    if (godotHwnd != IntPtr.Zero)
+                    {
+                        bool ok = MoveWindow(godotHwnd, 0, 0, w, h, true);
+                        Log($"WndProc WM_SIZE: MoveWindow(godotHwnd) = {ok}");
+                    }
                 }
             }
             return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
@@ -240,29 +263,34 @@ namespace VisorSingularity
         /// </summary>
         public void SetGodotHandle(IntPtr godotHwnd)
         {
+            Log($"SetGodotHandle: Asignando HWND = {godotHwnd.ToInt64():X}");
             _godotHwnd = godotHwnd;
         }
 
         /// <summary>Redimensiona el contenedor y Godot en píxeles físicos de pantalla.</summary>
         public void Resize(int widthPx, int heightPx)
         {
-            if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1) return;
+            Log($"Resize: widthPx = {widthPx}, heightPx = {heightPx}");
+            if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1)
+            {
+                Log("Resize: Abortando por _containerHwnd cero o dimensiones inválidas.");
+                return;
+            }
             
             // 1. Redimensionar y reposicionar el contenedor nativo en su origen local
-            MoveWindow(_containerHwnd, 0, 0, widthPx, heightPx, true);
+            bool ok1 = MoveWindow(_containerHwnd, 0, 0, widthPx, heightPx, true);
+            Log($"Resize: MoveWindow(_containerHwnd) = {ok1}");
             
             // 2. Redimensionar el hijo de Godot
             IntPtr godotHwnd = GetGodotHwnd();
             if (godotHwnd != IntPtr.Zero)
             {
-                long style = GetWindowLong(godotHwnd, GWL_STYLE).ToInt64();
-                if ((style & WS_POPUP) != 0 || (style & WS_CHILD) == 0)
-                {
-                    style &= ~WS_POPUP;
-                    style |= WS_CHILD;
-                    SetWindowLong(godotHwnd, GWL_STYLE, new IntPtr(style));
-                }
-                MoveWindow(godotHwnd, 0, 0, widthPx, heightPx, true);
+                bool ok2 = MoveWindow(godotHwnd, 0, 0, widthPx, heightPx, true);
+                Log($"Resize: MoveWindow(godotHwnd) = {ok2}");
+            }
+            else
+            {
+                Log("Resize: godotHwnd es cero, no se puede redimensionar.");
             }
         }
 
