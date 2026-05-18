@@ -66,9 +66,11 @@ namespace VisorSingularity
                 if (_viewer?.IsReady == true)
                 {
                     var dpi = GetDpi();
+                    int offsetLeftPx = (int)(ColSidebar.Width.Value * dpi.X);
                     _viewer.Resize(
                         (int)(GodotPlaceholder.ActualWidth  * dpi.X),
-                        (int)(GodotPlaceholder.ActualHeight * dpi.Y));
+                        (int)(GodotPlaceholder.ActualHeight * dpi.Y),
+                        offsetLeftPx);
                 }
             };
         }
@@ -730,8 +732,9 @@ namespace VisorSingularity
             if (width  < 100) width  = 1280;
             if (height < 100) height = 720;
 
-            // Redimensionar el contenedor al tamaño real
-            _viewer.Resize(width, height);
+            // Redimensionar el contenedor al tamaño real (y aplicar el recorte lateral para tapar UI sobrante)
+            int offsetLeftPx = (int)(ColSidebar.Width.Value * dpi.X);
+            _viewer.Resize(width, height, offsetLeftPx);
 
             // Escribir JSON de perfil del usuario para Godot
             try
