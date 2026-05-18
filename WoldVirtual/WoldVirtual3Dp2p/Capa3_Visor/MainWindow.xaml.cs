@@ -883,11 +883,6 @@ namespace VisorSingularity
             const int WM_SYSKEYDOWN = 0x0104;
             const int WM_SYSKEYUP = 0x0105;
 
-            if (_godotHwnd == IntPtr.Zero)
-            {
-                _godotHwnd = FindWindowEx(WfGamePanel.Handle, IntPtr.Zero, null, null);
-            }
-
             if (_godotHwnd != IntPtr.Zero)
             {
                 if (this.IsActive)
