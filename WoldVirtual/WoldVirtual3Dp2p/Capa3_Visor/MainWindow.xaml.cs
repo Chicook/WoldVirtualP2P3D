@@ -752,10 +752,10 @@ namespace VisorSingularity
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = godotExe,
-                Arguments = arguments,
+                FileName        = godotExe,
+                Arguments       = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle = ProcessWindowStyle.Hidden, // Ocultar para evitar el parpadeo de pantalla externa al iniciar
+                WindowStyle     = ProcessWindowStyle.Normal,
                 UseShellExecute = false
             };
 
@@ -841,15 +841,27 @@ namespace VisorSingularity
             );
         }
 
-        // Obtiene las coordenadas absolutas de pantalla del placeholder
+        // Obtiene las coordenadas absolutas de pantalla del placeholder (con escala DPI correcta)
         private Rect GetPlaceholderScreenRect()
         {
             try
             {
+                var source = PresentationSource.FromVisual(GodotPlaceholder);
+                if (source == null) return Rect.Empty;
+
+                var m    = source.CompositionTarget.TransformToDevice;
+                double dpiX = m.M11;
+                double dpiY = m.M22;
+
+                // PointToScreen ya devuelve píxeles físicos en WPF
                 var origin = GodotPlaceholder.PointToScreen(new System.Windows.Point(0, 0));
-                return new Rect(origin.X, origin.Y,
-                                GodotPlaceholder.ActualWidth,
-                                GodotPlaceholder.ActualHeight);
+
+                return new Rect(
+                    origin.X,
+                    origin.Y,
+                    GodotPlaceholder.ActualWidth  * dpiX,
+                    GodotPlaceholder.ActualHeight * dpiY
+                );
             }
             catch { return Rect.Empty; }
         }
