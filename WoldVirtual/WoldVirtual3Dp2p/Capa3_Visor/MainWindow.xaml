@@ -6,7 +6,7 @@
         xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
         xmlns:wf="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
         mc:Ignorable="d"
-        Title="Wold Virtual p2p 3D" Height="850" Width="1400"
+        Title="Wold Virtual p2p 3D" Height="950" Width="1600"
         WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="False"
         Background="#0A0E17" Foreground="#E2E8F0" FontFamily="Segoe UI"
         MouseDown="Window_MouseDown">
