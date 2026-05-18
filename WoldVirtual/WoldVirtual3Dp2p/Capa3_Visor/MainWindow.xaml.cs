@@ -680,7 +680,7 @@ namespace VisorSingularity
         }
 
         // ───── PIPELINE DE LANZAMIENTO DE GODOT ──
-        private void LaunchGodot(string wallet, string user, string island, bool isNewRegistration = false)
+        private async void LaunchGodot(string wallet, string user, string island, bool isNewRegistration = false)
         {
             if (_godotProcess != null && !_godotProcess.HasExited)
             {
@@ -707,13 +707,11 @@ namespace VisorSingularity
             }
 
             // ── PASO 1: Crear el visor nativo ANTES de lanzar Godot ──
-            // GodotViewer.BuildWindowCore() se ejecuta al asignarlo al árbol visual.
-            // Esto crea el contenedor Win32 y expone su HWND.
             _viewer = new GodotViewer();
             GodotPlaceholder.Child = _viewer;
 
-            // Esperar a que WPF procese el layout y cree el HWND
-            GodotPlaceholder.UpdateLayout();
+            // Esperar asíncronamente a que WPF calcule el layout y asigne el tamaño real
+            await Task.Delay(150);
 
             IntPtr containerHwnd = _viewer.ContainerHandle;
             if (containerHwnd == IntPtr.Zero)
@@ -723,14 +721,14 @@ namespace VisorSingularity
                 return;
             }
 
-            // Obtener tamaño en píxeles físicos
+            // Obtener tamaño en píxeles físicos reales
             var dpi    = GetDpi();
             int width  = (int)(GodotPlaceholder.ActualWidth  * dpi.X);
             int height = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
             if (width  < 100) width  = 1280;
             if (height < 100) height = 720;
 
-            // Redimensionar el contenedor al tamaño real
+            // Redimensionar el contenedor al tamaño real exacto
             _viewer.Resize(width, height);
 
             // Escribir JSON de perfil del usuario para Godot
@@ -773,7 +771,7 @@ namespace VisorSingularity
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
                 // Esperar de forma asíncrona a que el HWND de Godot se cree, y redimensionarlo / enfocarlo
-                Task.Run(async () =>
+                _ = Task.Run(async () =>
                 {
                     IntPtr hwnd = IntPtr.Zero;
                     for (int i = 0; i < 50; i++) // Esperar hasta 5 segundos (50 * 100ms)
