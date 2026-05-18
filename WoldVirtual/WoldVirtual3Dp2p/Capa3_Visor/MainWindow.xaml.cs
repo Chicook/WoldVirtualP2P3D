@@ -44,6 +44,9 @@ namespace VisorSingularity
         private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
+        [DllImport("user32.dll")]
+        private static extern bool EnumChildWindows(IntPtr hwndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
@@ -750,8 +753,8 @@ namespace VisorSingularity
             // Obtenemos el handle destino directamente del panel nativo
             IntPtr parentHwnd = WfGamePanel.Handle;
 
-            // Argumentos de línea de comandos para inicializar a Godot
-            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --resolution 1280x720 -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            // Argumentos de línea de comandos para inicializar a Godot con --wid nativo
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --wid {parentHwnd} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
@@ -780,7 +783,7 @@ namespace VisorSingularity
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
 
                 // Buscar e incrustar la ventana asíncronamente
-                Task.Run(() => ScanAndEmbed(_godotProcess.Id));
+                Task.Run(() => ScanAndEmbed(_godotProcess.Id, parentHwnd));
             }
             catch (Exception ex)
             {
@@ -789,14 +792,14 @@ namespace VisorSingularity
             }
         }
 
-        private void ScanAndEmbed(int processId)
+        private void ScanAndEmbed(int processId, IntPtr parentHwnd)
         {
             IntPtr hwnd = IntPtr.Zero;
             int retries = 40; // 20 segundos máximo
 
             while (hwnd == IntPtr.Zero && retries > 0 && !_isClosing)
             {
-                hwnd = FindWindowForProcess(processId);
+                hwnd = FindWindowForProcess(processId, parentHwnd);
                 if (hwnd != IntPtr.Zero) break;
 
                 Thread.Sleep(500);
@@ -809,8 +812,6 @@ namespace VisorSingularity
                 
                 // Docking e Incrustado usando el Dispatcher de WPF
                 Dispatcher.Invoke(() => {
-                    SetParent(_godotHwnd, WfGamePanel.Handle);
-                    SetWindowLong(_godotHwnd, GWL_STYLE, WS_VISIBLE | WS_CHILD);
                     MoveWindow(_godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
 
                     TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Firma de conexión P2P activa.";
@@ -834,29 +835,17 @@ namespace VisorSingularity
             }
         }
 
-        private IntPtr FindWindowForProcess(int processId)
+        private IntPtr FindWindowForProcess(int processId, IntPtr parentHwnd)
         {
             IntPtr result = IntPtr.Zero;
-            IntPtr selfHwnd = IntPtr.Zero;
 
-            Dispatcher.Invoke(() => {
-                selfHwnd = new WindowInteropHelper(this).Handle;
-            });
-
-            EnumWindows((hwnd, lParam) =>
+            EnumChildWindows(parentHwnd, (hwnd, lParam) =>
             {
-                if (hwnd == selfHwnd) return true;
-
                 GetWindowThreadProcessId(hwnd, out uint pid);
                 if (pid == processId)
                 {
-                    var sb = new StringBuilder(256);
-                    GetWindowText(hwnd, sb, sb.Capacity);
-                    if (sb.ToString().StartsWith("WoldVirtual", StringComparison.OrdinalIgnoreCase))
-                    {
-                        result = hwnd;
-                        return false; // Parar enumeración
-                    }
+                    result = hwnd;
+                    return false; // Parar enumeración
                 }
                 return true; // Continuar enumeración
             }, IntPtr.Zero);
