@@ -197,7 +197,7 @@ namespace VisorSingularity
                 }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
 
                 string zipFilePath = "";
-                string zipFileName = $"Wold_Firma_Digital_{recoveryHash.Substring(0, 8)}.zip";
+                string zipFileName = "Wold_Firma_Digital.zip";
 
                 if (autoSilent)
                 {
