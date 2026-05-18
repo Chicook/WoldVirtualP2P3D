@@ -715,9 +715,10 @@ namespace VisorSingularity
             // Limpiar controles internos del viewport WPF
             WfGamePanel.Controls.Clear();
 
-            // Configurar resolución de renderizado
-            int width = WfGamePanel.Width > 100 ? WfGamePanel.Width : 1100;
-            int height = WfGamePanel.Height > 100 ? WfGamePanel.Height : 700;
+            // Configurar resolución inicial de renderizado. 
+            // WfGamePanel puede medir 200px por defecto antes de que WPF finalice el layout.
+            int width = WfGamePanel.Width > 500 ? WfGamePanel.Width : 1280;
+            int height = WfGamePanel.Height > 400 ? WfGamePanel.Height : 720;
 
             // REGISTRO DE AVATAR POR FUERA (EXTERNO) SIN TOCAR LA ESCENA DE GODOT
             try
@@ -773,6 +774,24 @@ namespace VisorSingularity
 
                 TxtFooterStatus.Text = "¡Metaverso cargado de forma nativa! Firma de conexión P2P activa.";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+
+                // Bucle asíncrono súper rápido para redimensionar Godot tan pronto como inyecte su ventana hija
+                Task.Run(() => {
+                    IntPtr childHwnd = IntPtr.Zero;
+                    int retries = 50; // Hasta 5 segundos
+                    while (childHwnd == IntPtr.Zero && retries > 0 && !_isClosing)
+                    {
+                        Dispatcher.Invoke(() => {
+                            childHwnd = FindWindowEx(WfGamePanel.Handle, IntPtr.Zero, null, null);
+                            if (childHwnd != IntPtr.Zero)
+                            {
+                                MoveWindow(childHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
+                            }
+                        });
+                        Thread.Sleep(100);
+                        retries--;
+                    }
+                });
 
                 // Auto-redimensionar al cambiar el tamaño del panel WPF buscando directamente el Handle hijo de Godot
                 WfGamePanel.Resize += (s, e) => {
