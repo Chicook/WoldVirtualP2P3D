@@ -103,19 +103,15 @@ namespace VisorSingularity
                     TxtStep1LoggedUser.Text = _username.ToUpper();
                     PanStep1Login.Visibility = Visibility.Visible;
                     BtnStep1Action.Content = "INICIAR SESIÓN / ACCEDER AL METAVERSO";
+                    BtnStep1Action.IsEnabled = true; // Habilitado para Login directo
                     TxtFooterStatus.Text = $"Identidad '{_username}' detectada de forma segura en este ordenador.";
                 }
                 else
                 {
                     PanStep1Login.Visibility = Visibility.Collapsed;
                     BtnStep1Action.Content = "VINCULAR MAQUINA / SIGUIENTE";
-                    TxtFooterStatus.Text = "Listo para iniciar el proceso de enlace seguro en la red Wold.";
-
-                    // GENERACIÓN AUTOMÁTICA AL INICIO:
-                    // Si el ordenador está limpio, generamos el ZIP y Hash de Recuperación de inmediato al abrir la primera pantalla
-                    string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
-                    GenerateIdentityZip(recoveryHash);
-                    TxtUuid.Text = recoveryHash;
+                    BtnStep1Action.IsEnabled = false; // Deshabilitado hasta que descargue la firma
+                    TxtFooterStatus.Text = "Por favor, genera y guarda tu Firma Digital (.zip) primero para continuar.";
                 }
             }
             catch (Exception ex)
@@ -181,7 +177,7 @@ namespace VisorSingularity
         }
 
         // Helper para Generar Backup de Identidad .ZIP con JSON dentro
-        private void GenerateIdentityZip(string recoveryHash, bool autoSilent = false)
+        private bool GenerateIdentityZip(string recoveryHash, bool autoSilent = false)
         {
             try
             {
@@ -223,7 +219,7 @@ namespace VisorSingularity
                     {
                         TxtFooterStatus.Text = "Exportación de firma cancelada por el usuario.";
                         TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
-                        return;
+                        return false;
                     }
                 }
 
@@ -256,10 +252,12 @@ namespace VisorSingularity
 
                 TxtFooterStatus.Text = $"Backup de Firma guardado en: {zipFileName}";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error al generar el backup ZIP de identidad: {ex.Message}", "Error Criptográfico", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
         }
 
@@ -300,14 +298,7 @@ namespace VisorSingularity
             }
             else
             {
-                // Generar llave y backup ZIP antes de avanzar
-                string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
-                GenerateIdentityZip(recoveryHash);
-
-                // Auto-rellenar la casilla UUID del Paso 2
-                TxtUuid.Text = recoveryHash;
-
-                // Avanzar al Registro
+                // Avanzar al Registro (Sin volver a generar la firma, ya que la descargó antes!)
                 TxtFooterStatus.Text = "Firma de hardware vinculada con éxito. Crea tu usuario.";
                 ShowStep(2);
             }
@@ -317,8 +308,18 @@ namespace VisorSingularity
         private void BtnDownloadZip_Click(object sender, RoutedEventArgs e)
         {
             string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
-            GenerateIdentityZip(recoveryHash);
-            TxtUuid.Text = recoveryHash;
+            if (GenerateIdentityZip(recoveryHash, false))
+            {
+                TxtUuid.Text = recoveryHash;
+                BtnStep1Action.IsEnabled = true; // ¡Habilitar el botón Siguiente!
+                TxtFooterStatus.Text = "Firma Digital guardada. Haz clic en Siguiente para continuar.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+            }
+            else
+            {
+                TxtFooterStatus.Text = "Debes guardar tu Firma Digital (.zip) para poder continuar.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
+            }
         }
 
         // STEP 2 Action: Generate Account UUID

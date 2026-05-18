@@ -273,7 +273,7 @@
                             <!-- Botón Dedicado de Descarga Directa de la Firma Digital -->
                             <Button x:Name="BtnDownloadZip" Content="⬇ GENERAR Y GUARDAR BACKUP DE FIRMA (.ZIP)" Style="{StaticResource CyberButton}" Foreground="#00FF8C" BorderBrush="#00FF8C" Height="40" Margin="0,0,0,15" Click="BtnDownloadZip_Click"/>
 
-                            <Button x:Name="BtnStep1Action" Content="VINCULAR MAQUINA / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnStep1Next_Click"/>
+                            <Button x:Name="BtnStep1Action" Content="VINCULAR MAQUINA / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" IsEnabled="False" Click="BtnStep1Next_Click"/>
                         </StackPanel>
                     </Border>
                 </Grid>
