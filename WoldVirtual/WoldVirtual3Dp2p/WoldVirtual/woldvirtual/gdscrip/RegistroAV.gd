@@ -12,17 +12,27 @@ var wallet_full = ""
 func _ready():
 	# Leer argumentos de línea de comandos pasados por C# (prioridad usuario)
 	var user_args = OS.get_cmdline_user_args()
+	var username_arg = ""
+	
 	for i in range(user_args.size()):
 		if user_args[i] == "--wallet" and i + 1 < user_args.size():
 			wallet_full = user_args[i+1]
-			break
+		elif user_args[i] == "--user-id" and i + 1 < user_args.size():
+			username_arg = user_args[i+1]
 
-	if wallet_full == "":
-		var args = OS.get_cmdline_args()
-		for i in range(args.size()):
-			if args[i] == "--wallet" and i + 1 < args.size():
-				wallet_full = args[i+1]
-				break
+	# Si no vienen ahí, intentar de los argumentos generales (como fallback)
+	var args = OS.get_cmdline_args()
+	for i in range(args.size()):
+		if (wallet_full == "" or wallet_full == "No Wallet Address") and args[i] == "--wallet" and i + 1 < args.size():
+			wallet_full = args[i+1]
+		if username_arg == "" and args[i] == "--user-id" and i + 1 < args.size():
+			username_arg = args[i+1]
+
+	# Pre-rellenar y bloquear el campo de nombre para que esté 100% vinculado a su nik
+	if username_arg != "":
+		input_name.text = username_arg
+		input_name.editable = false
+		status_label.text = "Identidad vinculada: " + username_arg
 
 	# Estilo Glassmorphism
 	var sb = StyleBoxFlat.new()

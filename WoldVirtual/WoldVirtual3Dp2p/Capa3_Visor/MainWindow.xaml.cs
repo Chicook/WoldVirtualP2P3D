@@ -431,10 +431,10 @@ namespace VisorSingularity
                 _db.RegisterUser(_username, TxtRegPass.Password.Trim(), _fingerprint.UniqueHash, _islandId);
                 _db.UpdateWallet(_username, _wallet);
 
-                TxtFooterStatus.Text = "¡Usuario registrado con éxito en base de datos! Iniciando metaverso...";
+                TxtFooterStatus.Text = "¡Usuario registrado con éxito en base de datos! Cargando creador de avatar...";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
-                EnterDashboard();
+                EnterDashboard(isNewRegistration: true);
             }
             catch (Exception ex)
             {
@@ -452,7 +452,7 @@ namespace VisorSingularity
 
 
         // ───── CORE DASHBOARD TRANSITION ─────
-        private void EnterDashboard()
+        private void EnterDashboard(bool isNewRegistration = false)
         {
             // Ocultar todos los wizards
             Step1_PC.Visibility = Visibility.Collapsed;
@@ -482,7 +482,7 @@ namespace VisorSingularity
             LoadTeleportIslandsList();
 
             // Lanzar Godot e Incrustar
-            LaunchGodot(_wallet, _username, _islandId);
+            LaunchGodot(_wallet, _username, _islandId, isNewRegistration);
         }
 
         private void LoadTeleportIslandsList()
@@ -693,7 +693,7 @@ namespace VisorSingularity
         }
 
         // ───── PIPELINE DE LANZAMIENTO DE GODOT ──
-        private void LaunchGodot(string wallet, string user, string island)
+        private void LaunchGodot(string wallet, string user, string island, bool isNewRegistration = false)
         {
             if (_godotProcess != null && !_godotProcess.HasExited)
             {
@@ -726,8 +726,11 @@ namespace VisorSingularity
             int width = WfGamePanel.Width > 100 ? WfGamePanel.Width : 1100;
             int height = WfGamePanel.Height > 100 ? WfGamePanel.Height : 700;
 
+            // Seleccionar escena inicial de Godot (Registro de avatar en EscenaPrincipal.tscn o Metaverso directo)
+            string initialScene = isNewRegistration ? "res://EscenaPrincipal.tscn" : "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
+
             // Argumentos de línea de comandos para inicializar a Godot incrustado en el Visor
-            string arguments = $"--path \"{godotProjectDir}\" res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            string arguments = $"--path \"{godotProjectDir}\" {initialScene} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
