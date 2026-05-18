@@ -1,0 +1,74 @@
+<Window x:Class="VisorSingularity.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Wold Virtual p2p 3D" Height="720" Width="1280"
+        WindowStartupLocation="CenterScreen"
+        Background="#0B0C10">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Top Menu -->
+            <RowDefinition Height="*"/>    <!-- 3D Area (Black/Godot) -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Login/Dashboard Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- Top Menu -->
+        <Menu Grid.Row="0" Style="{StaticResource SingularityMenu}">
+            <MenuItem Header="Archivo" Style="{StaticResource SingularityMenuItem}"/>
+            <MenuItem Header="Editar" Style="{StaticResource SingularityMenuItem}"/>
+            <MenuItem Header="Ayuda" Style="{StaticResource SingularityMenuItem}"/>
+            <MenuItem Header="Advanced" Style="{StaticResource SingularityMenuItem}"/>
+        </Menu>
+
+        <!-- Central Black Area (Where Godot will be embedded) -->
+        <Border Grid.Row="1" Background="#000000" BorderBrush="#45A29E" BorderThickness="0,1,0,1">
+            <!-- Placeholder for Godot Engine -->
+            <Grid>
+                <TextBlock Text="[ ESPACIO RESERVADO PARA MOTOR 3D GODOT ]" 
+                           Foreground="#45A29E" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center" 
+                           FontSize="18" 
+                           FontWeight="Bold"
+                           Opacity="0.5"/>
+            </Grid>
+        </Border>
+
+        <!-- Bottom Login Bar (Professional Dashboard Look) -->
+        <Border Grid.Row="2" Height="90" Background="#1F2833" BorderBrush="#45A29E" BorderThickness="0,1,0,0">
+            <Grid Margin="20,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/> <!-- Brand/Status -->
+                    <ColumnDefinition Width="*"/>    <!-- Spacer -->
+                    <ColumnDefinition Width="Auto"/> <!-- Controls -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Side: Status / Brand -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="WOLD VIRTUAL P2P" Foreground="#66FCF1" FontSize="16" FontWeight="Bold"/>
+                    <TextBlock Text="Estado: Desconectado" Foreground="#C5C6C7" FontSize="11" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <!-- Right Side: Login Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Usuario -->
+                    <StackPanel Margin="10,0" VerticalAlignment="Center">
+                        <Label Content="Usuario:" Style="{StaticResource SingularityLabel}"/>
+                        <TextBox Width="150" Style="{StaticResource SingularityTextBox}" x:Name="TxtUser"/>
+                        <CheckBox Content="Recordar" Style="{StaticResource SingularityCheckBox}" FontSize="10" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <!-- Contraseña -->
+                    <StackPanel Margin="10,0" VerticalAlignment="Center">
+                        <Label Content="Contraseña:" Style="{StaticResource SingularityLabel}"/>
+                        <PasswordBox Width="150" Style="{StaticResource SingularityPasswordBox}" x:Name="TxtPass"/>
+                        <CheckBox Content="Recordar" Style="{StaticResource SingularityCheckBox}" FontSize="10" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <!-- Iniciar Sesión Button -->
+                    <Button Content="CONECTAR" Style="{StaticResource SingularityButton}" 
+                            Height="35" Width="120" Margin="15,0,0,0" VerticalAlignment="Center" x:Name="BtnLogin"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

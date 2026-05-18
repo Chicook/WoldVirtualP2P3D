@@ -1,0 +1,104 @@
+[gd_scene load_steps=2 format=3 uid="uid://dgscv1234567"]
+
+[ext_resource type="Script" path="res://woldvirtual/gdscrip/RegistroAV.gd" id="1_script"]
+
+[node name="RegistroAV" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0588235, 0.0588235, 0.0980392, 1)
+
+[node name="Panel" type="Panel" parent="."]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -250.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 30
+
+[node name="Title" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "Registro de Avatar"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Nombre de Usuario:"
+
+[node name="LineEdit" type="LineEdit" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+placeholder_text = "Escribe tu nombre..."
+
+[node name="Label2" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Selecciona Género:"
+
+[node name="HBox" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="Male" type="Button" parent="Panel/VBox/HBox"]
+custom_minimum_size = Vector2(180, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "HOMBRE"
+
+[node name="Female" type="Button" parent="Panel/VBox/HBox"]
+custom_minimum_size = Vector2(180, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "MUJER"
+
+[node name="Status" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+
+[node name="Login" type="Button" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "INICIAR SESIÓN"
+
+[connection signal="pressed" from="Panel/VBox/HBox/Male" to="." method="_on_male_pressed"]
+[connection signal="pressed" from="Panel/VBox/HBox/Female" to="." method="_on_female_pressed"]
+[connection signal="pressed" from="Panel/VBox/Login" to="." method="_on_login_pressed"]
