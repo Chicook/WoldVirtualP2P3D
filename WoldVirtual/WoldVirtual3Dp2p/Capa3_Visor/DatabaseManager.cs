@@ -18,6 +18,17 @@ namespace VisorSingularity
                 Directory.CreateDirectory(fullDbFolder);
 
             _dbPath = Path.Combine(fullDbFolder, "wold_core.db");
+
+            // RESET TEMPORAL EN CALIENTE PARA PRUEBAS: Borra base de datos para iniciar limpio en cada arranque
+            try
+            {
+                if (File.Exists(_dbPath))
+                {
+                    File.Delete(_dbPath);
+                }
+            }
+            catch { }
+
             InitializeDatabase();
         }
 
