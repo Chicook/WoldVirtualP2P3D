@@ -103,6 +103,15 @@ func _on_network_updated(state: Dictionary):
 		if p_coords != Vector2.ZERO:
 			slot = p_coords
 
+		# Si solo hay un usuario conectado, su ubicacion por defecto es 0,0,0 (evita tembleque de floats)
+		var is_alone = true
+		for uid in users:
+			if uid != lid:
+				is_alone = false
+				break
+		if is_alone:
+			slot = Vector2.ZERO
+
 		var me_data = {
 			"ix": slot.x, "iz": slot.y,
 			"x": slot.x * spacing,
