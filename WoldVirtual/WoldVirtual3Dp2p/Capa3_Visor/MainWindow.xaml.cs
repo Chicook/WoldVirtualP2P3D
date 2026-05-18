@@ -387,6 +387,16 @@ namespace VisorSingularity
             }
         }
 
+        private void GenerateUniqueIslandCoordinates()
+        {
+            int hash = _username.GetHashCode();
+            int x = Math.Abs(hash % 900) + 100; // Coordenada X entre 100 y 1000
+            int z = Math.Abs((hash / 1000) % 900) + 100; // Coordenada Z entre 100 y 1000
+            string generatedIsland = $"{x} : {z}.1.0";
+            TxtIslandCoordinates.Text = generatedIsland;
+            _islandId = generatedIsland;
+        }
+
         // STEP 3 Action: Confirm Wallet address
         private void BtnStep3Next_Click(object sender, RoutedEventArgs e)
         {
@@ -400,12 +410,8 @@ namespace VisorSingularity
 
             _wallet = w;
 
-            // GENERACIÓN DETERMINISTA DE COORDENADAS DE ISLA ÚNICA
-            int hash = _username.GetHashCode();
-            int x = Math.Abs(hash % 900) + 100; // Coordenada X entre 100 y 1000
-            int z = Math.Abs((hash / 1000) % 900) + 100; // Coordenada Z entre 100 y 1000
-            string generatedIsland = $"{x} : {z}.1.0";
-            TxtIslandCoordinates.Text = generatedIsland;
+            // Generar la isla fija única
+            GenerateUniqueIslandCoordinates();
 
             TxtFooterStatus.Text = "Wallet vinculada. Tu isla espacial única ha sido generada.";
             TxtFooterStatus.Foreground = new SolidColorBrush(Colors.White);
@@ -651,6 +657,9 @@ namespace VisorSingularity
                             PanWaitHttp.Visibility = Visibility.Collapsed;
                             TxtFooterStatus.Text = "¡Firma de MetaMask recibida con éxito por el puente HTTP!";
                             TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+
+                            // Generar la isla fija única al confirmar
+                            GenerateUniqueIslandCoordinates();
 
                             // Avanzar al paso 4
                             ShowStep(4);
