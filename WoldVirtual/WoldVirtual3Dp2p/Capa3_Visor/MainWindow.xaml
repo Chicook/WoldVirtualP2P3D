@@ -233,7 +233,7 @@
                 
                 <!-- ───── WIZARD STEP 1: PC REGISTRATION (Hardware Binding) ───── -->
                 <Grid x:Name="Step1_PC" Visibility="Visible" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="550" Padding="35">
+                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
                         <StackPanel>
                             <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                             <TextBlock Text="PASO 1 DE 4: VINCULACIÓN DE HARDWARE" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
@@ -280,7 +280,7 @@
 
                 <!-- ───── WIZARD STEP 2: USER REGISTRATION (Credentials & UUID) ───── -->
                 <Grid x:Name="Step2_User" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="550" Padding="35">
+                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
                         <StackPanel>
                             <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                             <TextBlock Text="PASO 2 DE 4: DATOS DE USUARIO Y VALIDACIÓN UUID" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
@@ -392,7 +392,7 @@
 
                 <!-- ───── PANTALLA DE ESPERA HTTP METAMASK ───── -->
                 <Grid x:Name="PanWaitHttp" Visibility="Collapsed" Background="#C0070A10">
-                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00E5FF" BorderThickness="1.5" Width="550" Padding="35" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00E5FF" BorderThickness="1.5" Width="650" Padding="35" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <StackPanel>
                             <TextBlock Text="⬢  PUENTE HTTP ACTIVO  ⬢" Foreground="#00E5FF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                             <TextBlock Text="ESPERANDO FIRMA DE METAMASK" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,25"/>
