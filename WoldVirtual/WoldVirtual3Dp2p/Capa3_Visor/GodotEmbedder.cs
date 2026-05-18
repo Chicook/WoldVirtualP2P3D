@@ -231,8 +231,8 @@ namespace VisorSingularity
             _godotHwnd = godotHwnd;
         }
 
-        /// <summary>Redimensiona el contenedor y Godot en píxeles físicos de pantalla, aplicando un recorte (offset) a la izquierda.</summary>
-        public void Resize(int widthPx, int heightPx, int offsetLeftPx = 0)
+        /// <summary>Redimensiona el contenedor y Godot en píxeles físicos de pantalla.</summary>
+        public void Resize(int widthPx, int heightPx)
         {
             if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1) return;
             
@@ -246,11 +246,7 @@ namespace VisorSingularity
                     style |= WS_CHILD;
                     SetWindowLong(godotHwnd, GWL_STYLE, new IntPtr(style));
                 }
-                
-                // Desplazamos la ventana interna de Godot hacia la izquierda (-offsetLeftPx) 
-                // para recortar su UI nativa que sobra, y sumamos ese recorte al ancho total
-                // para que rellene todo el espacio derecho sin dejar franjas.
-                MoveWindow(godotHwnd, -offsetLeftPx, 0, widthPx + offsetLeftPx, heightPx, true);
+                MoveWindow(godotHwnd, 0, 0, widthPx, heightPx, true);
             }
         }
 
