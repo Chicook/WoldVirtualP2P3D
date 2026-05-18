@@ -363,13 +363,7 @@ namespace VisorSingularity
             ShowStep(3);
         }
 
-        // STEP 3 Action: Generate Test Wallet Address
-        private void BtnGenerateTestWallet_Click(object sender, RoutedEventArgs e)
-        {
-            string randWallet = "0x" + Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N").Substring(0, 8);
-            TxtWalletAddress.Text = randWallet;
-            TxtFooterStatus.Text = "Wallet de pruebas generada correctamente para simulación.";
-        }
+
 
         // STEP 3 Action: Open browser for real Metamask bridge
         private void BtnValidateRealMetamask_Click(object sender, RoutedEventArgs e)
@@ -447,15 +441,7 @@ namespace VisorSingularity
             OpenMetamaskBrowser();
         }
 
-        private void BtnSimulateWaitConfirm_Click(object sender, RoutedEventArgs e)
-        {
-            PanWaitHttp.Visibility = Visibility.Collapsed;
-            string testWallet = "0x" + Guid.NewGuid().ToString("N").Substring(0, 40);
-            TxtWalletAddress.Text = testWallet;
-            _wallet = testWallet;
-            TxtFooterStatus.Text = "MetaMask vinculada por simulación.";
-            ShowStep(4);
-        }
+
 
         // ───── CORE DASHBOARD TRANSITION ─────
         private void EnterDashboard()

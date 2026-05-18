@@ -342,22 +342,14 @@
 
                             <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
 
-                            <TextBlock Text="Indica la dirección de tu MetaMask DeFi Wallet. Esta dirección vincula criptográficamente tus activos y NFTs de tierras 3D."
+                            <TextBlock Text="Vincula tu MetaMask DeFi Wallet de forma criptográfica para sincronizar y validar la propiedad de tus activos y NFTs de islas en 3D."
                                        Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,20" LineHeight="18"/>
 
+                            <Button Content="🦊 VINCULAR CON METAMASK REAL" Style="{StaticResource EmeraldButton}" Foreground="#FFFFFF" Margin="0,0,0,25" Height="45" Click="BtnValidateRealMetamask_Click"/>
+
                             <!-- Fields -->
-                            <TextBlock Text="DIRECCION DE METAMASK WALLET" Style="{StaticResource CyberLabel}"/>
-                            <TextBox x:Name="TxtWalletAddress" Style="{StaticResource CyberTextBox}" Margin="0,0,0,15"/>
-
-                            <!-- Actions -->
-                            <Button Content="GENERAR WALLET DE PRUEBA" Style="{StaticResource CyberButton}" Margin="0,0,0,12" Height="36" Click="BtnGenerateTestWallet_Click"/>
-                            
-                            <Border BorderBrush="#15FFFFFF" BorderThickness="0,0,0,1" Margin="0,0,0,15"/>
-
-                            <TextBlock Text="O valida tu MetaMask real de forma segura abriendo el portal en tu navegador predeterminado:"
-                                       Foreground="#8E9AA8" FontSize="11.5" TextWrapping="Wrap" Margin="0,0,0,15"/>
-
-                            <Button Content="VALIDAR EN NAVEGADOR EXTERNO (METAMASK REAL)" Style="{StaticResource CyberButton}" Foreground="#00FF8C" BorderBrush="#00FF8C" Margin="0,0,0,25" Height="40" Click="BtnValidateRealMetamask_Click"/>
+                            <TextBlock Text="DIRECCION VINCULADA (LECTURA)" Style="{StaticResource CyberLabel}"/>
+                            <TextBox x:Name="TxtWalletAddress" Style="{StaticResource CyberTextBox}" IsReadOnly="True" Background="#0A0F1A" BorderBrush="#1A80A3" Foreground="#8E9AA8" Margin="0,0,0,25"/>
 
                             <Button Content="CONFIRMAR / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnStep3Next_Click"/>
                         </StackPanel>
@@ -421,12 +413,7 @@
                                        Foreground="#00FF8C" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" TextAlignment="Center" Margin="0,0,0,25"/>
 
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" Content="ABRIR OTRA VEZ" Style="{StaticResource CyberButton}" Margin="0,0,10,0" Height="36" Click="BtnOpenBrowserAgain_Click"/>
-                                <Button Grid.Column="1" Content="USAR MOCK / SIMULAR" Style="{StaticResource EmeraldButton}" Margin="10,0,0,0" Height="36" Click="BtnSimulateWaitConfirm_Click"/>
+                                <Button Content="ABRIR PORTAL DE VERIFICACIÓN EN NAVEGADOR" Style="{StaticResource EmeraldButton}" Height="40" Click="BtnOpenBrowserAgain_Click"/>
                             </Grid>
                         </StackPanel>
                     </Border>
