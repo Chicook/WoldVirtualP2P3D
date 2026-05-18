@@ -344,7 +344,7 @@
 
                             <!-- Fields -->
                             <TextBlock Text="DIRECCION DE METAMASK WALLET" Style="{StaticResource CyberLabel}"/>
-                            <TextBox x:Name="TxtWalletAddress" Style="{StaticResource CyberTextBox}" PlaceholderText="0x..." Margin="0,0,0,15"/>
+                            <TextBox x:Name="TxtWalletAddress" Style="{StaticResource CyberTextBox}" Margin="0,0,0,15"/>
 
                             <!-- Actions -->
                             <Button Content="GENERAR WALLET DE PRUEBA" Style="{StaticResource CyberButton}" Margin="0,0,0,12" Height="36" Click="BtnGenerateTestWallet_Click"/>
