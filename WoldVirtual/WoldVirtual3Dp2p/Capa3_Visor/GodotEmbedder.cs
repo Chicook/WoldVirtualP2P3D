@@ -270,7 +270,8 @@ namespace VisorSingularity
         /// <summary>Redimensiona el contenedor y Godot en píxeles físicos de pantalla.</summary>
         public void Resize(int widthPx, int heightPx)
         {
-            Log($"Resize: widthPx = {widthPx}, heightPx = {heightPx}");
+            Log($"Resize (received): widthPx = {widthPx}, heightPx = {heightPx}");
+            Log($"Resize (containerHwnd): {_containerHwnd}");
             if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1)
             {
                 Log("Resize: Abortando por _containerHwnd cero o dimensiones inválidas.");
@@ -279,7 +280,7 @@ namespace VisorSingularity
             
             // 1. Redimensionar y reposicionar el contenedor nativo en su origen local
             bool ok1 = MoveWindow(_containerHwnd, 0, 0, widthPx, heightPx, true);
-            Log($"Resize: MoveWindow(_containerHwnd) = {ok1}");
+            Log($"Resize: MoveWindow(_containerHwnd) result = {ok1}");
             
             // 2. Redimensionar el hijo de Godot
             IntPtr godotHwnd = GetGodotHwnd();

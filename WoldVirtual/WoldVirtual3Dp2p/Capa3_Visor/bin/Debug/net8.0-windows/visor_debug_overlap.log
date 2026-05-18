@@ -138,3 +138,9 @@
 [01:35:57.131] ColSidebar Width=0, GridUnitType=Pixel
 [01:35:57.131] PanViewportContainer dimensions: ActualWidth=1287, ActualHeight=831
 [01:35:57.131] Step1_PC visibility: Collapsed, dimensions: ActualWidth=0, ActualHeight=0
+[01:42:55.926] MainWindow constructor started
+[01:42:56.072] InitializeComponent completed
+[01:42:56.220] MainWindow_Loaded started
+[01:42:56.693] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[01:42:56.695] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[01:42:56.702] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
