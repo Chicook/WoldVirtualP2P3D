@@ -110,6 +110,12 @@ namespace VisorSingularity
                     PanStep1Login.Visibility = Visibility.Collapsed;
                     BtnStep1Action.Content = "VINCULAR MAQUINA / SIGUIENTE";
                     TxtFooterStatus.Text = "Listo para iniciar el proceso de enlace seguro en la red Wold.";
+
+                    // GENERACIÓN AUTOMÁTICA AL INICIO:
+                    // Si el ordenador está limpio, generamos el ZIP y Hash de Recuperación de inmediato al abrir la primera pantalla
+                    string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
+                    GenerateIdentityZip(recoveryHash);
+                    TxtUuid.Text = recoveryHash;
                 }
             }
             catch (Exception ex)
@@ -279,6 +285,14 @@ namespace VisorSingularity
                 TxtFooterStatus.Text = "Firma de hardware vinculada con éxito. Crea tu usuario.";
                 ShowStep(2);
             }
+        }
+
+        // STEP 1 Action: Botón de Descarga Directa/Manual de la Firma Digital ZIP
+        private void BtnDownloadZip_Click(object sender, RoutedEventArgs e)
+        {
+            string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
+            GenerateIdentityZip(recoveryHash);
+            TxtUuid.Text = recoveryHash;
         }
 
         // STEP 2 Action: Generate Account UUID
