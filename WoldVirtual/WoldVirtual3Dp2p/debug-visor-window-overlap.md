@@ -18,10 +18,14 @@ El usuario reporta que:
 5. **H5: Wizard steps no se ocultan correctamente** - Los pasos del wizard permanecen visibles detrás del viewport
 
 ## 📋 Evidence Collection Plan
-1. Instrumentar MainWindow.xaml.cs para registrar eventos de visibilidad
+1. ✅ Instrumentar MainWindow.xaml.cs para registrar eventos de visibilidad
+   - Agregada función LogDebug()
+   - Agregados logs en EnterDashboard()
+   - Agregados logs en GodotPlaceholder.SizeChanged
 2. Instrumentar GodotEmbedder.cs para registrar dimensiones y posición
 3. Ejecutar aplicación y registrar secuencia de eventos
 4. Capturar estado de visibilidad de cada componente
+5. Analizar dimensiones reales vs esperadas
 
 ## 📊 Logs Collected
 *No logs collected yet*

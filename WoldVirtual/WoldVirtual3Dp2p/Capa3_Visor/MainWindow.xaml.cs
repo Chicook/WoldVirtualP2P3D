@@ -51,6 +51,17 @@ namespace VisorSingularity
         private Process? _godotProcess;
         private GodotViewer? _viewer;
 
+        // ── Debug Logging ──
+        private void LogDebug(string message)
+        {
+            try
+            {
+                string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "visor_debug_overlap.log");
+                System.IO.File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] {message}\r\n");
+            }
+            catch { }
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -63,12 +74,17 @@ namespace VisorSingularity
             // Redimensionar Godot cuando cambie el placeholder
             GodotPlaceholder.SizeChanged += (s, e) =>
             {
+                LogDebug($"GodotPlaceholder SizeChanged - ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
+                LogDebug($"ColSidebar Width={ColSidebar.Width.Value}, GridUnitType={ColSidebar.Width.GridUnitType}");
+
                 if (_viewer?.IsReady == true)
                 {
                     var dpi = GetDpi();
+                    LogDebug($"DPI: X={dpi.X}, Y={dpi.Y}");
                     _viewer.Resize(
                         (int)(GodotPlaceholder.ActualWidth * dpi.X),
                         (int)(GodotPlaceholder.ActualHeight * dpi.Y));
+                    LogDebug($"Godot resized to: {(int)(GodotPlaceholder.ActualWidth * dpi.X)}x{(int)(GodotPlaceholder.ActualHeight * dpi.Y)}");
                 }
             };
         }
