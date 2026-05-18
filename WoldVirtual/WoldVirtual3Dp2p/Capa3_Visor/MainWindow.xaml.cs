@@ -24,10 +24,7 @@ namespace VisorSingularity
 {
     public partial class MainWindow : Window
     {
-        // ── Win32 API (Fake Embedding) ──
-        [DllImport("user32.dll")]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-
+        // ── Win32: solo lo estrictamente necesario en MainWindow ──
         [DllImport("user32.dll")]
         private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
@@ -38,51 +35,42 @@ namespace VisorSingularity
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-        [DllImport("user32.dll")]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll")]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll")]
-        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-        private static readonly IntPtr HWND_TOPMOST   = new IntPtr(-1);
-        private static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
-        private const uint SWP_SHOWWINDOW = 0x0040;
-        private const uint SWP_NOACTIVATE = 0x0010;
-        private const uint SWP_FRAMECHANGED = 0x0020;
-        private const int  GWL_STYLE  = -16;
-        private const int  WS_CAPTION = 0x00C00000;
-        private const int  WS_THICKFRAME = 0x00040000;
-        private const int  WS_POPUP   = unchecked((int)0x80000000);
-        private const int  WS_VISIBLE = 0x10000000;
-
-        // ── Datos de la Sesión Actual y Helpers ──
+        // ── Datos de la Sesión ──
         private HardwareFingerprint _fingerprint = null!;
-        private DatabaseManager _db = null!;
-        private int _currentStep = 1;
-        private bool _isClosing = false;
-        private bool _hasAccount = false;
+        private DatabaseManager    _db           = null!;
+        private int  _currentStep = 1;
+        private bool _isClosing   = false;
+        private bool _hasAccount  = false;
 
         private string _username = "";
-        private string _wallet = "";
+        private string _wallet   = "";
         private string _islandId = "137 : 190.1.0";
 
         // ── Componentes de Ejecución ──
-        private HttpListener? _httpListener;
-        private Process?      _godotProcess;
-        private IntPtr        _godotHwnd  = IntPtr.Zero;
-        private DispatcherTimer? _syncTimer;
+        private HttpListener?  _httpListener;
+        private Process?       _godotProcess;
+        private GodotEmbedder? _embedder;
 
         public MainWindow()
         {
             InitializeComponent();
-            this.Loaded      += MainWindow_Loaded;
-            this.Closed      += MainWindow_Closed;
-            this.LocationChanged += (s, e) => SyncGodotWindow();
-            this.SizeChanged     += (s, e) => SyncGodotWindow();
-            this.StateChanged    += (s, e) => SyncGodotWindow();
+            this.Loaded += MainWindow_Loaded;
+            this.Closed += MainWindow_Closed;
+
+            // Redirigir foco a Godot cuando el usuario haga clic en el área 3D
+            GodotPlaceholder.MouseDown += (s, e) => _embedder?.FocusGodot();
+
+            // Redimensionar Godot cuando cambie el tamaño del placeholder
+            GodotPlaceholder.SizeChanged += (s, e) =>
+            {
+                if (_embedder?.IsAttached == true)
+                {
+                    var dpi = GetDpi();
+                    _embedder.Resize(
+                        (int)(GodotPlaceholder.ActualWidth  * dpi.X),
+                        (int)(GodotPlaceholder.ActualHeight * dpi.Y));
+                }
+            };
         }
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
@@ -563,7 +551,6 @@ namespace VisorSingularity
             _username = "";
             _wallet = "";
             _islandId = "137 : 190.1.0";
-            _godotHwnd = IntPtr.Zero;
 
             // Volver a cargar WMI y verificar cuenta para actualizar el Step 1
             _hasAccount = _db.CheckHardwareExists(_fingerprint.UniqueHash, out string? registeredUser);
@@ -719,10 +706,12 @@ namespace VisorSingularity
                 return;
             }
 
-            // Obtener tamaño inicial del placeholder
-            var rect = GetPlaceholderScreenRect();
-            int width  = rect.Width  > 100 ? (int)rect.Width  : 1280;
-            int height = rect.Height > 100 ? (int)rect.Height : 720;
+            // Obtener tamaño inicial del placeholder en píxeles físicos
+            var dpi    = GetDpi();
+            int width  = (int)(GodotPlaceholder.ActualWidth  * dpi.X);
+            int height = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
+            if (width  < 100) width  = 1280;
+            if (height < 100) height = 720;
 
             // REGISTRO DE AVATAR POR FUERA (EXTERNO) SIN TOCAR LA ESCENA DE GODOT
             try
@@ -776,8 +765,8 @@ namespace VisorSingularity
                 TxtFooterStatus.Text = "Motor 3D cargando. Acoplando al visor...";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
 
-                // Localizar y acoplar la ventana de Godot de forma asíncrona
-                Task.Run(() => ScanAndDock(_godotProcess.Id));
+                // Localizar e incrustar la ventana de Godot de forma asíncrona
+                Task.Run(() => ScanAndDock(_godotProcess.Id, width, height));
             }
             catch (Exception ex)
             {
@@ -786,8 +775,8 @@ namespace VisorSingularity
             }
         }
 
-        // Busca la ventana de Godot y la acopla visualmente sobre el placeholder
-        private void ScanAndDock(int processId)
+        // ── Localiza la ventana de Godot y la incrusta con GodotEmbedder ──
+        private void ScanAndDock(int processId, int width, int height)
         {
             IntPtr hwnd = IntPtr.Zero;
             for (int i = 0; i < 40 && !_isClosing; i++)
@@ -797,75 +786,31 @@ namespace VisorSingularity
                 Thread.Sleep(500);
             }
 
-            if (hwnd == IntPtr.Zero || _isClosing) {
-                Dispatcher.Invoke(() => TxtFooterStatus.Text = "Error: tiempo de espera agotado al localizar Godot.");
+            if (hwnd == IntPtr.Zero || _isClosing)
+            {
+                Dispatcher.Invoke(() => TxtFooterStatus.Text =
+                    "Error: no se encontró la ventana de Godot.");
                 return;
             }
 
-            _godotHwnd = hwnd;
-
             Dispatcher.Invoke(() =>
             {
-                // Quitar bordes/título de la ventana de Godot para que parezca incrustada
-                int style = GetWindowLong(_godotHwnd, GWL_STYLE);
-                style &= ~WS_CAPTION;
-                style &= ~WS_THICKFRAME;
-                SetWindowLong(_godotHwnd, GWL_STYLE, style);
+                // Crear y montar el embedder limpio
+                _embedder = new GodotEmbedder();
+                GodotPlaceholder.Child = _embedder;
 
-                // Primera sincronización de posición
-                SyncGodotWindow();
+                // Anclar Godot dentro del contenedor nativo
+                _embedder.AttachGodotWindow(hwnd, width, height);
 
-                // Timer a 60fps para mantener Godot siempre sobre el placeholder
-                _syncTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-                _syncTimer.Tick += (s, e) => SyncGodotWindow();
-                _syncTimer.Start();
+                // Dar foco inicial a Godot
+                _embedder.FocusGodot();
 
                 TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Conexión P2P activa.";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
             });
         }
 
-        // Sincroniza posición y tamaño de Godot con el Border placeholder del Visor
-        private void SyncGodotWindow()
-        {
-            if (_godotHwnd == IntPtr.Zero) return;
-            var r = GetPlaceholderScreenRect();
-            if (r.Width < 10 || r.Height < 10) return;
-
-            SetWindowPos(
-                _godotHwnd,
-                HWND_TOPMOST,
-                (int)r.X, (int)r.Y,
-                (int)r.Width, (int)r.Height,
-                SWP_SHOWWINDOW | SWP_NOACTIVATE
-            );
-        }
-
-        // Obtiene las coordenadas absolutas de pantalla del placeholder (con escala DPI correcta)
-        private Rect GetPlaceholderScreenRect()
-        {
-            try
-            {
-                var source = PresentationSource.FromVisual(GodotPlaceholder);
-                if (source == null) return Rect.Empty;
-
-                var m    = source.CompositionTarget.TransformToDevice;
-                double dpiX = m.M11;
-                double dpiY = m.M22;
-
-                // PointToScreen ya devuelve píxeles físicos en WPF
-                var origin = GodotPlaceholder.PointToScreen(new System.Windows.Point(0, 0));
-
-                return new Rect(
-                    origin.X,
-                    origin.Y,
-                    GodotPlaceholder.ActualWidth  * dpiX,
-                    GodotPlaceholder.ActualHeight * dpiY
-                );
-            }
-            catch { return Rect.Empty; }
-        }
-
+        // ── Localiza la ventana principal de Godot por PID ──
         private IntPtr FindGodotWindow(int processId)
         {
             IntPtr result   = IntPtr.Zero;
@@ -880,56 +825,38 @@ namespace VisorSingularity
 
                 var sb = new StringBuilder(256);
                 GetWindowText(hwnd, sb, sb.Capacity);
-                if (sb.Length > 0)          // cualquier ventana visible del proceso
-                {
-                    result = hwnd;
-                    return false;
-                }
+                if (sb.Length > 0) { result = hwnd; return false; }
                 return true;
             }, IntPtr.Zero);
 
             return result;
         }
 
-
-        // ── Redirección de teclado a Godot (fake-embedding) ──
-        private void ThreadFilterMessage(ref MSG msg, ref bool handled)
+        // ── Devuelve el factor de escala DPI de la pantalla principal ──
+        private System.Windows.Point GetDpi()
         {
-            if (_godotHwnd == IntPtr.Zero || !this.IsActive) return;
-
-            const int WM_KEYDOWN    = 0x0100;
-            const int WM_KEYUP      = 0x0101;
-            const int WM_CHAR       = 0x0102;
-            const int WM_SYSKEYDOWN = 0x0104;
-            const int WM_SYSKEYUP   = 0x0105;
-
-            if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP ||
-                msg.message == WM_CHAR    || msg.message == WM_SYSKEYDOWN ||
-                msg.message == WM_SYSKEYUP)
-            {
-                PostMessage(_godotHwnd, (uint)msg.message, msg.wParam, msg.lParam);
-
-                var key = KeyInterop.KeyFromVirtualKey((int)msg.wParam);
-                if (key == Key.W || key == Key.A || key == Key.S || key == Key.D ||
-                    key == Key.Up || key == Key.Down || key == Key.Left || key == Key.Right ||
-                    key == Key.Space)
-                {
-                    handled = true; // Evitar que WPF consuma la tecla dos veces
-                }
-            }
+            var source = PresentationSource.FromVisual(this);
+            if (source?.CompositionTarget == null)
+                return new System.Windows.Point(1, 1);
+            var m = source.CompositionTarget.TransformToDevice;
+            return new System.Windows.Point(m.M11, m.M22);
         }
+
 
         private void Cleanup()
         {
-            _syncTimer?.Stop();
-            _syncTimer = null;
-
             try { _httpListener?.Stop(); _httpListener?.Close(); } catch { }
             _httpListener = null;
 
             try { if (_godotProcess?.HasExited == false) _godotProcess.Kill(); } catch { }
             _godotProcess = null;
-            _godotHwnd = IntPtr.Zero;
+
+            // El GodotEmbedder se destruye al eliminarlo del árbol visual
+            if (_embedder != null)
+            {
+                GodotPlaceholder.Child = null;
+                _embedder = null;
+            }
         }
     }
 
