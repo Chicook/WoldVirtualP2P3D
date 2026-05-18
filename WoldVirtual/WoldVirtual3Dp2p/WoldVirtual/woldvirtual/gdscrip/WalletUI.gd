@@ -9,14 +9,22 @@ extends Control
 var _full_wallet := ""
 
 func _ready():
-	# 1. Intentar leer de los argumentos de línea de comandos de OS (máxima prioridad enviada por WPF)
-	var args = OS.get_cmdline_args()
-	for i in range(args.size()):
-		if args[i] == "--wallet" and i + 1 < args.size():
-			_full_wallet = args[i+1]
+	# 1. Intentar leer de los argumentos de usuario de Godot 4 (después de '--')
+	var user_args = OS.get_cmdline_user_args()
+	for i in range(user_args.size()):
+		if user_args[i] == "--wallet" and i + 1 < user_args.size():
+			_full_wallet = user_args[i+1]
 			break
 
-	# 2. Si no viene en los argumentos, intentar leer del perfil JSON (fallback)
+	# 2. Si no viene ahí, intentar de los argumentos generales (como fallback)
+	if _full_wallet == "" or _full_wallet == "No Wallet Address":
+		var args = OS.get_cmdline_args()
+		for i in range(args.size()):
+			if args[i] == "--wallet" and i + 1 < args.size():
+				_full_wallet = args[i+1]
+				break
+
+	# 3. Si no viene en los argumentos, intentar leer del perfil JSON
 	if _full_wallet == "" or _full_wallet == "No Wallet Address":
 		var user_path = "res://woldvirtual/scene/MTC/users3D/current_user.json"
 		var file = FileAccess.open(user_path, FileAccess.READ)

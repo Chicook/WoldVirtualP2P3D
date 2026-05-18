@@ -10,13 +10,19 @@ var save_path = "res://woldvirtual/scene/MTC/users3D/current_user.json"
 var wallet_full = ""
 
 func _ready():
-	# Leer argumentos de línea de comandos pasados por C#
-	var args = OS.get_cmdline_args()
-	
-	for i in range(args.size()):
-		if args[i] == "--wallet" and i + 1 < args.size():
-			wallet_full = args[i+1]
+	# Leer argumentos de línea de comandos pasados por C# (prioridad usuario)
+	var user_args = OS.get_cmdline_user_args()
+	for i in range(user_args.size()):
+		if user_args[i] == "--wallet" and i + 1 < user_args.size():
+			wallet_full = user_args[i+1]
 			break
+
+	if wallet_full == "":
+		var args = OS.get_cmdline_args()
+		for i in range(args.size()):
+			if args[i] == "--wallet" and i + 1 < args.size():
+				wallet_full = args[i+1]
+				break
 
 	# Estilo Glassmorphism
 	var sb = StyleBoxFlat.new()
