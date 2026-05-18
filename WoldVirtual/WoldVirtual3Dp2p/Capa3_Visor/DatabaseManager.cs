@@ -115,6 +115,19 @@ namespace VisorSingularity
             }
         }
 
+        public void UpdateUserId(string username, string newId)
+        {
+            using (var connection = new SqliteConnection($"Data Source={_dbPath}"))
+            {
+                connection.Open();
+                var command = connection.CreateCommand();
+                command.CommandText = "UPDATE Users SET Id = @newId WHERE Username = @user";
+                command.Parameters.AddWithValue("@newId", newId);
+                command.Parameters.AddWithValue("@user", username);
+                command.ExecuteNonQuery();
+            }
+        }
+
         public void UpdateUserIsland(string username, string islandId)
         {
             using (var connection = new SqliteConnection($"Data Source={_dbPath}"))

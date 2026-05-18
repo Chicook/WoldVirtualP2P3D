@@ -249,7 +249,13 @@ namespace VisorSingularity
                 {
                     _islandId = islandId ?? "137 : 190.1.0";
                     _wallet = wallet ?? "No Wallet Address";
-                    TxtFooterStatus.Text = "¡Autenticación correcta! Cargando tu nodo metaverso...";
+
+                    // ROTACIÓN CRIPTOGRÁFICA EN CALIENTE: Generar nueva firma única y exportar ZIP
+                    string newRecoveryHash = Guid.NewGuid().ToString("D").ToUpper();
+                    _db.UpdateUserId(_username, newRecoveryHash);
+                    GenerateIdentityZip(newRecoveryHash);
+
+                    TxtFooterStatus.Text = "¡Firma de sesión actualizada y autenticación correcta! Cargando metaverso...";
                     TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
                     EnterDashboard();
