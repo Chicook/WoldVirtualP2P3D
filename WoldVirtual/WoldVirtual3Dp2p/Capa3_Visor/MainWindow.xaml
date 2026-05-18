@@ -347,11 +347,7 @@
 
                             <Button Content="🦊 VINCULAR CON METAMASK REAL" Style="{StaticResource EmeraldButton}" Foreground="#FFFFFF" Margin="0,0,0,25" Height="45" Click="BtnValidateRealMetamask_Click"/>
 
-                            <!-- Fields -->
-                            <TextBlock Text="DIRECCION VINCULADA (LECTURA)" Style="{StaticResource CyberLabel}"/>
-                            <TextBox x:Name="TxtWalletAddress" Style="{StaticResource CyberTextBox}" IsReadOnly="True" Background="#0A0F1A" BorderBrush="#1A80A3" Foreground="#8E9AA8" Margin="0,0,0,25"/>
 
-                            <Button Content="CONFIRMAR / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnStep3Next_Click"/>
                         </StackPanel>
                     </Border>
                 </Grid>

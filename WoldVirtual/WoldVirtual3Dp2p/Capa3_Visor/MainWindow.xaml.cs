@@ -402,26 +402,7 @@ namespace VisorSingularity
             _islandId = generatedIsland;
         }
 
-        // STEP 3 Action: Confirm Wallet address
-        private void BtnStep3Next_Click(object sender, RoutedEventArgs e)
-        {
-            string w = TxtWalletAddress.Text.Trim();
-            if (string.IsNullOrEmpty(w) || !w.StartsWith("0x") || w.Length < 10)
-            {
-                TxtFooterStatus.Text = "Error: Especifica una MetaMask Wallet válida (inicia con 0x).";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
-                return;
-            }
 
-            _wallet = w;
-
-            // Generar la isla fija única
-            GenerateUniqueIslandCoordinates();
-
-            TxtFooterStatus.Text = "Wallet vinculada. Tu isla espacial única ha sido generada.";
-            TxtFooterStatus.Foreground = new SolidColorBrush(Colors.White);
-            ShowStep(4);
-        }
 
         // STEP 4 Action: Finalize and Launch
         private void BtnFinalizeRegister_Click(object sender, RoutedEventArgs e)
@@ -658,7 +639,6 @@ namespace VisorSingularity
                         // Actualizar UI del Visor
                         Dispatcher.Invoke(() => {
                             _wallet = wallet;
-                            TxtWalletAddress.Text = wallet;
                             PanWaitHttp.Visibility = Visibility.Collapsed;
                             TxtFooterStatus.Text = "¡Firma de MetaMask recibida con éxito por el puente HTTP!";
                             TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
