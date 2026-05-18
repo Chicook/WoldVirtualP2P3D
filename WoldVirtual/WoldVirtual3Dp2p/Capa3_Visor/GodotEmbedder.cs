@@ -97,6 +97,33 @@ namespace VisorSingularity
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr GetModuleHandleW(string? name);
 
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+        private static extern IntPtr GetWindowLongPtrW(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+        private static extern int GetWindowLongW(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+        private static extern IntPtr SetWindowLongPtrW(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongW")]
+        private static extern int SetWindowLongW(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        public static IntPtr GetWindowLong(IntPtr hWnd, int nIndex)
+        {
+            if (IntPtr.Size == 8) return GetWindowLongPtrW(hWnd, nIndex);
+            return (IntPtr)GetWindowLongW(hWnd, nIndex);
+        }
+
+        public static IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
+        {
+            if (IntPtr.Size == 8) return SetWindowLongPtrW(hWnd, nIndex, dwNewLong);
+            return (IntPtr)SetWindowLongW(hWnd, nIndex, dwNewLong.ToInt32());
+        }
+
+        private const int GWL_STYLE = -16;
+        private const uint WS_POPUP = 0x80000000u;
+
         // ──────────────────────────────────────────────────────────────────
         // Estado
         // ──────────────────────────────────────────────────────────────────
@@ -211,7 +238,16 @@ namespace VisorSingularity
             
             IntPtr godotHwnd = GetGodotHwnd();
             if (godotHwnd != IntPtr.Zero)
+            {
+                long style = GetWindowLong(godotHwnd, GWL_STYLE).ToInt64();
+                if ((style & WS_POPUP) != 0 || (style & WS_CHILD) == 0)
+                {
+                    style &= ~WS_POPUP;
+                    style |= WS_CHILD;
+                    SetWindowLong(godotHwnd, GWL_STYLE, new IntPtr(style));
+                }
                 MoveWindow(godotHwnd, 0, 0, widthPx, heightPx, true);
+            }
         }
 
         /// <summary>
