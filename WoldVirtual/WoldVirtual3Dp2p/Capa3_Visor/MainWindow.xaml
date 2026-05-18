@@ -386,11 +386,8 @@
                         </Grid>
                     </Border>
 
-                    <!-- Host Container for Godot Window Rendering -->
-                    <wfi:WindowsFormsHost Grid.Row="1" x:Name="WfHost" Background="Black" Focusable="True">
-                        <!-- Panel WinForms Embebido de Destino -->
-                        <wf:Panel x:Name="WfGamePanel" BackColor="Black"/>
-                    </wfi:WindowsFormsHost>
+                    <!-- Placeholder Container for Godot Window Rendering (Fake Embedding) -->
+                    <Border Grid.Row="1" x:Name="GodotPlaceholder" Background="Black" />
                 </Grid>
 
                 <!-- ───── PANTALLA DE ESPERA HTTP METAMASK ───── -->

@@ -16,11 +16,45 @@ using System.Collections.Generic;
 
 using Color = System.Windows.Media.Color;
 using Button = System.Windows.Controls.Button;
+using System.Windows.Interop;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 
 namespace VisorSingularity
 {
+    public class GodotHwndHost : HwndHost
+    {
+        private IntPtr _godotHwnd;
+
+        public GodotHwndHost(IntPtr godotHwnd)
+        {
+            _godotHwnd = godotHwnd;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        protected override HandleRef BuildWindowCore(HandleRef hwndParent)
+        {
+            const int GWL_STYLE = -16;
+            const int WS_CHILD = 0x40000000;
+            const int WS_VISIBLE = 0x10000000;
+
+            SetParent(_godotHwnd, hwndParent.Handle);
+            SetWindowLong(_godotHwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE);
+
+            return new HandleRef(this, _godotHwnd);
+        }
+
+        protected override void DestroyWindowCore(HandleRef hwnd)
+        {
+            // Opcional: desconectar Godot si se destruye el Host
+        }
+    }
+
     public partial class MainWindow : Window
     {
         // ── Win32 API Imports para el Incrustado Nativo ──
@@ -750,11 +784,11 @@ namespace VisorSingularity
             // Para el visor incrustado, cargamos SIEMPRE la escena principal del Metaverso de forma directa
             string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
 
-            // Obtenemos el handle destino directamente del panel nativo
-            IntPtr parentHwnd = WfGamePanel.Handle;
+            // Obtenemos el handle destino simulado (ahora se aloja en el Border)
+            IntPtr parentHwnd = IntPtr.Zero; // No lo pasamos a Godot directamente por CLI
 
-            // Argumentos de línea de comandos para inicializar a Godot con --wid nativo
-            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --wid {parentHwnd} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            // Argumentos de línea de comandos para inicializar a Godot (como ventana normal)
+            string arguments = $"--path \"{godotProjectDir}\" {mainScene} --rendering-driver opengl3 --windowed --resolution 1280x720 -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
             {
@@ -783,7 +817,7 @@ namespace VisorSingularity
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 229, 255));
 
                 // Buscar e incrustar la ventana asíncronamente
-                Task.Run(() => ScanAndEmbed(_godotProcess.Id, parentHwnd));
+                Task.Run(() => ScanAndEmbed(_godotProcess.Id));
             }
             catch (Exception ex)
             {
@@ -792,14 +826,14 @@ namespace VisorSingularity
             }
         }
 
-        private void ScanAndEmbed(int processId, IntPtr parentHwnd)
+        private void ScanAndEmbed(int processId)
         {
             IntPtr hwnd = IntPtr.Zero;
             int retries = 40; // 20 segundos máximo
 
             while (hwnd == IntPtr.Zero && retries > 0 && !_isClosing)
             {
-                hwnd = FindWindowForProcess(processId, parentHwnd);
+                hwnd = FindWindowForProcess(processId);
                 if (hwnd != IntPtr.Zero) break;
 
                 Thread.Sleep(500);
@@ -810,20 +844,13 @@ namespace VisorSingularity
             {
                 _godotHwnd = hwnd;
                 
-                // Docking e Incrustado usando el Dispatcher de WPF
+                // Docking e Incrustado usando HwndHost puro de WPF
                 Dispatcher.Invoke(() => {
-                    MoveWindow(_godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
+                    var host = new GodotHwndHost(_godotHwnd);
+                    GodotPlaceholder.Child = host;
 
                     TxtFooterStatus.Text = "¡Metaverso cargado con éxito! Firma de conexión P2P activa.";
                     TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-
-                    // Auto-redimensionar al cambiar el tamaño del panel WPF
-                    WfGamePanel.Resize += (s, e) => {
-                        if (_godotHwnd != IntPtr.Zero)
-                        {
-                            MoveWindow(_godotHwnd, 0, 0, WfGamePanel.Width, WfGamePanel.Height, true);
-                        }
-                    };
                 });
             }
             else
@@ -835,17 +862,29 @@ namespace VisorSingularity
             }
         }
 
-        private IntPtr FindWindowForProcess(int processId, IntPtr parentHwnd)
+        private IntPtr FindWindowForProcess(int processId)
         {
             IntPtr result = IntPtr.Zero;
+            IntPtr selfHwnd = IntPtr.Zero;
 
-            EnumChildWindows(parentHwnd, (hwnd, lParam) =>
+            Dispatcher.Invoke(() => {
+                selfHwnd = new WindowInteropHelper(this).Handle;
+            });
+
+            EnumWindows((hwnd, lParam) =>
             {
+                if (hwnd == selfHwnd) return true;
+
                 GetWindowThreadProcessId(hwnd, out uint pid);
                 if (pid == processId)
                 {
-                    result = hwnd;
-                    return false; // Parar enumeración
+                    var sb = new StringBuilder(256);
+                    GetWindowText(hwnd, sb, sb.Capacity);
+                    if (sb.ToString().StartsWith("WoldVirtual", StringComparison.OrdinalIgnoreCase))
+                    {
+                        result = hwnd;
+                        return false; // Parar enumeración
+                    }
                 }
                 return true; // Continuar enumeración
             }, IntPtr.Zero);
