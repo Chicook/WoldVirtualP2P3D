@@ -445,7 +445,7 @@ namespace VisorSingularity
             PanWaitHttp.Visibility = Visibility.Collapsed;
 
             // Mostrar el Sidebar y configurar tamaño
-            ColSidebar.Width = new GridLength(280);
+            ColSidebar.Width = new GridLength(320);
             PanSidebar.Visibility = Visibility.Visible;
 
             // Mostrar Viewport 3D
