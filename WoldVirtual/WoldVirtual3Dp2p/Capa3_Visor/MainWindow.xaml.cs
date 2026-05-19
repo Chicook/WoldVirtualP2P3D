@@ -81,24 +81,14 @@ namespace VisorSingularity
             // Foco a Godot al hacer clic en el área 3D
             GodotPlaceholder.MouseDown += (s, e) => _viewer?.FocusGodot();
 
-            // Redimensionar Godot cuando cambie el placeholder
-            GodotPlaceholder.SizeChanged += (s, e) =>
-            {
-                LogDebug($"GodotPlaceholder SizeChanged - ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
-                LogDebug($"ColSidebar Width={ColSidebar.Width.Value}, GridUnitType={ColSidebar.Width.GridUnitType}");
-                LogDebug($"PanViewportContainer dimensions: ActualWidth={PanViewportContainer.ActualWidth}, ActualHeight={PanViewportContainer.ActualHeight}");
-                LogDebug($"Step1_PC visibility: {Step1_PC.Visibility}, dimensions: ActualWidth={Step1_PC.ActualWidth}, ActualHeight={Step1_PC.ActualHeight}");
-
-                if (_viewer?.IsReady == true)
-                {
-                    var dpi = GetDpi();
-                    LogDebug($"DPI: X={dpi.X}, Y={dpi.Y}");
-                    _viewer.Resize(
-                        (int)(GodotPlaceholder.ActualWidth * dpi.X),
-                        (int)(GodotPlaceholder.ActualHeight * dpi.Y));
-                    LogDebug($"Godot resized to: {(int)(GodotPlaceholder.ActualWidth * dpi.X)}x{(int)(GodotPlaceholder.ActualHeight * dpi.Y)}");
-                }
-            };
+            // Sincronizar posición del overlay sin bordes de Godot
+            this.LocationChanged += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
+            this.SizeChanged += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
+            this.StateChanged += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
+            this.Activated += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
+            
+            GodotPlaceholder.SizeChanged += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
+            GodotPlaceholder.LayoutUpdated += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
         }
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
