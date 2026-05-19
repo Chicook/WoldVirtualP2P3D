@@ -398,20 +398,24 @@
                 </Grid> <!-- Cierra WizardContainer -->
 
                 <!-- ==================== GODOT VIEWPORT CONTAINER (Visible during metaverse) ==================== -->
-                <Grid x:Name="PanViewportContainer" Visibility="Collapsed" Background="#070A10" ClipToBounds="True">
+                <Grid x:Name="PanViewportContainer" Visibility="Collapsed" Background="Transparent">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/> <!-- Viewport Alert Bar -->
                         <RowDefinition Height="*"/>    <!-- Godot 3D Viewport -->
                     </Grid.RowDefinitions>
 
+                    <!-- Viewport Status Bar -->
                     <Border Grid.Row="0" Background="#121B2D" BorderBrush="#00E5FF" BorderThickness="0,0,0,1" Padding="12">
                         <Grid>
                             <TextBlock x:Name="TxtViewportMessage" Text="● CENTRO DE CONTROL DEL METAVERSO — Enlace P2P de alta fidelidad activo" Foreground="#00E5FF" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
                         </Grid>
                     </Border>
 
-                    <!-- Container for Godot Window Rendering -->
-                    <Border Grid.Row="1" x:Name="GodotPlaceholder" Background="Black" ClipToBounds="True" />
+                    <!-- Godot 3D Viewport Container -->
+                    <Grid Grid.Row="1" Background="Transparent">
+                        <!-- Container for Godot Window Rendering -->
+                        <Border x:Name="GodotPlaceholder" Background="Transparent" />
+                    </Grid>
                 </Grid>
 
             </Grid>
