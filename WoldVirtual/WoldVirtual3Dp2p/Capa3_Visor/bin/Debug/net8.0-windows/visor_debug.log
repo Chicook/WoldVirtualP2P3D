@@ -110,3 +110,4 @@
 [03:40:41.003] GetGodotHwnd: Escaneando hijos de _containerHwnd (3C04B4)...
 [03:40:41.003] GetGodotHwnd: Resultado = 0
 [03:40:47.355] DestroyWindowCore: Destruyendo HWND = 3C04B4
+[04:01:34.022] DestroyWindowCore: Destruyendo HWND = 560542
