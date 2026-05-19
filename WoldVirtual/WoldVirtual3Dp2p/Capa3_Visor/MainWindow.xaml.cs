@@ -146,8 +146,10 @@ namespace VisorSingularity
 
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
+            LogDebug("MainWindow_Closed called - forcing exit");
             _isClosing = true;
             Cleanup();
+            Environment.Exit(0);
         }
 
         // Drag window custom
@@ -168,9 +170,10 @@ namespace VisorSingularity
         // Close Button
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
+            LogDebug("BtnClose_Click called - forcing exit");
             _isClosing = true;
             Cleanup();
-            Application.Current.Shutdown();
+            Environment.Exit(0);
         }
 
         // ───── WIZARD ACTIONS & NAVIGATION ─────
@@ -799,6 +802,18 @@ namespace VisorSingularity
                 _godotProcess = Process.Start(startInfo);
                 if (_godotProcess == null)
                     throw new Exception("El sistema operativo deneó la ejecución.");
+
+                _godotProcess.EnableRaisingEvents = true;
+                _godotProcess.Exited += (s, e) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        LogDebug("Godot process exited - shutting down visor");
+                        _isClosing = true;
+                        Cleanup();
+                        Environment.Exit(0);
+                    });
+                };
 
                 _viewer.GodotProcessId = (uint)_godotProcess.Id; // Asignar el PID de Godot al viewer
                 LogDebug($"Godot Process ID: {_viewer.GodotProcessId}");
