@@ -62,3 +62,12 @@
 [04:15:08.607] Step1_PC visibility: Collapsed, dimensions: ActualWidth=0, ActualHeight=0
 [04:15:08.762] Godot Process ID: 13168
 [04:17:43.033] MainWindow_Closed called - forcing exit
+[04:44:15.352] MainWindow constructor started
+[04:44:15.497] InitializeComponent completed
+[04:44:15.646] MainWindow_Loaded started
+[04:44:15.972] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[04:44:15.974] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[04:44:15.974] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[04:45:26.096] EnterDashboard called - isNewRegistration: True
+[04:45:26.262] Godot Process ID: 7340
+[04:45:38.860] BtnClose_Click called - forcing exit
