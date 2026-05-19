@@ -216,3 +216,9 @@
 [02:07:24.521] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
 [02:07:24.523] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
 [02:07:24.537] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[02:10:45.354] MainWindow constructor started
+[02:10:45.602] InitializeComponent completed
+[02:10:45.850] MainWindow_Loaded started
+[02:10:46.553] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[02:10:46.556] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[02:10:46.570] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
