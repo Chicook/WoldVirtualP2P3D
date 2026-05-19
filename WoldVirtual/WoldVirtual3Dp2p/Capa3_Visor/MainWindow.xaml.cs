@@ -469,41 +469,20 @@ namespace VisorSingularity
         // ───── CORE DASHBOARD TRANSITION ─────
         private void EnterDashboard(bool isNewRegistration = false)
         {
-            // DEBUG: Log dashboard entry
             LogDebug($"EnterDashboard called - isNewRegistration: {isNewRegistration}");
-            LogDebug($"Window dimensions: Width={Width}, Height={Height}");
-            LogDebug($"Grid dimensions: ActualWidth={ActualWidth}, ActualHeight={ActualHeight}");
 
-            // Ocultar todos los wizards COMPLETAMENTE ocultando el contenedor completo
+            // Ocultar el wizard
             WizardContainer.Visibility = Visibility.Collapsed;
-            LogDebug($"WizardContainer HIDDEN - Visibility: Collapsed");
 
-            // MODO DISEÑO FIJO: Mantenemos la UI de WPF como marco delimitador.
-            // Godot se renderizará en el espacio restante de forma centrada a su tamaño nativo de 1280x720.
-            RowHeader.Height = new GridLength(70);
-            RowFooter.Height = new GridLength(45);
-            ColSidebar.Width = new GridLength(320);
-            
-            PanSidebar.Visibility = Visibility.Visible;
-            TxtHeaderCryptoInfo.Visibility = Visibility.Visible;
-            LogDebug($"Fixed Window Mode Enabled: WPF framework active around Godot.");
-
-            // Mostrar Viewport 3D
-            PanViewportContainer.Visibility = Visibility.Visible;
-            LogDebug($"Viewport container shown - Visibility: Visible");
-
-            // Forzar actualización del layout para obtener dimensiones reales
-            PanViewportContainer.UpdateLayout();
-            GodotPlaceholder.UpdateLayout();
-
-            LogDebug($"PanViewportContainer dimensions: ActualWidth={PanViewportContainer.ActualWidth}, ActualHeight={PanViewportContainer.ActualHeight}");
-            LogDebug($"GodotPlaceholder dimensions: ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
-            LogDebug($"Window client area: {ActualWidth}x{ActualHeight}");
-
-            // Configurar Header (Mostrar información de wallet en la parte superior derecha)
+            // Mostrar sidebar de WPF con el ancho justo para los datos del usuario.
+            // Godot ocupa TODA la columna derecha con Stretch — sin tamaño fijo que cause vibración.
+            RowHeader.Height  = new GridLength(70);
+            RowFooter.Height  = new GridLength(45);
+            ColSidebar.Width  = new GridLength(210);
+            PanSidebar.Visibility          = Visibility.Visible;
             TxtHeaderCryptoInfo.Visibility = Visibility.Visible;
 
-            // Configurar datos Sidebar
+            // Rellenar datos del sidebar
             TxtSidebarUsername.Text = _username.ToUpper();
             TxtSidebarWallet.Text = _wallet.Length > 16
                 ? _wallet.Substring(0, 8) + "..." + _wallet.Substring(_wallet.Length - 6)
@@ -513,7 +492,10 @@ namespace VisorSingularity
             // Cargar Lista de Islas del Teletransporte P2P
             LoadTeleportIslandsList();
 
-            // Lanzar Godot e Incrustar
+            // Mostrar el contenedor de Godot
+            PanViewportContainer.Visibility = Visibility.Visible;
+
+            // Lanzar Godot e incrustar via --wid
             LaunchGodot(_wallet, _username, _islandId, isNewRegistration);
         }
 
