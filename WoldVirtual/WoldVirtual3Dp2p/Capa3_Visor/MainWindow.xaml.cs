@@ -995,7 +995,7 @@ namespace VisorSingularity
                 FileName = godotExe,
                 Arguments = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle = ProcessWindowStyle.Minimized, // Arrancar minimizado para ocultar los bordes primero
+                WindowStyle = ProcessWindowStyle.Normal, // Cambiado a Normal porque Godot suspende el renderizado si arranca minimizado (Pantalla Negra)
                 UseShellExecute = false
             };
 

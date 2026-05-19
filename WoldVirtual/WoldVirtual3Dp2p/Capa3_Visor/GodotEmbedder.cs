@@ -39,6 +39,11 @@ namespace VisorSingularity
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        private const int SW_RESTORE = 9;
+        private const uint SWP_FRAMECHANGED = 0x0020;
+
+        [DllImport("user32.dll")]
         private static extern IntPtr SetFocus(IntPtr hWnd);
 
         [DllImport("user32.dll", SetLastError = true)]
@@ -163,6 +168,13 @@ namespace VisorSingularity
 
             // Aplicar nuevo estilo
             SetWindowLong(hwnd, GWL_STYLE, new IntPtr(style));
+            
+            // Forzar actualización del frame de Windows
+            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x0027); // SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER
+            
+            // Restaurar si estaba minimizado
+            ShowWindow(hwnd, SW_RESTORE);
+            
             Log("Bordes de Godot removidos exitosamente.");
         }
 
