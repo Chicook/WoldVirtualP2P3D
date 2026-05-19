@@ -22,7 +22,7 @@ var _local_island_data: Dictionary = {}
 var _persistent_island_id: String = ""
 
 func _parse_cmdline_args():
-	var args = OS.get_cmdline_args()
+	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
 	for i in args.size():
 		if args[i] == "--island-id" and i + 1 < args.size():
 			_persistent_island_id = args[i+1]
@@ -103,11 +103,20 @@ func _on_network_updated(state: Dictionary):
 		if p_coords != Vector2.ZERO:
 			slot = p_coords
 
+		# Si solo hay un usuario conectado, su ubicacion por defecto es 0,0,0 (evita tembleque de floats)
+		var is_alone = true
+		for uid in users:
+			if uid != lid:
+				is_alone = false
+				break
+		if is_alone:
+			slot = Vector2.ZERO
+
 		var me_data = {
 			"ix": slot.x, "iz": slot.y,
-			"x": slot.x * spacing + randf_range(-2.0, 2.0),
-			"y": HEIGHT, # 🔥 Usar HEIGHT corregida
-			"z": slot.y * spacing + randf_range(-2.0, 2.0),
+			"x": slot.x * spacing,
+			"y": HEIGHT,
+			"z": slot.y * spacing,
 			"r": 0.0, "t": Time.get_unix_time_from_system()
 		}
 		var island_name = "Isla de " + lid.substr(0, 4)
