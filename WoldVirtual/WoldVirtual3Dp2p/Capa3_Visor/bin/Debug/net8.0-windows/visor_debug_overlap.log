@@ -49,3 +49,16 @@
 [03:40:35.786] GodotPlaceholder dimensions: ActualWidth=1280, ActualHeight=720
 [03:40:35.786] Window client area: 1600x950
 [03:40:35.956] Godot Process ID: 6164
+[04:14:10.774] MainWindow constructor started
+[04:14:10.912] InitializeComponent completed
+[04:14:11.050] MainWindow_Loaded started
+[04:14:11.365] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[04:14:11.367] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[04:14:11.368] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[04:15:08.589] EnterDashboard called - isNewRegistration: True
+[04:15:08.604] GodotPlaceholder SizeChanged - ActualWidth=1600, ActualHeight=950
+[04:15:08.606] ColSidebar Width=210, GridUnitType=Pixel
+[04:15:08.606] PanViewportContainer dimensions: ActualWidth=1600, ActualHeight=950
+[04:15:08.607] Step1_PC visibility: Collapsed, dimensions: ActualWidth=0, ActualHeight=0
+[04:15:08.762] Godot Process ID: 13168
+[04:17:43.033] MainWindow_Closed called - forcing exit
