@@ -1,25 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net8.0-windows</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <UseWPF>true</UseWPF>
-        <UseWindowsForms>true</UseWindowsForms>
-        <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
-        <DefaultItemExcludes>$(DefaultItemExcludes);jsonDeEstado\**;servidor_interno\**;DTBSINT\**</DefaultItemExcludes>
-    </PropertyGroup>
+  <PropertyGroup>
+    <!-- Configuración del Ejecutable y Entorno -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    
+    <!-- Frameworks de Interfaz de Usuario -->
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    
+    <!-- Reglas de Exclusión de Datos y Estado -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);jsonDeEstado\**;servidor_interno\**;DTBSINT\**</DefaultItemExcludes>
 
-    <ItemGroup>
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
-        <PackageReference Include="System.Management" Version="8.0.0" />
-    </ItemGroup>
+    <!-- Parámetros de Seguridad Nativos y Calidad de Código -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Features>strict</Features>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <None Update="www\**\*">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
+  <!-- Dependencias de la Aplicación (Con parches de seguridad flotantes) -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.*" />
+    <PackageReference Include="System.Management" Version="8.0.*" />
+  </ItemGroup>
+
+  <!-- Recursos e Interfaz del Visor 3D -->
+  <ItemGroup>
+    <Content Include="www\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>
