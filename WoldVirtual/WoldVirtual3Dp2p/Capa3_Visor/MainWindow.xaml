@@ -232,53 +232,56 @@
             <Grid Grid.Column="1">
                 
                 <!-- WIZARD STEPS CONTAINER (Visible during registration) -->
-                <Grid x:Name="WizardContainer" Visibility="Visible">
-                    <!-- ───── WIZARD STEP 1: PC REGISTRATION (Hardware Binding) ───── -->
-                    <Grid x:Name="Step1_PC" Visibility="Visible" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
-                            <StackPanel>
-                                <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                <TextBlock Text="PASO 1 DE 4: VINCULACIÓN DE HARDWARE" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                                
-                                <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
+                <Grid x:Name="WizardContainer" Visibility="Visible" Background="#070A10">
+                    
+                    <!-- Wizard Content Area -->
+                    <Grid>
+                        <!-- ───── WIZARD STEP 1: PC REGISTRATION (Hardware Binding) ───── -->
+                        <Grid x:Name="Step1_PC" Visibility="Visible" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
+                                <StackPanel>
+                                    <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                    <TextBlock Text="PASO 1 DE 4: VINCULACIÓN DE HARDWARE" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                                    
+                                    <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
 
-                                <TextBlock Text="El Visor enlazará permanentemente tu cuenta con el procesador, placa base y sistema operativo de este computador para máxima seguridad criptográfica."
-                                           Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,25" LineHeight="18"/>
+                                    <TextBlock Text="El Visor enlazará permanentemente tu cuenta con el procesador, placa base y sistema operativo de este computador para máxima seguridad criptográfica."
+                                               Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,25" LineHeight="18"/>
 
-                                <!-- Hardware Telemetry Screen -->
-                                <Border Background="#070A10" BorderBrush="#1A80A3" BorderThickness="1" Padding="15" CornerRadius="6" Margin="0,0,0,25">
-                                    <StackPanel>
-                                        <TextBlock x:Name="TxtCpuId" Text="ID PROCESADOR: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,8"/>
-                                        <TextBlock x:Name="TxtBoardId" Text="PLACA BASE: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,8"/>
-                                        <TextBlock x:Name="TxtOsId" Text="ID SISTEMA OPERATIVO: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,15"/>
-                                        
-                                        <Border BorderBrush="#10FFFFFF" BorderThickness="0,0,0,1" Margin="0,0,0,12"/>
-                                        
-                                        <TextBlock Text="FIRMA DIGITAL DE SEGURIDAD (SHA-256):" Foreground="#8E9AA8" FontSize="9.5" FontWeight="Bold" Margin="0,0,0,4"/>
-                                        <TextBlock x:Name="TxtHwHash" Text="0x..." Foreground="#00FF8C" FontSize="11" FontWeight="Bold" FontFamily="Consolas" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Optional Password / Login Panel for registered users -->
-                                <StackPanel x:Name="PanStep1Login" Visibility="Collapsed" Margin="0,0,0,20">
-                                    <TextBlock Text="IDENTIDAD DE CUENTA DETECTADA EN ESTE PC" Style="{StaticResource CyberLabel}" Margin="0,0,0,5"/>
-                                    <Border Background="#121B2D" BorderBrush="#00E5FF" BorderThickness="1" Padding="12" CornerRadius="4" Margin="0,0,0,12">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="USUARIO: " Foreground="#8E9AA8" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
-                                            <TextBlock x:Name="TxtStep1LoggedUser" Text="CHICOOK" Foreground="#00E5FF" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <!-- Hardware Telemetry Screen -->
+                                    <Border Background="#070A10" BorderBrush="#1A80A3" BorderThickness="1" Padding="15" CornerRadius="6" Margin="0,0,0,25">
+                                        <StackPanel>
+                                            <TextBlock x:Name="TxtCpuId" Text="ID PROCESADOR: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,8"/>
+                                            <TextBlock x:Name="TxtBoardId" Text="PLACA BASE: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,8"/>
+                                            <TextBlock x:Name="TxtOsId" Text="ID SISTEMA OPERATIVO: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,15"/>
+                                            
+                                            <Border BorderBrush="#10FFFFFF" BorderThickness="0,0,0,1" Margin="0,0,0,12"/>
+                                            
+                                            <TextBlock Text="FIRMA DIGITAL DE SEGURIDAD (SHA-256):" Foreground="#8E9AA8" FontSize="9.5" FontWeight="Bold" Margin="0,0,0,4"/>
+                                            <TextBlock x:Name="TxtHwHash" Text="0x..." Foreground="#00FF8C" FontSize="11" FontWeight="Bold" FontFamily="Consolas" TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Border>
-                                    <TextBlock Text="CONTRASEÑA DE SEGURIDAD" Style="{StaticResource CyberLabel}"/>
-                                    <PasswordBox x:Name="TxtStep1Password" Style="{StaticResource CyberPasswordBox}"/>
+
+                                    <!-- Optional Password / Login Panel for registered users -->
+                                    <StackPanel x:Name="PanStep1Login" Visibility="Collapsed" Margin="0,0,0,20">
+                                        <TextBlock Text="IDENTIDAD DE CUENTA DETECTADA EN ESTE PC" Style="{StaticResource CyberLabel}" Margin="0,0,0,5"/>
+                                        <Border Background="#121B2D" BorderBrush="#00E5FF" BorderThickness="1" Padding="12" CornerRadius="4" Margin="0,0,0,12">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="USUARIO: " Foreground="#8E9AA8" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="TxtStep1LoggedUser" Text="CHICOOK" Foreground="#00E5FF" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <TextBlock Text="CONTRASEÑA DE SEGURIDAD" Style="{StaticResource CyberLabel}"/>
+                                        <PasswordBox x:Name="TxtStep1Password" Style="{StaticResource CyberPasswordBox}"/>
+                                    </StackPanel>
+
+                                    <!-- Botón Dedicado de Descarga Directa de la Firma Digital -->
+                                    <Button x:Name="BtnDownloadZip" Content="⬇ GENERAR Y GUARDAR BACKUP DE FIRMA (.ZIP)" Style="{StaticResource CyberButton}" Foreground="#00FF8C" BorderBrush="#00FF8C" Height="40" Margin="0,0,0,15" Click="BtnDownloadZip_Click"/>
+
+                                    <Button x:Name="BtnStep1Action" Content="VINCULAR MAQUINA / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" IsEnabled="False" Click="BtnStep1Next_Click"/>
                                 </StackPanel>
-
-                                <!-- Botón Dedicado de Descarga Directa de la Firma Digital -->
-                                <Button x:Name="BtnDownloadZip" Content="⬇ GENERAR Y GUARDAR BACKUP DE FIRMA (.ZIP)" Style="{StaticResource CyberButton}" Foreground="#00FF8C" BorderBrush="#00FF8C" Height="40" Margin="0,0,0,15" Click="BtnDownloadZip_Click"/>
-
-                                <Button x:Name="BtnStep1Action" Content="VINCULAR MAQUINA / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" IsEnabled="False" Click="BtnStep1Next_Click"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
+                            </Border>
+                        </Grid>
 
                     <!-- ───── WIZARD STEP 2: USER REGISTRATION (Credentials & UUID) ───── -->
                     <Grid x:Name="Step2_User" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
