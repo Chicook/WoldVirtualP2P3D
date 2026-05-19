@@ -114,5 +114,5 @@ Aquí tienes la distribución estratégica del trabajo dividida por fases para c
 ### ⏱️ Hora 3: Trae
  * **Tarea:** Sistema de "Co-Seeding" (hacer que los usuarios almacenen en caché partes de las islas de otros).
 ### ⏱️ Hora 4: VS Code
- * **Tarea:** Cierre del repositorio de GitHub. Dejar el código limpio, comentado y listo para que cualquiera pueda ejecutar su nodo y hacer emerger su isla.
+ * **Tarea:** dejar el código abierto de GitHub. código limpio, comentado listo para que cualquiera pueda ejecutar su nodo y hacer emerger su isla.
 Con esta distribución, cada hora tiene un objetivo cerrado. Al terminar agosto, tendrás la infraestructura de red más difícil y crítica del metaverso totalmente terminada.
