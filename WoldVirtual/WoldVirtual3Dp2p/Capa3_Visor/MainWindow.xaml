@@ -228,175 +228,159 @@
                 </Grid>
             </Border>
 
-            <!-- ───── CENTRAL AREA (Wizard steps & 3D Godot Viewport) ───── -->
+            <!-- ───── CENTRAL AREA (Wizard steps OR 3D Godot Viewport - NEVER BOTH) ───── -->
             <Grid Grid.Column="1">
                 
-                <!-- ───── WIZARD STEP 1: PC REGISTRATION (Hardware Binding) ───── -->
-                <Grid x:Name="Step1_PC" Visibility="Visible" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
-                        <StackPanel>
-                            <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                            <TextBlock Text="PASO 1 DE 4: VINCULACIÓN DE HARDWARE" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                            
-                            <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
+                <!-- WIZARD STEPS CONTAINER (Visible during registration) -->
+                <Grid x:Name="WizardContainer" Visibility="Visible">
+                    <!-- ───── WIZARD STEP 1: PC REGISTRATION (Hardware Binding) ───── -->
+                    <Grid x:Name="Step1_PC" Visibility="Visible" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
+                            <StackPanel>
+                                <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                <TextBlock Text="PASO 1 DE 4: VINCULACIÓN DE HARDWARE" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                                
+                                <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
 
-                            <TextBlock Text="El Visor enlazará permanentemente tu cuenta con el procesador, placa base y sistema operativo de este computador para máxima seguridad criptográfica."
-                                       Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,25" LineHeight="18"/>
+                                <TextBlock Text="El Visor enlazará permanentemente tu cuenta con el procesador, placa base y sistema operativo de este computador para máxima seguridad criptográfica."
+                                           Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,25" LineHeight="18"/>
 
-                            <!-- Hardware Telemetry Screen -->
-                            <Border Background="#070A10" BorderBrush="#1A80A3" BorderThickness="1" Padding="15" CornerRadius="6" Margin="0,0,0,25">
-                                <StackPanel>
-                                    <TextBlock x:Name="TxtCpuId" Text="ID PROCESADOR: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,8"/>
-                                    <TextBlock x:Name="TxtBoardId" Text="PLACA BASE: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,8"/>
-                                    <TextBlock x:Name="TxtOsId" Text="ID SISTEMA OPERATIVO: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,15"/>
-                                    
-                                    <Border BorderBrush="#10FFFFFF" BorderThickness="0,0,0,1" Margin="0,0,0,12"/>
-                                    
-                                    <TextBlock Text="FIRMA DIGITAL DE SEGURIDAD (SHA-256):" Foreground="#8E9AA8" FontSize="9.5" FontWeight="Bold" Margin="0,0,0,4"/>
-                                    <TextBlock x:Name="TxtHwHash" Text="0x..." Foreground="#00FF8C" FontSize="11" FontWeight="Bold" FontFamily="Consolas" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Optional Password / Login Panel for registered users -->
-                            <StackPanel x:Name="PanStep1Login" Visibility="Collapsed" Margin="0,0,0,20">
-                                <TextBlock Text="IDENTIDAD DE CUENTA DETECTADA EN ESTE PC" Style="{StaticResource CyberLabel}" Margin="0,0,0,5"/>
-                                <Border Background="#121B2D" BorderBrush="#00E5FF" BorderThickness="1" Padding="12" CornerRadius="4" Margin="0,0,0,12">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="USUARIO: " Foreground="#8E9AA8" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
-                                        <TextBlock x:Name="TxtStep1LoggedUser" Text="CHICOOK" Foreground="#00E5FF" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <!-- Hardware Telemetry Screen -->
+                                <Border Background="#070A10" BorderBrush="#1A80A3" BorderThickness="1" Padding="15" CornerRadius="6" Margin="0,0,0,25">
+                                    <StackPanel>
+                                        <TextBlock x:Name="TxtCpuId" Text="ID PROCESADOR: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="TxtBoardId" Text="PLACA BASE: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="TxtOsId" Text="ID SISTEMA OPERATIVO: Cargando..." Foreground="#00E5FF" FontSize="11.5" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,15"/>
+                                        
+                                        <Border BorderBrush="#10FFFFFF" BorderThickness="0,0,0,1" Margin="0,0,0,12"/>
+                                        
+                                        <TextBlock Text="FIRMA DIGITAL DE SEGURIDAD (SHA-256):" Foreground="#8E9AA8" FontSize="9.5" FontWeight="Bold" Margin="0,0,0,4"/>
+                                        <TextBlock x:Name="TxtHwHash" Text="0x..." Foreground="#00FF8C" FontSize="11" FontWeight="Bold" FontFamily="Consolas" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
-                                <TextBlock Text="CONTRASEÑA DE SEGURIDAD" Style="{StaticResource CyberLabel}"/>
-                                <PasswordBox x:Name="TxtStep1Password" Style="{StaticResource CyberPasswordBox}"/>
+
+                                <!-- Optional Password / Login Panel for registered users -->
+                                <StackPanel x:Name="PanStep1Login" Visibility="Collapsed" Margin="0,0,0,20">
+                                    <TextBlock Text="IDENTIDAD DE CUENTA DETECTADA EN ESTE PC" Style="{StaticResource CyberLabel}" Margin="0,0,0,5"/>
+                                    <Border Background="#121B2D" BorderBrush="#00E5FF" BorderThickness="1" Padding="12" CornerRadius="4" Margin="0,0,0,12">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="USUARIO: " Foreground="#8E9AA8" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="TxtStep1LoggedUser" Text="CHICOOK" Foreground="#00E5FF" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="CONTRASEÑA DE SEGURIDAD" Style="{StaticResource CyberLabel}"/>
+                                    <PasswordBox x:Name="TxtStep1Password" Style="{StaticResource CyberPasswordBox}"/>
+                                </StackPanel>
+
+                                <!-- Botón Dedicado de Descarga Directa de la Firma Digital -->
+                                <Button x:Name="BtnDownloadZip" Content="⬇ GENERAR Y GUARDAR BACKUP DE FIRMA (.ZIP)" Style="{StaticResource CyberButton}" Foreground="#00FF8C" BorderBrush="#00FF8C" Height="40" Margin="0,0,0,15" Click="BtnDownloadZip_Click"/>
+
+                                <Button x:Name="BtnStep1Action" Content="VINCULAR MAQUINA / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" IsEnabled="False" Click="BtnStep1Next_Click"/>
                             </StackPanel>
+                        </Border>
+                    </Grid>
 
-                            <!-- Botón Dedicado de Descarga Directa de la Firma Digital -->
-                            <Button x:Name="BtnDownloadZip" Content="⬇ GENERAR Y GUARDAR BACKUP DE FIRMA (.ZIP)" Style="{StaticResource CyberButton}" Foreground="#00FF8C" BorderBrush="#00FF8C" Height="40" Margin="0,0,0,15" Click="BtnDownloadZip_Click"/>
+                    <!-- ───── WIZARD STEP 2: USER REGISTRATION (Credentials & UUID) ───── -->
+                    <Grid x:Name="Step2_User" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
+                            <StackPanel>
+                                <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                <TextBlock Text="PASO 2 DE 4: DATOS DE USUARIO Y VALIDACIÓN UUID" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
-                            <Button x:Name="BtnStep1Action" Content="VINCULAR MAQUINA / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" IsEnabled="False" Click="BtnStep1Next_Click"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
+                                <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
 
-                <!-- ───── WIZARD STEP 2: USER REGISTRATION (Credentials & UUID) ───── -->
-                <Grid x:Name="Step2_User" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
-                        <StackPanel>
-                            <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                            <TextBlock Text="PASO 2 DE 4: DATOS DE USUARIO Y VALIDACIÓN UUID" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                                <TextBlock Text="Define los datos de acceso para tu cuenta en este PC y genera tu código de validación de cuenta único."
+                                           Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,20" LineHeight="18"/>
 
-                            <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
+                                <!-- Fields -->
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                            <TextBlock Text="Define los datos de acceso para tu cuenta en este PC y genera tu código de validación de cuenta único."
-                                       Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,20" LineHeight="18"/>
+                                    <TextBlock Grid.Row="0" Text="NOMBRE DE USUARIO" Style="{StaticResource CyberLabel}"/>
+                                    <TextBox Grid.Row="1" x:Name="TxtRegUser" Style="{StaticResource CyberTextBox}" Margin="0,0,0,15"/>
 
-                            <!-- Fields -->
-                            <Grid Margin="0,0,0,20">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="2" Text="CONTRASEÑA DE SEGURIDAD" Style="{StaticResource CyberLabel}"/>
+                                    <PasswordBox Grid.Row="3" x:Name="TxtRegPass" Style="{StaticResource CyberPasswordBox}" Margin="0,0,0,15"/>
 
-                                <TextBlock Grid.Row="0" Text="NOMBRE DE USUARIO" Style="{StaticResource CyberLabel}"/>
-                                <TextBox Grid.Row="1" x:Name="TxtRegUser" Style="{StaticResource CyberTextBox}" Margin="0,0,0,15"/>
-
-                                <TextBlock Grid.Row="2" Text="CONTRASEÑA DE SEGURIDAD" Style="{StaticResource CyberLabel}"/>
-                                <PasswordBox Grid.Row="3" x:Name="TxtRegPass" Style="{StaticResource CyberPasswordBox}" Margin="0,0,0,15"/>
-
-                                <TextBlock Grid.Row="4" Text="REPETIR CONTRASEÑA" Style="{StaticResource CyberLabel}"/>
-                                <PasswordBox Grid.Row="5" x:Name="TxtRegPassRepeat" Style="{StaticResource CyberPasswordBox}"/>
-                            </Grid>
-
-                            <!-- UUID Generator Section -->
-                            <Border Background="#070A10" BorderBrush="#1A80A3" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,25">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="UUID DE VALIDACIÓN DE CUENTA:" Foreground="#8E9AA8" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
-                                        <TextBlock x:Name="TxtUuid" Text="Haz clic para generar el UUID" Foreground="#00E5FF" FontSize="12" FontWeight="Bold" FontFamily="Consolas" TextWrapping="Wrap"/>
-                                    </StackPanel>
-
-                                    <Button Grid.Column="1" Content="GENERAR UUID" Style="{StaticResource CyberButton}" Height="34" Margin="10,0,0,0" Padding="10,5" Click="BtnGenerateUuid_Click"/>
+                                    <TextBlock Grid.Row="4" Text="REPETIR CONTRASEÑA" Style="{StaticResource CyberLabel}"/>
+                                    <PasswordBox Grid.Row="5" x:Name="TxtRegPassRepeat" Style="{StaticResource CyberPasswordBox}"/>
                                 </Grid>
-                            </Border>
 
-                            <Button Content="CREAR IDENTIDAD / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnStep2Next_Click"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
+                                <!-- UUID Generator Section -->
+                                <Border Background="#070A10" BorderBrush="#1A80A3" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,25">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="UUID DE VALIDACIÓN DE CUENTA:" Foreground="#8E9AA8" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                                            <TextBlock x:Name="TxtUuid" Text="Haz clic para generar el UUID" Foreground="#00E5FF" FontSize="12" FontWeight="Bold" FontFamily="Consolas" TextWrapping="Wrap"/>
+                                        </StackPanel>
 
-                <!-- ───── WIZARD STEP 3: METAMASK DEFI VALIDATION (HTTP Bridge) ───── -->
-                <Grid x:Name="Step3_Metamask" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
-                        <StackPanel>
-                            <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                            <TextBlock Text="PASO 3 DE 4: CONEXION DE METAMASK DEFI WALLET" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                                        <Button Grid.Column="1" Content="GENERAR UUID" Style="{StaticResource CyberButton}" Height="34" Margin="10,0,0,0" Padding="10,5" Click="BtnGenerateUuid_Click"/>
+                                    </Grid>
+                                </Border>
 
-                            <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
+                                <Button Content="CREAR IDENTIDAD / SIGUIENTE" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnStep2Next_Click"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
 
-                            <TextBlock Text="Vincula tu MetaMask DeFi Wallet de forma criptográfica para sincronizar y validar la propiedad de tus activos y NFTs de islas en 3D."
-                                       Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,20" LineHeight="18"/>
+                    <!-- ───── WIZARD STEP 3: METAMASK DEFI VALIDATION (HTTP Bridge) ───── -->
+                    <Grid x:Name="Step3_Metamask" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
+                            <StackPanel>
+                                <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                <TextBlock Text="PASO 3 DE 4: CONEXION DE METAMASK DEFI WALLET" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
-                            <Button Content="🦊 VINCULAR CON METAMASK REAL" Style="{StaticResource EmeraldButton}" Foreground="#FFFFFF" Margin="0,0,0,25" Height="45" Click="BtnValidateRealMetamask_Click"/>
+                                <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
+
+                                <TextBlock Text="Vincula tu MetaMask DeFi Wallet de forma criptográfica para sincronizar y validar la propiedad de tus activos y NFTs de islas en 3D."
+                                           Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,20" LineHeight="18"/>
+
+                                <Button Content="🦊 VINCULAR CON METAMASK REAL" Style="{StaticResource EmeraldButton}" Foreground="#FFFFFF" Margin="0,0,0,25" Height="45" Click="BtnValidateRealMetamask_Click"/>
 
 
-                        </StackPanel>
-                    </Border>
-                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
 
-                <!-- ───── WIZARD STEP 4: SELECCIÓN DE ISLA & FINALIZACIÓN ───── -->
-                <Grid x:Name="Step4_Island" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
-                        <StackPanel>
-                            <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                            <TextBlock Text="PASO 4 DE 4: COORDENADAS DE ISLA POR DEFECTO" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                    <!-- ───── WIZARD STEP 4: SELECCIÓN DE ISLA & FINALIZACIÓN ───── -->
+                    <Grid x:Name="Step4_Island" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00FF8C" BorderThickness="1.5" Width="650" Padding="35">
+                            <StackPanel>
+                                <TextBlock Text="⬢  CREADOR DE IDENTIDAD WOLD  ⬢" Foreground="#00FF8C" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                <TextBlock Text="PASO 4 DE 4: COORDENADAS DE ISLA POR DEFECTO" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
-                            <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
+                                <Border BorderBrush="#2000FF8C" BorderThickness="0,0,0,1" Margin="0,0,0,20"/>
 
-                            <TextBlock Text="Se han generado coordenadas espaciales únicas para tu nodo 3D. Tu isla cuántica quedará fija y asegurada de por vida en la red P2P."
-                                       Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,20" LineHeight="18"/>
+                                <TextBlock Text="Se han generado coordenadas espaciales únicas para tu nodo 3D. Tu isla cuántica quedará fija y asegurada de por vida en la red P2P."
+                                           Foreground="#E2E8F0" FontSize="12.5" TextWrapping="Wrap" Margin="0,0,0,20" LineHeight="18"/>
 
-                            <!-- Fields -->
-                            <TextBlock Text="COORDENADAS DE TU ISLA UNICA (GENERADA POR DEFECTO)" Style="{StaticResource CyberLabel}"/>
-                            <TextBox x:Name="TxtIslandCoordinates" Style="{StaticResource CyberTextBox}" IsReadOnly="True" Background="#0A0F1A" BorderBrush="#1A80A3" Foreground="#8E9AA8" Margin="0,0,0,25"/>
+                                <!-- Fields -->
+                                <TextBlock Text="COORDENADAS DE TU ISLA UNICA (GENERADA POR DEFECTO)" Style="{StaticResource CyberLabel}"/>
+                                <TextBox x:Name="TxtIslandCoordinates" Style="{StaticResource CyberTextBox}" IsReadOnly="True" Background="#0A0F1A" BorderBrush="#1A80A3" Foreground="#8E9AA8" Margin="0,0,0,25"/>
 
-                            <Button Content="FINALIZAR REGISTRO Y LANZAR METAVERSO" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnFinalizeRegister_Click"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
+                                <Button Content="FINALIZAR REGISTRO Y LANZAR METAVERSO" Style="{StaticResource EmeraldButton}" Height="45" Click="BtnFinalizeRegister_Click"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
 
-                <!-- ==================== VIEWPORT CENTRAL DE DIOS (GODOT 3D CONTAINER) ==================== -->
-                <Grid x:Name="PanViewportContainer" Visibility="Collapsed" Background="#070A10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Viewport Alert Bar -->
-                        <RowDefinition Height="*"/>    <!-- Control Dashboard / Host -->
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="#121B2D" BorderBrush="#00E5FF" BorderThickness="0,0,0,1" Padding="12">
-                        <Grid>
-                            <TextBlock x:Name="TxtViewportMessage" Text="● CENTRO DE CONTROL DEL METAVERSO — Enlace P2P de alta fidelidad activo" Foreground="#00E5FF" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                        </Grid>
-                    </Border>
-
-                    <!-- Placeholder Container for Godot Window Rendering (Fake Embedding) -->
-                    <Border Grid.Row="1" x:Name="GodotPlaceholder" Background="Black" />
-                </Grid>
-
-                <!-- ───── PANTALLA DE ESPERA HTTP METAMASK ───── -->
-                <Grid x:Name="PanWaitHttp" Visibility="Collapsed" Background="#C0070A10">
-                    <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00E5FF" BorderThickness="1.5" Width="650" Padding="35" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <StackPanel>
-                            <TextBlock Text="⬢  PUENTE HTTP ACTIVO  ⬢" Foreground="#00E5FF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                            <TextBlock Text="ESPERANDO FIRMA DE METAMASK" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,25"/>
-
+                    <!-- ───── PANTALLA DE ESPERA HTTP METAMASK ───── -->
+                    <Grid x:Name="PanWaitHttp" Visibility="Collapsed" Background="#C0070A10">
+                        <Border Background="#0E1524" CornerRadius="12" BorderBrush="#00E5FF" BorderThickness="1.5" Width="650" Padding="35" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel>
+                                <TextBlock Text="⬢  PUENTE HTTP ACTIVO  ⬢" Foreground="#00E5FF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                <TextBlock Text="ESPERANDO FIRMA DE METAMASK" Foreground="#8E9AA8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,25"/>
                             <ProgressBar IsIndeterminate="True" Height="4" Foreground="#00E5FF" Background="#121B2D" BorderThickness="0" Margin="0,0,0,25"/>
 
                             <TextBlock Text="Por favor, completa la confirmación de firma en la pestaña abierta en tu navegador de Internet."
@@ -410,6 +394,24 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+                </Grid>
+                </Grid> <!-- Cierra WizardContainer -->
+
+                <!-- ==================== GODOT VIEWPORT CONTAINER (Visible during metaverse) ==================== -->
+                <Grid x:Name="PanViewportContainer" Visibility="Collapsed" Background="#070A10" ClipToBounds="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Viewport Alert Bar -->
+                        <RowDefinition Height="*"/>    <!-- Godot 3D Viewport -->
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#121B2D" BorderBrush="#00E5FF" BorderThickness="0,0,0,1" Padding="12">
+                        <Grid>
+                            <TextBlock x:Name="TxtViewportMessage" Text="● CENTRO DE CONTROL DEL METAVERSO — Enlace P2P de alta fidelidad activo" Foreground="#00E5FF" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Container for Godot Window Rendering -->
+                    <Border Grid.Row="1" x:Name="GodotPlaceholder" Background="Black" ClipToBounds="True" />
                 </Grid>
 
             </Grid>

@@ -466,20 +466,9 @@ namespace VisorSingularity
             LogDebug($"Window dimensions: Width={Width}, Height={Height}");
             LogDebug($"Grid dimensions: ActualWidth={ActualWidth}, ActualHeight={ActualHeight}");
 
-            // Ocultar todos los wizards COMPLETAMENTE
-            Step1_PC.Visibility = Visibility.Collapsed;
-            Step2_User.Visibility = Visibility.Collapsed;
-            Step3_Metamask.Visibility = Visibility.Collapsed;
-            Step4_Island.Visibility = Visibility.Collapsed;
-            PanWaitHttp.Visibility = Visibility.Collapsed;
-
-            // Verificar que todos los wizards estén realmente ocultos
-            LogDebug($"Wizard visibility check:");
-            LogDebug($"  Step1_PC: {Step1_PC.Visibility}, IsVisible: {Step1_PC.IsVisible}");
-            LogDebug($"  Step2_User: {Step2_User.Visibility}, IsVisible: {Step2_User.IsVisible}");
-            LogDebug($"  Step3_Metamask: {Step3_Metamask.Visibility}, IsVisible: {Step3_Metamask.IsVisible}");
-            LogDebug($"  Step4_Island: {Step4_Island.Visibility}, IsVisible: {Step4_Island.IsVisible}");
-            LogDebug($"  PanWaitHttp: {PanWaitHttp.Visibility}, IsVisible: {PanWaitHttp.IsVisible}");
+            // Ocultar todos los wizards COMPLETAMENTE ocultando el contenedor completo
+            WizardContainer.Visibility = Visibility.Collapsed;
+            LogDebug($"WizardContainer HIDDEN - Visibility: Collapsed");
 
             // Ocultar Sidebar para dar TODO el espacio al viewport de Godot
             ColSidebar.Width = new GridLength(0);
