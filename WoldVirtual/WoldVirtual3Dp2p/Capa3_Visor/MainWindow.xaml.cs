@@ -478,13 +478,15 @@ namespace VisorSingularity
             WizardContainer.Visibility = Visibility.Collapsed;
             LogDebug($"WizardContainer HIDDEN - Visibility: Collapsed");
 
-            // MODO INMERSIVO: Ocultar todas las áreas de WPF para evitar solapamientos con la UI interna de Godot
-            RowHeader.Height = new GridLength(0);
-            RowFooter.Height = new GridLength(0);
-            ColSidebar.Width = new GridLength(0);
+            // MODO DISEÑO FIJO: Mantenemos la UI de WPF como marco delimitador.
+            // Godot se renderizará en el espacio restante de forma centrada a su tamaño nativo de 1280x720.
+            RowHeader.Height = new GridLength(70);
+            RowFooter.Height = new GridLength(45);
+            ColSidebar.Width = new GridLength(320);
             
-            PanSidebar.Visibility = Visibility.Collapsed;
-            LogDebug($"Immersive Mode Enabled: Header, Footer, and Sidebar hidden.");
+            PanSidebar.Visibility = Visibility.Visible;
+            TxtHeaderCryptoInfo.Visibility = Visibility.Visible;
+            LogDebug($"Fixed Window Mode Enabled: WPF framework active around Godot.");
 
             // Mostrar Viewport 3D
             PanViewportContainer.Visibility = Visibility.Visible;

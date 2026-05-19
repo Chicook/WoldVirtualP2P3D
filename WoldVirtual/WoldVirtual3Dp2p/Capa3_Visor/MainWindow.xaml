@@ -590,8 +590,9 @@
                         </StackPanel>
                     </Border>
 
-                    <Grid Grid.Row="1" Background="Transparent">
-                        <Border x:Name="GodotPlaceholder" Background="Transparent" />
+                    <Grid Grid.Row="1" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <!-- FIJAMOS EL TAMAÑO DE GODOT A SU NATIVO 1280x720 PARA EVITAR ESTIRAMIENTOS Y VIBRACIÓN -->
+                        <Border x:Name="GodotPlaceholder" Width="1280" Height="720" Background="#000000" />
                     </Grid>
                 </Grid>
 
