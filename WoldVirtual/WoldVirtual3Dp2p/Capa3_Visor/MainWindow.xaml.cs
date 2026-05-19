@@ -966,30 +966,11 @@ namespace VisorSingularity
                 return;
             }
 
-            // ── PASO 1: Crear el visor nativo ANTES de lanzar Godot ──
+            // ── PASO 1: Inicializar el controlador del overlay ──
             _viewer = new GodotViewer();
-            GodotPlaceholder.Child = _viewer;
 
-            // Esperar asíncronamente a que WPF calcule el layout y asigne el tamaño real
+            // Esperar asíncronamente a que WPF calcule el layout
             await Task.Delay(150);
-
-            IntPtr containerHwnd = _viewer.ContainerHandle;
-            if (containerHwnd == IntPtr.Zero)
-            {
-                TxtFooterStatus.Text = "Error: no se pudo crear el contenedor del visor.";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
-                return;
-            }
-
-            // Obtener tamaño en píxeles físicos reales
-            var dpi = GetDpi();
-            int width = (int)(GodotPlaceholder.ActualWidth * dpi.X);
-            int height = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
-            if (width < 100) width = 1280;
-            if (height < 100) height = 720;
-
-            // Redimensionar el contenedor al tamaño real exacto
-            _viewer.Resize(width, height);
 
             // Escribir JSON de perfil del usuario para Godot
             try
@@ -1001,13 +982,12 @@ namespace VisorSingularity
             }
             catch (Exception ex) { Debug.WriteLine($"current_user.json: {ex.Message}"); }
 
-            // ── PASO 2: Lanzar Godot con --wid apuntando al contenedor ──
-            // Godot crea su contexto OpenGL directamente como hijo del contenedor.
-            // No hay SetParent a posteriori. No hay conflicto de renderizado.
+            // ── PASO 2: Lanzar Godot de forma autónoma (Sin --wid) ──
+            // Al no incrustar el HWND en WPF, evitamos los conflictos de renderizado 
+            // que causan el parpadeo del avatar. Luego lo superpondremos.
             string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
             string arguments = $"--path \"{godotProjectDir}\" {mainScene} "
                               + $"--rendering-driver opengl3 "
-                              + $"--wid {containerHwnd} "
                               + $"-- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
 
             var startInfo = new ProcessStartInfo
@@ -1015,7 +995,7 @@ namespace VisorSingularity
                 FileName = godotExe,
                 Arguments = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle = ProcessWindowStyle.Hidden,
+                WindowStyle = ProcessWindowStyle.Minimized, // Arrancar minimizado para ocultar los bordes primero
                 UseShellExecute = false
             };
 
@@ -1023,7 +1003,7 @@ namespace VisorSingularity
             {
                 _godotProcess = Process.Start(startInfo);
                 if (_godotProcess == null)
-                    throw new Exception("El sistema operativo deneó la ejecución.");
+                    throw new Exception("El sistema operativo denegó la ejecución.");
 
                 _godotProcess.EnableRaisingEvents = true;
                 _godotProcess.Exited += (s, e) =>
@@ -1042,10 +1022,10 @@ namespace VisorSingularity
 
                 try { _godotProcess.PriorityClass = ProcessPriorityClass.High; } catch { }
 
-                TxtFooterStatus.Text = "¡Metaverso cargado! Motor 3D activo dentro del visor.";
+                TxtFooterStatus.Text = "¡Metaverso cargado! Sincronizando overlay espacial...";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
-                // Esperar de forma asíncrona a que el HWND de Godot se cree, y redimensionarlo / enfocarlo
+                // Esperar de forma asíncrona a que Godot cree su ventana principal
                 _ = Task.Run(async () =>
                 {
                     IntPtr hwnd = IntPtr.Zero;
@@ -1068,11 +1048,14 @@ namespace VisorSingularity
                         {
                             if (_viewer != null)
                             {
-                                var dpi = GetDpi();
-                                int w = (int)(GodotPlaceholder.ActualWidth * dpi.X);
-                                int h = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
-                                _viewer.Resize(w, h);
+                                // Quitar los bordes de la ventana para que parezca embebida
+                                _viewer.StripWindowBorders();
+                                
+                                // Mover y superponer encima de nuestro GodotPlaceholder
+                                _viewer.UpdatePosition(GodotPlaceholder, this);
                                 _viewer.FocusGodot();
+                                
+                                TxtFooterStatus.Text = "¡Metaverso activo en modo overlay sincronizado!";
                             }
                         });
                     }
@@ -1106,7 +1089,6 @@ namespace VisorSingularity
 
             if (_viewer != null)
             {
-                GodotPlaceholder.Child = null;
                 _viewer = null;
             }
         }
