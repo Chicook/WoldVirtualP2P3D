@@ -14,6 +14,7 @@ using System.Windows.Threading;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Collections.Generic;
+using System.Globalization;
 
 using Color = System.Windows.Media.Color;
 using Button = System.Windows.Controls.Button;
@@ -22,32 +23,25 @@ using MessageBox = System.Windows.MessageBox;
 
 namespace VisorSingularity
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "WPF Window lifecycle manages listener cleanup in Closed event.")]
     public partial class MainWindow : Window
     {
         // ── Win32: solo lo estrictamente necesario en MainWindow ──
-        [DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-        [DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
         [DllImport("user32.dll")]
         private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         [DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+        private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+
         // ── Datos de la Sesión ──
         private HardwareFingerprint _fingerprint = null!;
         private DatabaseManager _db = null!;
         private int _currentStep = 1;
-        private bool _isClosing = false;
-        private bool _hasAccount = false;
-        private bool _ignoreGodotExit = false;
+        private bool _isClosing;
+        private bool _hasAccount;
+        private bool _ignoreGodotExit;
 
         private string _username = "";
         private string _wallet = "";
@@ -59,7 +53,7 @@ namespace VisorSingularity
         private GodotViewer? _viewer;
 
         // ── Debug Logging ──
-        private void LogDebug(string message)
+        private static void LogDebug(string message)
         {
             try
             {
@@ -114,8 +108,8 @@ namespace VisorSingularity
                 TxtCpuId.Text = $"ID PROCESADOR: {_fingerprint.ProcessorId}";
                 TxtBoardId.Text = $"PLACA BASE: {_fingerprint.MotherboardId}";
                 TxtOsId.Text = $"ID SISTEMA OPERATIVO: {_fingerprint.OsId}";
-                TxtHwHash.Text = _fingerprint.UniqueHash.ToUpper();
-                TxtFooterHwSignature.Text = $"ENLACE SEGURO FINGERPRINT: {_fingerprint.UniqueHash.Substring(0, 16).ToUpper()}";
+                TxtHwHash.Text = _fingerprint.UniqueHash.ToUpper(CultureInfo.InvariantCulture);
+                TxtFooterHwSignature.Text = $"ENLACE SEGURO FINGERPRINT: {_fingerprint.UniqueHash.Substring(0, 16).ToUpper(CultureInfo.InvariantCulture)}";
 
                 // Iniciar el HTTP Bridge en puerto 8080 para MetaMask
                 StartHttpBridge();
@@ -125,7 +119,7 @@ namespace VisorSingularity
                 if (_hasAccount && !string.IsNullOrEmpty(registeredUser))
                 {
                     _username = registeredUser;
-                    TxtStep1LoggedUser.Text = _username.ToUpper();
+                    TxtStep1LoggedUser.Text = _username.ToUpper(CultureInfo.InvariantCulture);
                     PanStep1Login.Visibility = Visibility.Visible;
                     BtnStep1Action.Content = "INICIAR SESIÓN / ACCEDER AL METAVERSO";
                     BtnStep1Action.IsEnabled = true; // Habilitado para Login directo
@@ -221,8 +215,8 @@ namespace VisorSingularity
                     DetalleCPU = _fingerprint.ProcessorId,
                     DetallePlacaBase = _fingerprint.MotherboardId,
                     DetalleOS = _fingerprint.OsId,
-                    FechaVinculacion = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                    FechaVinculacion = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+                }, _jsonOptions);
 
                 string zipFilePath = "";
                 string zipFileName = "Wold_Firma_Digital.zip";
@@ -274,7 +268,7 @@ namespace VisorSingularity
                     $"Se ha creado y guardado tu llave cuántica de identidad segura en:\n" +
                     $"📄 {zipFilePath}\n\n" +
                     $"IMPORTANTE: Conserva este archivo .zip. Contiene tu firma digital de hardware única:\n" +
-                    $"{_fingerprint.UniqueHash.ToUpper()}\n\n" +
+                    $"{_fingerprint.UniqueHash.ToUpper(CultureInfo.InvariantCulture)}\n\n" +
                     $"Tu llave de recuperación cuántica es:\n" +
                     $"{recoveryHash}",
                     "Criptografía WOLD VIRTUAL P2P",
@@ -334,7 +328,7 @@ namespace VisorSingularity
         // STEP 1 Action: Botón de Descarga Directa/Manual de la Firma Digital ZIP
         private void BtnDownloadZip_Click(object sender, RoutedEventArgs e)
         {
-            string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
+            string recoveryHash = Guid.NewGuid().ToString("D", CultureInfo.InvariantCulture).ToUpper(CultureInfo.InvariantCulture);
             if (GenerateIdentityZip(recoveryHash, false))
             {
                 TxtUuid.Text = recoveryHash;
@@ -352,7 +346,7 @@ namespace VisorSingularity
         // STEP 2 Action: Generate Account UUID
         private void BtnGenerateUuid_Click(object sender, RoutedEventArgs e)
         {
-            TxtUuid.Text = Guid.NewGuid().ToString("D").ToUpper();
+            TxtUuid.Text = Guid.NewGuid().ToString("D", CultureInfo.InvariantCulture).ToUpper(CultureInfo.InvariantCulture);
             TxtFooterStatus.Text = "UUID de cuenta generado con éxito para la firma digital.";
         }
 
@@ -480,12 +474,12 @@ namespace VisorSingularity
             PanRightSidebar.Visibility = Visibility.Visible;
 
             // Actualizar la dirección IPFS del nodo
-            TxtIpfsAddress.Text = $"http://localhost:8080/node/{_username.ToLower()}.ipfs";
+            TxtIpfsAddress.Text = $"http://localhost:8080/node/{_username.ToLower(CultureInfo.InvariantCulture)}.ipfs";
 
             // Rellenar datos del sidebar
-            TxtSidebarUsername.Text = _username.ToUpper();
+            TxtSidebarUsername.Text = _username.ToUpper(CultureInfo.InvariantCulture);
             TxtSidebarWallet.Text = _wallet.Length > 16
-                ? _wallet.Substring(0, 8) + "..." + _wallet.Substring(_wallet.Length - 6)
+                ? string.Concat(_wallet.AsSpan(0, 8), "...", _wallet.AsSpan(_wallet.Length - 6))
                 : _wallet;
             TxtSidebarIsland.Text = _islandId;
 
@@ -514,7 +508,7 @@ namespace VisorSingularity
             foreach (var item in list)
             {
                 string isCurrent = item.Username.Equals(_username, StringComparison.OrdinalIgnoreCase) ? " ⬢ [Mía]" : "";
-                string btnText = $"⬢ {item.Username.ToUpper()}{isCurrent}\n  ({item.IslandId})";
+                string btnText = $"⬢ {item.Username.ToUpper(CultureInfo.InvariantCulture)}{isCurrent}\n  ({item.IslandId})";
 
                 var btn = new Button
                 {
@@ -593,7 +587,7 @@ namespace VisorSingularity
             if (_hasAccount && !string.IsNullOrEmpty(registeredUser))
             {
                 _username = registeredUser;
-                TxtStep1LoggedUser.Text = _username.ToUpper();
+                TxtStep1LoggedUser.Text = _username.ToUpper(CultureInfo.InvariantCulture);
                 PanStep1Login.Visibility = Visibility.Visible;
                 BtnStep1Action.Content = "INICIAR SESIÓN / ACCEDER AL METAVERSO";
             }
@@ -660,7 +654,7 @@ namespace VisorSingularity
                         byte[] buffer = Encoding.UTF8.GetBytes(responseString);
                         response.ContentLength64 = buffer.Length;
                         response.ContentType = "text/html; charset=UTF-8";
-                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        await response.OutputStream.WriteAsync(buffer.AsMemory(0, buffer.Length));
                         response.OutputStream.Close();
 
                         // Actualizar UI del Visor
@@ -674,7 +668,7 @@ namespace VisorSingularity
                             if (_hasAccount)
                             {
                                 // ROTACIÓN CRIPTOGRÁFICA EN CALIENTE: Generar nueva firma única y exportar ZIP
-                                string newRecoveryHash = Guid.NewGuid().ToString("D").ToUpper();
+                                string newRecoveryHash = Guid.NewGuid().ToString("D", CultureInfo.InvariantCulture).ToUpper(CultureInfo.InvariantCulture);
                                 _db.UpdateUserId(_username, newRecoveryHash);
                                 GenerateIdentityZip(newRecoveryHash);
 
@@ -696,14 +690,14 @@ namespace VisorSingularity
                             }
                         });
                     }
-                    else if (path.StartsWith("/node"))
+                    else if (path.StartsWith("/node", StringComparison.Ordinal))
                     {
                         // Servir la página de descarga IPFS
                         string responseString = GetIpfsDownloadHtml();
                         byte[] buffer = Encoding.UTF8.GetBytes(responseString);
                         response.ContentLength64 = buffer.Length;
                         response.ContentType = "text/html; charset=UTF-8";
-                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        await response.OutputStream.WriteAsync(buffer.AsMemory(0, buffer.Length));
                         response.OutputStream.Close();
                     }
                     else
@@ -721,16 +715,16 @@ namespace VisorSingularity
                             byte[] buffer = File.ReadAllBytes(filePath);
                             response.ContentLength64 = buffer.Length;
                             response.ContentType = "text/html; charset=UTF-8";
-                            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                            await response.OutputStream.WriteAsync(buffer.AsMemory(0, buffer.Length));
                         }
                         else
                         {
                             // Generar portal Web3 inline de contingencia
-                            string responseString = $"<html><head><meta charset='UTF-8'><title>Conectar Wallet</title><style>body{{background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:50px;}}a{{background:#00d9ff;color:#000;padding:12px 24px;text-decoration:none;font-weight:bold;border-radius:6px;}}</style></head><body><h1>Link WoldVirtual MetaMask</h1><p>Usuario: {_username}</p><br><br><a href='/confirm?user={_username}&wallet=0x{Guid.NewGuid().ToString().Replace("-", "").Substring(0, 40)}&islandId={_islandId}'>SIMULAR CONEXION METAMASK EN CALIENTE</a></body></html>";
+                            string responseString = $"<html><head><meta charset='UTF-8'><title>Conectar Wallet</title><style>body{{background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:50px;}}a{{background:#00d9ff;color:#000;padding:12px 24px;text-decoration:none;font-weight:bold;border-radius:6px;}}</style></head><body><h1>Link WoldVirtual MetaMask</h1><p>Usuario: {_username}</p><br><br><a href='/confirm?user={_username}&wallet=0x{Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture).ToLower(CultureInfo.InvariantCulture)}&islandId={_islandId}'>SIMULAR CONEXION METAMASK EN CALIENTE</a></body></html>";
                             byte[] buffer = Encoding.UTF8.GetBytes(responseString);
                             response.ContentLength64 = buffer.Length;
                             response.ContentType = "text/html";
-                            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                            await response.OutputStream.WriteAsync(buffer.AsMemory(0, buffer.Length));
                         }
                         response.OutputStream.Close();
                     }
@@ -756,7 +750,7 @@ namespace VisorSingularity
         private string GetIpfsDownloadHtml()
         {
             string hash = _fingerprint?.UniqueHash ?? "FINGERPRINT_NOT_FOUND";
-            string userDisplay = string.IsNullOrEmpty(_username) ? "Invitado" : _username.ToUpper();
+            string userDisplay = string.IsNullOrEmpty(_username) ? "Invitado" : _username.ToUpper(CultureInfo.InvariantCulture);
             
             return $@"<!DOCTYPE html>
 <html>
@@ -942,11 +936,11 @@ namespace VisorSingularity
         <div class='info-grid'>
             <div class='info-item'>
                 <div class='info-label'>Firma Cuántica del Nodo (Fingerprint)</div>
-                <div class='info-value'>{hash.ToUpper()}</div>
+                <div class='info-value'>{hash.ToUpper(CultureInfo.InvariantCulture)}</div>
             </div>
             <div class='info-item'>
                 <div class='info-label'>Dirección del Portal Distribuido</div>
-                <div class='info-value'>http://localhost:8080/node/{userDisplay.ToLower()}.ipfs</div>
+                <div class='info-value'>http://localhost:8080/node/{userDisplay.ToLower(CultureInfo.InvariantCulture)}.ipfs</div>
             </div>
         </div>
 
@@ -1025,7 +1019,7 @@ namespace VisorSingularity
             {
                 _godotProcess = Process.Start(startInfo);
                 if (_godotProcess == null)
-                    throw new Exception("El sistema operativo denegó la ejecución.");
+                    throw new InvalidOperationException("El sistema operativo denegó la ejecución.");
 
                 _godotProcess.EnableRaisingEvents = true;
                 _godotProcess.Exited += (s, e) =>

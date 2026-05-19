@@ -120,7 +120,7 @@ namespace VisorSingularity
             EnumWindows((hWnd, lParam) =>
             {
                 uint processId;
-                GetWindowThreadProcessId(hWnd, out processId);
+                _ = GetWindowThreadProcessId(hWnd, out processId);
                 
                 // Si el PID coincide, verificamos que sea una ventana principal
                 if (processId == _godotProcessId)

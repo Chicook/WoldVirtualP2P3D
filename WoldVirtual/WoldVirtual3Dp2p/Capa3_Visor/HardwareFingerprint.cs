@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Management;
 using System.Security.Cryptography;
 using System.Text;
@@ -21,7 +22,7 @@ namespace VisorSingularity
             UniqueHash = GenerateHash(ProcessorId + MotherboardId + OsId);
         }
 
-        private string GetProcessorId()
+        private static string GetProcessorId()
         {
             try
             {
@@ -29,7 +30,7 @@ namespace VisorSingularity
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        return mo["ProcessorId"]?.ToString() ?? "UNKNOWN_CPU";
+                        return mo[nameof(ProcessorId)]?.ToString() ?? "UNKNOWN_CPU";
                     }
                 }
             }
@@ -37,7 +38,7 @@ namespace VisorSingularity
             return "NOT_FOUND_CPU";
         }
 
-        private string GetMotherboardId()
+        private static string GetMotherboardId()
         {
             try
             {
@@ -53,7 +54,7 @@ namespace VisorSingularity
             return "NOT_FOUND_BOARD";
         }
 
-        private string GetOsId()
+        private static string GetOsId()
         {
             try
             {
@@ -69,18 +70,10 @@ namespace VisorSingularity
             return "NOT_FOUND_OS";
         }
 
-        private string GenerateHash(string input)
+        private static string GenerateHash(string input)
         {
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
+            byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+            return Convert.ToHexString(bytes).ToLower(CultureInfo.InvariantCulture);
         }
     }
 }
