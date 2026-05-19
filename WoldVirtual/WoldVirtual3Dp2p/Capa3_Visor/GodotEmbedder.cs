@@ -1,117 +1,54 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Windows.Interop;
-using System.Text; // Added for StringBuilder
+using System.Text;
+using System.Windows;
+using System.Threading.Tasks;
 
 namespace VisorSingularity
 {
     /// <summary>
-    /// Contenedor Win32 profesional para incrustar Godot 4 dentro de WPF.
-    ///
-    /// PRINCIPIO FUNDAMENTAL:
-    ///   El contenedor se crea ANTES de lanzar Godot. Su HWND se pasa a Godot
-    ///   mediante --wid, de forma que Godot inicializa su contexto OpenGL
-    ///   directamente como ventana hija desde el primer fotograma.
-    ///
-    ///   No hay SetParent a posteriori. No hay conflicto de contextos gráficos.
-    ///   No hay parpadeo.
-    ///
-    /// FLUJO DE USO:
-    ///   1. Instanciar GodotViewer y asignarlo como hijo de un Border WPF.
-    ///      En ese momento BuildWindowCore() crea el contenedor nativo.
-    ///   2. Leer ContainerHandle y pasarlo a Godot con --wid.
-    ///   3. Godot arranca embebido de forma nativa.
-    ///   4. Llamar a SetGodotHandle() con el HWND de Godot para poder
-    ///      gestionar el foco.
+    /// Controlador Win32 para overlay de Godot sobre WPF (Sin HwndHost).
+    /// Ejecuta Godot como un proceso top-level pero elimina sus bordes
+    /// y lo superpone sobre el visor, eliminando el parpadeo de SetParent/HwndHost.
     /// </summary>
-    public sealed class GodotViewer : HwndHost
+    public sealed class GodotViewer
     {
         // ──────────────────────────────────────────────────────────────────
-        // Win32 — Constantes
+        // Win32 — Constantes y Flags
         // ──────────────────────────────────────────────────────────────────
-        private const uint WS_CHILD = 0x40000000u;
-        private const uint WS_VISIBLE = 0x10000000u;
-        private const uint WS_CLIPCHILDREN = 0x02000000u;
-        private const uint WS_CLIPSIBLINGS = 0x04000000u;
+        private const int GWL_STYLE = -16;
+        
+        // Estilos para hacer la ventana sin bordes (Borderless Pop-up)
+        private const uint WS_POPUP = 0x80000000;
+        private const uint WS_VISIBLE = 0x10000000;
+        
+        private const uint WS_CAPTION = 0x00C00000;
+        private const uint WS_THICKFRAME = 0x00040000;
+        private const uint WS_MINIMIZEBOX = 0x00020000;
+        private const uint WS_MAXIMIZEBOX = 0x00010000;
+        private const uint WS_SYSMENU = 0x00080000;
 
-        private const uint WS_EX_COMPOSITED = 0x02000000u;
-        private const uint WS_EX_NOPARENTNOTIFY = 0x00000004u;
-
-        private const uint WM_ERASEBKGND = 0x0014u;
-        private const uint WM_PAINT = 0x000Fu;
-        private const uint WM_SIZE = 0x0005u;
-
-        private const int CS_HREDRAW = 0x0002;
-        private const int CS_VREDRAW = 0x0001;
-
-        // ──────────────────────────────────────────────────────────────────
-        // Win32 — Estructuras
-        // ──────────────────────────────────────────────────────────────────
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private struct WNDCLASSEX
-        {
-            public uint cbSize;
-            public int style;
-            public IntPtr lpfnWndProc;
-            public int cbClsExtra;
-            public int cbWndExtra;
-            public IntPtr hInstance;
-            public IntPtr hIcon;
-            public IntPtr hCursor;
-            public IntPtr hbrBackground;
-            public IntPtr lpszMenuName;
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string lpszClassName;
-            public IntPtr hIconSm;
-        }
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_SHOWWINDOW = 0x0040;
+        private static readonly IntPtr HWND_TOP = new IntPtr(0);
 
         // ──────────────────────────────────────────────────────────────────
         // Win32 — Imports
         // ──────────────────────────────────────────────────────────────────
-        private delegate IntPtr WndProcDel(IntPtr hWnd, uint msg, IntPtr w, IntPtr l);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern ushort RegisterClassExW(ref WNDCLASSEX lpwcx);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern IntPtr CreateWindowExW(
-            uint exStyle, string cls, string title, uint style,
-            int x, int y, int w, int h,
-            IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
-
-        [DllImport("user32.dll")]
-        private static extern bool DestroyWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr DefWindowProcW(IntPtr hWnd, uint msg, IntPtr w, IntPtr l);
-
-        [DllImport("user32.dll")]
-        private static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         [DllImport("user32.dll")]
         private static extern IntPtr SetFocus(IntPtr hWnd);
 
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern IntPtr FindWindowExW(
-            IntPtr hwndParent, IntPtr hwndChildAfter, string? lpszClass, string? lpszWindow);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", SetLastError = true)]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool EnumChildWindows(IntPtr hwndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-        private static extern IntPtr GetModuleHandleW(string? name);
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
         [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
         private static extern IntPtr GetWindowLongPtrW(IntPtr hWnd, int nIndex);
@@ -137,21 +74,11 @@ namespace VisorSingularity
             return (IntPtr)SetWindowLongW(hWnd, nIndex, dwNewLong.ToInt32());
         }
 
-        private const int GWL_STYLE = -16;
-        private const uint WS_POPUP = 0x80000000u;
-
         // ──────────────────────────────────────────────────────────────────
         // Estado
         // ──────────────────────────────────────────────────────────────────
-        private static readonly object _regLock = new();
-        private static bool _registered;
-        private static WndProcDel? _wndProcDelegate; // evita que GC lo recoja
-
-        private IntPtr _containerHwnd;
-        private IntPtr _godotHwnd;
-        private uint _godotProcessId; // Nuevo: para almacenar el PID de Godot
-
-        private const string WndClass = "GodotViewer_v1";
+        private IntPtr _godotHwnd = IntPtr.Zero;
+        private uint _godotProcessId;
 
         private static void Log(string message)
         {
@@ -163,215 +90,130 @@ namespace VisorSingularity
             catch { }
         }
 
-        /// <summary>
-        /// Obtiene dinámicamente el HWND de Godot buscando la ventana hija del contenedor.
-        /// </summary>
-        public IntPtr GetGodotHwnd()
-        {
-            if (_godotHwnd != IntPtr.Zero) return _godotHwnd;
-            if (_containerHwnd != IntPtr.Zero)
-            {
-                Log($"GetGodotHwnd: Escaneando hijos de _containerHwnd ({_containerHwnd.ToInt64():X})...");
-                IntPtr foundHwnd = IntPtr.Zero;
-                EnumChildWindows(_containerHwnd, (hWnd, lParam) =>
-                {
-                    StringBuilder title = new StringBuilder(256);
-                    GetWindowText(hWnd, title, title.Capacity);
-                    StringBuilder className = new StringBuilder(256);
-                    GetClassName(hWnd, className, className.Capacity);
-                    uint processId;
-                    GetWindowThreadProcessId(hWnd, out processId);
-                    Log($"GetGodotHwnd: Encontrado hijo HWND = {hWnd.ToInt64():X}, Title = '{title}', Class = '{className}', PID = {processId}");
-                    
-                    // Si el PID coincide, esta es nuestra ventana de Godot
-                    if (_godotProcessId != 0 && processId == _godotProcessId)
-                    {
-                        foundHwnd = hWnd;
-                        return false; // Detener la enumeración
-                    }
-                    return true; // Continuar enumerando para ver todos los hijos
-                }, IntPtr.Zero);
-                _godotHwnd = foundHwnd;
-                Log($"GetGodotHwnd: Resultado = {_godotHwnd.ToInt64():X}");
-            }
-            return _godotHwnd;
+        public uint GodotProcessId 
+        { 
+            get => _godotProcessId; 
+            set => _godotProcessId = value; 
         }
 
-        // ──────────────────────────────────────────────────────────────────
-        // Propiedades públicas
-        // ──────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Handle del contenedor nativo. Pasarlo a Godot mediante --wid
-        /// ANTES de lanzar el proceso.
-        /// </summary>
-        public IntPtr ContainerHandle => _containerHwnd;
-
-        /// <summary>True cuando el contenedor está listo para recibir Godot.</summary>
         public bool IsReady => _godotHwnd != IntPtr.Zero;
-        public uint GodotProcessId { get => _godotProcessId; set => _godotProcessId = value; }
-
-        // ──────────────────────────────────────────────────────────────────
-        // HwndHost
-        // ──────────────────────────────────────────────────────────────────
-
-        protected override HandleRef BuildWindowCore(HandleRef hwndParent)
-        {
-            Log("BuildWindowCore: Inicializando...");
-            RegisterWindowClass();
-
-            _containerHwnd = CreateWindowExW(
-                exStyle: WS_EX_COMPOSITED,
-                cls: WndClass,
-                title: "",
-                style: WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-                x: 0, y: 0, w: 1, h: 1,
-                parent: hwndParent.Handle,
-                menu: IntPtr.Zero,
-                instance: GetModuleHandleW(null),
-                param: IntPtr.Zero
-            );
-
-            if (_containerHwnd == IntPtr.Zero)
-            {
-                Log("BuildWindowCore: ERROR al crear _containerHwnd.");
-                throw new InvalidOperationException(
-                    $"CreateWindowExW falló (Win32 error {Marshal.GetLastWin32Error()}).");
-            }
-
-            Log($"BuildWindowCore: Contenedor _containerHwnd creado con HWND = {_containerHwnd.ToInt64():X}");
-            return new HandleRef(this, _containerHwnd);
-        }
-
-        protected override void DestroyWindowCore(HandleRef hwnd)
-        {
-            Log($"DestroyWindowCore: Destruyendo HWND = {hwnd.Handle.ToInt64():X}");
-            if (_containerHwnd != IntPtr.Zero)
-            {
-                DestroyWindow(_containerHwnd);
-                _containerHwnd = IntPtr.Zero;
-            }
-        }
-
-        /// <summary>
-        /// Propaga WM_SIZE de WPF a Godot para que siempre llene el área.
-        /// </summary>
-        protected override IntPtr WndProc(
-            IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            if ((uint)msg == WM_SIZE)
-            {
-                int w = (int)(lParam.ToInt64() & 0xFFFF);
-                int h = (int)((lParam.ToInt64() >> 16) & 0xFFFF);
-                Log($"WndProc WM_SIZE: w = {w}, h = {h}");
-                if (w > 0 && h > 0)
-                {
-                    IntPtr godotHwnd = GetGodotHwnd();
-                    if (godotHwnd != IntPtr.Zero)
-                    {
-                        bool ok = MoveWindow(godotHwnd, 0, 0, w, h, true);
-                        Log($"WndProc WM_SIZE: MoveWindow(godotHwnd) = {ok}");
-                    }
-                }
-            }
-            return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
-        }
 
         // ──────────────────────────────────────────────────────────────────
         // API Pública
         // ──────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Registra el HWND de la ventana que Godot creó como hijo del contenedor.
-        /// Llamar después de que Godot haya arrancado completamente.
+        /// Busca la ventana top-level que pertenezca al PID de Godot.
+        /// Retorna el HWND si la encuentra.
         /// </summary>
-        public void SetGodotHandle(IntPtr godotHwnd)
+        public IntPtr GetGodotHwnd()
         {
-            Log($"SetGodotHandle: Asignando HWND = {godotHwnd.ToInt64():X}");
-            _godotHwnd = godotHwnd;
-        }
+            if (_godotHwnd != IntPtr.Zero) return _godotHwnd;
+            if (_godotProcessId == 0) return IntPtr.Zero;
 
-        /// <summary>Redimensiona el contenedor y Godot en píxeles físicos de pantalla.</summary>
-        public void Resize(int widthPx, int heightPx)
-        {
-            Log($"Resize (received): widthPx = {widthPx}, heightPx = {heightPx}");
-            Log($"Resize (containerHwnd): {_containerHwnd}");
-            if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1)
+            IntPtr foundHwnd = IntPtr.Zero;
+            EnumWindows((hWnd, lParam) =>
             {
-                Log("Resize: Abortando por _containerHwnd cero o dimensiones inválidas.");
-                return;
-            }
+                uint processId;
+                GetWindowThreadProcessId(hWnd, out processId);
+                
+                // Si el PID coincide, verificamos que sea una ventana principal
+                if (processId == _godotProcessId)
+                {
+                    // Comprobamos si tiene el estilo de ventana normal
+                    IntPtr style = GetWindowLong(hWnd, GWL_STYLE);
+                    uint styleUInt = (uint)(IntPtr.Size == 8 ? style.ToInt64() : style.ToInt32());
+                    
+                    // Si tiene el WS_VISIBLE o algún borde, lo consideramos
+                    if ((styleUInt & WS_VISIBLE) != 0)
+                    {
+                        foundHwnd = hWnd;
+                        return false; // Stop enumeration
+                    }
+                }
+                return true;
+            }, IntPtr.Zero);
 
-            // 1. Redimensionar y reposicionar el contenedor nativo en su origen local
-            bool ok1 = MoveWindow(_containerHwnd, 0, 0, widthPx, heightPx, true);
-            Log($"Resize: MoveWindow(_containerHwnd) result = {ok1}");
-
-            // 2. Redimensionar el hijo de Godot
-            IntPtr godotHwnd = GetGodotHwnd();
-            if (godotHwnd != IntPtr.Zero)
-            {
-                bool ok2 = MoveWindow(godotHwnd, 0, 0, widthPx, heightPx, true);
-                Log($"Resize: MoveWindow(godotHwnd) = {ok2}");
-            }
-            else
-            {
-                Log("Resize: godotHwnd es cero, no se puede redimensionar.");
-            }
+            _godotHwnd = foundHwnd;
+            return _godotHwnd;
         }
 
         /// <summary>
-        /// Da el foco de teclado a Godot directamente.
-        /// Windows enrutará los eventos de teclado a Godot sin ningún intermediario.
+        /// Transforma la ventana de Godot en un Pop-up sin bordes
+        /// de modo que parezca integrada de forma nativa sin usar SetParent.
         /// </summary>
+        public void StripWindowBorders()
+        {
+            IntPtr hwnd = GetGodotHwnd();
+            if (hwnd == IntPtr.Zero) return;
+
+            // Obtener el estilo actual
+            IntPtr currentStyle = GetWindowLong(hwnd, GWL_STYLE);
+            long style = IntPtr.Size == 8 ? currentStyle.ToInt64() : currentStyle.ToInt32();
+
+            // Quitar barra de título, bordes y menú
+            style &= ~WS_CAPTION;
+            style &= ~WS_THICKFRAME;
+            style &= ~WS_MINIMIZEBOX;
+            style &= ~WS_MAXIMIZEBOX;
+            style &= ~WS_SYSMENU;
+
+            // Asegurarnos de que sea POPUP
+            style |= WS_POPUP;
+
+            // Aplicar nuevo estilo
+            SetWindowLong(hwnd, GWL_STYLE, new IntPtr(style));
+            Log("Bordes de Godot removidos exitosamente.");
+        }
+
+        /// <summary>
+        /// Mueve la ventana de Godot para que coincida exactamente
+        /// con la posición y tamaño del control de WPF proporcionado en coordenadas de pantalla.
+        /// </summary>
+        public void UpdatePosition(FrameworkElement targetPlaceholder, Window parentWindow)
+        {
+            IntPtr hwnd = GetGodotHwnd();
+            if (hwnd == IntPtr.Zero) return;
+            if (targetPlaceholder == null || parentWindow == null) return;
+            if (!targetPlaceholder.IsVisible) return;
+
+            try
+            {
+                // Calcular la posición del placeholder relativa a la pantalla
+                Point locationFromScreen = targetPlaceholder.PointToScreen(new Point(0, 0));
+
+                // Calcular el factor de escala DPI de la pantalla actual
+                PresentationSource source = PresentationSource.FromVisual(parentWindow);
+                double dpiX = 1.0;
+                double dpiY = 1.0;
+                if (source?.CompositionTarget != null)
+                {
+                    dpiX = source.CompositionTarget.TransformToDevice.M11;
+                    dpiY = source.CompositionTarget.TransformToDevice.M22;
+                }
+
+                // Calcular ancho y alto en pixeles físicos
+                int width = (int)(targetPlaceholder.ActualWidth * dpiX);
+                int height = (int)(targetPlaceholder.ActualHeight * dpiY);
+                int x = (int)locationFromScreen.X;
+                int y = (int)locationFromScreen.Y;
+
+                // Posicionar la ventana encima del visor de WPF
+                SetWindowPos(hwnd, HWND_TOP, x, y, width, height, SWP_SHOWWINDOW | SWP_NOACTIVATE);
+            }
+            catch (Exception ex)
+            {
+                Log($"UpdatePosition Error: {ex.Message}");
+            }
+        }
+
         public void FocusGodot()
         {
-            IntPtr godotHwnd = GetGodotHwnd();
-            if (godotHwnd != IntPtr.Zero) SetFocus(godotHwnd);
-            else if (_containerHwnd != IntPtr.Zero) SetFocus(_containerHwnd);
-        }
-
-        // ──────────────────────────────────────────────────────────────────
-        // Registro de la clase Win32 (una sola vez por proceso)
-        // ──────────────────────────────────────────────────────────────────
-
-        private static void RegisterWindowClass()
-        {
-            lock (_regLock)
+            IntPtr hwnd = GetGodotHwnd();
+            if (hwnd != IntPtr.Zero)
             {
-                if (_registered) return;
-
-                // El delegado debe vivir mientras el proceso esté activo
-                _wndProcDelegate = StaticWndProc;
-
-                var wc = new WNDCLASSEX
-                {
-                    cbSize = (uint)Marshal.SizeOf<WNDCLASSEX>(),
-                    style = CS_HREDRAW | CS_VREDRAW,
-                    lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate),
-                    hInstance = GetModuleHandleW(null),
-                    hbrBackground = IntPtr.Zero,  // Sin pintar fondo → sin parpadeo
-                    lpszClassName = WndClass,
-                };
-
-                ushort atom = RegisterClassExW(ref wc);
-                if (atom == 0)
-                    throw new InvalidOperationException(
-                        $"RegisterClassExW falló (Win32 error {Marshal.GetLastWin32Error()}).");
-
-                _registered = true;
+                SetFocus(hwnd);
             }
-        }
-
-        /// <summary>
-        /// WndProc estático del contenedor.
-        /// Suprime WM_ERASEBKGND y WM_PAINT para que el contenedor nunca borre
-        /// los píxeles que Godot ha dibujado — causa raíz del parpadeo.
-        /// </summary>
-        private static IntPtr StaticWndProc(IntPtr hWnd, uint msg, IntPtr w, IntPtr l)
-        {
-            if (msg == WM_ERASEBKGND) return new IntPtr(1); // "gestionado, no borres"
-            if (msg == WM_PAINT) return IntPtr.Zero;   // Godot pinta, nosotros no
-            return DefWindowProcW(hWnd, msg, w, l);
         }
     }
 }
