@@ -35,6 +35,12 @@ namespace VisorSingularity
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
         // ── Datos de la Sesión ──
         private HardwareFingerprint _fingerprint = null!;
         private DatabaseManager _db = null!;
@@ -1093,16 +1099,64 @@ namespace VisorSingularity
 
         private void Cleanup()
         {
+            LogDebug("Cleanup started");
             try { _httpListener?.Stop(); _httpListener?.Close(); } catch { }
             _httpListener = null;
 
-            try { if (_godotProcess?.HasExited == false) _godotProcess.Kill(); } catch { }
+            // 1. Intentar ocultar y cerrar la ventana de Godot nativamente para respuesta instantánea
+            if (_viewer != null)
+            {
+                try
+                {
+                    IntPtr hwnd = _viewer.GetGodotHwnd();
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        LogDebug("Cleanup: Hiding and closing Godot window natively");
+                        ShowWindow(hwnd, 0); // SW_HIDE = 0
+                        PostMessage(hwnd, 0x0010, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE = 0x0010
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"Cleanup Window Native Error: {ex.Message}");
+                }
+            }
+
+            // 2. Terminar el proceso a nivel de Process StartInfo
+            try 
+            { 
+                if (_godotProcess != null)
+                {
+                    if (!_godotProcess.HasExited)
+                    {
+                        LogDebug("Cleanup: Killing Godot process");
+                        _godotProcess.Kill();
+                        _godotProcess.WaitForExit(1000);
+                    }
+                }
+            } 
+            catch (Exception ex)
+            {
+                LogDebug($"Cleanup Process Kill Error: {ex.Message}");
+            }
             _godotProcess = null;
+
+            // 3. Matar cualquier proceso de Godot residual por su nombre para asegurar que nada queda flotando
+            try
+            {
+                foreach (var p in Process.GetProcessesByName("Godot_v4.6.2-stable_mono_win64"))
+                {
+                    LogDebug($"Cleanup: Terminating residual Godot process: {p.Id}");
+                    p.Kill();
+                }
+            }
+            catch { }
 
             if (_viewer != null)
             {
                 _viewer = null;
             }
+            LogDebug("Cleanup completed");
         }
     }
 
