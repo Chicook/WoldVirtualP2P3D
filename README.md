@@ -61,7 +61,8 @@ Se ha implementado una interfaz visual de altísima calidad inspirada en las mej
 VERANO DE IAs
 
 **25 de junio al 31 de agosto**, tienes exactamente **67 días de desarrollo**. A 4 horas diarias, dispones de **67 horas dedicadas a cada herramienta** (268 horas en total).
-Aquí tienes la distribución estratégica del trabajo dividida por fases para construir el núcleo P2P de tu metaverso:
+Distribución estratégica del trabajo dividida por fases para construir el núcleo P2P de tu metaverso:
+
 ## 📅 Fase 1: Criptografía, Identidad y Sockets Básicos (Días 1 a 20)
 *Objetivo: Conseguir que dos ordenadores se reconozcan, generen su número de nodo y midan su conexión.*
 ### ⏱️ Hora 1: Antigravity
