@@ -1,4 +1,4 @@
-﻿<Window x:Class="VisorSingularity.MainWindow"
+<Window x:Class="VisorSingularity.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -230,9 +230,9 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="70"/> <!-- Premium Header -->
-            <RowDefinition Height="*"/>  <!-- Main Content -->
-            <RowDefinition Height="45"/> <!-- Sleek Footer Bar -->
+            <RowDefinition x:Name="RowHeader" Height="70"/> <!-- Premium Header -->
+            <RowDefinition x:Name="RowContent" Height="*"/>  <!-- Main Content -->
+            <RowDefinition x:Name="RowFooter" Height="45"/> <!-- Sleek Footer Bar -->
         </Grid.RowDefinitions>
 
         <!-- ==================== HEADER ==================== -->

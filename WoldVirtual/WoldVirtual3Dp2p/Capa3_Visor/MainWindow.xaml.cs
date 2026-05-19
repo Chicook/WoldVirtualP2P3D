@@ -478,11 +478,13 @@ namespace VisorSingularity
             WizardContainer.Visibility = Visibility.Collapsed;
             LogDebug($"WizardContainer HIDDEN - Visibility: Collapsed");
 
-            // Mostrar Sidebar para el control P2P junto al viewport de Godot
-            ColSidebar.Width = new GridLength(320);
-            PanSidebar.Visibility = Visibility.Visible;
-            LogDebug($"Sidebar VISIBLE - Width: 320, Visibility: Visible");
-            LogDebug($"PanSidebar dimensions: ActualWidth={PanSidebar.ActualWidth}, ActualHeight={PanSidebar.ActualHeight}");
+            // MODO INMERSIVO: Ocultar todas las áreas de WPF para evitar solapamientos con la UI interna de Godot
+            RowHeader.Height = new GridLength(0);
+            RowFooter.Height = new GridLength(0);
+            ColSidebar.Width = new GridLength(0);
+            
+            PanSidebar.Visibility = Visibility.Collapsed;
+            LogDebug($"Immersive Mode Enabled: Header, Footer, and Sidebar hidden.");
 
             // Mostrar Viewport 3D
             PanViewportContainer.Visibility = Visibility.Visible;

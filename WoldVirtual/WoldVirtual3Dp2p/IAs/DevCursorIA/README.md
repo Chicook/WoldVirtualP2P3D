@@ -56,3 +56,29 @@ Se ha modificado el archivo `MainWindow.xaml.cs`, eliminando la siguiente línea
 ```
 
 Con este cambio mínimo, la transición de la UI se completa de forma limpia y Godot 3D se embebe correctamente en el visualizador sin arrojar el error de índices.
+
+Rediseño Arquitectónico del Visor para Resolver el Problema de Superposición (Overlap)
+Análisis del "Problema Inicial" de la Foto
+Al observar la nueva captura que has enviado, se identifican claramente los conflictos:
+
+Doble Interfaz (Duplicidad): Tenemos la interfaz moderna en WPF (Sidebar Izquierdo y Header) ejecutándose al mismo tiempo que la interfaz interna de Godot (el panel oscuro que dice "RED P2P" y el contador de WCV).
+Artefactos Visuales de Renderizado: En el borde derecho de la ventana de Godot se aprecian unas líneas verticales (artefactos de estiramiento). Esto ocurre porque el motor OpenGL de Godot no escala perfectamente en tiempo real dentro del contenedor nativo (HwndHost) cuando WPF reduce su espacio para hacerle hueco al Sidebar de WPF.
+Desplazamiento (Offset): Godot fue diseñado asumiendo que tendría toda la pantalla (o una proporción fija). Al "empujarlo" hacia la derecha y hacia abajo con paneles de WPF, su UI interna queda flotando en medio de la pantalla 3D de forma incómoda.
+¿Por qué ocurre?
+El GodotEmbedder incrusta el proceso de Godot directamente en un "agujero" de la ventana de WPF (WindowsFormsHost / HwndHost). Godot ignora las reglas de diseño de WPF (márgenes, transparencias, esquinas redondeadas) porque opera a bajo nivel en la tarjeta gráfica. Si intentamos apretar a Godot en una columna a la derecha, sus píxeles no siempre coinciden, generando parpadeos y rayas.
+
+Solución Propuesta (Rediseño Limpio)
+Para no arrastrar este problema, el rediseño del visor debe ser drástico en el momento de entrar al Metaverso. Tenemos dos caminos, dime cuál es el que tenías en mente para aplicar los cambios de inmediato:
+
+IMPORTANT
+
+OPCIÓN A: WPF domina la UI, Godot es solo un "Lienzo 3D" sin UI. Para que esto funcione bien y sin rayas, el Sidebar de WPF y la barra superior se mantienen como los hice. Pero la escena de Godot (N3DWoldVirtualMT.tscn) debe tener su UI interna oculta. (Nota: Como me pediste no tocar lógica ni el motor, yo no puedo modificar el proyecto de Godot, tendrías que ocultar el UI de Godot tú mismo en su código GDScript).
+
+TIP
+
+OPCIÓN B: Modo Inmersivo (La opción más estable y recomendada). El visor WPF se usa EXCLUSIVAMENTE como "Lanzador y Gestor de Cripto-Identidad" (Los 4 pasos). En el momento en que se hace clic en "LANZAR METAVERSO", ocultamos ABSOLUTAMENTE TODO en WPF (Sidebar, Header, Footer) y le damos el 100% de la ventana al contenedor de Godot. De esta forma, Godot ocupa toda la pantalla de esquina a esquina, su propia UI interna ("RED P2P") se posiciona correctamente en la esquina superior izquierda, y eliminamos para siempre los artefactos visuales y los bordes negros.
+
+Open Questions (Preguntas para ti)
+¿Quieres que aplique la OPCIÓN B (Ocultar toda la interfaz de WPF al entrar al dashboard para que Godot ocupe toda la ventana sin errores)? ¿O prefieres mantener la interfaz de WPF y tú mismo quitarás la UI interna de Godot en el futuro?
+
+Confírmame qué camino tomamos y aplicaré el código en un instante.
