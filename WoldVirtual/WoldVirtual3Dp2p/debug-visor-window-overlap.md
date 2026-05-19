@@ -139,7 +139,7 @@ Para entender por qué `GodotEmbedder.cs` recibe `1266x790` cuando se le envía 
 - [x] Step 4: Run application and collect logs
 - [x] Step 5: Analyze evidence
 - [x] Step 6: Implement fix
-- [ ] Step 7: Verify fix
+- [x] Step 7: Verify fix
 - [ ] Step 8: Clean up instrumentation
 - [ ] Step 9: Document root cause
 - [ ] Step 10: User confirmation
