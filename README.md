@@ -1,45 +1,56 @@
-# WoldVirtual P2P 3D — Plan Ejecutivo (Prototipo)
+# ⬢ WoldVirtual P2P 3D — Metaverso Cripto Descentralizado
 
-> **🎯 Meta:** Crear un metaverso cripto 3D descentralizado de código abierto, optimizando recursos mediante el reciclaje inteligente de código de la versión `v001`.
-
----
-
-## 🔍 Análisis de Referencia (v001)
-Tras analizar el directorio `C:\Users\Usuario\Desktop\WoldVirtualv001\docs` y sus archivos principales, se extrae la siguiente arquitectura base para reciclar:
-
-1. **Arquitectura de 3 Capas:**
-   - **Capa 1 (Estado Global):** Persistencia C# y gestión P2P (JSON).
-   - **Capa 2 (Godot):** Motor 3D, lógica de mundo y shaders (Océano).
-   - **Capa 3 (Visor3D):** Host WinForms que embebe Godot.
-2. **Estado Estable:** Teletransporte funcional, carga de islas/avatares y comunicación IPC (Godot <-> C#).
-3. **P2P:** Descentralizado por archivos locales (Peer JSON).
+> **🎯 Estado del Proyecto:** Prototipo Funcional de Alta Fidelidad y Visor Estético Completado.
+> Integración fluida del motor 3D de Godot incrustado en un visor WPF moderno y descentralizado de 3 Capas.
 
 ---
 
-## 🚀 Plan de Ejecución Directo (Sin Desvíos)
+## 🔍 Arquitectura de 3 Capas Implementada
 
-El objetivo es llegar a un prototipo funcional lo antes posible, reciclando el 100% de lo que funciona.
+La arquitectura actual del proyecto conecta de forma segura el motor de renderizado 3D, la lógica de red local P2P y la persistencia criptográfica en el sistema de la siguiente manera:
 
-### Fase 1: Cimentación y Reciclaje (Días 1-3)
-* **Objetivo:** Levantar la estructura base del nuevo repositorio.
-* **Acciones:**
-  - Crear estructura de carpetas: `/Capa1_Estado`, `/Capa2_Godot`, `/Capa3_Visor`.
-  - Copiar y limpiar el código de `v001` (manteniendo el Zero-Config ya logrado).
-  - Validar que el Visor C# levanta la escena de Godot básica.
+```mermaid
+graph TD
+    A[Capa 3: Visor Singularity WPF] -->|Enlace Criptográfico / IPC| B[Capa 2: Motor Godot 3D]
+    A -->|Persistencia Local SQL / Hardware| C[Capa 1: Estado Global & Firma]
+    B -->|Sincronización de Coordenadas| D[Protocolo P2P - Red de Islas]
+```
 
-### Fase 2: Integración Cripto y P2P (Días 4-6)
-* **Objetivo:** Asegurar la identidad y la red.
-* **Acciones:**
-  - Integrar el flujo de registro (MetaMask/Wallet) en el Visor WinForms (Capa 3).
-  - Activar el sincronizador P2P (`IslandStateSync.gd`) en Godot (Capa 2) para que lea los estados de red compartidos.
-  - Asegurar la comunicación IPC mediante JSON entre el visor y el motor.
+1. **Capa 1: Persistencia y Firma (Estado Global):**
+   * **Base de Datos SQLite:** Almacenamiento local seguro de identidades vinculadas a firmas de hardware.
+   * **Criptografía de Hardware (Fingerprint):** Algoritmo de hash SHA-256 generado a partir de IDs únicos de CPU, Placa Base y Sistema Operativo obtenidos mediante WMI.
+   * **Firma Digital Cuántica:** Exportación e importación segura de claves en un paquete `.zip` comprimido que resguarda la llave cuántica local.
 
-### Fase 3: Validación del Prototipo (Día 7)
-* **Objetivo:** Probar el entorno compartido.
-* **Acciones:**
-  - Simular dos nodos (usuarios) en la red compartiendo la misma carpeta de estado o vía P2P.
-  - Verificar que el teletransporte y la presencia funcionan.
+2. **Capa 2: Motor Gráfico (Godot Engine):**
+   * **Godot 4.6.2 Stable (Mono / C# / OpenGL3):** Renderizado en caliente embebido directamente mediante controladores nativos.
+   * **Lógica del Mundo P2P:** Teletransporte P2P, gestión de físicas del avatar, renderizado de islas y shaders integrados.
+
+3. **Capa 3: Visor Singularity (WPF / .NET 8):**
+   * **Flujo del Wizard en 4 Pasos:** Registro guiado, generación automática de firma, validación de MetaMask y asignación de coordenadas de islas.
+   * **Puente HTTP Local (Puerto 8080):** Pasarela de comunicación segura que intercepta la firma de MetaMask desde el navegador para transferirla directamente al Visor WPF.
 
 ---
-> [!IMPORTANT]
-> **Regla de Oro:** No añadir nuevas características (como lucIA o renderizado premium) hasta que la Fase 3 esté completada y validada.
+
+## 🚀 Logros y Hitos Completados (Sesión de Rediseño)
+
+### 💎 Rediseño Estético desde Cero del Visor WPF (`MainWindow.xaml`)
+Se ha implementado una interfaz visual de altísima calidad inspirada en las mejores prácticas de la estética cyberpunk e interfaces tácticas de ciencia ficción:
+* **Glow & Glassmorphism:** Paneles de cristal esmerilado con fondo translúcido (`#F2080E1C`), bordes cian muy sutiles y efectos de resplandor mediante sombras difusas y desenfocadas de neón.
+* **Control Chrome Personalizado:** Ventana fija a `1600x950` sin barra nativa de Windows (`WindowStyle="None"`, `NoResize`) para evitar deformaciones físicas en el avatar, incorporando controles minimalistas de Minimizar y Cerrar con respuestas visuales interactivas.
+* **Visuales y Inputs Premium:** Campos de entrada iluminados con transiciones de color en hover/foco y botones de acción dinámicos en neón cian, verde esmeralda y magenta.
+* **HTTP Bridge Wait Overlay:** Alerta premium de validación de MetaMask con una barra animada que pulsa de forma infinita mientras escucha el puerto local.
+
+### 🎮 Integración Total de Godot e Inmersión del Viewport 3D
+* **Solución de Vibración del Avatar:** Fijación del visor nativo a coordenadas exactas y estiramiento por GPU, eliminando la vibración del avatar causada por constantes cambios de escala y recálculos en el `HwndHost`.
+* **Modo Inmersivo 100%:** Al arrancar el metaverso, el `PanViewportContainer` se expande ocupando el **100% de la ventana** (`Grid.RowSpan="3"`, `Panel.ZIndex="99"`, `Stretch`).
+* **Visualización Perfecta de Godot UI:** El panel interno de control de Godot ("RED P2P") y sus menús superiores ya no se solapan ni se ven obstruidos por barras laterales de WPF, disfrutando de toda la resolución de pantalla.
+* **Dummy Controller de Retrocompatibilidad:** Todos los componentes requeridos por el código-detrás (`MainWindow.xaml.cs`) para su lógica interna (como la barra lateral antigua `PanSidebar`, anchos `ColSidebar` y etiquetas de islas) se mantuvieron encapsulados en un Grid oculto (`Visibility="Collapsed"`). Esto garantiza **cero errores de compilación y cero NullReferenceException** en tiempo de ejecución.
+
+---
+
+## 📅 Próximos Pasos en el Prototipo
+
+1. **Pruebas de Concurrencia Multijugador:**
+   * Iniciar dos instancias del Visor Singularity simulando diferentes firmas digitales y comprobar la sincronización del estado espacial 3D y la presencia del avatar.
+2. **Refinamiento de Assets P2P:**
+   * Continuar optimizando el renderizado gráfico de las islas y la sincronización de archivos JSON en tiempo real sin dependencias externas o servidores centralizados.

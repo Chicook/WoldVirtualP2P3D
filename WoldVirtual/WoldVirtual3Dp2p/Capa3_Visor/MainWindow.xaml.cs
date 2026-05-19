@@ -37,25 +37,42 @@ namespace VisorSingularity
 
         // ── Datos de la Sesión ──
         private HardwareFingerprint _fingerprint = null!;
-        private DatabaseManager    _db           = null!;
-        private int  _currentStep = 1;
-        private bool _isClosing   = false;
-        private bool _hasAccount  = false;
+        private DatabaseManager _db = null!;
+        private int _currentStep = 1;
+        private bool _isClosing = false;
+        private bool _hasAccount = false;
 
         private string _username = "";
-        private string _wallet   = "";
+        private string _wallet = "";
         private string _islandId = "137 : 190.1.0";
 
         // ── Componentes de Ejecución ──
-        private HttpListener?  _httpListener;
-        private Process?       _godotProcess;
-        private GodotViewer?   _viewer;
+        private HttpListener? _httpListener;
+        private Process? _godotProcess;
+        private GodotViewer? _viewer;
+
+        // ── Debug Logging ──
+        private void LogDebug(string message)
+        {
+            try
+            {
+                string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "visor_debug_overlap.log");
+                System.IO.File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] {message}\r\n");
+            }
+            catch { }
+        }
 
         public MainWindow()
         {
+            LogDebug("MainWindow constructor started");
             InitializeComponent();
+            LogDebug("InitializeComponent completed");
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
+
+            // Configurar visibilidad inicial
+            WizardContainer.Visibility = Visibility.Visible;
+            PanViewportContainer.Visibility = Visibility.Collapsed;
 
             // Foco a Godot al hacer clic en el área 3D
             GodotPlaceholder.MouseDown += (s, e) => _viewer?.FocusGodot();
@@ -63,23 +80,34 @@ namespace VisorSingularity
             // Redimensionar Godot cuando cambie el placeholder
             GodotPlaceholder.SizeChanged += (s, e) =>
             {
+                LogDebug($"GodotPlaceholder SizeChanged - ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
+                LogDebug($"ColSidebar Width={ColSidebar.Width.Value}, GridUnitType={ColSidebar.Width.GridUnitType}");
+                LogDebug($"PanViewportContainer dimensions: ActualWidth={PanViewportContainer.ActualWidth}, ActualHeight={PanViewportContainer.ActualHeight}");
+                LogDebug($"Step1_PC visibility: {Step1_PC.Visibility}, dimensions: ActualWidth={Step1_PC.ActualWidth}, ActualHeight={Step1_PC.ActualHeight}");
+
                 if (_viewer?.IsReady == true)
                 {
                     var dpi = GetDpi();
+                    LogDebug($"DPI: X={dpi.X}, Y={dpi.Y}");
                     _viewer.Resize(
-                        (int)(GodotPlaceholder.ActualWidth  * dpi.X),
+                        (int)(GodotPlaceholder.ActualWidth * dpi.X),
                         (int)(GodotPlaceholder.ActualHeight * dpi.Y));
+                    LogDebug($"Godot resized to: {(int)(GodotPlaceholder.ActualWidth * dpi.X)}x{(int)(GodotPlaceholder.ActualHeight * dpi.Y)}");
                 }
             };
         }
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
+            LogDebug("MainWindow_Loaded started");
             try
             {
                 // Inicializar Helpers
                 _db = new DatabaseManager();
                 _fingerprint = new HardwareFingerprint();
+                LogDebug($"Hardware fingerprint: {_fingerprint.UniqueHash}");
+                LogDebug($"Window dimensions on load: Width={Width}, Height={Height}, ActualWidth={ActualWidth}, ActualHeight={ActualHeight}");
+                LogDebug($"GodotPlaceholder dimensions on load: ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
 
                 // Cargar datos de Telemetría de Hardware
                 TxtCpuId.Text = $"ID PROCESADOR: {_fingerprint.ProcessorId}";
@@ -146,10 +174,14 @@ namespace VisorSingularity
         }
 
         // ───── WIZARD ACTIONS & NAVIGATION ─────
-        
+
         private void ShowStep(int step)
         {
             _currentStep = step;
+
+            // Asegurar que el WizardContainer esté visible cuando mostramos pasos
+            WizardContainer.Visibility = Visibility.Visible;
+
             Step1_PC.Visibility = (step == 1) ? Visibility.Visible : Visibility.Collapsed;
             Step2_User.Visibility = (step == 2) ? Visibility.Visible : Visibility.Collapsed;
             Step3_Metamask.Visibility = (step == 3) ? Visibility.Visible : Visibility.Collapsed;
@@ -437,34 +469,33 @@ namespace VisorSingularity
         // ───── CORE DASHBOARD TRANSITION ─────
         private void EnterDashboard(bool isNewRegistration = false)
         {
-            // Ocultar todos los wizards
-            Step1_PC.Visibility = Visibility.Collapsed;
-            Step2_User.Visibility = Visibility.Collapsed;
-            Step3_Metamask.Visibility = Visibility.Collapsed;
-            Step4_Island.Visibility = Visibility.Collapsed;
-            PanWaitHttp.Visibility = Visibility.Collapsed;
+            LogDebug($"EnterDashboard called - isNewRegistration: {isNewRegistration}");
 
-            // Mostrar el Sidebar y configurar tamaño
-            ColSidebar.Width = new GridLength(280);
-            PanSidebar.Visibility = Visibility.Visible;
+            // Ocultar el wizard
+            WizardContainer.Visibility = Visibility.Collapsed;
 
-            // Mostrar Viewport 3D
-            PanViewportContainer.Visibility = Visibility.Visible;
+            // Mostrar sidebar de WPF con el ancho justo para los datos del usuario.
+            // Godot ocupa TODA la columna derecha con Stretch — sin tamaño fijo que cause vibración.
+            RowHeader.Height  = new GridLength(70);
+            RowFooter.Height  = new GridLength(45);
+            ColSidebar.Width  = new GridLength(210);
+            PanSidebar.Visibility          = Visibility.Visible;
+            TxtHeaderCryptoInfo.Visibility = Visibility.Visible;
 
-            // Configurar Header (Ocultado para reubicar la información dentro de la escena 3D de Godot)
-            TxtHeaderCryptoInfo.Visibility = Visibility.Collapsed;
-
-            // Configurar datos Sidebar
+            // Rellenar datos del sidebar
             TxtSidebarUsername.Text = _username.ToUpper();
-            TxtSidebarWallet.Text = _wallet.Length > 16 
-                ? _wallet.Substring(0, 8) + "..." + _wallet.Substring(_wallet.Length - 6) 
+            TxtSidebarWallet.Text = _wallet.Length > 16
+                ? _wallet.Substring(0, 8) + "..." + _wallet.Substring(_wallet.Length - 6)
                 : _wallet;
             TxtSidebarIsland.Text = _islandId;
 
             // Cargar Lista de Islas del Teletransporte P2P
             LoadTeleportIslandsList();
 
-            // Lanzar Godot e Incrustar
+            // Mostrar el contenedor de Godot
+            PanViewportContainer.Visibility = Visibility.Visible;
+
+            // Lanzar Godot e incrustar via --wid
             LaunchGodot(_wallet, _username, _islandId, isNewRegistration);
         }
 
@@ -492,10 +523,10 @@ namespace VisorSingularity
                     Margin = new Thickness(0, 0, 0, 8),
                     Style = (Style)FindResource("CyberButton")
                 };
-                
+
                 string targetIsland = item.IslandId;
                 btn.Click += (s, e) => TeleportToIsland(targetIsland);
-                
+
                 StackIslandsList.Children.Add(btn);
                 idx++;
             }
@@ -522,8 +553,10 @@ namespace VisorSingularity
                 catch { }
                 _godotProcess = null;
 
-                Task.Run(() => {
-                    Dispatcher.Invoke(() => {
+                Task.Run(() =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
                         LaunchGodot(_wallet, _username, newIslandId);
                     });
                 });
@@ -590,7 +623,8 @@ namespace VisorSingularity
 
         private void _lblBridgeStatus_Error(string errorMsg)
         {
-            Dispatcher.Invoke(() => {
+            Dispatcher.Invoke(() =>
+            {
                 TxtFooterBridgeStatus.Text = "● PUENTE HTTP: ERROR";
                 TxtFooterBridgeStatus.Foreground = new SolidColorBrush(Colors.Red);
                 TxtFooterStatus.Text = errorMsg;
@@ -627,7 +661,8 @@ namespace VisorSingularity
                         response.OutputStream.Close();
 
                         // Actualizar UI del Visor
-                        Dispatcher.Invoke(() => {
+                        Dispatcher.Invoke(() =>
+                        {
                             _wallet = wallet;
                             PanWaitHttp.Visibility = Visibility.Collapsed;
                             TxtFooterStatus.Text = "¡Firma de MetaMask recibida con éxito por el puente HTTP!";
@@ -722,10 +757,10 @@ namespace VisorSingularity
             }
 
             // Obtener tamaño en píxeles físicos reales
-            var dpi    = GetDpi();
-            int width  = (int)(GodotPlaceholder.ActualWidth  * dpi.X);
+            var dpi = GetDpi();
+            int width = (int)(GodotPlaceholder.ActualWidth * dpi.X);
             int height = (int)(GodotPlaceholder.ActualHeight * dpi.Y);
-            if (width  < 100) width  = 1280;
+            if (width < 100) width = 1280;
             if (height < 100) height = 720;
 
             // Redimensionar el contenedor al tamaño real exacto
@@ -752,11 +787,11 @@ namespace VisorSingularity
 
             var startInfo = new ProcessStartInfo
             {
-                FileName         = godotExe,
-                Arguments        = arguments,
+                FileName = godotExe,
+                Arguments = arguments,
                 WorkingDirectory = godotProjectDir,
-                WindowStyle      = ProcessWindowStyle.Hidden,
-                UseShellExecute  = false
+                WindowStyle = ProcessWindowStyle.Hidden,
+                UseShellExecute = false
             };
 
             try
@@ -764,6 +799,9 @@ namespace VisorSingularity
                 _godotProcess = Process.Start(startInfo);
                 if (_godotProcess == null)
                     throw new Exception("El sistema operativo deneó la ejecución.");
+
+                _viewer.GodotProcessId = (uint)_godotProcess.Id; // Asignar el PID de Godot al viewer
+                LogDebug($"Godot Process ID: {_viewer.GodotProcessId}");
 
                 try { _godotProcess.PriorityClass = ProcessPriorityClass.High; } catch { }
 

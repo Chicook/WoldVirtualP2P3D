@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using System.Text; // Added for StringBuilder
 
 namespace VisorSingularity
 {
@@ -28,17 +29,17 @@ namespace VisorSingularity
         // ──────────────────────────────────────────────────────────────────
         // Win32 — Constantes
         // ──────────────────────────────────────────────────────────────────
-        private const uint WS_CHILD        = 0x40000000u;
-        private const uint WS_VISIBLE      = 0x10000000u;
+        private const uint WS_CHILD = 0x40000000u;
+        private const uint WS_VISIBLE = 0x10000000u;
         private const uint WS_CLIPCHILDREN = 0x02000000u;
         private const uint WS_CLIPSIBLINGS = 0x04000000u;
 
-        private const uint WS_EX_COMPOSITED     = 0x02000000u;
+        private const uint WS_EX_COMPOSITED = 0x02000000u;
         private const uint WS_EX_NOPARENTNOTIFY = 0x00000004u;
 
         private const uint WM_ERASEBKGND = 0x0014u;
-        private const uint WM_PAINT      = 0x000Fu;
-        private const uint WM_SIZE       = 0x0005u;
+        private const uint WM_PAINT = 0x000Fu;
+        private const uint WM_SIZE = 0x0005u;
 
         private const int CS_HREDRAW = 0x0002;
         private const int CS_VREDRAW = 0x0001;
@@ -49,19 +50,19 @@ namespace VisorSingularity
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct WNDCLASSEX
         {
-            public uint    cbSize;
-            public int     style;
-            public IntPtr  lpfnWndProc;
-            public int     cbClsExtra;
-            public int     cbWndExtra;
-            public IntPtr  hInstance;
-            public IntPtr  hIcon;
-            public IntPtr  hCursor;
-            public IntPtr  hbrBackground;
-            public IntPtr  lpszMenuName;
+            public uint cbSize;
+            public int style;
+            public IntPtr lpfnWndProc;
+            public int cbClsExtra;
+            public int cbWndExtra;
+            public IntPtr hInstance;
+            public IntPtr hIcon;
+            public IntPtr hCursor;
+            public IntPtr hbrBackground;
+            public IntPtr lpszMenuName;
             [MarshalAs(UnmanagedType.LPWStr)]
-            public string  lpszClassName;
-            public IntPtr  hIconSm;
+            public string lpszClassName;
+            public IntPtr hIconSm;
         }
 
         // ──────────────────────────────────────────────────────────────────
@@ -93,6 +94,15 @@ namespace VisorSingularity
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr FindWindowExW(
             IntPtr hwndParent, IntPtr hwndChildAfter, string? lpszClass, string? lpszWindow);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
@@ -133,12 +143,13 @@ namespace VisorSingularity
         // ──────────────────────────────────────────────────────────────────
         // Estado
         // ──────────────────────────────────────────────────────────────────
-        private static readonly object   _regLock = new();
-        private static bool              _registered;
-        private static WndProcDel?       _wndProcDelegate; // evita que GC lo recoja
+        private static readonly object _regLock = new();
+        private static bool _registered;
+        private static WndProcDel? _wndProcDelegate; // evita que GC lo recoja
 
-        private IntPtr _containerHwnd = IntPtr.Zero;
-        private IntPtr _godotHwnd     = IntPtr.Zero;
+        private IntPtr _containerHwnd;
+        private IntPtr _godotHwnd;
+        private uint _godotProcessId; // Nuevo: para almacenar el PID de Godot
 
         private const string WndClass = "GodotViewer_v1";
 
@@ -164,9 +175,21 @@ namespace VisorSingularity
                 IntPtr foundHwnd = IntPtr.Zero;
                 EnumChildWindows(_containerHwnd, (hWnd, lParam) =>
                 {
-                    Log($"GetGodotHwnd: Encontrado hijo HWND = {hWnd.ToInt64():X}");
-                    foundHwnd = hWnd;
-                    return false; // Detener la enumeración al encontrar la primera ventana hija
+                    StringBuilder title = new StringBuilder(256);
+                    GetWindowText(hWnd, title, title.Capacity);
+                    StringBuilder className = new StringBuilder(256);
+                    GetClassName(hWnd, className, className.Capacity);
+                    uint processId;
+                    GetWindowThreadProcessId(hWnd, out processId);
+                    Log($"GetGodotHwnd: Encontrado hijo HWND = {hWnd.ToInt64():X}, Title = '{title}', Class = '{className}', PID = {processId}");
+                    
+                    // Si el PID coincide, esta es nuestra ventana de Godot
+                    if (_godotProcessId != 0 && processId == _godotProcessId)
+                    {
+                        foundHwnd = hWnd;
+                        return false; // Detener la enumeración
+                    }
+                    return true; // Continuar enumerando para ver todos los hijos
                 }, IntPtr.Zero);
                 _godotHwnd = foundHwnd;
                 Log($"GetGodotHwnd: Resultado = {_godotHwnd.ToInt64():X}");
@@ -185,7 +208,8 @@ namespace VisorSingularity
         public IntPtr ContainerHandle => _containerHwnd;
 
         /// <summary>True cuando el contenedor está listo para recibir Godot.</summary>
-        public bool IsReady => _containerHwnd != IntPtr.Zero;
+        public bool IsReady => _godotHwnd != IntPtr.Zero;
+        public uint GodotProcessId { get => _godotProcessId; set => _godotProcessId = value; }
 
         // ──────────────────────────────────────────────────────────────────
         // HwndHost
@@ -197,15 +221,15 @@ namespace VisorSingularity
             RegisterWindowClass();
 
             _containerHwnd = CreateWindowExW(
-                exStyle:  WS_EX_COMPOSITED,
-                cls:      WndClass,
-                title:    "",
-                style:    WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+                exStyle: WS_EX_COMPOSITED,
+                cls: WndClass,
+                title: "",
+                style: WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
                 x: 0, y: 0, w: 1, h: 1,
-                parent:   hwndParent.Handle,
-                menu:     IntPtr.Zero,
+                parent: hwndParent.Handle,
+                menu: IntPtr.Zero,
                 instance: GetModuleHandleW(null),
-                param:    IntPtr.Zero
+                param: IntPtr.Zero
             );
 
             if (_containerHwnd == IntPtr.Zero)
@@ -270,17 +294,18 @@ namespace VisorSingularity
         /// <summary>Redimensiona el contenedor y Godot en píxeles físicos de pantalla.</summary>
         public void Resize(int widthPx, int heightPx)
         {
-            Log($"Resize: widthPx = {widthPx}, heightPx = {heightPx}");
+            Log($"Resize (received): widthPx = {widthPx}, heightPx = {heightPx}");
+            Log($"Resize (containerHwnd): {_containerHwnd}");
             if (_containerHwnd == IntPtr.Zero || widthPx < 1 || heightPx < 1)
             {
                 Log("Resize: Abortando por _containerHwnd cero o dimensiones inválidas.");
                 return;
             }
-            
+
             // 1. Redimensionar y reposicionar el contenedor nativo en su origen local
             bool ok1 = MoveWindow(_containerHwnd, 0, 0, widthPx, heightPx, true);
-            Log($"Resize: MoveWindow(_containerHwnd) = {ok1}");
-            
+            Log($"Resize: MoveWindow(_containerHwnd) result = {ok1}");
+
             // 2. Redimensionar el hijo de Godot
             IntPtr godotHwnd = GetGodotHwnd();
             if (godotHwnd != IntPtr.Zero)
@@ -320,10 +345,10 @@ namespace VisorSingularity
 
                 var wc = new WNDCLASSEX
                 {
-                    cbSize        = (uint)Marshal.SizeOf<WNDCLASSEX>(),
-                    style         = CS_HREDRAW | CS_VREDRAW,
-                    lpfnWndProc   = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate),
-                    hInstance     = GetModuleHandleW(null),
+                    cbSize = (uint)Marshal.SizeOf<WNDCLASSEX>(),
+                    style = CS_HREDRAW | CS_VREDRAW,
+                    lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate),
+                    hInstance = GetModuleHandleW(null),
                     hbrBackground = IntPtr.Zero,  // Sin pintar fondo → sin parpadeo
                     lpszClassName = WndClass,
                 };
@@ -345,7 +370,7 @@ namespace VisorSingularity
         private static IntPtr StaticWndProc(IntPtr hWnd, uint msg, IntPtr w, IntPtr l)
         {
             if (msg == WM_ERASEBKGND) return new IntPtr(1); // "gestionado, no borres"
-            if (msg == WM_PAINT)      return IntPtr.Zero;   // Godot pinta, nosotros no
+            if (msg == WM_PAINT) return IntPtr.Zero;   // Godot pinta, nosotros no
             return DefWindowProcW(hWnd, msg, w, l);
         }
     }
