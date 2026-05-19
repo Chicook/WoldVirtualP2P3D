@@ -191,6 +191,14 @@ namespace VisorSingularity
 
             try
             {
+                // Establecer WPF como Owner de Godot para que Godot NUNCA caiga detrás de WPF
+                var interopHelper = new System.Windows.Interop.WindowInteropHelper(parentWindow);
+                IntPtr wpfHwnd = interopHelper.Handle;
+                if (wpfHwnd != IntPtr.Zero)
+                {
+                    SetWindowLong(hwnd, -8, wpfHwnd); // GWLP_HWNDPARENT = -8
+                }
+
                 // Calcular la posición del placeholder relativa a la pantalla
                 System.Windows.Point locationFromScreen = targetPlaceholder.PointToScreen(new System.Windows.Point(0, 0));
 
@@ -211,7 +219,7 @@ namespace VisorSingularity
                 int y = (int)locationFromScreen.Y;
 
                 // Posicionar la ventana encima del visor de WPF
-                SetWindowPos(hwnd, HWND_TOP, x, y, width, height, SWP_SHOWWINDOW | SWP_NOACTIVATE);
+                SetWindowPos(hwnd, HWND_TOP, x, y, width, height, SWP_SHOWWINDOW);
             }
             catch (Exception ex)
             {
