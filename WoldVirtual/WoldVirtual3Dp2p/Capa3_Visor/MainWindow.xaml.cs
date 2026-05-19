@@ -70,6 +70,10 @@ namespace VisorSingularity
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
 
+            // Configurar visibilidad inicial
+            WizardContainer.Visibility = Visibility.Visible;
+            PanViewportContainer.Visibility = Visibility.Collapsed;
+
             // Foco a Godot al hacer clic en el área 3D
             GodotPlaceholder.MouseDown += (s, e) => _viewer?.FocusGodot();
 
@@ -174,6 +178,10 @@ namespace VisorSingularity
         private void ShowStep(int step)
         {
             _currentStep = step;
+
+            // Asegurar que el WizardContainer esté visible cuando mostramos pasos
+            WizardContainer.Visibility = Visibility.Visible;
+
             Step1_PC.Visibility = (step == 1) ? Visibility.Visible : Visibility.Collapsed;
             Step2_User.Visibility = (step == 2) ? Visibility.Visible : Visibility.Collapsed;
             Step3_Metamask.Visibility = (step == 3) ? Visibility.Visible : Visibility.Collapsed;
