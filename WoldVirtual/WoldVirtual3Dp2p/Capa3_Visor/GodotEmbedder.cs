@@ -180,7 +180,7 @@ namespace VisorSingularity
             try
             {
                 // Calcular la posición del placeholder relativa a la pantalla
-                Point locationFromScreen = targetPlaceholder.PointToScreen(new Point(0, 0));
+                System.Windows.Point locationFromScreen = targetPlaceholder.PointToScreen(new System.Windows.Point(0, 0));
 
                 // Calcular el factor de escala DPI de la pantalla actual
                 PresentationSource source = PresentationSource.FromVisual(parentWindow);
