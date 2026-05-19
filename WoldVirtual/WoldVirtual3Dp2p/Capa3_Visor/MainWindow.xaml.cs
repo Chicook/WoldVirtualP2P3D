@@ -73,6 +73,10 @@ namespace VisorSingularity
             // Configurar visibilidad inicial
             WizardContainer.Visibility = Visibility.Visible;
             PanViewportContainer.Visibility = Visibility.Collapsed;
+            PanIpfsBar.Visibility = Visibility.Collapsed;
+            PanMetricsBar.Visibility = Visibility.Collapsed;
+            PanLeftSidebar.Visibility = Visibility.Collapsed;
+            PanRightSidebar.Visibility = Visibility.Collapsed;
 
             // Foco a Godot al hacer clic en el área 3D
             GodotPlaceholder.MouseDown += (s, e) => _viewer?.FocusGodot();
@@ -477,13 +481,14 @@ namespace VisorSingularity
             // Ocultar el wizard
             WizardContainer.Visibility = Visibility.Collapsed;
 
-            // Mostrar sidebar de WPF con el ancho justo para los datos del usuario.
-            // Godot ocupa TODA la columna derecha con Stretch — sin tamaño fijo que cause vibración.
-            RowHeader.Height  = new GridLength(70);
-            RowFooter.Height  = new GridLength(45);
-            ColSidebar.Width  = new GridLength(210);
-            PanSidebar.Visibility          = Visibility.Visible;
-            TxtHeaderCryptoInfo.Visibility = Visibility.Visible;
+            // Mostrar los paneles tácticos del visor premium
+            PanIpfsBar.Visibility = Visibility.Visible;
+            PanMetricsBar.Visibility = Visibility.Visible;
+            PanLeftSidebar.Visibility = Visibility.Visible;
+            PanRightSidebar.Visibility = Visibility.Visible;
+
+            // Actualizar la dirección IPFS del nodo
+            TxtIpfsAddress.Text = $"http://localhost:8080/node/{_username.ToLower()}.ipfs";
 
             // Rellenar datos del sidebar
             TxtSidebarUsername.Text = _username.ToUpper();
@@ -578,10 +583,11 @@ namespace VisorSingularity
             Cleanup();
 
             // Ocultar Dashboard
-            ColSidebar.Width = new GridLength(0);
-            PanSidebar.Visibility = Visibility.Collapsed;
+            PanIpfsBar.Visibility = Visibility.Collapsed;
+            PanMetricsBar.Visibility = Visibility.Collapsed;
+            PanLeftSidebar.Visibility = Visibility.Collapsed;
+            PanRightSidebar.Visibility = Visibility.Collapsed;
             PanViewportContainer.Visibility = Visibility.Collapsed;
-            TxtHeaderCryptoInfo.Visibility = Visibility.Collapsed;
 
             // Resetear datos
             _username = "";
@@ -681,6 +687,16 @@ namespace VisorSingularity
                             ShowStep(4);
                         });
                     }
+                    else if (path.StartsWith("/node"))
+                    {
+                        // Servir la página de descarga IPFS
+                        string responseString = GetIpfsDownloadHtml();
+                        byte[] buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.ContentLength64 = buffer.Length;
+                        response.ContentType = "text/html; charset=UTF-8";
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        response.OutputStream.Close();
+                    }
                     else
                     {
                         // Servir metamask.html del visor si existe
@@ -715,6 +731,222 @@ namespace VisorSingularity
                     // Ignorar cierres asíncronos de sockets
                 }
             }
+        }
+
+        private void BtnCopyIpfs_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(TxtIpfsAddress.Text);
+                TxtFooterStatus.Text = "¡Enlace IPFS local copiado al portapapeles! Abre tu navegador.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+            }
+            catch { }
+        }
+
+        private string GetIpfsDownloadHtml()
+        {
+            string hash = _fingerprint?.UniqueHash ?? "FINGERPRINT_NOT_FOUND";
+            string userDisplay = string.IsNullOrEmpty(_username) ? "Invitado" : _username.ToUpper();
+            
+            return $@"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <title>WoldVirtual P2P - IPFS Node Portal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {{
+            background: radial-gradient(circle at 50% 0%, #0d1527 0%, #060b14 100%);
+            color: #f8fafc;
+            font-family: 'Outfit', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }}
+
+        .container {{
+            background: rgba(13, 22, 40, 0.6);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 229, 255, 0.05);
+            backdrop-filter: blur(16px);
+            padding: 40px 60px;
+            max-width: 600px;
+            width: 90%;
+            margin: 20px;
+            animation: fadeIn 1s ease-out;
+        }}
+
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(20px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        .logo {{
+            font-size: 50px;
+            margin: 0 0 10px 0;
+            text-shadow: 0 0 20px #00e5ff;
+            color: #00e5ff;
+        }}
+
+        h1 {{
+            font-weight: 800;
+            font-size: 28px;
+            letter-spacing: 2px;
+            margin: 0 0 5px 0;
+            color: #f8fafc;
+        }}
+
+        .subtitle {{
+            color: #00ff8c;
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }}
+
+        .status-badge {{
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 255, 140, 0.1);
+            border: 1px solid rgba(0, 255, 140, 0.3);
+            color: #00ff8c;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            box-shadow: 0 0 15px rgba(0, 255, 140, 0.1);
+        }}
+
+        .status-dot {{
+            width: 8px;
+            height: 8px;
+            background: #00ff8c;
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 8px #00ff8c;
+        }}
+
+        .description {{
+            color: #94a3b8;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 35px;
+        }}
+
+        .btn-download {{
+            display: inline-block;
+            background: linear-gradient(135deg, #00e5ff 0%, #007acc 100%);
+            color: #060b14;
+            font-weight: 700;
+            font-size: 15px;
+            text-decoration: none;
+            padding: 16px 36px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+
+        .btn-download:hover {{
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.6), 0 0 10px rgba(0, 229, 255, 0.2);
+            filter: brightness(1.1);
+        }}
+
+        .btn-download:active {{
+            transform: translateY(-1px);
+        }}
+
+        .info-grid {{
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-top: 40px;
+            text-align: left;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 30px;
+        }}
+
+        .info-item {{
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px 18px;
+        }}
+
+        .info-label {{
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }}
+
+        .info-value {{
+            color: #00e5ff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }}
+
+        .footer {{
+            margin-top: 40px;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='logo'>⬢</div>
+        <h1>WOLD VIRTUAL</h1>
+        <div class='subtitle'>P2P Decentralized Metaverse</div>
+
+        <div class='status-badge'>
+            <div class='status-dot'></div>
+            NODO IPFS ACTIVO: LOCAL PORTAL
+        </div>
+
+        <p class='description'>
+            Estás accediendo al portal web distribuido hosteado directamente por el Nodo Soberano de <strong>{userDisplay}</strong>. 
+            Desde aquí puedes descargar de forma segura el visor 3D para unirte a la red descentralizada P2P.
+        </p>
+
+        <a href='#' class='btn-download' onclick='alert(""Iniciando simulación de descarga segura del Visor 3D (WoldVirtual3D.zip)..."")'>
+            Descargar Visor 3D
+        </a>
+
+        <div class='info-grid'>
+            <div class='info-item'>
+                <div class='info-label'>Firma Cuántica del Nodo (Fingerprint)</div>
+                <div class='info-value'>{hash.ToUpper()}</div>
+            </div>
+            <div class='info-item'>
+                <div class='info-label'>Dirección del Portal Distribuido</div>
+                <div class='info-value'>http://localhost:8080/node/{userDisplay.ToLower()}.ipfs</div>
+            </div>
+        </div>
+
+        <div class='footer'>
+            WOLD VIRTUAL P2P PROTOCOL V0.0.2 • SECURE CONNECTION
+        </div>
+    </div>
+</body>
+</html>";
         }
 
         // ───── PIPELINE DE LANZAMIENTO DE GODOT ──
