@@ -123,15 +123,22 @@ Para entender por qué `GodotEmbedder.cs` recibe `1266x790` cuando se le envía 
 -   Asegurar que el z-order sea correcto y que Godot no se superponga con otros elementos.
 
 ## 🔧 Fixes Applied
-*No fixes applied yet*
+1. **Rediseño completo de la composición de ventanas**: Separación estricta entre Wizard y Viewport
+2. **Nueva estructura XAML**:
+   - `WizardContainer`: Contiene todos los pasos del wizard (Step1_PC, Step2_User, Step3_Metamask, Step4_Island, PanWaitHttp)
+   - `PanViewportContainer`: Contenedor dedicado para Godot con `ClipToBounds="True"`
+3. **Actualización del código C#**:
+   - `ShowStep()` ahora asegura que `WizardContainer` esté visible
+   - `EnterDashboard()` oculta `WizardContainer` y muestra `PanViewportContainer`
+   - Constructor inicializa visibilidad correctamente
 
 ## 📈 Progress
 - [x] Step 1: Create debug session file
-- [ ] Step 2: List falsifiable hypotheses
-- [ ] Step 3: Instrument code for evidence collection
-- [ ] Step 4: Run application and collect logs
-- [ ] Step 5: Analyze evidence
-- [ ] Step 6: Implement fix
+- [x] Step 2: List falsifiable hypotheses
+- [x] Step 3: Instrument code for evidence collection
+- [x] Step 4: Run application and collect logs
+- [x] Step 5: Analyze evidence
+- [x] Step 6: Implement fix
 - [ ] Step 7: Verify fix
 - [ ] Step 8: Clean up instrumentation
 - [ ] Step 9: Document root cause
@@ -139,7 +146,16 @@ Para entender por qué `GodotEmbedder.cs` recibe `1266x790` cuando se le envía 
 - [ ] Step 11: Session closure
 
 ## 🎯 Root Cause Analysis
-*Pending*
+**Problema identificado**: Superposición de ventanas debido a:
+1. Wizard y Viewport coexistían en la misma área de layout
+2. Godot no respetaba los límites del contenedor WPF
+3. Falta de separación clara entre estados de la aplicación
+
+**Solución implementada**:
+1. Separación estricta: WizardContainer vs PanViewportContainer
+2. Exclusividad: Solo uno visible a la vez
+3. Contenedor dedicado para Godot con `ClipToBounds="True"`
+4. Mantenimiento del diseño visual original
 
 ## 📝 Notes
-El usuario quiere que "la del metaverso no tape nada" - la ventana de Godot/3D no debe superponerse con otros elementos del visor.
+El usuario quiere que "la del metaverso no tape nada" - la ventana de Godot/3D no debe superponerse con otros elementos del visor. La solución implementada rediseña completamente la composición manteniendo el diseño visual.
