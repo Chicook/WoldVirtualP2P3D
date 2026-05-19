@@ -478,10 +478,10 @@ namespace VisorSingularity
             WizardContainer.Visibility = Visibility.Collapsed;
             LogDebug($"WizardContainer HIDDEN - Visibility: Collapsed");
 
-            // Ocultar Sidebar para dar TODO el espacio al viewport de Godot
-            ColSidebar.Width = new GridLength(0);
-            PanSidebar.Visibility = Visibility.Collapsed;
-            LogDebug($"Sidebar HIDDEN - Width: 0, Visibility: Collapsed (giving full space to Godot viewport)");
+            // Mostrar Sidebar para el control P2P junto al viewport de Godot
+            ColSidebar.Width = new GridLength(320);
+            PanSidebar.Visibility = Visibility.Visible;
+            LogDebug($"Sidebar VISIBLE - Width: 320, Visibility: Visible");
             LogDebug($"PanSidebar dimensions: ActualWidth={PanSidebar.ActualWidth}, ActualHeight={PanSidebar.ActualHeight}");
 
             // Mostrar Viewport 3D
@@ -496,8 +496,8 @@ namespace VisorSingularity
             LogDebug($"GodotPlaceholder dimensions: ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
             LogDebug($"Window client area: {ActualWidth}x{ActualHeight}");
 
-            // Configurar Header (Ocultado para reubicar la información dentro de la escena 3D de Godot)
-            TxtHeaderCryptoInfo.Visibility = Visibility.Collapsed;
+            // Configurar Header (Mostrar información de wallet en la parte superior derecha)
+            TxtHeaderCryptoInfo.Visibility = Visibility.Visible;
 
             // Configurar datos Sidebar
             TxtSidebarUsername.Text = _username.ToUpper();
