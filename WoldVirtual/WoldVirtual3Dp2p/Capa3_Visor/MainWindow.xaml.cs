@@ -47,6 +47,7 @@ namespace VisorSingularity
         private int _currentStep = 1;
         private bool _isClosing = false;
         private bool _hasAccount = false;
+        private bool _ignoreGodotExit = false;
 
         private string _username = "";
         private string _wallet = "";
@@ -546,6 +547,7 @@ namespace VisorSingularity
             {
                 try
                 {
+                    _ignoreGodotExit = true;
                     _godotProcess.Kill();
                     _godotProcess.WaitForExit(2000);
                 }
@@ -571,6 +573,7 @@ namespace VisorSingularity
 
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
         {
+            _ignoreGodotExit = true;
             Cleanup();
 
             // Ocultar Dashboard
@@ -958,6 +961,7 @@ namespace VisorSingularity
         // ───── PIPELINE DE LANZAMIENTO DE GODOT ──
         private async void LaunchGodot(string wallet, string user, string island, bool isNewRegistration = false)
         {
+            _ignoreGodotExit = false;
             if (_godotProcess != null && !_godotProcess.HasExited)
             {
                 return;
@@ -1028,6 +1032,11 @@ namespace VisorSingularity
                 {
                     Dispatcher.Invoke(() =>
                     {
+                        if (_ignoreGodotExit)
+                        {
+                            LogDebug("Godot process exited but _ignoreGodotExit is true - ignoring visor shutdown");
+                            return;
+                        }
                         LogDebug("Godot process exited - shutting down visor");
                         _isClosing = true;
                         Cleanup();
