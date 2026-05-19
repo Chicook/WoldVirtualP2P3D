@@ -305,15 +305,10 @@ namespace VisorSingularity
                     _islandId = islandId ?? "137 : 190.1.0";
                     _wallet = wallet ?? "No Wallet Address";
 
-                    // ROTACIÓN CRIPTOGRÁFICA EN CALIENTE: Generar nueva firma única y exportar ZIP
-                    string newRecoveryHash = Guid.NewGuid().ToString("D").ToUpper();
-                    _db.UpdateUserId(_username, newRecoveryHash);
-                    GenerateIdentityZip(newRecoveryHash);
-
-                    TxtFooterStatus.Text = "¡Firma de sesión actualizada y autenticación correcta! Cargando metaverso...";
+                    TxtFooterStatus.Text = "Contraseña correcta. Por favor, confirma tu MetaMask.";
                     TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
-                    EnterDashboard();
+                    ShowStep(3); // Avanzar al paso de MetaMask (Paso 2 del Login)
                 }
                 else
                 {
@@ -667,14 +662,29 @@ namespace VisorSingularity
                             TxtFooterStatus.Text = "¡Firma de MetaMask recibida con éxito por el puente HTTP!";
                             TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
-                            // Generar la isla fija única al confirmar (SÓLO si es usuario nuevo)
-                            if (!_hasAccount || _islandId == "137 : 190.1.0" || string.IsNullOrEmpty(_islandId))
+                            if (_hasAccount)
                             {
-                                GenerateUniqueIslandCoordinates();
-                            }
+                                // ROTACIÓN CRIPTOGRÁFICA EN CALIENTE: Generar nueva firma única y exportar ZIP
+                                string newRecoveryHash = Guid.NewGuid().ToString("D").ToUpper();
+                                _db.UpdateUserId(_username, newRecoveryHash);
+                                GenerateIdentityZip(newRecoveryHash);
 
-                            // Avanzar al paso 4
-                            ShowStep(4);
+                                TxtFooterStatus.Text = "¡Firma de sesión actualizada y autenticación correcta! Cargando metaverso...";
+                                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+
+                                EnterDashboard(isNewRegistration: false); // Carga N3DWoldVirtualMT.tscn
+                            }
+                            else
+                            {
+                                // Generar la isla fija única al confirmar (SÓLO si es usuario nuevo)
+                                if (_islandId == "137 : 190.1.0" || string.IsNullOrEmpty(_islandId))
+                                {
+                                    GenerateUniqueIslandCoordinates();
+                                }
+
+                                // Avanzar al paso 4
+                                ShowStep(4);
+                            }
                         });
                     }
                     else if (path.StartsWith("/node"))
