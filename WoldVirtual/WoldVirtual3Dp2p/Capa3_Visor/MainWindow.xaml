@@ -542,7 +542,7 @@
                                     </TextBlock>
                                     <TextBlock Text="ESPERANDO FIRMA DE METAMASK" Foreground="#94A3B8" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,30"/>
                                     
-                                    <Border Background="#1000E5FF" Height="6" CornerRadius="3" Margin="0,0,0,30" Overflow="Hidden">
+                                    <Border Background="#1000E5FF" Height="6" CornerRadius="3" Margin="0,0,0,30" ClipToBounds="True">
                                         <Border Width="150" Background="#00E5FF" CornerRadius="3" HorizontalAlignment="Left">
                                             <Border.Triggers>
                                                 <EventTrigger RoutedEvent="Loaded">
