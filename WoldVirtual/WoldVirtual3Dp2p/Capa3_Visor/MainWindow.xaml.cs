@@ -985,7 +985,9 @@ namespace VisorSingularity
             // ── PASO 2: Lanzar Godot de forma autónoma (Sin --wid) ──
             // Al no incrustar el HWND en WPF, evitamos los conflictos de renderizado 
             // que causan el parpadeo del avatar. Luego lo superpondremos.
-            string mainScene = "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
+            string mainScene = isNewRegistration 
+                ? "res://EscenaPrincipal.tscn" 
+                : "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn";
             string arguments = $"--path \"{godotProjectDir}\" {mainScene} "
                               + $"--rendering-driver opengl3 "
                               + $"-- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
