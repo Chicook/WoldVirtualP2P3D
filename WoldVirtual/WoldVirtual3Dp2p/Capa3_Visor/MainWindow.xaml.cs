@@ -494,7 +494,6 @@ namespace VisorSingularity
 
             LogDebug($"PanViewportContainer dimensions: ActualWidth={PanViewportContainer.ActualWidth}, ActualHeight={PanViewportContainer.ActualHeight}");
             LogDebug($"GodotPlaceholder dimensions: ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
-            LogDebug($"Main Grid column 1 width: {((Grid)PanViewportContainer.Parent).ColumnDefinitions[1].Width}");
             LogDebug($"Window client area: {ActualWidth}x{ActualHeight}");
 
             // Configurar Header (Ocultado para reubicar la información dentro de la escena 3D de Godot)
