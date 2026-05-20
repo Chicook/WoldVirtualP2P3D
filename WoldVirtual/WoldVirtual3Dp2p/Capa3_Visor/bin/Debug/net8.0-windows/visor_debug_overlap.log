@@ -215,3 +215,39 @@
 [17:23:33.608] Cleanup started
 [17:23:33.611] Cleanup: Hiding and closing Godot window natively
 [17:23:33.615] Cleanup completed
+[17:29:32.274] MainWindow constructor started
+[17:29:32.420] InitializeComponent completed
+[17:29:32.568] MainWindow_Loaded started
+[17:29:32.706] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[17:29:32.711] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[17:29:32.711] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[17:30:06.027] EnterDashboard called - isNewRegistration: False
+[17:30:06.198] Godot Process ID: 7920
+[17:30:37.939] MainWindow_Closed called - forcing exit
+[17:30:37.940] Cleanup started
+[17:30:37.941] Cleanup: Hiding Godot window via _viewer
+[17:30:38.066] Cleanup: Posting WM_CLOSE to Godot window
+[17:30:38.066] Cleanup: Killing Godot process
+[17:30:38.128] Godot process exited - shutting down visor
+[17:30:38.128] Cleanup started
+[17:30:38.128] Cleanup: Hiding Godot window via _viewer
+[17:30:38.130] Cleanup: Posting WM_CLOSE to Godot window
+[17:30:38.132] Cleanup completed
+[17:30:44.515] MainWindow constructor started
+[17:30:44.657] InitializeComponent completed
+[17:30:44.788] MainWindow_Loaded started
+[17:30:44.899] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[17:30:44.901] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[17:30:44.901] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[17:31:30.979] EnterDashboard called - isNewRegistration: False
+[17:31:31.153] Godot Process ID: 2036
+[17:31:54.347] MainWindow_Closed called - forcing exit
+[17:31:54.348] Cleanup started
+[17:31:54.349] Cleanup: Hiding Godot window via _viewer
+[17:31:54.475] Cleanup: Posting WM_CLOSE to Godot window
+[17:31:54.475] Cleanup: Killing Godot process
+[17:31:54.537] Godot process exited - shutting down visor
+[17:31:54.537] Cleanup started
+[17:31:54.538] Cleanup: Hiding Godot window via _viewer
+[17:31:54.539] Cleanup: Posting WM_CLOSE to Godot window
+[17:31:54.541] Cleanup completed
