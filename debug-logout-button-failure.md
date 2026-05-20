@@ -85,18 +85,31 @@ El botón "CERRAR SESIÓN" en el visor WPF no funciona. A pesar de múltiples in
 ## 📝 **EVIDENCIA RECOPILADA**
 
 ### **Evidencia E1**: Logs de `BtnCerrarSesion_Click`
-- **Estado**: Pendiente
+- **Estado**: **NO ENCONTRADO**
 - **Ubicación esperada**: `debug_logout_trace.log`
 - **Contenido clave**: Secuencia de logs de logout-1 a logout-10
+- **Análisis**: **El evento `BtnCerrarSesion_Click` NO se está disparando**. Los logs muestran múltiples ejecuciones del visor pero NINGÚN registro del evento click.
 
 ### **Evidencia E2**: Logs de `PreviewMouseDown`
-- **Estado**: Pendiente
+- **Estado**: **NO ENCONTRADO**
 - **Ubicación esperada**: `debug_logout_trace.log`
 - **Contenido clave**: Logs de evento de bajo nivel
+- **Análisis**: **El evento `PreviewMouseDown` tampoco se está disparando**. Esto sugiere que los eventos de mouse no están llegando al botón.
 
 ### **Evidencia E3**: Estado de interfaz post-clic
-- **Estado**: Pendiente
+- **Estado**: **Pendiente (necesita confirmación del usuario)**
 - **Observación visual**: ¿Vuelve al wizard? ¿Mensajes de estado?
+- **Análisis**: Basado en los logs, es probable que la interfaz NO cambie después del clic.
+
+### **Evidencia E4**: Logs de ejecución del visor
+- **Estado**: **ENCONTRADO**
+- **Ubicación**: `debug_logout_trace.log` y `visor_debug_overlap.log`
+- **Contenido clave**: 
+  - El visor se inicia correctamente múltiples veces
+  - El dashboard se muestra (`EnterDashboard called`)
+  - Godot se ejecuta (`Godot Process ID`)
+  - El visor se cierra (`BtnClose_Click called` o `MainWindow_Closed called`)
+- **Análisis**: **El visor funciona correctamente excepto por el botón de cierre de sesión**. Esto confirma que el problema está aislado al botón específico.
 
 ## 🔧 **PLAN DE ACCIÓN**
 
