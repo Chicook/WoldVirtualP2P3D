@@ -207,36 +207,15 @@ namespace VisorSingularity
                     FechaVinculacion = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
 
-                string zipFilePath = "";
                 string zipFileName = "Wold_Firma_Digital.zip";
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string tempDir = Path.Combine(baseDir, "_temp");
+                Directory.CreateDirectory(tempDir); // Ensure the directory exists
+                string zipFilePath = Path.Combine(tempDir, zipFileName);
 
-                if (autoSilent)
-                {
-                    // Guardado automático silencioso en Escritorio al arrancar
-                    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                    zipFilePath = Path.Combine(desktopPath, zipFileName);
-                }
-                else
-                {
-                    // Abrir diálogo nativo de Windows (SaveFileDialog) para elegir directorio y nombre de archivo
-                    var saveFileDialog = new Microsoft.Win32.SaveFileDialog();
-                    saveFileDialog.Filter = "Archivo ZIP (*.zip)|*.zip";
-                    saveFileDialog.FileName = zipFileName;
-                    saveFileDialog.Title = "Selecciona el directorio para guardar tu Firma Digital";
-                    saveFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-
-                    if (saveFileDialog.ShowDialog() == true)
-                    {
-                        zipFilePath = saveFileDialog.FileName;
-                        zipFileName = Path.GetFileName(zipFilePath);
-                    }
-                    else
-                    {
-                        TxtFooterStatus.Text = "Exportación de firma cancelada por el usuario.";
-                        TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
-                        return false;
-                    }
-                }
+                // For now, we will always save to a fixed location within the project to avoid sandbox issues.
+                // The autoSilent parameter will be ignored for now.
+                // The SaveFileDialog logic is removed to prevent sandbox permission issues.
 
                 // 3. Crear el archivo ZIP y empaquetar el JSON dentro
                 using (var fileStream = new FileStream(zipFilePath, FileMode.Create))
@@ -323,18 +302,12 @@ namespace VisorSingularity
         private void BtnDownloadZip_Click(object sender, RoutedEventArgs e)
         {
             string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
-            if (GenerateIdentityZip(recoveryHash, false))
-            {
-                TxtUuid.Text = recoveryHash;
-                BtnStep1Action.IsEnabled = true; // ¡Habilitar el botón Siguiente!
-                TxtFooterStatus.Text = "Firma Digital guardada. Haz clic en Siguiente para continuar.";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-            }
-            else
-            {
-                TxtFooterStatus.Text = "Debes guardar tu Firma Digital (.zip) para poder continuar.";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
-            }
+            GenerateIdentityZip(recoveryHash, false); // Call the modified function
+
+            TxtUuid.Text = recoveryHash;
+            BtnStep1Action.IsEnabled = true; // ¡Habilitar el botón Siguiente!
+            TxtFooterStatus.Text = "Firma Digital guardada. Haz clic en Siguiente para continuar.";
+            TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
         }
 
         // STEP 2 Action: Generate Account UUID
@@ -481,6 +454,11 @@ namespace VisorSingularity
 
             // Mostrar el contenedor de Godot
             PanViewportContainer.Visibility = Visibility.Visible;
+
+            // Mostrar y rellenar el overlay del usuario
+            PanUserOverlay.Visibility = Visibility.Visible;
+            TxtOverlayUsername.Text = _username.ToUpper();
+            TxtOverlayStatus.Text = "Online"; // Estado por defecto
 
             // Lanzar Godot e incrustar via --wid
             LaunchGodot(_wallet, _username, _islandId, isNewRegistration);

@@ -37,6 +37,7 @@
         <DropShadowEffect x:Key="GlowEmerald" Color="#00FF8C" BlurRadius="15" ShadowDepth="0" Opacity="0.6"/>
         <DropShadowEffect x:Key="GlowMagenta" Color="#FF007F" BlurRadius="15" ShadowDepth="0" Opacity="0.6"/>
         <DropShadowEffect x:Key="PanelShadow" Color="#000000" BlurRadius="20" ShadowDepth="8" Opacity="0.5"/>
+        <DropShadowEffect x:Key="GlowOnlineStatus" Color="#00FF8C" BlurRadius="4" ShadowDepth="0"/>
 
         <!-- Premium Glass Panel -->
         <Style x:Key="GlassPanel" TargetType="Border">
@@ -501,12 +502,38 @@
         </Grid>
 
         <!-- ==================== GODOT VIEWPORT CONTAINER ==================== -->
-        <!-- Ocupa el 100% de la ventana completa, solapando cualquier fila y columna de WPF -->
-        <Grid x:Name="PanViewportContainer" Visibility="Collapsed" Background="#000000"
-              Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="99">
-            <Border x:Name="GodotPlaceholder" Background="#000000"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-        </Grid>
+            <!-- Ocupa el 100% de la ventana completa, solapando cualquier fila y columna de WPF -->
+            <Grid x:Name="PanViewportContainer" Visibility="Collapsed" Background="#000000"
+                  Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="99">
+                <Border x:Name="GodotPlaceholder" Background="#000000"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+            </Grid>
+
+            <!-- ==================== USER OVERLAY (Avatar & Status) ==================== -->
+            <!-- Este Grid se superpondrá a la vista de Godot para mostrar el avatar y el estado del usuario -->
+            <Grid x:Name="PanUserOverlay" Visibility="Collapsed"
+                  Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="100"
+                  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20">
+                <Border Style="{StaticResource GlassPanel}" Padding="15" CornerRadius="12" Width="250" Height="100">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- Avatar Image -->
+                        <Border Width="60" Height="60" CornerRadius="30" Background="#1AFFFFFF" BorderBrush="#4000E5FF" BorderThickness="1" Margin="0,0,10,0">
+                            <Image x:Name="ImgAvatar" Source="/Assets/default_avatar.png" Stretch="UniformToFill"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="TxtOverlayUsername" Text="Usuario" Foreground="#F8FAFC" FontSize="16" FontWeight="Bold"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                <Ellipse Width="8" Height="8" Fill="#00FF8C" Margin="0,0,5,0">
+                                    <Ellipse.Effect>
+                                        <StaticResource ResourceKey="GlowOnlineStatus"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                                <TextBlock x:Name="TxtOverlayStatus" Text="Online" Foreground="#00FF8C" FontSize="12" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
         <!-- ==================== REAL FOOTER ==================== -->
         <!-- Visibilidad atada al WizardContainer: cuando el Wizard se oculta, el Footer también -->
