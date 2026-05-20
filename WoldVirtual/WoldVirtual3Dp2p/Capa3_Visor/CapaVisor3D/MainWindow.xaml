@@ -278,41 +278,26 @@
                 </Grid>
             </Border>
 
-            <!-- Bottom Login Bar (Professional Dashboard Look) -->
-            <Border Grid.Row="2" Height="90" Background="#1F2833" BorderBrush="#45A29E" BorderThickness="0,1,0,0">
+            <!-- Bottom Chat Bar (Cyberpunk Chat Look) -->
+            <Border x:Name="BorderBottomLoginBar" Grid.Row="2" Height="80" Background="#111625" BorderBrush="#45A29E" BorderThickness="0,1,0,0">
                 <Grid Margin="20,10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/> <!-- Brand/Status -->
-                        <ColumnDefinition Width="*"/>    <!-- Spacer -->
-                        <ColumnDefinition Width="Auto"/> <!-- Controls -->
+                        <ColumnDefinition Width="Auto"/> <!-- Status/User -->
+                        <ColumnDefinition Width="*"/>    <!-- Text input -->
+                        <ColumnDefinition Width="Auto"/> <!-- Send Button -->
                     </Grid.ColumnDefinitions>
 
-                    <!-- Left Side: Status / Brand -->
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="WOLD VIRTUAL P2P" Foreground="#66FCF1" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="Estado: Desconectado" Foreground="#C5C6C7" FontSize="11" Margin="0,2,0,0"/>
+                    <!-- Left Side: User Active -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                        <TextBlock Text="P2P CHAT" Foreground="#66FCF1" FontSize="16" FontWeight="Bold"/>
+                        <TextBlock x:Name="TxtChatActiveUser" Text="Usuario: Conectado" Foreground="#C5C6C7" FontSize="11" Margin="0,2,0,0"/>
                     </StackPanel>
 
-                    <!-- Right Side: Login Controls -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- Usuario -->
-                        <StackPanel Margin="10,0" VerticalAlignment="Center">
-                            <Label Content="Usuario:" Style="{StaticResource SingularityLabel}"/>
-                            <TextBox Width="150" Style="{StaticResource SingularityTextBox}" x:Name="TxtUser"/>
-                            <CheckBox Content="Recordar" Style="{StaticResource SingularityCheckBox}" FontSize="10" Margin="0,2,0,0"/>
-                        </StackPanel>
+                    <!-- Center: Input Box -->
+                    <TextBox Grid.Column="1" x:Name="TxtChatMessage" Style="{StaticResource SingularityTextBox}" Height="38" FontSize="13" VerticalAlignment="Center" Margin="10,0"/>
 
-                        <!-- Contraseña -->
-                        <StackPanel Margin="10,0" VerticalAlignment="Center">
-                            <Label Content="Contraseña:" Style="{StaticResource SingularityLabel}"/>
-                            <PasswordBox Width="150" Style="{StaticResource SingularityPasswordBox}" x:Name="TxtPass"/>
-                            <CheckBox Content="Recordar" Style="{StaticResource SingularityCheckBox}" FontSize="10" Margin="0,2,0,0"/>
-                        </StackPanel>
-
-                        <!-- Iniciar Sesión Button -->
-                        <Button Content="CONECTAR" Style="{StaticResource SingularityButton}" 
-                                Height="35" Width="120" Margin="15,0,0,0" VerticalAlignment="Center" x:Name="BtnLogin"/>
-                    </StackPanel>
+                    <!-- Right Side: Send button -->
+                    <Button Grid.Column="2" x:Name="BtnSendChat" Content="ENVIAR" Style="{StaticResource SingularityButton}" Height="38" Width="100" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
         </Grid>

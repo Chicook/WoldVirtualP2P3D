@@ -51,6 +51,7 @@ func _ready() -> void:
 	_parse_cmdline_args()
 	_initialize_sub_controllers()
 	_setup_connections()
+	_setup_dynamic_chat_ui()
 
 func _initialize_sub_controllers():
 	# Cargar NetworkLayer modular
@@ -165,3 +166,16 @@ func _setup_camera_controller(av: Node3D):
 		cam_ctrl.name = "CameraController"
 		add_child(cam_ctrl)
 	cam_ctrl.set_target(av)
+
+func _setup_dynamic_chat_ui():
+	# Buscar el CanvasLayer UI_Layer (padre de ChunkManager es N3DWoldVirtualMT)
+	var ui_layer = get_parent().get_node_or_null("UI_Layer")
+	if is_instance_valid(ui_layer):
+		# Instanciar el control de Chat
+		var chat_control = Control.new()
+		chat_control.name = "ChatUI"
+		chat_control.set_script(load("res://woldvirtual/gdscrip/ChatUI.gd"))
+		ui_layer.add_child(chat_control)
+		print("ChatUI instanciado dinámicamente en UI_Layer.")
+	else:
+		print("Error: No se encontró UI_Layer para inyectar el ChatUI.")

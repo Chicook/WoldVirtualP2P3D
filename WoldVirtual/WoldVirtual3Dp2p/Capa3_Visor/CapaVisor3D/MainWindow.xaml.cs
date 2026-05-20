@@ -9,6 +9,7 @@ using System.Windows;
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 
@@ -27,6 +28,7 @@ namespace VisorSingularity
         private IntPtr _godotHwnd = IntPtr.Zero;
         private bool _isClosing = false;
         private GodotHwndHost? _godotHost;
+        private string _currentUsername = "Anonymous";
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -43,6 +45,13 @@ namespace VisorSingularity
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "GetClassNameW")]
+        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
+
         public MainWindow()
         {
             InitializeComponent();
@@ -56,6 +65,10 @@ namespace VisorSingularity
             // Vincular eventos de botones (Paso 2)
             BtnGenerateUuid.Click += BtnGenerateUuid_Click;
             BtnRegisterAndEnter.Click += BtnRegisterAndEnter_Click;
+
+            // Vincular eventos del Chat P2P
+            BtnSendChat.Click += BtnSendChat_Click;
+            TxtChatMessage.KeyDown += TxtChatMessage_KeyDown;
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -432,6 +445,9 @@ namespace VisorSingularity
                             GridUserRegistration.Visibility = Visibility.Collapsed;
                             GridMainViewer.Visibility = Visibility.Visible;
 
+                            _currentUsername = user;
+                            TxtChatActiveUser.Text = $"Usuario: {user}";
+
                             LaunchAndEmbedGodot(wallet, user, island);
                         });
                     }
@@ -487,6 +503,9 @@ namespace VisorSingularity
             // Limpiar contenedor placeholder
             GodotPlaceholder.Children.Clear();
 
+            // Ocultar barra inferior de conexión inicialmente mientras se registra el avatar en Godot
+            BorderBottomLoginBar.Visibility = Visibility.Collapsed;
+
             // Configurar resolución de inicio
             int width = (int)Math.Max(800, GodotPlaceholder.ActualWidth);
             int height = (int)Math.Max(600, GodotPlaceholder.ActualHeight);
@@ -499,18 +518,37 @@ namespace VisorSingularity
                 FileName = exePath,
                 Arguments = arguments,
                 WorkingDirectory = projectDir,
-                WindowStyle = ProcessWindowStyle.Hidden, // Ocultar inicialmente para evitar parpadeos
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            _godotProcess = new Process();
+            _godotProcess.StartInfo = startInfo;
+            _godotProcess.EnableRaisingEvents = true;
+
+            // Escuchar la salida estándar de Godot para saber cuándo se registra el avatar
+            _godotProcess.OutputDataReceived += (s, ev) =>
+            {
+                if (!string.IsNullOrEmpty(ev.Data))
+                {
+                    // Si se registra el perfil de usuario en Godot, mostramos la barra inferior de conexión en WPF
+                    if (ev.Data.Contains("Usuario guardado") || ev.Data.Contains("current_user.json"))
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            BorderBottomLoginBar.Visibility = Visibility.Visible;
+                        });
+                    }
+                }
             };
 
             try
             {
-                _godotProcess = Process.Start(startInfo);
-                if (_godotProcess == null)
-                {
-                    throw new Exception("El sistema operativo denegó el lanzamiento del proceso.");
-                }
+                _godotProcess.Start();
+                _godotProcess.BeginOutputReadLine();
+                _godotProcess.BeginErrorReadLine();
 
                 // Escanear ventana de Godot en segundo plano
                 _godotHwnd = await Task.Run(() => ScanForGodotWindow(_godotProcess.Id, 15000)); // 15 segundos máximo
@@ -539,32 +577,50 @@ namespace VisorSingularity
         {
             IntPtr result = IntPtr.Zero;
             DateTime start = DateTime.Now;
+            IntPtr wpfHwnd = IntPtr.Zero;
+
+            // Obtener el manejador de la ventana WPF en el hilo UI
+            Dispatcher.Invoke(() =>
+            {
+                wpfHwnd = new WindowInteropHelper(this).Handle;
+            });
 
             while (result == IntPtr.Zero && (DateTime.Now - start).TotalMilliseconds < timeoutMs && !_isClosing)
             {
                 EnumWindows((hwnd, lParam) =>
                 {
-                    uint pid;
-                    GetWindowThreadProcessId(hwnd, out pid);
+                    if (hwnd == wpfHwnd) return true; // Ignorar la ventana principal de WPF
 
-                    if (pid == targetProcessId)
+                    // Debe ser una ventana visible en el escritorio
+                    if (!IsWindowVisible(hwnd)) return true;
+
+                    // Validar estrictamente que el HWND pertenezca al proceso de Godot que acabamos de arrancar
+                    uint processId;
+                    GetWindowThreadProcessId(hwnd, out processId);
+                    if (processId != targetProcessId) return true; // No es el proceso de Godot, ignorar
+
+                    // Obtener la clase de la ventana nativa
+                    StringBuilder className = new StringBuilder(256);
+                    GetClassName(hwnd, className, className.Capacity);
+                    string cls = className.ToString();
+
+                    // Obtener el título de la ventana
+                    StringBuilder sb = new StringBuilder(256);
+                    GetWindowText(hwnd, sb, sb.Capacity);
+                    string title = sb.ToString();
+
+                    // Descartar ventanas de consola o selectores de depuración, buscando la ventana principal de renderizado (Engine)
+                    if (cls == "Engine" || (!title.Contains("Console") && !title.Contains("Select")))
                     {
-                        StringBuilder sb = new StringBuilder(256);
-                        GetWindowText(hwnd, sb, sb.Capacity);
-                        string title = sb.ToString();
-
-                        // Descartar ventanas invisibles o del sistema del mismo proceso
-                        if (!string.IsNullOrEmpty(title))
-                        {
-                            result = hwnd;
-                            return false; // Detener enumeración
-                        }
+                        result = hwnd;
+                        return false; // Detener enumeración, hemos encontrado la ventana de renderizado correcta
                     }
+
                     return true; // Continuar
                 }, IntPtr.Zero);
 
                 if (result != IntPtr.Zero) break;
-                System.Threading.Thread.Sleep(200);
+                System.Threading.Thread.Sleep(250);
             }
 
             return result;
@@ -666,6 +722,41 @@ namespace VisorSingularity
             _isClosing = true;
             Cleanup();
             base.OnClosing(e);
+        }
+
+        private void BtnSendChat_Click(object sender, RoutedEventArgs e)
+        {
+            SendChatMessage();
+        }
+
+        private void TxtChatMessage_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                SendChatMessage();
+                e.Handled = true;
+            }
+        }
+
+        private void SendChatMessage()
+        {
+            string message = TxtChatMessage.Text.Trim();
+            if (string.IsNullOrEmpty(message)) return;
+
+            try
+            {
+                using (UdpClient udpClient = new UdpClient())
+                {
+                    string json = $"{{\"type\": \"chat\", \"user\": \"{_currentUsername}\", \"text\": \"{message.Replace("\"", "\\\"")}\"}}";
+                    byte[] data = Encoding.UTF8.GetBytes(json);
+                    udpClient.Send(data, data.Length, "127.0.0.1", 50007);
+                }
+                TxtChatMessage.Text = "";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error al enviar mensaje UDP: {ex.Message}");
+            }
         }
     }
 }
