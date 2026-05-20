@@ -1,12 +1,671 @@
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Management;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Win32;
+using System.Diagnostics;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace VisorSingularity
 {
     public partial class MainWindow : Window
     {
+        private string _osName = "Desconocido";
+        private string _cpuName = "Desconocido";
+        private string _motherboard = "Desconocido";
+        private string _hardwareFingerprint = "";
+
+        // MetaMask local HTTP server bridge variables
+        private HttpListener? _httpListener;
+        private Process? _godotProcess;
+        private IntPtr _godotHwnd = IntPtr.Zero;
+        private bool _isClosing = false;
+        private GodotHwndHost? _godotHost;
+
+        // Win32 API Imports
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
         public MainWindow()
         {
             InitializeComponent();
+            this.Loaded += MainWindow_Loaded;
+            
+            // Vincular eventos de botones (Paso 1)
+            BtnGenerateZip.Click += BtnGenerateZip_Click;
+            BtnEnterMetaverse.Click += BtnEnterMetaverse_Click;
+            BtnCopyHash.Click += BtnCopyHash_Click;
+
+            // Vincular eventos de botones (Paso 2)
+            BtnGenerateUuid.Click += BtnGenerateUuid_Click;
+            BtnRegisterAndEnter.Click += BtnRegisterAndEnter_Click;
+        }
+
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            await RunHardwareScanAsync();
+        }
+
+        private async Task RunHardwareScanAsync()
+        {
+            try
+            {
+                ProgScan.Value = 0;
+                TxtScanStatus.Text = "Inicializando escaneo del sistema...";
+                await Task.Delay(400);
+
+                // Paso 1: Escanear Sistema Operativo (25%)
+                TxtScanStatus.Text = "Escaneando Sistema Operativo...";
+                ProgScan.Value = 15;
+                await Task.Delay(500);
+                _osName = GetOSName();
+                TxtOsName.Text = _osName;
+                ProgScan.Value = 35;
+                await Task.Delay(300);
+
+                // Paso 2: Escanear Procesador (60%)
+                TxtScanStatus.Text = "Identificando Procesador (CPU)...";
+                ProgScan.Value = 50;
+                await Task.Delay(600);
+                _cpuName = GetCpuName();
+                TxtCpuName.Text = _cpuName;
+                ProgScan.Value = 70;
+                await Task.Delay(300);
+
+                // Paso 3: Escanear Placa Base (85%)
+                TxtScanStatus.Text = "Detectando Placa Base y Chipset...";
+                ProgScan.Value = 80;
+                await Task.Delay(500);
+                _motherboard = GetMotherboardName();
+                TxtMotherboardName.Text = _motherboard;
+                ProgScan.Value = 90;
+                await Task.Delay(200);
+
+                // Paso 4: Generar Huella Digital (100%)
+                TxtScanStatus.Text = "Generando firma criptográfica SHA-256...";
+                ProgScan.Value = 95;
+                await Task.Delay(400);
+                
+                _hardwareFingerprint = GenerateSHA256Signature(_osName, _cpuName, _motherboard);
+                TxtHardwareHash.Text = _hardwareFingerprint;
+                
+                ProgScan.Value = 100;
+                TxtScanStatus.Text = "Escaneo completado. Firma de hardware generada.";
+                
+                // Habilitar botón para guardar el ZIP de respaldo
+                BtnGenerateZip.IsEnabled = true;
+            }
+            catch (Exception ex)
+            {
+                TxtScanStatus.Text = "Error durante el escaneo: " + ex.Message;
+                ProgScan.Value = 100;
+                // Incluso si falla WMI, permitimos generar una firma alternativa basada en variables de entorno
+                if (string.IsNullOrEmpty(_hardwareFingerprint))
+                {
+                    _hardwareFingerprint = GenerateSHA256Signature(
+                        Environment.OSVersion.ToString(), 
+                        Environment.ProcessorCount.ToString() + " Cores", 
+                        Environment.MachineName
+                    );
+                    TxtHardwareHash.Text = _hardwareFingerprint;
+                }
+                BtnGenerateZip.IsEnabled = true;
+            }
+        }
+
+        private string GetOSName()
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Caption FROM Win32_OperatingSystem"))
+                {
+                    foreach (var obj in searcher.Get())
+                    {
+                        var caption = obj["Caption"]?.ToString();
+                        if (!string.IsNullOrEmpty(caption))
+                        {
+                            return caption.Trim();
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback a API de sistema
+                return $"{Environment.OSVersion} ({ (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit") })";
+            }
+            return "Windows OS";
+        }
+
+        private string GetCpuName()
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor"))
+                {
+                    foreach (var obj in searcher.Get())
+                    {
+                        var name = obj["Name"]?.ToString();
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            return name.Trim();
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Desconocido";
+            }
+            return "Generic CPU";
+        }
+
+        private string GetMotherboardName()
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Manufacturer, Product FROM Win32_BaseBoard"))
+                {
+                    foreach (var obj in searcher.Get())
+                    {
+                        string manufacturer = obj["Manufacturer"]?.ToString() ?? "";
+                        string product = obj["Product"]?.ToString() ?? "";
+                        string res = $"{manufacturer} {product}".Trim();
+                        if (!string.IsNullOrEmpty(res))
+                        {
+                            return res;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return "Placa Base Genérica (WMI no disponible)";
+            }
+            return "Baseboard";
+        }
+
+        private string GenerateSHA256Signature(string os, string cpu, string motherboard)
+        {
+            string rawData = $"{os.ToLower().Trim()}|{cpu.ToLower().Trim()}|{motherboard.ToLower().Trim()}";
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    builder.Append(bytes[i].ToString("x2"));
+                }
+                return builder.ToString();
+            }
+        }
+
+        private void BtnCopyHash_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(TxtHardwareHash.Text))
+            {
+                Clipboard.SetText(TxtHardwareHash.Text);
+                MessageBox.Show("Firma criptográfica copiada al portapapeles.", "Firma Copiada", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void BtnGenerateZip_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                SaveFileDialog saveFileDialog = new SaveFileDialog
+                {
+                    Title = "Guardar Respaldo Seguro de Registro de PC",
+                    FileName = "Firma_Hardware_WoldVirtual.zip",
+                    Filter = "Archivo ZIP (*.zip)|*.zip",
+                    DefaultExt = ".zip"
+                };
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    string targetZipPath = saveFileDialog.FileName;
+
+                    // Crear directorio temporal seguro
+                    string tempDir = Path.Combine(Path.GetTempPath(), "WoldVirtualBackup_" + Guid.NewGuid().ToString("N"));
+                    Directory.CreateDirectory(tempDir);
+
+                    // 1. Crear ficha de hardware
+                    string reportPath = Path.Combine(tempDir, "registro_hardware.txt");
+                    StringBuilder reportBuilder = new StringBuilder();
+                    reportBuilder.AppendLine("==================================================");
+                    reportBuilder.AppendLine("  WOLD VIRTUAL P2P 3D - REGISTRO DE HARDWARE");
+                    reportBuilder.AppendLine("==================================================");
+                    reportBuilder.AppendLine($"Fecha de Registro : {DateTime.Now}");
+                    reportBuilder.AppendLine($"Sistema Operativo : {_osName}");
+                    reportBuilder.AppendLine($"Procesador        : {_cpuName}");
+                    reportBuilder.AppendLine($"Placa Base        : {_motherboard}");
+                    reportBuilder.AppendLine("-------------------------------------------------- ");
+                    reportBuilder.AppendLine("FIRMADO CRYPTO DE HARDWARE (SHA-256):");
+                    reportBuilder.AppendLine(_hardwareFingerprint);
+                    reportBuilder.AppendLine("==================================================");
+                    File.WriteAllText(reportPath, reportBuilder.ToString(), Encoding.UTF8);
+
+                    // 2. Crear archivo de clave de firma
+                    string signaturePath = Path.Combine(tempDir, "signature.key");
+                    File.WriteAllText(signaturePath, _hardwareFingerprint, Encoding.UTF8);
+
+                    // 3. Comprimir a archivo zip
+                    if (File.Exists(targetZipPath))
+                    {
+                        File.Delete(targetZipPath);
+                    }
+
+                    ZipFile.CreateFromDirectory(tempDir, targetZipPath);
+
+                    // Limpiar directorio temporal
+                    Directory.Delete(tempDir, true);
+
+                    // Cambiar apariencia del botón
+                    BtnGenerateZip.Content = "✓ RESPALDO GUARDADO";
+                    BtnGenerateZip.IsEnabled = false;
+
+                    // Desbloquear botón de ingreso al metaverso
+                    BtnEnterMetaverse.IsEnabled = true;
+
+                    MessageBox.Show(
+                        $"¡Registro completado!\n\nSe ha generado y guardado el archivo de respaldo seguro en:\n{targetZipPath}\n\nGuarde este archivo ZIP en un lugar seguro para su autenticación de hardware.", 
+                        "Respaldo Exitoso", 
+                        MessageBoxButton.OK, 
+                        MessageBoxImage.Information
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al generar el respaldo ZIP: {ex.Message}", "Error de Registro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnEnterMetaverse_Click(object sender, RoutedEventArgs e)
+        {
+            // Paso 1 completado: Transicionar al Paso 2 (Registro de Usuario)
+            GridPcRegistration.Visibility = Visibility.Collapsed;
+            GridUserRegistration.Visibility = Visibility.Visible;
+        }
+
+        private void BtnGenerateUuid_Click(object sender, RoutedEventArgs e)
+        {
+            // Generar UUID único y ponerlo en el recuadro
+            TxtRegUuid.Text = Guid.NewGuid().ToString().ToUpper();
+        }
+
+        private void BtnRegisterAndEnter_Click(object sender, RoutedEventArgs e)
+        {
+            string username = TxtRegUser.Text.Trim();
+            string password = TxtRegPass.Password;
+            string confirmPass = TxtRegPassConfirm.Password;
+            string uuid = TxtRegUuid.Text.Trim();
+
+            // Validaciones
+            if (string.IsNullOrEmpty(username))
+            {
+                MessageBox.Show("Por favor, ingrese un nombre de usuario.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(password))
+            {
+                MessageBox.Show("Por favor, ingrese una contraseña.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (password != confirmPass)
+            {
+                MessageBox.Show("Las contraseñas no coinciden. Por favor, verifíquelas.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(uuid))
+            {
+                MessageBox.Show("Por favor, genere un UUID único pulsando el botón 'GENERAR UUID'.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Activar visualización de carga MetaMask en el Paso 2
+            GridMetaMaskOverlay.Visibility = Visibility.Visible;
+
+            // Iniciar el Servidor HTTP puente local en el puerto 8080
+            StartHttpBridge(username);
+
+            // Abrir automáticamente el navegador predeterminado para iniciar MetaMask
+            try
+            {
+                string defaultIsland = "137 : 190.1.0";
+                string url = $"http://localhost:8080/?user={Uri.EscapeDataString(username)}&islandId={Uri.EscapeDataString(defaultIsland)}";
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo abrir el navegador automáticamente: {ex.Message}. Por favor, navegue a http://localhost:8080/ de forma manual.", "Error de Navegador", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        // ── SERVIDOR PUENTE HTTP LOCAL (METAMASK) ──
+        private void StartHttpBridge(string username)
+        {
+            try
+            {
+                if (_httpListener != null)
+                {
+                    _httpListener.Stop();
+                    _httpListener.Close();
+                }
+
+                _httpListener = new HttpListener();
+                _httpListener.Prefixes.Add("http://localhost:8080/");
+                _httpListener.Start();
+
+                Task.Run(() => ListenLoop(username));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ERROR al iniciar HTTP Bridge en puerto 8080: {ex.Message}. Asegúrate de que no esté en uso.", "Error de Servidor", MessageBoxButton.OK, MessageBoxImage.Error);
+                GridMetaMaskOverlay.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private async Task ListenLoop(string username)
+        {
+            while (_httpListener != null && _httpListener.IsListening && !_isClosing)
+            {
+                try
+                {
+                    var context = await _httpListener.GetContextAsync();
+                    var request = context.Request;
+                    var response = context.Response;
+
+                    string path = request.Url?.AbsolutePath ?? "/";
+
+                    if (path == "/confirm")
+                    {
+                        string user = request.QueryString["user"] ?? username;
+                        string wallet = request.QueryString["wallet"] ?? "No Wallet";
+                        string island = request.QueryString["islandId"] ?? "137 : 190.1.0";
+                        string signature = request.QueryString["signature"] ?? "";
+
+                        // Responder HTML de éxito
+                        string responseString = "<html><head><meta charset='UTF-8'><title>Confirmado</title><style>body{background:#0a0f1a;color:#00d9ff;font-family:sans-serif;text-align:center;padding-top:100px;}h1{color:#00ff8c;}</style></head><body><h1>Metaverse Link Confirmed!</h1><p>Puedes regresar al Visor de la aplicacion.</p></body></html>";
+                        byte[] buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.ContentLength64 = buffer.Length;
+                        response.ContentType = "text/html; charset=UTF-8";
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        response.OutputStream.Close();
+
+                        // Transicionar la interfaz e iniciar Godot en el hilo UI
+                        Dispatcher.Invoke(() =>
+                        {
+                            // Cerrar Listener
+                            if (_httpListener != null)
+                            {
+                                try
+                                {
+                                    _httpListener.Stop();
+                                    _httpListener.Close();
+                                }
+                                catch { }
+                                _httpListener = null;
+                            }
+
+                            GridMetaMaskOverlay.Visibility = Visibility.Collapsed;
+                            GridUserRegistration.Visibility = Visibility.Collapsed;
+                            GridMainViewer.Visibility = Visibility.Visible;
+
+                            LaunchAndEmbedGodot(wallet, user, island);
+                        });
+                    }
+                    else
+                    {
+                        // Servir metamask.html local
+                        string wwwPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "www");
+                        string filePath = Path.Combine(wwwPath, "metamask.html");
+
+                        if (File.Exists(filePath))
+                        {
+                            byte[] buffer = File.ReadAllBytes(filePath);
+                            response.ContentLength64 = buffer.Length;
+                            response.ContentType = "text/html; charset=UTF-8";
+                            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        }
+                        else
+                        {
+                            // Fallback inline si no encuentra metamask.html
+                            string responseString = $"<html><head><meta charset='UTF-8'><title>Conectar Wallet</title><style>body{{background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:50px;}}a{{background:#00d9ff;color:#000;padding:12px 24px;text-decoration:none;font-weight:bold;border-radius:6px;}}</style></head><body><h1>Link WoldVirtual MetaMask</h1><p>Usuario: {username}</p><br><br><a href='/confirm?user={username}&wallet=0x{Guid.NewGuid().ToString().Replace("-", "").Substring(0, 40)}&islandId=137_190_1_0'>SIMULAR CONEXION METAMASK</a></body></html>";
+                            byte[] buffer = Encoding.UTF8.GetBytes(responseString);
+                            response.ContentLength64 = buffer.Length;
+                            response.ContentType = "text/html; charset=UTF-8";
+                            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        }
+                        response.OutputStream.Close();
+                    }
+                }
+                catch
+                {
+                    // Evitar excepciones al abortar sockets o listener
+                }
+            }
+        }
+
+        // ── LANZAMIENTO E INCRUSTACIÓN DEL MOTOR GODOT ──
+        private async void LaunchAndEmbedGodot(string wallet, string user, string island)
+        {
+            if (_godotProcess != null && !_godotProcess.HasExited)
+            {
+                return;
+            }
+
+            // Buscar rutas de Godot localmente
+            var (projectDir, exePath) = FindLocalGodotPaths();
+
+            if (!File.Exists(exePath))
+            {
+                MessageBox.Show($"Error: El ejecutable de Godot no fue encontrado localmente en:\n{exePath}", "Error de Lanzamiento", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Limpiar contenedor placeholder
+            GodotPlaceholder.Children.Clear();
+
+            // Configurar resolución de inicio
+            int width = (int)Math.Max(800, GodotPlaceholder.ActualWidth);
+            int height = (int)Math.Max(600, GodotPlaceholder.ActualHeight);
+
+            // Argumentos de línea de comandos de Godot (apuntando a EscenaPrincipal.tscn)
+            string arguments = $"--path \"{projectDir}\" res://EscenaPrincipal.tscn --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = arguments,
+                WorkingDirectory = projectDir,
+                WindowStyle = ProcessWindowStyle.Hidden, // Ocultar inicialmente para evitar parpadeos
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            try
+            {
+                _godotProcess = Process.Start(startInfo);
+                if (_godotProcess == null)
+                {
+                    throw new Exception("El sistema operativo denegó el lanzamiento del proceso.");
+                }
+
+                // Escanear ventana de Godot en segundo plano
+                _godotHwnd = await Task.Run(() => ScanForGodotWindow(_godotProcess.Id, 15000)); // 15 segundos máximo
+
+                if (_godotHwnd != IntPtr.Zero && !_isClosing)
+                {
+                    // Crear el componente HwndHost e incrustarlo en WPF
+                    _godotHost = new GodotHwndHost(_godotHwnd);
+                    GodotPlaceholder.Children.Add(_godotHost);
+
+                    // Hook de desvío de teclado
+                    ComponentDispatcher.ThreadFilterMessage += ComponentDispatcher_ThreadFilterMessage;
+                }
+                else
+                {
+                    MessageBox.Show("Tiempo de espera agotado para incrustar el motor 3D de Godot.", "Error de Integración", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al iniciar el metaverso de Godot: {ex.Message}", "Error Crítico", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private IntPtr ScanForGodotWindow(int targetProcessId, int timeoutMs)
+        {
+            IntPtr result = IntPtr.Zero;
+            DateTime start = DateTime.Now;
+
+            while (result == IntPtr.Zero && (DateTime.Now - start).TotalMilliseconds < timeoutMs && !_isClosing)
+            {
+                EnumWindows((hwnd, lParam) =>
+                {
+                    uint pid;
+                    GetWindowThreadProcessId(hwnd, out pid);
+
+                    if (pid == targetProcessId)
+                    {
+                        StringBuilder sb = new StringBuilder(256);
+                        GetWindowText(hwnd, sb, sb.Capacity);
+                        string title = sb.ToString();
+
+                        // Descartar ventanas invisibles o del sistema del mismo proceso
+                        if (!string.IsNullOrEmpty(title))
+                        {
+                            result = hwnd;
+                            return false; // Detener enumeración
+                        }
+                    }
+                    return true; // Continuar
+                }, IntPtr.Zero);
+
+                if (result != IntPtr.Zero) break;
+                System.Threading.Thread.Sleep(200);
+            }
+
+            return result;
+        }
+
+        private (string projectDir, string exePath) FindLocalGodotPaths()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            DirectoryInfo? dir = new DirectoryInfo(baseDir);
+
+            while (dir != null)
+            {
+                string checkProject = Path.Combine(dir.FullName, "WoldVirtual");
+                if (Directory.Exists(checkProject) && File.Exists(Path.Combine(checkProject, "project.godot")))
+                {
+                    string checkExe = Path.Combine(checkProject, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
+                    if (File.Exists(checkExe))
+                    {
+                        return (checkProject, checkExe);
+                    }
+                }
+                
+                if (dir.Name == "WoldVirtual" && File.Exists(Path.Combine(dir.FullName, "project.godot")))
+                {
+                    string checkExe = Path.Combine(dir.FullName, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
+                    if (File.Exists(checkExe))
+                    {
+                        return (dir.FullName, checkExe);
+                    }
+                }
+
+                dir = dir.Parent;
+            }
+
+            // Fallback por defecto relativo
+            string defaultProject = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "WoldVirtual"));
+            string defaultExe = Path.Combine(defaultProject, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
+            return (defaultProject, defaultExe);
+        }
+
+        // ── HOOK DE TECLADO PARA AVATAR GODOT ──
+        private void ComponentDispatcher_ThreadFilterMessage(ref MSG msg, ref bool handled)
+        {
+            const int WM_KEYDOWN = 0x0100;
+            const int WM_KEYUP = 0x0101;
+            const int WM_CHAR = 0x0102;
+            const int WM_SYSKEYDOWN = 0x0104;
+            const int WM_SYSKEYUP = 0x0105;
+
+            if (_godotHwnd != IntPtr.Zero)
+            {
+                if (this.IsActive)
+                {
+                    if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP || msg.message == WM_CHAR || msg.message == WM_SYSKEYDOWN || msg.message == WM_SYSKEYUP)
+                    {
+                        PostMessage(_godotHwnd, (uint)msg.message, msg.wParam, msg.lParam);
+
+                        // Consumir controles del avatar para evitar comportamientos extraños en WPF
+                        int key = (int)msg.wParam;
+                        if (key == 0x57 || key == 0x41 || key == 0x53 || key == 0x44 || // W A S D
+                            key == 0x20 || // Espacio
+                            key == 0x25 || key == 0x26 || key == 0x27 || key == 0x28) // Flechas
+                        {
+                            handled = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void Cleanup()
+        {
+            if (_httpListener != null)
+            {
+                try
+                {
+                    _httpListener.Stop();
+                    _httpListener.Close();
+                }
+                catch { }
+                _httpListener = null;
+            }
+
+            if (_godotProcess != null && !_godotProcess.HasExited)
+            {
+                try
+                {
+                    _godotProcess.Kill();
+                }
+                catch { }
+                _godotProcess = null;
+            }
+
+            ComponentDispatcher.ThreadFilterMessage -= ComponentDispatcher_ThreadFilterMessage;
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            _isClosing = true;
+            Cleanup();
+            base.OnClosing(e);
         }
     }
 }

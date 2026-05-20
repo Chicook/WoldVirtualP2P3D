@@ -5,70 +5,316 @@
         WindowStartupLocation="CenterScreen"
         Background="#0B0C10">
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Top Menu -->
-            <RowDefinition Height="*"/>    <!-- 3D Area (Black/Godot) -->
-            <RowDefinition Height="Auto"/> <!-- Bottom Login/Dashboard Bar -->
-        </Grid.RowDefinitions>
+        <!-- PANTALLA 1: REGISTRO DEL PC -->
+        <Grid x:Name="GridPcRegistration" Visibility="Visible">
+            <Grid.Background>
+                <RadialGradientBrush Center="0.5,0.5" RadiusX="0.8" RadiusY="0.8">
+                    <GradientStop Color="#0F172A" Offset="0"/>
+                    <GradientStop Color="#050B14" Offset="1"/>
+                </RadialGradientBrush>
+            </Grid.Background>
 
-        <!-- Top Menu -->
-        <Menu Grid.Row="0" Style="{StaticResource SingularityMenu}">
-            <MenuItem Header="Archivo" Style="{StaticResource SingularityMenuItem}"/>
-            <MenuItem Header="Editar" Style="{StaticResource SingularityMenuItem}"/>
-            <MenuItem Header="Ayuda" Style="{StaticResource SingularityMenuItem}"/>
-            <MenuItem Header="Advanced" Style="{StaticResource SingularityMenuItem}"/>
-        </Menu>
+            <Border Width="680" Height="580" CornerRadius="12" BorderThickness="1.5" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#45A29E"/>
+                </Border.BorderBrush>
+                <Border.Background>
+                    <SolidColorBrush Color="#111625" Opacity="0.95"/>
+                </Border.Background>
+                <Border.Effect>
+                    <DropShadowEffect Color="#66FCF1" BlurRadius="20" ShadowDepth="0" Opacity="0.3"/>
+                </Border.Effect>
 
-        <!-- Central Black Area (Where Godot will be embedded) -->
-        <Border Grid.Row="1" Background="#000000" BorderBrush="#45A29E" BorderThickness="0,1,0,1">
-            <!-- Placeholder for Godot Engine -->
-            <Grid>
-                <TextBlock Text="[ ESPACIO RESERVADO PARA MOTOR 3D GODOT ]" 
-                           Foreground="#45A29E" 
-                           HorizontalAlignment="Center" 
-                           VerticalAlignment="Center" 
-                           FontSize="18" 
-                           FontWeight="Bold"
-                           Opacity="0.5"/>
-            </Grid>
-        </Border>
+                <Grid Margin="30">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+                        <RowDefinition Height="Auto"/> <!-- Progress / Scan Bar -->
+                        <RowDefinition Height="*"/>    <!-- Info Cards -->
+                        <RowDefinition Height="Auto"/> <!-- Hash Area -->
+                        <RowDefinition Height="Auto"/> <!-- Buttons -->
+                    </Grid.RowDefinitions>
 
-        <!-- Bottom Login Bar (Professional Dashboard Look) -->
-        <Border Grid.Row="2" Height="90" Background="#1F2833" BorderBrush="#45A29E" BorderThickness="0,1,0,0">
-            <Grid Margin="20,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/> <!-- Brand/Status -->
-                    <ColumnDefinition Width="*"/>    <!-- Spacer -->
-                    <ColumnDefinition Width="Auto"/> <!-- Controls -->
-                </Grid.ColumnDefinitions>
-
-                <!-- Left Side: Status / Brand -->
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="WOLD VIRTUAL P2P" Foreground="#66FCF1" FontSize="16" FontWeight="Bold"/>
-                    <TextBlock Text="Estado: Desconectado" Foreground="#C5C6C7" FontSize="11" Margin="0,2,0,0"/>
-                </StackPanel>
-
-                <!-- Right Side: Login Controls -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Usuario -->
-                    <StackPanel Margin="10,0" VerticalAlignment="Center">
-                        <Label Content="Usuario:" Style="{StaticResource SingularityLabel}"/>
-                        <TextBox Width="150" Style="{StaticResource SingularityTextBox}" x:Name="TxtUser"/>
-                        <CheckBox Content="Recordar" Style="{StaticResource SingularityCheckBox}" FontSize="10" Margin="0,2,0,0"/>
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                        <TextBlock Text="WOLD VIRTUAL — SISTEMA DE INGRESO" Foreground="#66FCF1" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center">
+                            <TextBlock.Effect>
+                                <DropShadowEffect Color="#66FCF1" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                            </TextBlock.Effect>
+                        </TextBlock>
+                        <TextBlock Text="REGISTRO AUTOMÁTICO DE FIRMA DE HARDWARE" Foreground="#C5C6C7" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                     </StackPanel>
 
-                    <!-- Contraseña -->
-                    <StackPanel Margin="10,0" VerticalAlignment="Center">
-                        <Label Content="Contraseña:" Style="{StaticResource SingularityLabel}"/>
-                        <PasswordBox Width="150" Style="{StaticResource SingularityPasswordBox}" x:Name="TxtPass"/>
-                        <CheckBox Content="Recordar" Style="{StaticResource SingularityCheckBox}" FontSize="10" Margin="0,2,0,0"/>
+                    <!-- Scanning progress -->
+                    <StackPanel Grid.Row="1" Margin="0,5,0,15">
+                        <TextBlock x:Name="TxtScanStatus" Text="Iniciando escáner de hardware..." Foreground="#C5C6C7" FontSize="11" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                        <ProgressBar x:Name="ProgScan" Height="6" Background="#1F2833" BorderThickness="0" Foreground="#66FCF1" Minimum="0" Maximum="100" Value="0">
+                            <ProgressBar.Template>
+                                <ControlTemplate TargetType="ProgressBar">
+                                    <Grid>
+                                        <Border CornerRadius="3" Background="{TemplateBinding Background}"/>
+                                        <Border x:Name="PART_Indicator" CornerRadius="3" Background="{TemplateBinding Foreground}" HorizontalAlignment="Left"/>
+                                    </Grid>
+                                </ControlTemplate>
+                            </ProgressBar.Template>
+                        </ProgressBar>
                     </StackPanel>
 
-                    <!-- Iniciar Sesión Button -->
-                    <Button Content="CONECTAR" Style="{StaticResource SingularityButton}" 
-                            Height="35" Width="120" Margin="15,0,0,0" VerticalAlignment="Center" x:Name="BtnLogin"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+                    <!-- Hardware Cards -->
+                    <UniformGrid Grid.Row="2" Columns="1" Margin="0,5,0,15">
+                        <!-- OS CARD -->
+                        <Border Background="#1A2232" BorderBrush="#45A29E" BorderThickness="1" CornerRadius="6" Margin="0,4" Padding="12,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="💻" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="SISTEMA OPERATIVO" Foreground="#45A29E" FontSize="9" FontWeight="Bold"/>
+                                    <TextBlock x:Name="TxtOsName" Text="Obteniendo información del sistema..." Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- CPU CARD -->
+                        <Border Background="#1A2232" BorderBrush="#45A29E" BorderThickness="1" CornerRadius="6" Margin="0,4" Padding="12,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="⚙️" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="PROCESADOR" Foreground="#45A29E" FontSize="9" FontWeight="Bold"/>
+                                    <TextBlock x:Name="TxtCpuName" Text="Obteniendo especificaciones de la CPU..." Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- MOTHERBOARD CARD -->
+                        <Border Background="#1A2232" BorderBrush="#45A29E" BorderThickness="1" CornerRadius="6" Margin="0,4" Padding="12,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="🔌" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="PLACA BASE (MOTHERBOARD)" Foreground="#45A29E" FontSize="9" FontWeight="Bold"/>
+                                    <TextBlock x:Name="TxtMotherboardName" Text="Detectando placa base..." Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </UniformGrid>
+
+                    <!-- Cryptographic Hash Signature -->
+                    <Border Grid.Row="3" Background="#0C101A" BorderBrush="#45A29E" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="FIRMADO EN HARDWARE / UNIQUE CRYPTO FINGERPRINT (SHA-256)" Foreground="#66FCF1" FontSize="9" FontWeight="Bold"/>
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="TxtHardwareHash" IsReadOnly="True" Background="Transparent" Foreground="#66FCF1" BorderThickness="0" FontSize="11" FontFamily="Consolas" VerticalAlignment="Center" Text="GENERANDO FIRMA CRIPTOGRÁFICA..."/>
+                                <Button Grid.Column="1" Content="COPIAR" Style="{StaticResource SingularityButton}" Padding="8,2" FontSize="10" Cursor="Hand" x:Name="BtnCopyHash"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Buttons -->
+                    <Grid Grid.Row="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Button Generate ZIP -->
+                        <Button x:Name="BtnGenerateZip" Grid.Column="0" Content="REGISTRAR PC &amp; GUARDAR ZIP" Style="{StaticResource SingularityButton}" Height="40" Margin="0,0,10,0" IsEnabled="False"/>
+                        
+                        <!-- Button Enter Metaverse -->
+                        <Button x:Name="BtnEnterMetaverse" Grid.Column="1" Content="INGRESAR AL METAVERSO" Style="{StaticResource SingularityButton}" Height="40" Margin="10,0,0,0" IsEnabled="False"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- PANTALLA 1.5 (PASO 2): REGISTRO DE USUARIO -->
+        <Grid x:Name="GridUserRegistration" Visibility="Collapsed">
+            <Grid.Background>
+                <RadialGradientBrush Center="0.5,0.5" RadiusX="0.8" RadiusY="0.8">
+                    <GradientStop Color="#0F172A" Offset="0"/>
+                    <GradientStop Color="#050B14" Offset="1"/>
+                </RadialGradientBrush>
+            </Grid.Background>
+
+            <Border Width="680" Height="580" CornerRadius="12" BorderThickness="1.5" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#45A29E"/>
+                </Border.BorderBrush>
+                <Border.Background>
+                    <SolidColorBrush Color="#111625" Opacity="0.95"/>
+                </Border.Background>
+                <Border.Effect>
+                    <DropShadowEffect Color="#66FCF1" BlurRadius="20" ShadowDepth="0" Opacity="0.3"/>
+                </Border.Effect>
+
+                <Grid Margin="30">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+                        <RowDefinition Height="*"/>    <!-- Form Fields -->
+                        <RowDefinition Height="Auto"/> <!-- Actions -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                        <TextBlock Text="WOLD VIRTUAL — REGISTRO DE USUARIO" Foreground="#66FCF1" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center">
+                            <TextBlock.Effect>
+                                <DropShadowEffect Color="#66FCF1" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                            </TextBlock.Effect>
+                        </TextBlock>
+                        <TextBlock Text="CREACIÓN DE IDENTIDAD Y ASIGNACIÓN DE CREDENCIALES" Foreground="#C5C6C7" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                    </StackPanel>
+
+                    <!-- Form Fields -->
+                    <StackPanel Grid.Row="1" VerticalAlignment="Center">
+                        <!-- Nombre de Usuario -->
+                        <StackPanel Margin="0,5">
+                            <Label Content="Nombre de Usuario:" Style="{StaticResource SingularityLabel}"/>
+                            <TextBox x:Name="TxtRegUser" Style="{StaticResource SingularityTextBox}" Height="35" FontSize="13"/>
+                        </StackPanel>
+
+                        <!-- Contraseña -->
+                        <StackPanel Margin="0,5">
+                            <Label Content="Contraseña:" Style="{StaticResource SingularityLabel}"/>
+                            <PasswordBox x:Name="TxtRegPass" Style="{StaticResource SingularityPasswordBox}" Height="35" FontSize="13"/>
+                        </StackPanel>
+
+                        <!-- Repetir Contraseña -->
+                        <StackPanel Margin="0,5">
+                            <Label Content="Repetir Contraseña:" Style="{StaticResource SingularityLabel}"/>
+                            <PasswordBox x:Name="TxtRegPassConfirm" Style="{StaticResource SingularityPasswordBox}" Height="35" FontSize="13"/>
+                        </StackPanel>
+
+                        <!-- UUID Recuadro -->
+                        <StackPanel Margin="0,5">
+                            <Label Content="Identificador Único Universal (UUID):" Style="{StaticResource SingularityLabel}"/>
+                            <TextBox x:Name="TxtRegUuid" Style="{StaticResource SingularityTextBox}" IsReadOnly="True" Height="35" FontSize="13" FontFamily="Consolas" Foreground="#66FCF1"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Actions -->
+                    <Grid Grid.Row="2" Margin="0,15,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Button Generate UUID -->
+                        <Button x:Name="BtnGenerateUuid" Grid.Column="0" Content="GENERAR UUID" Style="{StaticResource SingularityButton}" Height="40" Margin="0,0,10,0"/>
+                        
+                        <!-- Button Register & Enter -->
+                        <Button x:Name="BtnRegisterAndEnter" Grid.Column="1" Content="REGISTRAR &amp; INGRESAR" Style="{StaticResource SingularityButton}" Height="40" Margin="10,0,0,0"/>
+                    </Grid>
+
+                    <!-- MetaMask Overlay (Overlay loading screen) -->
+                    <Grid x:Name="GridMetaMaskOverlay" Grid.RowSpan="3" Background="#111625" Visibility="Collapsed" Margin="-30">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <!-- Glowing Neon Icon/Circle -->
+                            <Border Width="80" Height="80" CornerRadius="40" BorderThickness="2" BorderBrush="#66FCF1" Background="#0F172A" HorizontalAlignment="Center">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#66FCF1" BlurRadius="15" ShadowDepth="0" Opacity="0.8"/>
+                                </Border.Effect>
+                                <TextBlock Text="🦊" FontSize="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,5"/>
+                            </Border>
+                            
+                            <!-- Status Text -->
+                            <TextBlock Text="ESPERANDO FIRMA DE METAMASK" Foreground="#66FCF1" FontSize="18" FontWeight="Bold" Margin="0,25,0,5" HorizontalAlignment="Center">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="#66FCF1" BlurRadius="6" ShadowDepth="0" Opacity="0.7"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                            
+                            <TextBlock Text="Por favor, abre tu navegador predeterminado y firma la solicitud de MetaMask para vincular tu billetera." 
+                                       Foreground="#C5C6C7" FontSize="11" Margin="0,5,0,0" Width="380" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"/>
+
+                            <!-- Progress animation simulation/Spinner -->
+                            <ProgressBar IsIndeterminate="True" Height="4" Width="200" Background="#1F2833" Foreground="#66FCF1" BorderThickness="0" Margin="0,20,0,0">
+                                <ProgressBar.Effect>
+                                    <DropShadowEffect Color="#66FCF1" BlurRadius="5" ShadowDepth="0" Opacity="0.5"/>
+                                </ProgressBar.Effect>
+                            </ProgressBar>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- PANTALLA 2: VISOR PRINCIPAL Y MOTOR 3D -->
+        <Grid x:Name="GridMainViewer" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Top Menu -->
+                <RowDefinition Height="*"/>    <!-- 3D Area (Black/Godot) -->
+                <RowDefinition Height="Auto"/> <!-- Bottom Login/Dashboard Bar -->
+            </Grid.RowDefinitions>
+
+            <!-- Top Menu -->
+            <Menu Grid.Row="0" Style="{StaticResource SingularityMenu}">
+                <MenuItem Header="Archivo" Style="{StaticResource SingularityMenuItem}"/>
+                <MenuItem Header="Editar" Style="{StaticResource SingularityMenuItem}"/>
+                <MenuItem Header="Ayuda" Style="{StaticResource SingularityMenuItem}"/>
+                <MenuItem Header="Advanced" Style="{StaticResource SingularityMenuItem}"/>
+            </Menu>
+
+            <!-- Central Black Area (Where Godot will be embedded) -->
+            <Border Grid.Row="1" Background="#000000" BorderBrush="#45A29E" BorderThickness="0,1,0,1">
+                <!-- Placeholder for Godot Engine -->
+                <Grid x:Name="GodotPlaceholder">
+                    <TextBlock x:Name="TxtGodotPlaceholder" Text="[ ESPACIO RESERVADO PARA MOTOR 3D GODOT ]" 
+                               Foreground="#45A29E" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center" 
+                               FontSize="18" 
+                               FontWeight="Bold"
+                               Opacity="0.5"/>
+                </Grid>
+            </Border>
+
+            <!-- Bottom Login Bar (Professional Dashboard Look) -->
+            <Border Grid.Row="2" Height="90" Background="#1F2833" BorderBrush="#45A29E" BorderThickness="0,1,0,0">
+                <Grid Margin="20,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/> <!-- Brand/Status -->
+                        <ColumnDefinition Width="*"/>    <!-- Spacer -->
+                        <ColumnDefinition Width="Auto"/> <!-- Controls -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left Side: Status / Brand -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="WOLD VIRTUAL P2P" Foreground="#66FCF1" FontSize="16" FontWeight="Bold"/>
+                        <TextBlock Text="Estado: Desconectado" Foreground="#C5C6C7" FontSize="11" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <!-- Right Side: Login Controls -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Usuario -->
+                        <StackPanel Margin="10,0" VerticalAlignment="Center">
+                            <Label Content="Usuario:" Style="{StaticResource SingularityLabel}"/>
+                            <TextBox Width="150" Style="{StaticResource SingularityTextBox}" x:Name="TxtUser"/>
+                            <CheckBox Content="Recordar" Style="{StaticResource SingularityCheckBox}" FontSize="10" Margin="0,2,0,0"/>
+                        </StackPanel>
+
+                        <!-- Contraseña -->
+                        <StackPanel Margin="10,0" VerticalAlignment="Center">
+                            <Label Content="Contraseña:" Style="{StaticResource SingularityLabel}"/>
+                            <PasswordBox Width="150" Style="{StaticResource SingularityPasswordBox}" x:Name="TxtPass"/>
+                            <CheckBox Content="Recordar" Style="{StaticResource SingularityCheckBox}" FontSize="10" Margin="0,2,0,0"/>
+                        </StackPanel>
+
+                        <!-- Iniciar Sesión Button -->
+                        <Button Content="CONECTAR" Style="{StaticResource SingularityButton}" 
+                                Height="35" Width="120" Margin="15,0,0,0" VerticalAlignment="Center" x:Name="BtnLogin"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
