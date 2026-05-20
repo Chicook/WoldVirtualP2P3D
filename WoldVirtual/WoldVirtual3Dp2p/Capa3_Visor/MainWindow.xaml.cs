@@ -102,6 +102,33 @@ namespace VisorSingularity
             LogDebug("MainWindow constructor started");
             InitializeComponent();
             LogDebug("InitializeComponent completed");
+            
+            // Verificar si el botón de cerrar sesión existe después de InitializeComponent
+            #region debug-point constructor-1
+            var cerrarSesionButton = FindName("BtnCerrarSesion") as Button;
+            if (cerrarSesionButton != null)
+            {
+                LogDebug($"✅ Botón 'BtnCerrarSesion' ENCONTRADO después de InitializeComponent");
+                LogDebug($"📊 Estado del botón: IsEnabled={cerrarSesionButton.IsEnabled}, Visibility={cerrarSesionButton.Visibility}, IsVisible={cerrarSesionButton.IsVisible}");
+                LogDebug($"📊 Panel padre (PanLeftSidebar): Visibility={PanLeftSidebar.Visibility}, IsVisible={PanLeftSidebar.IsVisible}");
+            }
+            else
+            {
+                LogDebug("❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent");
+                LogDebug("🔍 Buscando botón en el árbol visual...");
+                
+                // Intentar buscar el botón de otra manera
+                var buttons = FindVisualChildren<Button>(this);
+                int buttonCount = buttons.Count();
+                LogDebug($"🔍 Total de botones en el árbol visual: {buttonCount}");
+                
+                foreach (var btn in buttons.Take(5))
+                {
+                    LogDebug($"🔍 Botón encontrado: Content='{btn.Content}', Name='{btn.Name}'");
+                }
+            }
+            #endregion
+            
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
 
