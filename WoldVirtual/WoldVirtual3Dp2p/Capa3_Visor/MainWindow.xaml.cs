@@ -29,7 +29,7 @@ namespace VisorSingularity
         private string _username = "";
         private string _password = "";
         private string _wallet = "";
-        private string _islandId = "137 : 190.1.0";
+        private string _islandId = "137.190.1.0";
         private string _hardwareFingerprint = ""; // Added for hardware fingerprint
 
         // ── MetaMask HTTP Bridge ──
@@ -40,9 +40,104 @@ namespace VisorSingularity
         // ── Componentes de Ejecución (minimal for now) ──
         private GodotEmbedder _godotEmbedder; // Added GodotEmbedder instance
 
-        // Placeholder paths - YOU MUST REPLACE THESE WITH YOUR ACTUAL PATHS
-        private readonly string _godotExecutablePath = @"C:\Path\To\Your\Godot_v4.2.1-stable_mono_win64.exe"; // Example path
-        private readonly string _godotProjectPath = @"D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\WoldVirtual"; // Example path to your Godot project
+        // Godot paths
+        private readonly string _godotExecutablePath = @"C:\Program Files\Godot\Godot.exe"; // Default Godot installation path
+        private readonly string _godotProjectPath = @"D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\WoldVirtual"; // Path to your Godot project
+        
+        // Method to find Godot executable
+        private string FindGodotExecutable()
+        {
+            LogDebug("Searching for Godot executable...");
+            
+            // Check default installation path first
+            if (File.Exists(_godotExecutablePath))
+            {
+                LogDebug($"Found Godot at default location: {_godotExecutablePath}");
+                return _godotExecutablePath;
+            }
+            
+            // Common installation locations
+            string[] commonPaths = new string[]
+            {
+                @"C:\Godot\Godot.exe",
+                @"C:\Program Files\Godot\Godot.exe",
+                @"C:\Program Files (x86)\Godot\Godot.exe",
+                @"D:\Godot\Godot.exe",
+                @"D:\Program Files\Godot\Godot.exe",
+                @"E:\Godot\Godot.exe",
+                @"E:\Program Files\Godot\Godot.exe",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "Godot_v4.2.1-stable_mono_win64.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "Godot_v4.2.1-stable_win64.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "Godot.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop", "Godot.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Documents", "Godot", "Godot.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData", "Local", "Godot", "Godot.exe")
+            };
+            
+            // Common Godot executable names
+            string[] godotNames = new string[]
+            {
+                "Godot.exe",
+                "Godot_v4.2.1-stable_mono_win64.exe",
+                "Godot_v4.2.1-stable_win64.exe",
+                "Godot_v4.2-stable_mono_win64.exe",
+                "Godot_v4.2-stable_win64.exe",
+                "Godot_v4.1-stable_mono_win64.exe",
+                "Godot_v4.1-stable_win64.exe"
+            };
+            
+            // First, check all common paths with the default name
+            foreach (string path in commonPaths)
+            {
+                if (File.Exists(path))
+                {
+                    LogDebug($"Found Godot at: {path}");
+                    return path;
+                }
+            }
+            
+            // If not found, search for Godot in common directories with different names
+            string[] searchDirectories = new string[]
+            {
+                @"C:\",
+                @"D:\",
+                @"E:\",
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+            };
+            
+            foreach (string directory in searchDirectories)
+            {
+                if (!Directory.Exists(directory))
+                    continue;
+                    
+                try
+                {
+                    // Search for Godot executables in this directory and subdirectories (limited depth)
+                    foreach (string godotName in godotNames)
+                    {
+                        string[] foundFiles = Directory.GetFiles(directory, godotName, SearchOption.TopDirectoryOnly);
+                        if (foundFiles.Length > 0)
+                        {
+                            string foundPath = foundFiles[0];
+                            LogDebug($"Found Godot at: {foundPath}");
+                            return foundPath;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"Error searching in {directory}: {ex.Message}");
+                }
+            }
+            
+            // If not found, return the default path (will show error when trying to launch)
+            LogDebug("Godot executable not found in common locations");
+            return _godotExecutablePath;
+        }
 
         // ── Debug Logging ──
         private void LogDebug(string message)
@@ -63,7 +158,7 @@ namespace VisorSingularity
             this.Closed += MainWindow_Closed;
         }
 
-        private async void MainWindow_Loaded(object? sender, RoutedEventArgs e)
+        private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             LogDebug("MainWindow Loaded.");
             // Generate hardware fingerprint on load
@@ -72,7 +167,7 @@ namespace VisorSingularity
 
             // For initial testing, launch Godot directly from here.
             // Later, this will be called after the wizard is completed.
-            // await LaunchGodot(_username, _wallet, _islandId, false);
+            // LaunchGodot(_username, _wallet, _islandId, false);
         }
 
         private void MainWindow_Closed(object? sender, EventArgs e)
@@ -97,8 +192,27 @@ namespace VisorSingularity
 
             try
             {
+                // Find Godot executable
+                string godotPath = FindGodotExecutable();
+                
+                // Check if Godot project exists
+                if (!Directory.Exists(_godotProjectPath))
+                {
+                    LogDebug($"Godot project not found at: {_godotProjectPath}");
+                    MessageBox.Show($"No se encontró el proyecto Godot en: {_godotProjectPath}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+                
+                // Check if Godot executable exists
+                if (!File.Exists(godotPath))
+                {
+                    LogDebug($"Godot executable not found at: {godotPath}");
+                    MessageBox.Show($"No se encontró el ejecutable de Godot. Por favor, instale Godot 4.2.1 o superior.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
                 // Create the GodotViewer control
-                GodotViewer godotViewer = new GodotViewer(_godotEmbedder, _godotExecutablePath, _godotProjectPath, godotArgs);
+                GodotViewer godotViewer = new GodotViewer(_godotEmbedder, godotPath, _godotProjectPath, godotArgs);
                 GodotHost.Child = godotViewer; // Assign the GodotViewer control to the WindowsFormsHost
 
                 LogDebug("GodotViewer assigned to GodotHost.Child.");
@@ -475,7 +589,7 @@ namespace VisorSingularity
             Random rand = new Random();
             int x, y, z;
             
-            // Generate random coordinates, but avoid "0:0:0" 
+            // Generate random coordinates, but avoid "0.0.0" 
             // since that's reserved for the first node
             do
             {
@@ -484,8 +598,8 @@ namespace VisorSingularity
                 z = rand.Next(0, 1000);
             } while (x == 0 && y == 0 && z == 0);
             
-            TxtIslandCoordinates.Text = $"{x}:{y}:{z}";
-            TxtIslandName.Text = $"Isla {x}-{y}-{z}";
+            TxtIslandCoordinates.Text = $"{x}.{y}.{z}";
+            TxtIslandName.Text = $"Isla {x}.{y}.{z}";
         }
 
         // STEP 4 Handlers
@@ -505,7 +619,7 @@ namespace VisorSingularity
                 
                 // Check if this is the first node (no island coordinates set)
                 // If it's the first node, set location to "0.0.0"
-                if (string.IsNullOrWhiteSpace(TxtIslandCoordinates.Text) || TxtIslandCoordinates.Text == "0:0:0")
+                if (string.IsNullOrWhiteSpace(TxtIslandCoordinates.Text) || TxtIslandCoordinates.Text == "0.0.0")
                 {
                     _islandId = "0.0.0";
                     TxtIslandCoordinates.Text = "0.0.0";

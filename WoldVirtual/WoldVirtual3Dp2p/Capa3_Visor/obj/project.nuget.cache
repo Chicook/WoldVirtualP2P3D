@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "UihPdh66IZE=",
+  "dgSpecHash": "cm6fa7NqJzc=",
   "success": true,
-  "projectFilePath": "D:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj",
+  "projectFilePath": "d:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Usuario\\.nuget\\packages\\system.management\\8.0.0\\system.management.8.0.0.nupkg.sha512"
   ],
