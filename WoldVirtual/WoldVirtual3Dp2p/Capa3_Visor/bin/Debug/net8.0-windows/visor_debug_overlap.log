@@ -251,3 +251,39 @@
 [17:31:54.538] Cleanup: Hiding Godot window via _viewer
 [17:31:54.539] Cleanup: Posting WM_CLOSE to Godot window
 [17:31:54.541] Cleanup completed
+[17:40:12.990] MainWindow constructor started
+[17:40:13.138] InitializeComponent completed
+[17:40:13.279] MainWindow_Loaded started
+[17:40:13.374] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[17:40:13.376] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[17:40:13.376] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[17:40:57.706] EnterDashboard called - isNewRegistration: False
+[17:40:57.865] Godot Process ID: 8468
+[17:41:31.848] MainWindow_Closed called - forcing exit
+[17:41:31.849] Cleanup started
+[17:41:31.849] Cleanup: Hiding Godot window via _viewer
+[17:41:31.949] Cleanup: Posting WM_CLOSE to Godot window
+[17:41:31.950] Cleanup: Killing Godot process
+[17:41:32.037] Godot process exited - shutting down visor
+[17:41:32.038] Cleanup started
+[17:41:32.038] Cleanup: Hiding Godot window via _viewer
+[17:41:32.040] Cleanup: Posting WM_CLOSE to Godot window
+[17:41:32.042] Cleanup completed
+[17:42:09.330] MainWindow constructor started
+[17:42:09.610] InitializeComponent completed
+[17:42:09.885] MainWindow_Loaded started
+[17:42:10.768] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[17:42:10.770] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[17:42:10.781] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[17:42:44.150] BtnClose_Click called - forcing exit
+[17:42:44.151] Cleanup started
+[17:42:44.169] Cleanup completed
+[17:42:54.067] MainWindow constructor started
+[17:42:54.230] InitializeComponent completed
+[17:42:54.383] MainWindow_Loaded started
+[17:42:54.488] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[17:42:54.490] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[17:42:54.490] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[17:42:56.774] BtnClose_Click called - forcing exit
+[17:42:56.775] Cleanup started
+[17:42:56.781] Cleanup completed
