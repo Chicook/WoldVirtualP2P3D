@@ -64,9 +64,7 @@ namespace VisorSingularity
 
         public MainWindow()
         {
-            LogDebug("MainWindow constructor started");
             InitializeComponent();
-            LogDebug("InitializeComponent completed");
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
 
@@ -99,15 +97,11 @@ namespace VisorSingularity
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
-            LogDebug("MainWindow_Loaded started");
             try
             {
                 // Inicializar Helpers
                 _db = new DatabaseManager();
                 _fingerprint = new HardwareFingerprint();
-                LogDebug($"Hardware fingerprint: {_fingerprint.UniqueHash}");
-                LogDebug($"Window dimensions on load: Width={Width}, Height={Height}, ActualWidth={ActualWidth}, ActualHeight={ActualHeight}");
-                LogDebug($"GodotPlaceholder dimensions on load: ActualWidth={GodotPlaceholder.ActualWidth}, ActualHeight={GodotPlaceholder.ActualHeight}");
 
                 // Cargar datos de Telemetría de Hardware
                 TxtCpuId.Text = $"ID PROCESADOR: {_fingerprint.ProcessorId}";
