@@ -61,15 +61,50 @@ Por favor, después de hacer clic en "Cerrar Sesión", comparte:
 3. Intenta hacer clic en "Cerrar Sesión" varias veces para ver si hay algún patrón
 
 ## 📝 Log Analysis
-*Esperando evidencia del usuario*
+**NUEVO DESCUBRIMIENTO CRÍTICO**: He identificado un problema fundamental en la arquitectura del visor.
 
-**Estado actual**: Instrumentación implementada y lista para recopilar evidencia de tiempo de ejecución.
+### 🔍 **Análisis del código:**
+1. **El botón "CERRAR SESIÓN" está correctamente vinculado** en el XAML (línea 405):
+   ```xml
+   <Button Content="✕ CERRAR SESIÓN" Style="{StaticResource MagentaButton}" Height="35" Margin="0,15,0,0" Padding="0" Click="BtnCerrarSesion_Click"/>
+   ```
 
-**Próximo paso**: El usuario debe:
-1. Compilar y ejecutar el visor
-2. Iniciar sesión normalmente
-3. Hacer clic en "Cerrar Sesión"
-4. Compartir los logs resultantes
+2. **El panel `PanLeftSidebar` está OCULTO por defecto** (línea 365):
+   ```xml
+   <Border x:Name="PanLeftSidebar" Grid.Column="0" Width="240" Style="{StaticResource GlassPanel}" Margin="15,15,5,15" Visibility="Collapsed">
+   ```
+
+3. **El panel se muestra cuando el usuario inicia sesión** (línea 507):
+   ```csharp
+   PanLeftSidebar.Visibility = Visibility.Visible;
+   ```
+
+4. **El panel se oculta cuando se cierra sesión** (línea 751):
+   ```csharp
+   PanLeftSidebar.Visibility = Visibility.Collapsed;
+   ```
+
+### 🎯 **Hipótesis revisada:**
+**H6: El botón "CERRAR SESIÓN" está en un panel que se oculta inmediatamente al hacer clic, interrumpiendo la ejecución del evento**
+
+**Evidencia**:
+- El botón está dentro de `PanLeftSidebar`
+- `HideDashboardShowWizard()` se llama en `BtnCerrarSesion_Click`
+- `HideDashboardShowWizard()` establece `PanLeftSidebar.Visibility = Visibility.Collapsed`
+- **Si el panel se oculta antes de que complete el evento click, la ejecución podría interrumpirse**
+
+### 🚨 **Problema identificado**:
+El flujo actual es:
+1. Usuario hace clic en "CERRAR SESIÓN"
+2. Se ejecuta `BtnCerrarSesion_Click`
+3. Se llama a `HideDashboardShowWizard()`
+4. `HideDashboardShowWizard()` oculta `PanLeftSidebar`
+5. **El botón (que está dentro del panel) podría dejar de recibir eventos**
+
+### 🔧 **Solución propuesta**:
+**Retrasar la ocultación del panel** hasta que el evento click se complete completamente.
+
+**Próximo paso**: Modificar `HideDashboardShowWizard()` para usar `Dispatcher.BeginInvoke` y retrasar la ocultación del panel.
 
 ## 🛠️ Fix Implementation
 *Dependerá de la evidencia recopilada*

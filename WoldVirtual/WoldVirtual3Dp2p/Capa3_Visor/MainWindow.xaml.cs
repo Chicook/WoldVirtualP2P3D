@@ -745,18 +745,45 @@ namespace VisorSingularity
         
         private void HideDashboardShowWizard()
         {
-            // Ocultar todos los componentes del dashboard
-            PanIpfsBar.Visibility = Visibility.Collapsed;
-            PanMetricsBar.Visibility = Visibility.Collapsed;
-            PanLeftSidebar.Visibility = Visibility.Collapsed;
-            PanRightSidebar.Visibility = Visibility.Collapsed;
-            PanViewportContainer.Visibility = Visibility.Collapsed;
+            #region debug-point hide-dashboard-1
+            LogDebug("👁️ HideDashboardShowWizard INICIADO - Punto de instrumentación 31");
+            LogDebug($"📊 Estado inicial: PanLeftSidebar.Visibility={PanLeftSidebar.Visibility}");
+            #endregion
             
-            // Asegurar que el WizardContainer sea visible
-            WizardContainer.Visibility = Visibility.Visible;
+            // Usar Dispatcher.BeginInvoke para retrasar la ocultación del panel
+            // Esto asegura que el evento click se complete antes de ocultar el panel
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                #region debug-point hide-dashboard-2
+                LogDebug("🔄 Dispatcher.BeginInvoke ejecutando - Ocultando dashboard");
+                #endregion
+                
+                // Ocultar todos los componentes del dashboard
+                PanIpfsBar.Visibility = Visibility.Collapsed;
+                PanMetricsBar.Visibility = Visibility.Collapsed;
+                PanLeftSidebar.Visibility = Visibility.Collapsed;
+                PanRightSidebar.Visibility = Visibility.Collapsed;
+                PanViewportContainer.Visibility = Visibility.Collapsed;
+                
+                #region debug-point hide-dashboard-3
+                LogDebug("✅ Dashboard ocultado - Mostrando Wizard");
+                #endregion
+                
+                // Asegurar que el WizardContainer sea visible
+                WizardContainer.Visibility = Visibility.Visible;
+                
+                // Mostrar paso 1 del wizard
+                ShowStep(1);
+                
+                #region debug-point hide-dashboard-4
+                LogDebug("🏁 HideDashboardShowWizard COMPLETADO dentro de Dispatcher");
+                #endregion
+            }), System.Windows.Threading.DispatcherPriority.Background);
             
-            // Mostrar paso 1 del wizard
-            ShowStep(1);
+            #region debug-point hide-dashboard-5
+            LogDebug("📤 HideDashboardShowWizard FINALIZADO - Dispatcher.BeginInvoke programado");
+            #endregion
+        }
         }
         
         private void ResetSessionData()
