@@ -333,3 +333,6 @@
 [18:12:46.906] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=1552
 [18:12:50.988] 🌐 Deteniendo HTTP listener porque _isClosing=true
 [18:12:55.082] Cleanup: Hiding Godot window via _viewer
+[18:12:59.188] Cleanup: Posting WM_CLOSE to Godot window
+[18:13:03.281] Cleanup: Unsubscribing from Godot process Exited event
+[18:13:07.387] Cleanup completed
