@@ -37,7 +37,6 @@ namespace VisorSingularity
         private CancellationTokenSource _ctsMetaMaskBridge = new CancellationTokenSource();
 
         // ── Componentes de Ejecución (minimal for now) ──
-        private Process? _godotProcess;
         private GodotEmbedder _godotEmbedder; // Added GodotEmbedder instance
 
         // Placeholder paths - YOU MUST REPLACE THESE WITH YOUR ACTUAL PATHS
