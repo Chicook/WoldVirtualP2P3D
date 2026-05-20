@@ -567,23 +567,112 @@ namespace VisorSingularity
 
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
         {
-            _ignoreGodotExit = true;
-            Cleanup();
-
-            // Ocultar Dashboard
+            LogDebug("BtnCerrarSesion_Click iniciado");
+            
+            // Deshabilitar botón para prevenir múltiples clics
+            if (sender is Button btn) btn.IsEnabled = false;
+            
+            try
+            {
+                // Marcar que estamos en proceso de cierre de sesión (no cierre completo de aplicación)
+                _ignoreGodotExit = true;
+                
+                // 1. Limpiar recursos de Godot de forma más agresiva
+                CleanupWithTimeout();
+                
+                // 2. Ocultar Dashboard y mostrar Wizard
+                HideDashboardShowWizard();
+                
+                // 3. Resetear datos de sesión
+                ResetSessionData();
+                
+                // 4. Actualizar estado de la interfaz
+                UpdateInterfaceAfterLogout();
+                
+                // 5. Forzar recolección de basura para liberar memoria
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                
+                LogDebug("Cierre de sesión completado exitosamente");
+                TxtFooterStatus.Text = "Sesión cerrada correctamente. Puedes iniciar sesión nuevamente.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.LimeGreen);
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error en cierre de sesión: {ex.Message}");
+                TxtFooterStatus.Text = $"Error al cerrar sesión: {ex.Message}";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
+                
+                // Intentar forzar el cierre de procesos de Godot residuales
+                ForceKillGodotProcesses();
+            }
+            finally
+            {
+                // Rehabilitar botón después de un breve delay
+                if (sender is Button button)
+                {
+                    Task.Delay(1000).ContinueWith(_ => 
+                    {
+                        Dispatcher.Invoke(() => button.IsEnabled = true);
+                    });
+                }
+            }
+        }
+        
+        private void CleanupWithTimeout()
+        {
+            LogDebug("CleanupWithTimeout iniciado");
+            
+            // Crear un token de cancelación con timeout de 3 segundos
+            var cts = new CancellationTokenSource(3000);
+            
+            try
+            {
+                // Ejecutar limpieza en un hilo separado con timeout
+                var cleanupTask = Task.Run(() => Cleanup(), cts.Token);
+                cleanupTask.Wait(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                LogDebug("Cleanup timeout - forzando terminación de procesos");
+                ForceKillGodotProcesses();
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error en CleanupWithTimeout: {ex.Message}");
+                ForceKillGodotProcesses();
+            }
+        }
+        
+        private void HideDashboardShowWizard()
+        {
+            // Ocultar todos los componentes del dashboard
             PanIpfsBar.Visibility = Visibility.Collapsed;
             PanMetricsBar.Visibility = Visibility.Collapsed;
             PanLeftSidebar.Visibility = Visibility.Collapsed;
             PanRightSidebar.Visibility = Visibility.Collapsed;
             PanViewportContainer.Visibility = Visibility.Collapsed;
-
-            // Resetear datos
+            
+            // Asegurar que el WizardContainer sea visible
+            WizardContainer.Visibility = Visibility.Visible;
+            
+            // Mostrar paso 1 del wizard
+            ShowStep(1);
+        }
+        
+        private void ResetSessionData()
+        {
             _username = "";
             _wallet = "";
             _islandId = "137 : 190.1.0";
-
-            // Volver a cargar WMI y verificar cuenta para actualizar el Step 1
+            TxtStep1Password.Clear();
+        }
+        
+        private void UpdateInterfaceAfterLogout()
+        {
+            // Verificar si hay una cuenta registrada para actualizar la interfaz
             _hasAccount = _db.CheckHardwareExists(_fingerprint.UniqueHash, out string? registeredUser);
+            
             if (_hasAccount && !string.IsNullOrEmpty(registeredUser))
             {
                 _username = registeredUser;
@@ -591,20 +680,57 @@ namespace VisorSingularity
                 PanStep1Login.Visibility = Visibility.Visible;
                 BtnStep1Action.Content = "INICIAR SESIÓN / ACCEDER AL METAVERSO";
                 BtnStep1Action.IsEnabled = true;
-                TxtFooterStatus.Text = $"Identidad '{_username}' detectada de forma segura en este ordenador.";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.White);
             }
             else
             {
                 PanStep1Login.Visibility = Visibility.Collapsed;
                 BtnStep1Action.Content = "VINCULAR MAQUINA / SIGUIENTE";
                 BtnStep1Action.IsEnabled = false;
-                TxtFooterStatus.Text = "Por favor, genera y guarda tu Firma Digital (.zip) primero para continuar.";
-                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
             }
-
-            TxtStep1Password.Clear();
-            ShowStep(1);
+        }
+        
+        private void ForceKillGodotProcesses()
+        {
+            LogDebug("ForceKillGodotProcesses iniciado");
+            
+            try
+            {
+                // Matar todos los procesos de Godot por nombre
+                var godotProcesses = Process.GetProcessesByName("Godot_v4.6.2-stable_mono_win64");
+                foreach (var process in godotProcesses)
+                {
+                    try
+                    {
+                        if (!process.HasExited)
+                        {
+                            LogDebug($"Forzando terminación del proceso Godot: {process.Id}");
+                            process.Kill();
+                            process.WaitForExit(500);
+                        }
+                    }
+                    catch { }
+                }
+                
+                // También buscar procesos con nombres similares
+                var allProcesses = Process.GetProcesses();
+                foreach (var process in allProcesses)
+                {
+                    try
+                    {
+                        if (process.ProcessName.Contains("Godot", StringComparison.OrdinalIgnoreCase) && 
+                            !process.HasExited)
+                        {
+                            LogDebug($"Forzando terminación del proceso relacionado a Godot: {process.ProcessName} ({process.Id})");
+                            process.Kill();
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error en ForceKillGodotProcesses: {ex.Message}");
+            }
         }
 
         // ───── SERVIDOR PUENTE HTTP LOCAL (METAMASK) ─────
