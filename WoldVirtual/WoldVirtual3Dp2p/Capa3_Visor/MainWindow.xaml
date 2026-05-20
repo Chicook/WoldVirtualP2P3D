@@ -402,7 +402,7 @@
                             <TextBlock x:Name="TxtSidebarIsland" Text="137 : 190.1.0" Foreground="#00E5FF" FontSize="13" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Center"/>
                         </Border>
                         
-                        <Button Content="✕ CERRAR SESIÓN" Style="{StaticResource MagentaButton}" Height="35" Margin="0,15,0,0" Padding="0" Click="BtnCerrarSesion_Click"/>
+                        <Button Content="✕ CERRAR SESIÓN" Style="{StaticResource MagentaButton}" Height="35" Margin="0,15,0,0" Padding="0" Click="BtnCerrarSesion_Click" PreviewMouseDown="BtnCerrarSesion_PreviewMouseDown"/>
                     </StackPanel>
                 </Grid>
             </Border>

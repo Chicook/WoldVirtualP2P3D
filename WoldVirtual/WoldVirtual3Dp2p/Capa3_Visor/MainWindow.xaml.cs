@@ -606,8 +606,20 @@ namespace VisorSingularity
             LogDebug($"📌 Parámetros: sender={sender?.GetType().Name}, e={e?.GetType().Name}");
             #endregion
             
-            // Deshabilitar botón para prevenir múltiples clics
-            if (sender is Button btn) btn.IsEnabled = false;
+            // Verificar estado del botón antes de deshabilitarlo
+            if (sender is Button btn)
+            {
+                LogDebug($"🔍 Estado inicial del botón: IsEnabled={btn.IsEnabled}, Visibility={btn.Visibility}, IsVisible={btn.IsVisible}");
+                LogDebug($"🔍 Panel padre (PanLeftSidebar): Visibility={PanLeftSidebar.Visibility}, IsVisible={PanLeftSidebar.IsVisible}");
+                
+                // Deshabilitar botón para prevenir múltiples clics
+                btn.IsEnabled = false;
+                LogDebug("🔒 Botón deshabilitado para prevenir múltiples clics");
+            }
+            else
+            {
+                LogDebug("⚠️ sender no es un Button, no se puede deshabilitar");
+            }
             
             try
             {
@@ -702,6 +714,23 @@ namespace VisorSingularity
             }
         }
         
+        private void BtnCerrarSesion_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            LogDebug("🎯 BtnCerrarSesion_PreviewMouseDown DISPARADO - Evento de bajo nivel activado");
+            LogDebug($"📊 Detalles del evento: OriginalSource={e.OriginalSource?.GetType().Name}, Source={e.Source?.GetType().Name}");
+            LogDebug($"📊 Posición del clic: X={e.GetPosition((IInputElement)sender).X}, Y={e.GetPosition((IInputElement)sender).Y}");
+            
+            // Verificar si el evento está siendo manejado
+            if (e.Handled)
+            {
+                LogDebug("⚠️ El evento ya está marcado como Handled - algo más lo está interceptando");
+            }
+            else
+            {
+                LogDebug("✅ El evento no está Handled - debería propagarse normalmente");
+            }
+        }
+        
         private void CleanupWithTimeout()
         {
             #region debug-point cleanup-timeout-1
@@ -743,19 +772,22 @@ namespace VisorSingularity
             #endregion
         }
         
-        private void HideDashboardShowWizard()
+        private async void HideDashboardShowWizard()
         {
             #region debug-point hide-dashboard-1
             LogDebug("👁️ HideDashboardShowWizard INICIADO - Punto de instrumentación 31");
             LogDebug($"📊 Estado inicial: PanLeftSidebar.Visibility={PanLeftSidebar.Visibility}");
             #endregion
             
-            // Usar Dispatcher.BeginInvoke para retrasar la ocultación del panel
-            // Esto asegura que el evento click se complete antes de ocultar el panel
-            Dispatcher.BeginInvoke(new Action(() =>
+            // Esperar un breve momento para asegurar que el evento click se complete
+            await Task.Delay(100);
+            
+            // Usar Dispatcher para asegurar que ejecutamos en el hilo de UI
+            await Dispatcher.InvokeAsync(() =>
             {
                 #region debug-point hide-dashboard-2
-                LogDebug("🔄 Dispatcher.BeginInvoke ejecutando - Ocultando dashboard");
+                LogDebug("🔄 Dispatcher.InvokeAsync ejecutando - Ocultando dashboard");
+                LogDebug($"📊 Estado antes de ocultar: PanLeftSidebar.Visibility={PanLeftSidebar.Visibility}");
                 #endregion
                 
                 // Ocultar todos los componentes del dashboard
@@ -778,12 +810,11 @@ namespace VisorSingularity
                 #region debug-point hide-dashboard-4
                 LogDebug("🏁 HideDashboardShowWizard COMPLETADO dentro de Dispatcher");
                 #endregion
-            }), System.Windows.Threading.DispatcherPriority.Background);
+            }, System.Windows.Threading.DispatcherPriority.Background);
             
             #region debug-point hide-dashboard-5
-            LogDebug("📤 HideDashboardShowWizard FINALIZADO - Dispatcher.BeginInvoke programado");
+            LogDebug("📤 HideDashboardShowWizard FINALIZADO");
             #endregion
-        }
         }
         
         private void ResetSessionData()

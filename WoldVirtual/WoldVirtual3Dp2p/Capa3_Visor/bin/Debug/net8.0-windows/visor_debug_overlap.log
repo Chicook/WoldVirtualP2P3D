@@ -354,3 +354,33 @@
 [18:25:55.445] Cleanup: Posting WM_CLOSE to Godot window
 [18:25:59.555] Cleanup: Unsubscribing from Godot process Exited event
 [18:26:03.653] Cleanup completed
+[18:56:02.144] MainWindow constructor started
+[18:56:06.449] InitializeComponent completed
+[18:56:10.651] MainWindow_Loaded started
+[18:56:14.877] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[18:56:18.951] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[18:56:23.045] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[18:56:48.834] BtnClose_Click called - forcing exit
+[18:56:51.571] MainWindow_Closed called - forcing exit
+[18:56:54.831] MainWindow constructor started
+[18:56:55.666] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[18:56:59.104] InitializeComponent completed
+[18:56:59.746] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[18:57:03.329] MainWindow_Loaded started
+[18:57:03.839] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[18:57:07.484] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[18:57:07.923] Cleanup completed
+[18:57:11.589] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[18:57:15.680] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[18:57:47.182] EnterDashboard called - isNewRegistration: False
+[18:57:51.419] Godot Process ID: 10984
+[18:58:06.082] Godot process exited - shutting down visor
+[18:58:10.168] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[18:58:11.867] MainWindow_Closed called - forcing exit
+[18:58:15.974] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[18:58:20.069] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=10984
+[18:58:24.189] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[18:58:28.287] Cleanup: Hiding Godot window via _viewer
+[18:58:32.387] Cleanup: Posting WM_CLOSE to Godot window
+[18:58:36.483] Cleanup: Unsubscribing from Godot process Exited event
+[18:58:40.570] Cleanup completed
