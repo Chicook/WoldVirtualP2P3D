@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "0K7qQNj/S/s=",
+  "dgSpecHash": "MP/XT2i1PVo=",
   "success": true,
-  "projectFilePath": "D:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj",
+  "projectFilePath": "d:\\WCVcoinMTB\\WoldVirtual\\WoldVirtual3Dp2p\\Capa3_Visor\\VisorSingularity.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.data.sqlite\\8.0.27\\microsoft.data.sqlite.8.0.27.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.data.sqlite.core\\8.0.27\\microsoft.data.sqlite.core.8.0.27.nupkg.sha512",

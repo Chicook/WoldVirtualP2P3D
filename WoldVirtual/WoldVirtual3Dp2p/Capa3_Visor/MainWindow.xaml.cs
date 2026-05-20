@@ -51,6 +51,7 @@ namespace VisorSingularity
         private HttpListener? _httpListener;
         private Process? _godotProcess;
         private GodotViewer? _viewer;
+        private EventHandler? _godotProcessExitedHandler;
 
         // ── Debug Logging ──
         private static void LogDebug(string message)
@@ -576,6 +577,7 @@ namespace VisorSingularity
             {
                 // Marcar que estamos en proceso de cierre de sesión (no cierre completo de aplicación)
                 _ignoreGodotExit = true;
+                LogDebug($"Set _ignoreGodotExit = true for logout");
                 
                 // 1. Limpiar recursos de Godot de forma más agresiva
                 CleanupWithTimeout();
@@ -593,6 +595,10 @@ namespace VisorSingularity
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 
+                // 6. Restablecer el flag para futuras sesiones
+                _ignoreGodotExit = false;
+                LogDebug($"Set _ignoreGodotExit = false after successful logout");
+                
                 LogDebug("Cierre de sesión completado exitosamente");
                 TxtFooterStatus.Text = "Sesión cerrada correctamente. Puedes iniciar sesión nuevamente.";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Colors.LimeGreen);
@@ -605,6 +611,10 @@ namespace VisorSingularity
                 
                 // Intentar forzar el cierre de procesos de Godot residuales
                 ForceKillGodotProcesses();
+                
+                // Asegurar que el flag se restablece incluso en caso de error
+                _ignoreGodotExit = false;
+                LogDebug($"Set _ignoreGodotExit = false after error");
             }
             finally
             {
@@ -693,39 +703,78 @@ namespace VisorSingularity
         {
             LogDebug("ForceKillGodotProcesses iniciado");
             
+            int killedProcesses = 0;
+            
             try
             {
-                // Matar todos los procesos de Godot por nombre
+                // Primero, intentar desuscribir el evento Exited si existe
+                try
+                {
+                    if (_godotProcess != null && _godotProcessExitedHandler != null)
+                    {
+                        LogDebug("ForceKillGodotProcesses: Unsubscribing from Godot process Exited event");
+                        _godotProcess.Exited -= _godotProcessExitedHandler;
+                        _godotProcessExitedHandler = null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"ForceKillGodotProcesses Event Unsubscribe Error: {ex.Message}");
+                }
+                
+                // Matar todos los procesos de Godot por nombre (versión exacta)
                 var godotProcesses = Process.GetProcessesByName("Godot_v4.6.2-stable_mono_win64");
+                LogDebug($"Found {godotProcesses.Length} processes with exact name 'Godot_v4.6.2-stable_mono_win64'");
+                
                 foreach (var process in godotProcesses)
                 {
                     try
                     {
                         if (!process.HasExited)
                         {
-                            LogDebug($"Forzando terminación del proceso Godot: {process.Id}");
+                            LogDebug($"Forzando terminación del proceso Godot: {process.Id} (MainWindowHandle: {process.MainWindowHandle})");
                             process.Kill();
-                            process.WaitForExit(500);
+                            process.WaitForExit(1000);
+                            killedProcesses++;
+                            LogDebug($"Proceso Godot {process.Id} terminado");
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        LogDebug($"Error al terminar proceso Godot {process.Id}: {ex.Message}");
+                    }
                 }
                 
                 // También buscar procesos con nombres similares
                 var allProcesses = Process.GetProcesses();
+                LogDebug($"Checking {allProcesses.Length} total processes for Godot-related names");
+                
                 foreach (var process in allProcesses)
                 {
                     try
                     {
-                        if (process.ProcessName.Contains("Godot", StringComparison.OrdinalIgnoreCase) && 
+                        string processName = process.ProcessName.ToLowerInvariant();
+                        if ((processName.Contains("godot") || processName.Contains("godot_v")) && 
                             !process.HasExited)
                         {
                             LogDebug($"Forzando terminación del proceso relacionado a Godot: {process.ProcessName} ({process.Id})");
                             process.Kill();
+                            process.WaitForExit(500);
+                            killedProcesses++;
+                            LogDebug($"Proceso relacionado a Godot {process.Id} terminado");
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        LogDebug($"Error al terminar proceso relacionado a Godot: {ex.Message}");
+                    }
                 }
+                
+                // Limpiar referencias
+                _godotProcess = null;
+                _viewer = null;
+                
+                LogDebug($"ForceKillGodotProcesses completado: {killedProcesses} procesos terminados");
             }
             catch (Exception ex)
             {
@@ -1154,7 +1203,7 @@ namespace VisorSingularity
                     throw new InvalidOperationException("El sistema operativo denegó la ejecución.");
 
                 _godotProcess.EnableRaisingEvents = true;
-                _godotProcess.Exited += (s, e) =>
+                _godotProcessExitedHandler = (s, e) =>
                 {
                     Dispatcher.Invoke(() =>
                     {
@@ -1169,6 +1218,7 @@ namespace VisorSingularity
                         Environment.Exit(0);
                     });
                 };
+                _godotProcess.Exited += _godotProcessExitedHandler;
 
                 _viewer.GodotProcessId = (uint)_godotProcess.Id; // Asignar el PID de Godot al viewer
                 LogDebug($"Godot Process ID: {_viewer.GodotProcessId}");
@@ -1292,7 +1342,22 @@ namespace VisorSingularity
                 }
             }
 
-            // 3. Terminar el proceso de Godot a nivel de control de proceso si sigue activo
+            // 3. Desuscribir el evento Exited antes de matar el proceso para evitar que se dispare
+            try
+            {
+                if (_godotProcess != null && _godotProcessExitedHandler != null)
+                {
+                    LogDebug("Cleanup: Unsubscribing from Godot process Exited event");
+                    _godotProcess.Exited -= _godotProcessExitedHandler;
+                    _godotProcessExitedHandler = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Cleanup Event Unsubscribe Error: {ex.Message}");
+            }
+
+            // 4. Terminar el proceso de Godot a nivel de control de proceso si sigue activo
             try 
             { 
                 if (_godotProcess != null)
