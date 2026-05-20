@@ -26,7 +26,7 @@ namespace VisorSingularity
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         // Window styles
-        private const uint GWL_STYLE_UINT = 0xFFFFFFF0; // -16 as uint
+        private const int GWL_STYLE = -16;
         private const int WS_CHILD = 0x40000000; // Child window
         private const int WS_POPUP = 0x80000000; // Pop-up window
         private const int WS_BORDER = 0x00800000; // Window with border
@@ -115,10 +115,10 @@ namespace VisorSingularity
             SetParent(_godotWindowHandle, parentControl.Handle);
 
             // Remove window styles (border, title bar)
-            int style = GetWindowLong(_godotWindowHandle, (int)GWL_STYLE_UINT);
+            int style = GetWindowLong(_godotWindowHandle, GWL_STYLE);
             style = style & ~WS_CAPTION & ~WS_BORDER & ~WS_POPUP; // Remove caption, border, popup style
             style = style | WS_CHILD; // Add child style
-            SetWindowLong(_godotWindowHandle, (int)GWL_STYLE_UINT, style);
+            SetWindowLong(_godotWindowHandle, GWL_STYLE, style);
 
             // Resize and show Godot window
             ResizeGodotWindow(parentControl.Width, parentControl.Height);
