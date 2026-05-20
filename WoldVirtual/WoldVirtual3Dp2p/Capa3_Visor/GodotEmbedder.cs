@@ -26,7 +26,7 @@ namespace VisorSingularity
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         // Window styles
-        private const int GWL_STYLE = -16;
+        private const int GWL_STYLE = unchecked((int)0xFFFFFFF0); // -16 as int
         private const int WS_CHILD = 0x40000000; // Child window
         private const int WS_POPUP = 0x80000000; // Pop-up window
         private const int WS_BORDER = 0x00800000; // Window with border
