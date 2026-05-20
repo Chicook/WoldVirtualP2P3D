@@ -49,3 +49,27 @@
 [03:40:35.786] GodotPlaceholder dimensions: ActualWidth=1280, ActualHeight=720
 [03:40:35.786] Window client area: 1600x950
 [03:40:35.956] Godot Process ID: 6164
+[20:12:38.121] MainWindow constructor started
+[20:12:38.263] InitializeComponent completed
+[20:12:38.393] MainWindow_Loaded started
+[20:12:38.695] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[20:12:38.697] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[20:12:38.697] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[20:13:31.588] EnterDashboard called - isNewRegistration: True
+[20:13:31.602] GodotPlaceholder SizeChanged - ActualWidth=1600, ActualHeight=950
+[20:13:31.604] ColSidebar Width=210, GridUnitType=Pixel
+[20:13:31.604] PanViewportContainer dimensions: ActualWidth=1600, ActualHeight=950
+[20:13:31.605] Step1_PC visibility: Collapsed, dimensions: ActualWidth=0, ActualHeight=0
+[20:13:31.761] Godot Process ID: 10688
+[20:19:45.177] MainWindow constructor started
+[20:19:45.355] InitializeComponent completed
+[20:19:45.528] MainWindow_Loaded started
+[20:19:45.795] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[20:19:45.797] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[20:19:45.797] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[20:20:51.801] EnterDashboard called - isNewRegistration: True
+[20:20:51.816] GodotPlaceholder SizeChanged - ActualWidth=1600, ActualHeight=950
+[20:20:51.818] ColSidebar Width=210, GridUnitType=Pixel
+[20:20:51.818] PanViewportContainer dimensions: ActualWidth=1600, ActualHeight=950
+[20:20:51.819] Step1_PC visibility: Collapsed, dimensions: ActualWidth=0, ActualHeight=0
+[20:20:51.974] Godot Process ID: 2764
