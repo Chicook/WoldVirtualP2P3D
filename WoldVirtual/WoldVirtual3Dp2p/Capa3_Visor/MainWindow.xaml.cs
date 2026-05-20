@@ -1162,10 +1162,12 @@ namespace VisorSingularity
 
                     if (path == "/confirm")
                     {
-                        // MetaMask ha firmado exitosamente la wallet
+                        LogDebug("🌐 Recibida solicitud /confirm de MetaMask.");
                         string user = request.QueryString["user"] ?? _username;
                         string wallet = request.QueryString["wallet"] ?? "No Wallet Address";
                         string island = request.QueryString["islandId"] ?? _islandId;
+
+                        LogDebug($"🌐 Parámetros de confirmación: user={user}, wallet={wallet}, island={island}");
 
                         _db.UpdateWallet(user, wallet);
 
@@ -1179,14 +1181,19 @@ namespace VisorSingularity
                         // Actualizar UI del Visor
                         Dispatcher.Invoke(() =>
                         {
+                            LogDebug("🌐 Dispatcher.Invoke para actualizar UI y datos de sesión.");
                             _wallet = wallet;
                             PanWaitHttp.Visibility = Visibility.Collapsed;
                             TxtFooterStatus.Text = "¡Firma de MetaMask recibida con éxito por el puente HTTP!";
                             TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
-                            if (_hasAccount)
+                            // Verificar si el usuario ya tiene una cuenta registrada
+                            bool hasAccount = _db.CheckHardwareExists(_fingerprint.UniqueHash, out string? registeredUser);
+                            LogDebug($"🌐 Estado de la cuenta: hasAccount={hasAccount}, registeredUser={registeredUser ?? "N/A"}");
+
+                            if (hasAccount)
                             {
-                                // ROTACIÓN CRIPTOGRÁFICA EN CALIENTE: Generar nueva firma única y exportar ZIP
+                                LogDebug("🌐 Usuario existente detectado. Actualizando firma y generando ZIP.");
                                 string newRecoveryHash = Guid.NewGuid().ToString("D", CultureInfo.InvariantCulture).ToUpper(CultureInfo.InvariantCulture);
                                 _db.UpdateUserId(_username, newRecoveryHash);
                                 GenerateIdentityZip(newRecoveryHash);
@@ -1194,19 +1201,20 @@ namespace VisorSingularity
                                 TxtFooterStatus.Text = "¡Firma de sesión actualizada y autenticación correcta! Cargando metaverso...";
                                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
 
+                                LogDebug("🌐 Llamando a EnterDashboard para usuario existente.");
                                 EnterDashboard(isNewRegistration: false); // Carga N3DWoldVirtualMT.tscn
                             }
                             else
                             {
-                                // Generar la isla fija única al confirmar (SÓLO si es usuario nuevo)
+                                LogDebug("🌐 Nuevo usuario detectado. Generando isla única si es necesario y mostrando paso 4.");
                                 if (_islandId == "137 : 190.1.0" || string.IsNullOrEmpty(_islandId))
                                 {
                                     GenerateUniqueIslandCoordinates();
                                 }
 
-                                // Avanzar al paso 4
                                 ShowStep(4);
                             }
+                            LogDebug("🌐 Fin de Dispatcher.Invoke en /confirm.");
                         });
                     }
                     else if (path.StartsWith("/node", StringComparison.Ordinal))

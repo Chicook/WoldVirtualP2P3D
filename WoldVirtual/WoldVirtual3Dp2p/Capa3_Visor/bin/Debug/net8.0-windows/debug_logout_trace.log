@@ -91,3 +91,204 @@
 [19:18:56.629] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
 [19:19:00.714] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
 [19:19:04.800] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:20:24.357] EnterDashboard called - isNewRegistration: False
+[19:20:28.443] 🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...
+[19:20:32.515] ❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard
+[19:20:34.674] MainWindow_Closed called - forcing exit
+[19:20:38.796] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:20:43.169] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:20:47.265] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:20:51.362] Cleanup completed
+[19:21:12.372] MainWindow constructor started
+[19:21:17.259] InitializeComponent completed
+[19:21:21.703] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:21:26.057] 🔍 Buscando botón en el árbol visual...
+[19:21:30.149] 🔍 Total de botones en el árbol visual: 0
+[19:21:34.395] MainWindow_Loaded started
+[19:21:38.635] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:21:42.717] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:21:46.814] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:22:18.331] BtnClose_Click called - forcing exit
+[19:22:22.427] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:22:24.997] MainWindow_Closed called - forcing exit
+[19:22:29.132] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:22:33.217] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:22:37.293] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:22:41.386] Cleanup completed
+[19:22:45.651] MainWindow constructor started
+[19:22:50.307] InitializeComponent completed
+[19:22:54.394] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:22:58.494] 🔍 Buscando botón en el árbol visual...
+[19:23:02.593] 🔍 Total de botones en el árbol visual: 0
+[19:23:06.831] MainWindow_Loaded started
+[19:23:11.060] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:23:15.141] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:23:19.235] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:23:27.297] BtnClose_Click called - forcing exit
+[19:23:31.394] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:23:34.988] MainWindow_Closed called - forcing exit
+[19:23:39.128] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:23:48.050] MainWindow constructor started
+[19:23:52.356] InitializeComponent completed
+[19:23:56.447] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:24:00.550] 🔍 Buscando botón en el árbol visual...
+[19:24:04.634] 🔍 Total de botones en el árbol visual: 0
+[19:24:06.396] MainWindow constructor started
+[19:24:08.863] MainWindow_Loaded started
+[19:24:10.666] InitializeComponent completed
+[19:24:13.040] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:24:14.744] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:24:17.134] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:24:18.839] 🔍 Buscando botón en el árbol visual...
+[19:24:21.218] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:24:22.932] 🔍 Total de botones en el árbol visual: 0
+[19:24:27.159] MainWindow_Loaded started
+[19:24:31.316] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:24:35.408] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:24:39.529] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:25:09.085] EnterDashboard called - isNewRegistration: False
+[19:25:13.208] 🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...
+[19:25:17.282] ❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard
+[19:25:21.407] 🔍 Buscando botón en el árbol visual...
+[19:25:25.524] 🔍 Total de botones en el árbol visual: 12
+[19:25:29.806] 🔍 Botón encontrado: Content='—', Name='', IsEnabled=True, Visibility=Visible
+[19:25:33.890] 🔍 Botón encontrado: Content='✕', Name='', IsEnabled=True, Visibility=Visible
+[19:25:37.978] 🔍 Botón encontrado: Content='COPIAR URL', Name='', IsEnabled=True, Visibility=Visible
+[19:25:38.032] MainWindow_Closed called - forcing exit
+[19:25:41.903] MainWindow_Closed called - forcing exit
+[19:25:42.137] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:25:46.010] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:25:46.226] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:25:50.118] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:25:50.320] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:25:54.191] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:25:54.414] Cleanup completed
+[19:25:58.283] Cleanup completed
+[19:28:51.842] MainWindow constructor started
+[19:28:56.147] InitializeComponent completed
+[19:29:00.242] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:29:04.338] 🔍 Buscando botón en el árbol visual...
+[19:29:08.434] 🔍 Total de botones en el árbol visual: 0
+[19:29:12.642] MainWindow_Loaded started
+[19:29:16.830] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:29:20.911] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:29:24.988] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:31:26.886] 🌐 Recibida solicitud /confirm de MetaMask.
+[19:31:31.000] 🌐 Parámetros de confirmación: user=chicook, wallet=0xa8e670588bbb447c1e98557c64f740016d908085, island=491 : 321.1.0
+[19:31:35.098] 🌐 Dispatcher.Invoke para actualizar UI y datos de sesión.
+[19:31:39.231] 🌐 Estado de la cuenta: hasAccount=True, registeredUser=chicook
+[19:31:43.331] 🌐 Usuario existente detectado. Actualizando firma y generando ZIP.
+[19:31:57.427] 🌐 Llamando a EnterDashboard para usuario existente.
+[19:32:01.527] EnterDashboard called - isNewRegistration: False
+[19:32:05.626] 🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...
+[19:32:09.725] ❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard
+[19:32:13.786] 🔍 Buscando botón en el árbol visual...
+[19:32:17.869] 🔍 Total de botones en el árbol visual: 12
+[19:32:21.940] 🔍 Botón encontrado: Content='—', Name='', IsEnabled=True, Visibility=Visible
+[19:32:25.376] MainWindow_Closed called - forcing exit
+[19:32:29.474] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:32:33.657] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:32:37.940] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:32:42.915] Cleanup completed
+[19:33:53.689] MainWindow constructor started
+[19:33:57.985] InitializeComponent completed
+[19:34:02.076] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:34:06.183] 🔍 Buscando botón en el árbol visual...
+[19:34:10.289] 🔍 Total de botones en el árbol visual: 0
+[19:34:14.508] MainWindow_Loaded started
+[19:34:18.673] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:34:22.769] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:34:26.848] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:34:56.269] 🌐 Recibida solicitud /confirm de MetaMask.
+[19:35:00.376] 🌐 Parámetros de confirmación: user=chicook, wallet=0xa8e670588bbb447c1e98557c64f740016d908085, island=491 : 321.1.0
+[19:35:04.472] 🌐 Dispatcher.Invoke para actualizar UI y datos de sesión.
+[19:35:08.558] 🌐 Estado de la cuenta: hasAccount=True, registeredUser=chicook
+[19:35:12.658] 🌐 Usuario existente detectado. Actualizando firma y generando ZIP.
+[19:35:28.484] 🌐 Llamando a EnterDashboard para usuario existente.
+[19:35:32.537] EnterDashboard called - isNewRegistration: False
+[19:35:36.634] 🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...
+[19:35:40.808] ❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard
+[19:35:45.119] 🔍 Buscando botón en el árbol visual...
+[19:35:49.189] 🔍 Total de botones en el árbol visual: 12
+[19:35:53.536] 🔍 Botón encontrado: Content='—', Name='', IsEnabled=True, Visibility=Visible
+[19:35:57.613] 🔍 Botón encontrado: Content='✕', Name='', IsEnabled=True, Visibility=Visible
+[19:36:02.021] 🔍 Botón encontrado: Content='COPIAR URL', Name='', IsEnabled=True, Visibility=Visible
+[19:40:19.628] MainWindow constructor started
+[19:40:24.447] InitializeComponent completed
+[19:40:28.537] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:40:32.662] 🔍 Buscando botón en el árbol visual...
+[19:40:36.755] 🔍 Total de botones en el árbol visual: 0
+[19:40:41.170] MainWindow_Loaded started
+[19:40:46.359] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:40:50.449] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:40:54.508] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:41:31.189] 🌐 Recibida solicitud /confirm de MetaMask.
+[19:41:35.269] 🌐 Parámetros de confirmación: user=chicook, wallet=0xa8e670588bbb447c1e98557c64f740016d908085, island=491 : 321.1.0
+[19:41:39.320] 🌐 Dispatcher.Invoke para actualizar UI y datos de sesión.
+[19:41:43.423] 🌐 Estado de la cuenta: hasAccount=True, registeredUser=chicook
+[19:41:47.482] 🌐 Usuario existente detectado. Actualizando firma y generando ZIP.
+[19:42:02.073] 🌐 Llamando a EnterDashboard para usuario existente.
+[19:42:06.098] EnterDashboard called - isNewRegistration: False
+[19:42:10.121] 🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...
+[19:42:14.158] ❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard
+[19:42:18.222] 🔍 Buscando botón en el árbol visual...
+[19:42:22.289] 🔍 Total de botones en el árbol visual: 12
+[19:42:26.337] 🔍 Botón encontrado: Content='—', Name='', IsEnabled=True, Visibility=Visible
+[19:42:29.260] MainWindow_Closed called - forcing exit
+[19:42:33.309] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:42:37.391] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:42:41.445] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:42:45.500] Cleanup completed
+[19:44:57.281] MainWindow constructor started
+[19:45:01.588] InitializeComponent completed
+[19:45:05.624] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:45:09.677] 🔍 Buscando botón en el árbol visual...
+[19:45:13.727] 🔍 Total de botones en el árbol visual: 0
+[19:45:17.929] MainWindow_Loaded started
+[19:45:22.103] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:45:26.169] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:45:30.221] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:45:59.962] 🌐 Recibida solicitud /confirm de MetaMask.
+[19:46:04.055] 🌐 Parámetros de confirmación: user=chicook, wallet=0xa8e670588bbb447c1e98557c64f740016d908085, island=491 : 321.1.0
+[19:46:08.142] 🌐 Dispatcher.Invoke para actualizar UI y datos de sesión.
+[19:46:12.231] 🌐 Estado de la cuenta: hasAccount=True, registeredUser=chicook
+[19:46:16.301] 🌐 Usuario existente detectado. Actualizando firma y generando ZIP.
+[19:46:29.561] 🌐 Llamando a EnterDashboard para usuario existente.
+[19:46:33.635] EnterDashboard called - isNewRegistration: False
+[19:46:37.688] 🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...
+[19:46:41.743] ❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard
+[19:46:41.935] MainWindow_Closed called - forcing exit
+[19:46:46.026] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:46:50.080] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:46:54.127] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:46:58.224] Cleanup completed
+[19:47:05.303] MainWindow constructor started
+[19:47:09.565] InitializeComponent completed
+[19:47:13.632] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:47:17.704] 🔍 Buscando botón en el árbol visual...
+[19:47:21.802] 🔍 Total de botones en el árbol visual: 0
+[19:47:26.016] MainWindow_Loaded started
+[19:47:30.708] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:47:34.792] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:47:38.835] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:48:16.283] 🌐 Recibida solicitud /confirm de MetaMask.
+[19:48:20.343] 🌐 Parámetros de confirmación: user=chicook, wallet=0xa8e670588bbb447c1e98557c64f740016d908085, island=491 : 321.1.0
+[19:48:24.416] 🌐 Dispatcher.Invoke para actualizar UI y datos de sesión.
+[19:48:28.522] 🌐 Estado de la cuenta: hasAccount=True, registeredUser=chicook
+[19:48:32.573] 🌐 Usuario existente detectado. Actualizando firma y generando ZIP.
+[19:48:45.808] 🌐 Llamando a EnterDashboard para usuario existente.
+[19:48:49.901] EnterDashboard called - isNewRegistration: False
+[19:48:53.966] 🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...
+[19:48:58.049] ❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard
+[19:49:02.110] 🔍 Buscando botón en el árbol visual...
+[19:49:06.142] 🔍 Total de botones en el árbol visual: 12
+[19:49:10.195] 🔍 Botón encontrado: Content='—', Name='', IsEnabled=True, Visibility=Visible
+[19:49:14.240] 🔍 Botón encontrado: Content='✕', Name='', IsEnabled=True, Visibility=Visible
+[19:49:18.288] 🔍 Botón encontrado: Content='COPIAR URL', Name='', IsEnabled=True, Visibility=Visible
+[19:49:22.353] 🔍 Botón encontrado: Content='✕ CERRAR SESIÓN', Name='', IsEnabled=True, Visibility=Visible
+[19:49:26.411] 🎯 Botón de cerrar sesión encontrado por contenido: '✕ CERRAR SESIÓN'
+[19:49:26.837] MainWindow_Closed called - forcing exit
+[19:49:30.905] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:49:34.934] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:49:38.975] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:49:43.052] Cleanup completed
