@@ -25,10 +25,23 @@ namespace VisorSingularity
         [DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+        // Delegate for EnumWindows
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
         // Window styles
         private const int GWL_STYLE = unchecked((int)0xFFFFFFF0); // -16 as int
         private const int WS_CHILD = (int)0x40000000; // Child window
-        private const int WS_POPUP = (int)0x80000000; // Pop-up window
+        private const int WS_POPUP = unchecked((int)0x80000000); // Pop-up window
         private const int WS_BORDER = 0x00800000; // Window with border
         private const int WS_DLGFRAME = 0x00400000; // Window with double border
         private const int WS_CAPTION = WS_BORDER | WS_DLGFRAME; // Window with a title bar

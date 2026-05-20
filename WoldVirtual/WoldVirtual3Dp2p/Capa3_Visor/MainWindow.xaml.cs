@@ -97,8 +97,14 @@ namespace VisorSingularity
 
             try
             {
-                GodotHost.Child = new GodotViewer(_godotEmbedder, _godotExecutablePath, _godotProjectPath, godotArgs);
+                // Create a WindowsFormsHost to host the GodotViewer (HwndHost)
+                System.Windows.Forms.Integration.WindowsFormsHost host = new System.Windows.Forms.Integration.WindowsFormsHost();
+                GodotViewer godotViewer = new GodotViewer(_godotEmbedder, _godotExecutablePath, _godotProjectPath, godotArgs);
+                host.Child = godotViewer;
+                GodotHost.Child = host; // Assign the WindowsFormsHost to the WPF element
+
                 LogDebug("GodotViewer assigned to GodotHost.Child.");
+                await _godotEmbedder.LaunchAndEmbed(_godotExecutablePath, _godotProjectPath, godotViewer.HostPanel, godotArgs);
             }
             catch (Exception ex)
             {
@@ -161,7 +167,7 @@ namespace VisorSingularity
 
         private void PanViewportContainer_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (_godotEmbedder.IsGodotRunning && GodotHost.Child is GodotViewer godotViewer)
+            if (_godotEmbedder.IsGodotRunning && GodotHost.Child is System.Windows.Forms.Integration.WindowsFormsHost host && host.Child is GodotViewer godotViewer)
             {
                 // The GodotViewer (HwndHost) handles its own OnRenderSizeChanged,
                 // which in turn calls GodotEmbedder.ResizeGodotWindow.
@@ -430,7 +436,7 @@ namespace VisorSingularity
                     context.Response.OutputStream.Close();
 
                     // Extract wallet address from query string
-                    string? walletAddress = System.Uri.ParseQueryString(context.Request.Url?.Query ?? "").Get("address");
+                    string? walletAddress = ParseQueryString(context.Request.Url?.Query ?? "").GetValueOrDefault("address");
                     LogDebug($"Wallet address received: {walletAddress}");
 
                     return walletAddress ?? string.Empty;
@@ -461,6 +467,37 @@ namespace VisorSingularity
                 _httpListener = null;
                 LogDebug("HTTP Listener stopped.");
             }
+        }
+
+        // Helper method to parse query string manually
+        private Dictionary<string, string> ParseQueryString(string query)
+        {
+            Dictionary<string, string> queryParameters = new Dictionary<string, string>();
+            if (string.IsNullOrEmpty(query))
+            {
+                return queryParameters;
+            }
+
+            // Remove leading '?' if present
+            if (query.StartsWith("?"))
+            {
+                query = query.Substring(1);
+            }
+
+            string[] pairs = query.Split('&');
+            foreach (string pair in pairs)
+            {
+                string[] parts = pair.Split('=');
+                if (parts.Length == 2)
+                {
+                    queryParameters[System.Net.WebUtility.UrlDecode(parts[0])] = System.Net.WebUtility.UrlDecode(parts[1]);
+                }
+                else if (parts.Length == 1)
+                {
+                    queryParameters[System.Net.WebUtility.UrlDecode(parts[0])] = string.Empty;
+                }
+            }
+            return queryParameters;
         }
     }
 }
