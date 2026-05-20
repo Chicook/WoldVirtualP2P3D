@@ -36,3 +36,112 @@
 [23:39:51.255] Error generating identity ZIP: Access to the path 'I:\Wold_Firma_Digital.zip' is denied.
 [23:40:11.960] Error generating identity ZIP: Access to the path 'I:\Wold_Firma_Digital.zip' is denied.
 [23:40:16.528] MainWindow Closed.
+[23:50:15.517] MainWindow Loaded.
+[23:50:21.848] [DEBUG-ZIP] Iniciando generación de ZIP. RecoveryHash: E72A824F-7C5A-4548-B385-2512D115B847, AutoSilent: False
+[23:50:21.851] [DEBUG-ZIP] Abriendo SaveFileDialog...
+[23:50:30.350] [DEBUG-ZIP] Diálogo confirmado. Ruta: I:\Wold_Firma_Digital.zip, Nombre: Wold_Firma_Digital.zip
+[23:50:30.351] [DEBUG-ZIP] Creando directorio temporal: C:\Users\Usuario\AppData\Local\Temp\0c206e42-750d-4941-ae32-7e54f14a57f6
+[23:50:30.363] [DEBUG-ZIP] Directorio temporal creado exitosamente
+[23:50:30.375] [DEBUG-ZIP] Obteniendo información del hardware...
+[23:50:30.414] [DEBUG-ZIP] osInfo: {
+            "name": "Microsoft Windows 10 Pro",
+            "version": "10.0.19045",
+            "serial": "00330-51035-43676-AAOEM",
+            "architecture": "64 bits",
+            "build": "19045"
+        }
+[23:50:30.415] [DEBUG-ZIP] cpuInfo: {
+            "name": "Intel(R) Core(TM) i5-7400 CPU @ 3.00GHz",
+            "id": "BFEBFBFF000906E9",
+            "cores": 4,
+            "threads": 4,
+            "maxClockSpeed": 3000
+        }
+[23:50:30.426] [DEBUG-ZIP] mbInfo: {
+            "manufacturer": "Acer",
+            "product": "Veriton M2640G(KBL)",
+            "serial": "DBVPN1100180900AFF9100",
+            "version": "V:1.1   "
+        }
+[23:50:30.441] [DEBUG-ZIP] Valores escapados - Usuario: , Password: [PROTEGIDO], Wallet: 
+[23:50:30.451] [DEBUG-ZIP] JSON generado (primeras 200 chars): {
+    "user": {
+        "username": "",
+        "password": "",
+        "registrationDate": "2026-05-20 23:50:30",
+        "uuid": "E72A824F-7C5A-4548-B385-2512D115B847"
+    },
+    "hardware": {
+     
+[23:50:30.460] [DEBUG-ZIP] Guardando identity.json en: C:\Users\Usuario\AppData\Local\Temp\0c206e42-750d-4941-ae32-7e54f14a57f6\identity.json
+[23:50:30.470] [DEBUG-ZIP] identity.json guardado exitosamente
+[23:50:30.479] [DEBUG-ZIP] Guardando hardware_details.json en: C:\Users\Usuario\AppData\Local\Temp\0c206e42-750d-4941-ae32-7e54f14a57f6\hardware_details.json
+[23:50:30.491] [DEBUG-ZIP] hardware_details.json guardado exitosamente
+[23:50:30.500] [DEBUG-ZIP] Creando archivo ZIP en: I:\Wold_Firma_Digital.zip
+[23:50:30.510] [DEBUG-ZIP] Archivo ZIP existente, eliminando...
+[23:50:30.520] [DEBUG-ZIP] Archivo ZIP anterior eliminado
+[23:50:30.542] [DEBUG-ZIP] ERROR generando ZIP: Access to the path 'I:\Wold_Firma_Digital.zip' is denied.
+[23:50:30.579] [DEBUG-ZIP] StackTrace:    at System.IO.RandomAccess.WriteAtOffset(SafeFileHandle handle, ReadOnlySpan`1 buffer, Int64 fileOffset)
+   at System.IO.Strategies.OSFileStreamStrategy.Write(ReadOnlySpan`1 buffer)
+   at System.IO.Strategies.BufferedFileStreamStrategy.Flush(Boolean flushToDisk)
+   at System.IO.Strategies.BufferedFileStreamStrategy.Dispose(Boolean disposing)
+   at System.IO.Stream.Dispose()
+   at System.IO.Compression.ZipArchive.CloseStreams()
+   at System.IO.Compression.ZipArchive.Dispose(Boolean disposing)
+   at System.IO.Compression.ZipFile.DoCreateFromDirectory(String sourceDirectoryName, String destinationArchiveFileName, Nullable`1 compressionLevel, Boolean includeBaseDirectory, Encoding entryNameEncoding)
+   at System.IO.Compression.ZipFile.CreateFromDirectory(String sourceDirectoryName, String destinationArchiveFileName)
+   at VisorSingularity.MainWindow.GenerateIdentityZip(String recoveryHash, Boolean autoSilent) in d:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\MainWindow.xaml.cs:line 461
+[23:50:33.161] MainWindow Closed.
+[23:50:42.064] MainWindow Loaded.
+[23:50:44.176] [DEBUG-ZIP] Iniciando generación de ZIP. RecoveryHash: 8728631C-6CDA-4C27-8EBA-FE9D14856FDB, AutoSilent: False
+[23:50:44.179] [DEBUG-ZIP] Abriendo SaveFileDialog...
+[23:50:51.124] [DEBUG-ZIP] Diálogo confirmado. Ruta: I:\Wold_Firma_Digital.zip, Nombre: Wold_Firma_Digital.zip
+[23:50:51.125] [DEBUG-ZIP] Creando directorio temporal: C:\Users\Usuario\AppData\Local\Temp\3e4ffafd-54eb-4357-ad44-b4071947864c
+[23:50:51.125] [DEBUG-ZIP] Directorio temporal creado exitosamente
+[23:50:51.125] [DEBUG-ZIP] Obteniendo información del hardware...
+[23:50:51.150] [DEBUG-ZIP] osInfo: {
+            "name": "Microsoft Windows 10 Pro",
+            "version": "10.0.19045",
+            "serial": "00330-51035-43676-AAOEM",
+            "architecture": "64 bits",
+            "build": "19045"
+        }
+[23:50:51.150] [DEBUG-ZIP] cpuInfo: {
+            "name": "Intel(R) Core(TM) i5-7400 CPU @ 3.00GHz",
+            "id": "BFEBFBFF000906E9",
+            "cores": 4,
+            "threads": 4,
+            "maxClockSpeed": 3000
+        }
+[23:50:51.151] [DEBUG-ZIP] mbInfo: {
+            "manufacturer": "Acer",
+            "product": "Veriton M2640G(KBL)",
+            "serial": "DBVPN1100180900AFF9100",
+            "version": "V:1.1   "
+        }
+[23:50:51.153] [DEBUG-ZIP] Valores escapados - Usuario: , Password: [PROTEGIDO], Wallet: 
+[23:50:51.154] [DEBUG-ZIP] JSON generado (primeras 200 chars): {
+    "user": {
+        "username": "",
+        "password": "",
+        "registrationDate": "2026-05-20 23:50:51",
+        "uuid": "8728631C-6CDA-4C27-8EBA-FE9D14856FDB"
+    },
+    "hardware": {
+     
+[23:50:51.154] [DEBUG-ZIP] Guardando identity.json en: C:\Users\Usuario\AppData\Local\Temp\3e4ffafd-54eb-4357-ad44-b4071947864c\identity.json
+[23:50:51.154] [DEBUG-ZIP] identity.json guardado exitosamente
+[23:50:51.155] [DEBUG-ZIP] Guardando hardware_details.json en: C:\Users\Usuario\AppData\Local\Temp\3e4ffafd-54eb-4357-ad44-b4071947864c\hardware_details.json
+[23:50:51.155] [DEBUG-ZIP] hardware_details.json guardado exitosamente
+[23:50:51.155] [DEBUG-ZIP] Creando archivo ZIP en: I:\Wold_Firma_Digital.zip
+[23:50:51.155] [DEBUG-ZIP] Archivo ZIP existente, eliminando...
+[23:50:51.925] [DEBUG-ZIP] Archivo ZIP anterior eliminado
+[23:50:51.961] [DEBUG-ZIP] Archivo ZIP creado exitosamente. Tamaño: 1147 bytes
+[23:50:51.961] [DEBUG-ZIP] Limpiando directorio temporal: C:\Users\Usuario\AppData\Local\Temp\3e4ffafd-54eb-4357-ad44-b4071947864c
+[23:50:51.962] [DEBUG-ZIP] Directorio temporal eliminado
+[23:50:51.962] [DEBUG-ZIP] Generación de ZIP completada exitosamente
+[23:51:11.230] Starting MetaMask connection process...
+[23:51:11.264] HTTP Listener started on http://localhost:8080/
+[23:51:11.492] Opened browser for MetaMask connection: https://metamask.github.io/metamask-deeplinks/connect?dappUrl=http%3A%2F%2Flocalhost%3A8080%2F
+[23:51:26.318] MainWindow Closed.
+[23:51:26.322] HTTP Listener stopped.
