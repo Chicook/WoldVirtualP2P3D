@@ -153,6 +153,27 @@ namespace VisorSingularity
             GodotPlaceholder.LayoutUpdated += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
         }
 
+        // Helper method to find visual children of a specific type
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
+        {
+            if (depObj != null)
+            {
+                for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(depObj); i++)
+                {
+                    DependencyObject child = System.Windows.Media.VisualTreeHelper.GetChild(depObj, i);
+                    if (child != null && child is T)
+                    {
+                        yield return (T)child;
+                    }
+
+                    foreach (T childOfChild in FindVisualChildren<T>(child))
+                    {
+                        yield return childOfChild;
+                    }
+                }
+            }
+        }
+
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             LogDebug("MainWindow_Loaded started");
