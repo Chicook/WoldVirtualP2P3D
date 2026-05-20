@@ -17,23 +17,17 @@ func _ready():
 	panel.size = Vector2(350, 180)
 	add_child(panel)
 	
-	# Aplicar diseño translúcido (Glassmorphism)
-	var sb = StyleBoxFlat.new()
-	sb.bg_color = Color(0.07, 0.09, 0.15, 0.75) # Fondo azul oscuro muy translúcido
-	sb.set_corner_radius_all(10)
-	sb.border_width_left = 2
-	sb.border_width_top = 2
-	sb.border_width_right = 2
-	sb.border_width_bottom = 2
-	sb.border_color = Color(0.27, 0.64, 0.62, 0.6) # Verde esmeralda translúcido brillante
-	panel.add_theme_stylebox_override("panel", sb)
+	# Usar StyleBoxEmpty para que no tenga recuadro (fondo invisible y sin bordes)
+	var sb_empty = StyleBoxEmpty.new()
+	panel.add_theme_stylebox_override("panel", sb_empty)
 	
-	# Título de cabecera del chat
+	# Título de cabecera del chat (se oculta para dejar solo los mensajes)
 	var title = Label.new()
 	title.text = "💬 CHAT DE PROXIMIDAD"
 	title.position = Vector2(10, 5)
 	title.add_theme_font_size_override("font_size", 11)
 	title.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
+	title.visible = false # Ocultar cabecera
 	panel.add_child(title)
 	
 	# RichTextLabel para el historial de chat con scroll automático
@@ -41,8 +35,8 @@ func _ready():
 	chat_log.name = "ChatLog"
 	chat_log.bbcode_enabled = true
 	chat_log.scroll_following = true
-	chat_log.position = Vector2(10, 25)
-	chat_log.size = Vector2(330, 145)
+	chat_log.position = Vector2(0, 0)
+	chat_log.size = Vector2(350, 180)
 	chat_log.add_theme_font_size_override("normal_font_size", 12)
 	panel.add_child(chat_log)
 

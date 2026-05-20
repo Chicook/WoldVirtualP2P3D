@@ -670,6 +670,13 @@ namespace VisorSingularity
             const int WM_SYSKEYDOWN = 0x0104;
             const int WM_SYSKEYUP = 0x0105;
 
+            // Si el foco está en un control de texto (TextBox o PasswordBox), permitimos escribir normalmente y no lo enviamos a Godot
+            var focusedElement = System.Windows.Input.Keyboard.FocusedElement;
+            if (focusedElement is System.Windows.Controls.TextBox || focusedElement is System.Windows.Controls.PasswordBox)
+            {
+                return;
+            }
+
             if (_godotHwnd != IntPtr.Zero)
             {
                 if (this.IsActive)
