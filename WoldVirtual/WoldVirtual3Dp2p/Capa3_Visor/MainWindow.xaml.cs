@@ -27,6 +27,7 @@ namespace VisorSingularity
     {
         // ── Datos de la Sesión (minimal for now) ──
         private string _username = "";
+        private string _password = "";
         private string _wallet = "";
         private string _islandId = "137 : 190.1.0";
         private string _hardwareFingerprint = ""; // Added for hardware fingerprint
@@ -262,6 +263,7 @@ namespace VisorSingularity
                 string identityJsonContent = $@"{{
     ""user"": {{
         ""username"": ""{TxtUsername.Text}"",
+        ""password"": ""{TxtPassword.Password}"",
         ""registrationDate"": ""{DateTime.Now:yyyy-MM-dd HH:mm:ss}"",
         ""uuid"": ""{recoveryHash}""
     }},
@@ -498,6 +500,7 @@ namespace VisorSingularity
                 
                 // Final step, enter the metaverse
                 _username = TxtUsername.Text;
+                _password = TxtPassword.Password;
                 _wallet = TxtWalletAddress.Text;
                 
                 // Check if this is the first node (no island coordinates set)
