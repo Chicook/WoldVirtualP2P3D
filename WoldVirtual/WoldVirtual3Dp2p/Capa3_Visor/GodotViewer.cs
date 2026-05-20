@@ -12,7 +12,9 @@ namespace VisorSingularity
         private readonly string _godotProjectPath;
         private readonly string _godotArgs;
 
-        private Panel _hostPanel; // Windows Forms Panel to host Godot
+        private Panel? _hostPanel; // Windows Forms Panel to host Godot
+
+        public Panel? HostPanel => _hostPanel;
 
         public GodotViewer(GodotEmbedder godotEmbedder, string godotExecutablePath, string godotProjectPath, string godotArgs)
         {

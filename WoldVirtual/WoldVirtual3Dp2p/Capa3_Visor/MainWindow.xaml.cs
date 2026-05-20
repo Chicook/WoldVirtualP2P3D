@@ -104,7 +104,7 @@ namespace VisorSingularity
                 GodotHost.Child = host; // Assign the WindowsFormsHost to the WPF element
 
                 LogDebug("GodotViewer assigned to GodotHost.Child.");
-                await _godotEmbedder.LaunchAndEmbed(_godotExecutablePath, _godotProjectPath, godotViewer.HostPanel, godotArgs);
+                // GodotViewer will launch Godot internally in BuildWindowCore
             }
             catch (Exception ex)
             {
