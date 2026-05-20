@@ -22,25 +22,11 @@ using Button = System.Windows.Controls.Button;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 
-namespace VisorSingularity
-{
-    public partial class MainWindow : Window
-    {
-        // ── Win32: solo lo estrictamente necesario en MainWindow ──
-        [DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-        [DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
         // ── Datos de la Sesión (minimal for now) ──
         private string _username = "";
         private string _wallet = "";
         private string _islandId = "137 : 190.1.0";
+        private string _hardwareFingerprint = ""; // Added for hardware fingerprint
 
         // ── Componentes de Ejecución (minimal for now) ──
         private Process? _godotProcess;
@@ -72,9 +58,13 @@ namespace VisorSingularity
         private async void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             LogDebug("MainWindow Loaded.");
+            // Generate hardware fingerprint on load
+            _hardwareFingerprint = GenerateHardwareFingerprint();
+            TxtHardwareFingerprint.Text = _hardwareFingerprint;
+
             // For initial testing, launch Godot directly from here.
             // Later, this will be called after the wizard is completed.
-            await LaunchGodot(_username, _wallet, _islandId, false);
+            // await LaunchGodot(_username, _wallet, _islandId, false);
         }
 
         private void MainWindow_Closed(object? sender, EventArgs e)
@@ -179,6 +169,235 @@ namespace VisorSingularity
         // STEP 1 Handlers
         private void BtnGenerateSignature_Click(object sender, RoutedEventArgs e)
         {
+            string recoveryHash = Guid.NewGuid().ToString("D").ToUpper();
+            if (GenerateIdentityZip(recoveryHash, false))
+            {
+                TxtUuid.Text = recoveryHash;
+                BtnStep1Next.IsEnabled = true; // ¡Habilitar el botón Siguiente!
+                TxtFooterStatus.Text = "Firma Digital guardada. Haz clic en Siguiente para continuar.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+            }
+            else
+            {
+                TxtFooterStatus.Text = "Debes guardar tu Firma Digital (.zip) para poder continuar.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
+            }
+        }
+
+        private void BtnStep1Next_Click(object sender, RoutedEventArgs e)
+        {
+            GoToNextStep();
+        }
+
+        // ── Identity ZIP Generation ──
+        private bool GenerateIdentityZip(string recoveryHash, bool autoSilent)
+        {
+            try
+            {
+                string zipFilePath = "";
+                string zipFileName = "Wold_Firma_Digital.zip";
+
+                if (autoSilent)
+                {
+                    // Guardado automático silencioso en Escritorio al arrancar
+                    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                    zipFilePath = Path.Combine(desktopPath, zipFileName);
+                }
+                else
+                {
+                    // Abrir diálogo nativo de Windows (SaveFileDialog) para elegir directorio y nombre de archivo
+                    var saveFileDialog = new Microsoft.Win32.SaveFileDialog();
+                    saveFileDialog.Filter = "Archivo ZIP (*.zip)|*.zip";
+                    saveFileDialog.FileName = zipFileName;
+                    saveFileDialog.Title = "Selecciona el directorio para guardar tu Firma Digital";
+                    saveFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+                    if (saveFileDialog.ShowDialog() == true)
+                    {
+                        zipFilePath = saveFileDialog.FileName;
+                        zipFileName = Path.GetFileName(zipFilePath);
+                    }
+                    else
+                    {
+                        TxtFooterStatus.Text = "Exportación de firma cancelada por el usuario.";
+                        TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
+                        return false;
+                    }
+                }
+
+                // Create a temporary directory for the files to be zipped
+                string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempDir);
+
+                // Create identity.json
+                string identityJsonContent = $"{{\"username\": \"{TxtUsername.Text}\", \"hardwareFingerprint\": \"{_hardwareFingerprint}\", \"recoveryHash\": \"{recoveryHash}\"}}";
+                File.WriteAllText(Path.Combine(tempDir, "identity.json"), identityJsonContent);
+
+                // Create wallet.json (placeholder for now)
+                string walletJsonContent = $"{{\"walletAddress\": \"{_wallet}\"}}";
+                File.WriteAllText(Path.Combine(tempDir, "wallet.json"), walletJsonContent);
+
+                // Create the ZIP file
+                if (File.Exists(zipFilePath))
+                {
+                    File.Delete(zipFilePath);
+                }
+                ZipFile.CreateFromDirectory(tempDir, zipFilePath);
+
+                // Clean up temporary directory
+                Directory.Delete(tempDir, true);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error generating identity ZIP: {ex.Message}");
+                MessageBox.Show($"Error al generar la firma digital: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        // STEP 2 Handlers
+        private void BtnConnectMetaMask_Click(object sender, RoutedEventArgs e)
+        {
+            // Logic for connecting MetaMask will go here
+            // For now, just enable the next button and set a dummy wallet
+            TxtWalletAddress.Text = "0x1234...ABCD"; // Dummy wallet
+            BtnStep2Next.IsEnabled = true;
+            TxtFooterStatus.Text = "MetaMask conectado. Haz clic en Siguiente para continuar.";
+            TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+        }
+
+        private void BtnStep2Back_Click(object sender, RoutedEventArgs e)
+        {
+            GoToPreviousStep();
+        }
+
+        private void BtnStep2Next_Click(object sender, RoutedEventArgs e)
+        {
+            GoToNextStep();
+        }
+
+        // STEP 3 Handlers
+        private void BtnSelectIsland_Click(object sender, RoutedEventArgs e)
+        {
+            GenerateRandomIslandCoordinates();
+            TxtFooterStatus.Text = "Isla seleccionada. Haz clic en Siguiente para continuar.";
+            TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+        }
+
+        private void BtnStep3Back_Click(object sender, RoutedEventArgs e)
+        {
+            GoToPreviousStep();
+        }
+
+        private void BtnStep3Next_Click(object sender, RoutedEventArgs e)
+        {
+            GoToNextStep();
+        }
+
+        // ── Island Coordinates Generation ──
+        private void GenerateRandomIslandCoordinates()
+        {
+            Random rand = new Random();
+            int x = rand.Next(0, 1000);
+            int y = rand.Next(0, 1000);
+            int z = rand.Next(0, 1000);
+            TxtIslandCoordinates.Text = $"{x}:{y}:{z}";
+            TxtIslandName.Text = $"Isla {x}-{y}-{z}";
+        }
+
+        // STEP 4 Handlers
+        private void BtnEnterMetaverse_Click(object sender, RoutedEventArgs e)
+        {
+            // Final step, enter the metaverse
+            _username = TxtUsername.Text;
+            _wallet = TxtWalletAddress.Text;
+            _islandId = TxtIslandCoordinates.Text; // Using coordinates as island ID for now
+
+            EnterDashboard(true); // Assuming new registration for now
+        }
+
+        private void BtnStep4Back_Click(object sender, RoutedEventArgs e)
+        {
+            GoToPreviousStep();
+        }
+
+        // ── Hardware Fingerprint Generation ──
+        private string GenerateHardwareFingerprint()
+        {
+            try
+            {
+                StringBuilder sb = new StringBuilder();
+
+                // Get CPU ID
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        sb.Append(mo["ProcessorId"]?.ToString());
+                    }
+                }
+
+                // Get BaseBoard Serial Number
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_BaseBoard"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        sb.Append(mo["SerialNumber"]?.ToString());
+                    }
+                }
+
+                // Get OS Serial Number
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_OperatingSystem"))
+                    {
+                        foreach (ManagementObject mo in searcher.Get())
+                        {
+                            sb.Append(mo["SerialNumber"]?.ToString());
+                        }
+                    }
+
+                // Hash the combined string
+                using (SHA256 sha256Hash = SHA256.Create())
+                {
+                    byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
+                    StringBuilder builder = new StringBuilder();
+                    for (int i = 0; i < bytes.Length; i++)
+                    {
+                        builder.Append(bytes[i].ToString("x2"));
+                    }
+                    return builder.ToString().ToUpper();
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error generating hardware fingerprint: {ex.Message}");
+                return "ERROR_FINGERPRINT";
+            }
+        }
+    }
+}
+
+        // ── Wizard Navigation ──
+        private void GoToNextStep()
+        {
+            if (WizardTabControl.SelectedIndex < WizardTabControl.Items.Count - 1)
+            {
+                WizardTabControl.SelectedIndex++;
+            }
+        }
+
+        private void GoToPreviousStep()
+        {
+            if (WizardTabControl.SelectedIndex > 0)
+            {
+                WizardTabControl.SelectedIndex--;
+            }
+        }
+
+        // STEP 1 Handlers
+        private void BtnGenerateSignature_Click(object sender, RoutedEventArgs e)
+        {
             // Logic for generating signature will go here
             // For now, just enable the next button
             BtnStep1Next.IsEnabled = true;
@@ -247,6 +466,122 @@ namespace VisorSingularity
         private void BtnStep4Back_Click(object sender, RoutedEventArgs e)
         {
             GoToPreviousStep();
+        }
+
+        // ── Hardware Fingerprint Generation ──
+        private string GenerateHardwareFingerprint()
+        {
+            try
+            {
+                StringBuilder sb = new StringBuilder();
+
+                // Get CPU ID
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        sb.Append(mo["ProcessorId"]?.ToString());
+                    }
+                }
+
+                // Get BaseBoard Serial Number
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_BaseBoard"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        sb.Append(mo["SerialNumber"]?.ToString());
+                    }
+                }
+
+                // Get OS Serial Number
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_OperatingSystem"))
+                    {
+                        foreach (ManagementObject mo in searcher.Get())
+                        {
+                            sb.Append(mo["SerialNumber"]?.ToString());
+                        }
+                    }
+
+                // Hash the combined string
+                using (SHA256 sha256Hash = SHA256.Create())
+                {
+                    byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
+                    StringBuilder builder = new StringBuilder();
+                    for (int i = 0; i < bytes.Length; i++)
+                    {
+                        builder.Append(bytes[i].ToString("x2"));
+                    }
+                    return builder.ToString().ToUpper();
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error generating hardware fingerprint: {ex.Message}");
+                return "ERROR_FINGERPRINT";
+            }
+        }
+
+        // ── MetaMask HTTP Bridge ──
+        private async Task<string> StartMetaMaskBridge(CancellationToken cancellationToken)
+        {
+            _httpListener = new HttpListener();
+            _httpListener.Prefixes.Add(MetaMaskBridgeUrl);
+            _httpListener.Start();
+            LogDebug($"HTTP Listener started on {MetaMaskBridgeUrl}");
+
+            // Open browser to initiate MetaMask connection
+            string metamaskConnectUrl = $"https://metamask.github.io/metamask-deeplinks/connect?dappUrl={HttpUtility.UrlEncode(MetaMaskBridgeUrl)}";
+            Process.Start(new ProcessStartInfo(metamaskConnectUrl) { UseShellExecute = true });
+            LogDebug($"Opened browser for MetaMask connection: {metamaskConnectUrl}");
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    HttpListenerContext context = await _httpListener.GetContextAsync();
+                    LogDebug("Received HTTP request.");
+
+                    // Process the request
+                    string responseString = "<html><body><h1>MetaMask Connected!</h1><p>You can close this window.</p></body></html>";
+                    byte[] buffer = Encoding.UTF8.GetBytes(responseString);
+
+                    context.Response.ContentLength64 = buffer.Length;
+                    context.Response.ContentType = "text/html";
+                    context.Response.OutputStream.Write(buffer, 0, buffer.Length);
+                    context.Response.OutputStream.Close();
+
+                    // Extract wallet address from query string
+                    string? walletAddress = HttpUtility.ParseQueryString(context.Request.Url?.Query ?? "").Get("address");
+                    LogDebug($"Wallet address received: {walletAddress}");
+
+                    return walletAddress ?? string.Empty;
+                }
+            }
+            catch (HttpListenerException ex) when (ex.ErrorCode == 995) // Operation canceled by user
+            {
+                LogDebug("HTTP Listener operation canceled.");
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error in HTTP Listener: {ex.Message}");
+            }
+            finally
+            {
+                StopMetaMaskBridge();
+            }
+            return string.Empty;
+        }
+
+        private void StopMetaMaskBridge()
+        {
+            if (_httpListener != null && _httpListener.IsListening)
+            {
+                _ctsMetaMaskBridge.Cancel();
+                _httpListener.Stop();
+                _httpListener.Close();
+                _httpListener = null;
+                LogDebug("HTTP Listener stopped.");
+            }
         }
     }
 }
