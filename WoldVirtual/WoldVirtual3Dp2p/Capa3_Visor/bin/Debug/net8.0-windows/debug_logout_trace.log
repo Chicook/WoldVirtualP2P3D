@@ -86,3 +86,7 @@
 [19:18:39.991] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
 [19:18:42.835] Cleanup completed
 [19:18:44.093] 🔍 Buscando botón en el árbol visual...
+[19:18:48.191] 🔍 Total de botones en el árbol visual: 0
+[19:18:52.399] MainWindow_Loaded started
+[19:18:56.629] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:19:00.714] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
