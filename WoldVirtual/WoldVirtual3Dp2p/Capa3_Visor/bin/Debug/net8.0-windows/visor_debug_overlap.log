@@ -336,3 +336,21 @@
 [18:12:59.188] Cleanup: Posting WM_CLOSE to Godot window
 [18:13:03.281] Cleanup: Unsubscribing from Godot process Exited event
 [18:13:07.387] Cleanup completed
+[18:23:11.000] MainWindow constructor started
+[18:23:15.305] InitializeComponent completed
+[18:23:19.511] MainWindow_Loaded started
+[18:23:23.681] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[18:23:27.748] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[18:23:31.804] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[18:24:25.864] EnterDashboard called - isNewRegistration: False
+[18:24:30.094] Godot Process ID: 2792
+[18:25:27.771] Godot process exited - shutting down visor
+[18:25:31.873] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[18:25:34.957] MainWindow_Closed called - forcing exit
+[18:25:39.073] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[18:25:43.149] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=2792
+[18:25:47.243] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[18:25:51.330] Cleanup: Hiding Godot window via _viewer
+[18:25:55.445] Cleanup: Posting WM_CLOSE to Godot window
+[18:25:59.555] Cleanup: Unsubscribing from Godot process Exited event
+[18:26:03.653] Cleanup completed

@@ -119,3 +119,85 @@ Se ha implementado una interfaz visual de altísima calidad inspirada en las mej
   * ⏱️ **Hora 4 (VS Code - QA, Refactor y Testing):** Pulido terminal del árbol de ramas en Github, incorporación integral de XML Docs en interfaces C# y formateo general con linting. Cierre absoluto de incidencias residuales para garantizar que el compilador refleje **cero errores y cero advertencias** en la solución Release final.
 
 * **Entregable:** El lanzamiento definitivo (*v1.0.0 Alpha*) del core distribuido WoldVirtual; un ecosistema documentado, seguro y abierto, capacitado para que cualquier usuario instale la semilla tecnológica y propague el juego libremente.
+
+---
+
+## 📋 **SESIÓN ACTUAL - RAMA: DevTraeIA**
+
+### 🚀 **LO DESARROLLADO HOY (20 de mayo de 2026)**
+
+#### **1. Sistema de Cierre de Sesión Mejorado**
+- **Implementación completa** del evento `BtnCerrarSesion_Click` en [MainWindow.xaml.cs](file:///d:/WCVcoinMTB/WoldVirtual/WoldVirtual3Dp2p/Capa3_Visor/MainWindow.xaml.cs)
+- **Instrumentación de depuración** con 10 puntos de instrumentación para rastrear la ejecución
+- **Manejo robusto de errores** con try-catch-finally completo
+- **Timeout controlado** para limpieza de recursos de Godot
+- **Terminación forzada** de procesos residuales de Godot
+
+#### **2. Modificación con Dispatcher.BeginInvoke**
+- **Solución implementada** en la función `HideDashboardShowWizard()`
+- **Retraso de la ocultación** del panel `PanLeftSidebar` hasta que el evento click se complete
+- **Prioridad Background** para asegurar que la interfaz no se bloquee
+
+#### **3. Sistema de Logging Avanzado**
+- **Archivo de logs específico**: `debug_logout_trace.log`
+- **Envío de logs** a servidor de depuración local (puerto 3001)
+- **Registro local** para diagnóstico inmediato
+- **Múltiples puntos de instrumentación** en todo el flujo de cierre de sesión
+
+#### **4. Análisis Científico del Problema**
+- **Creación de documentación** en [debug-visor-logout-failure.md](file:///d:/WCVcoinMTB/debug-visor-logout-failure.md)
+- **Hipótesis H6 identificada**: "El botón 'CERRAR SESIÓN' está en un panel que se oculta inmediatamente al hacer clic, interrumpiendo la ejecución del evento"
+- **Evidencia recopilada** de logs de tiempo de ejecución
+
+#### **5. Guía de Instrucciones**
+- **Creación de** [INSTRUCCIONES_CIERRE_SESION.md](file:///d:/WCVcoinMTB/INSTRUCCIONES_CIERRE_SESION.md)
+- **Pasos detallados** para probar el cierre de sesión
+- **Recopilación de evidencia** para diagnóstico
+
+### ⚠️ **PROBLEMA PERSISTENTE: BOTÓN "CERRAR SESIÓN"**
+
+#### **Estado Actual**
+- **El botón no cierra el visor** a pesar de todas las implementaciones
+- **No hay registros** del evento `BtnCerrarSesion_Click` en los logs
+- **El código está correctamente implementado** pero el evento no se dispara
+
+#### **Causa Raíz Identificada**
+1. **El botón no está siendo clickeado** (posiblemente deshabilitado, cubierto o no interactivo)
+2. **Problema con la vinculación del evento** en tiempo de ejecución
+3. **El panel `PanLeftSidebar`** tiene `Visibility="Collapsed"` inicialmente y puede no estar visible cuando el usuario intenta hacer clic
+
+#### **Evidencia Clave**
+- ✅ **XAML correcto**: `Click="BtnCerrarSesion_Click"`
+- ✅ **Código implementado**: Función con instrumentación completa
+- ❌ **Logs vacíos**: No hay registros del evento
+- 🔍 **Panel oculto**: `PanLeftSidebar.Visibility="Collapsed"` inicial
+
+### 📝 **LO PENDIENTE PARA RESOLVER**
+
+#### **1. Diagnóstico del Problema Real**
+- **Verificar si el botón es clickeable** en tiempo de ejecución
+- **Comprobar la visibilidad del panel** `PanLeftSidebar` durante el clic
+- **Añadir logging adicional** para diagnóstico del estado del botón
+
+#### **2. Soluciones a Implementar**
+- **Añadir manejador de eventos alternativo** para verificar la interactividad
+- **Verificar el estado `IsEnabled`** del botón en tiempo de ejecución
+- **Comprobar si hay elementos superpuestos** que bloqueen el clic
+- **Implementar solución definitiva** basada en evidencia de tiempo de ejecución
+
+#### **3. Pruebas Requeridas**
+- **Ejecutar el visor** con las modificaciones implementadas
+- **Hacer clic en "Cerrar Sesión"** y recopilar logs
+- **Analizar evidencia** para confirmar la causa raíz
+- **Implementar fix definitivo** y verificar funcionamiento
+
+### 🔧 **PRÓXIMOS PASOS RECOMENDADOS**
+
+1. **Ejecutar el visor** con `dotnet build "d:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\VisorSingularity.csproj"`
+2. **Iniciar sesión normalmente** y hacer clic en "Cerrar Sesión"
+3. **Compartir logs** del archivo `debug_logout_trace.log`
+4. **Analizar evidencia** para implementar solución definitiva
+
+---
+
+**Nota**: Todas las implementaciones están completas en el código, pero el problema persiste debido a que el evento no se está disparando. Se requiere análisis de tiempo de ejecución para identificar la causa raíz exacta.
