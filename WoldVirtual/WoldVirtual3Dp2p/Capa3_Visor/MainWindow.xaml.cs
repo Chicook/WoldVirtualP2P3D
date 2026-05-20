@@ -69,6 +69,18 @@ namespace VisorSingularity
         
         private static void SendDebugLog(string message)
         {
+            // Escribir log local para depuración inmediata
+            try
+            {
+                string localLogPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_logout_trace.log");
+                System.IO.File.AppendAllText(localLogPath, $"[{DateTime.Now:HH:mm:ss.fff}] {message}\r\n");
+            }
+            catch { }
+            
+            // También escribir a consola para depuración
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] {message}");
+            
+            // Intentar enviar al servidor de depuración (opcional)
             try
             {
                 using (var client = new System.Net.WebClient())
@@ -81,7 +93,7 @@ namespace VisorSingularity
             }
             catch
             {
-                // Silenciar errores de envío de logs
+                // Silenciar errores de envío de logs al servidor
             }
         }
 
