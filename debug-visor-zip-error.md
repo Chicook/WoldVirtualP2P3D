@@ -50,13 +50,13 @@ El usuario reporta que hay un error al intentar guardar el archivo ZIP que conti
 4. Verificar que el método `EscapeJsonString` esté funcionando correctamente
 
 ## 📊 Evidence Collection Status
-- [ ] Hipótesis 1: Diálogo de guardado
-- [ ] Hipótesis 2: Directorio temporal
-- [ ] Hipótesis 3: Información WMI
-- [ ] Hipótesis 4: Formato JSON
-- [ ] Hipótesis 5: Permisos de escritura
+- [ ] Hipótesis 1: Diálogo de guardado - Instrumentado
+- [ ] Hipótesis 2: Directorio temporal - Instrumentado
+- [ ] Hipótesis 3: Información WMI - Instrumentado
+- [ ] Hipótesis 4: Formato JSON - Instrumentado
+- [ ] Hipótesis 5: Permisos de escritura - Instrumentado
 
 ## 🔄 Session Status
-**Estado**: [OPEN] - Instrumentación en progreso
+**Estado**: [OPEN] - Instrumentación completada, recopilando evidencia
 **Última actualización**: 2026-05-20
-**Próximo paso**: Instrumentar el método `GenerateIdentityZip` con logs detallados
+**Próximo paso**: Ejecutar la aplicación y recopilar logs de depuración
