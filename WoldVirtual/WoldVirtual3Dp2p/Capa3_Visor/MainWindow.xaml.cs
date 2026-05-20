@@ -603,7 +603,7 @@ namespace VisorSingularity
         }
 
         // STEP 4 Handlers
-        private async void BtnEnterMetaverse_Click(object sender, RoutedEventArgs e)
+        private void BtnEnterMetaverse_Click(object sender, RoutedEventArgs e)
         {
             try
             {
