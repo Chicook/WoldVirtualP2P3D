@@ -178,7 +178,7 @@ namespace VisorSingularity
         }
 
         // Method to launch and embed Godot
-        private async Task LaunchGodot(string username, string wallet, string islandId, bool isNewRegistration)
+        private void LaunchGodot(string username, string wallet, string islandId, bool isNewRegistration)
         {
             LogDebug($"LaunchGodot called. User: {username}, Wallet: {wallet}, Island: {islandId}, NewReg: {isNewRegistration}");
 
@@ -640,7 +640,7 @@ namespace VisorSingularity
                 
                 // Launch Godot with the EscenaPrincipal.tscn
                 // The Godot project path should point to the project containing EscenaPrincipal.tscn
-                await LaunchGodot(_username, _wallet, _islandId, true);
+                LaunchGodot(_username, _wallet, _islandId, true);
                 
                 TxtFooterStatus.Text = "¡Bienvenido al Metaverso Wold Virtual!";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
