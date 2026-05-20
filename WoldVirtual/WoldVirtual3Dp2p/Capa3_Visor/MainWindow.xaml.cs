@@ -160,14 +160,31 @@ namespace VisorSingularity
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
-            LogDebug("MainWindow Loaded.");
-            // Generate hardware fingerprint on load
-            _hardwareFingerprint = GenerateHardwareFingerprint();
-            TxtHardwareFingerprint.Text = _hardwareFingerprint;
+            try
+            {
+                LogDebug("MainWindow Loaded.");
+                // Generate hardware fingerprint on load
+                _hardwareFingerprint = GenerateHardwareFingerprint();
+                
+                // Check if TxtHardwareFingerprint exists before setting text
+                if (TxtHardwareFingerprint != null)
+                {
+                    TxtHardwareFingerprint.Text = _hardwareFingerprint;
+                }
+                else
+                {
+                    LogDebug("Warning: TxtHardwareFingerprint is null");
+                }
 
-            // For initial testing, launch Godot directly from here.
-            // Later, this will be called after the wizard is completed.
-            // LaunchGodot(_username, _wallet, _islandId, false);
+                // For initial testing, launch Godot directly from here.
+                // Later, this will be called after the wizard is completed.
+                // LaunchGodot(_username, _wallet, _islandId, false);
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error in MainWindow_Loaded: {ex.Message}");
+                MessageBox.Show($"Error al cargar la ventana: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void MainWindow_Closed(object? sender, EventArgs e)
@@ -333,6 +350,8 @@ namespace VisorSingularity
         {
             try
             {
+                LogDebug($"[DEBUG-ZIP] Iniciando generación de ZIP. RecoveryHash: {recoveryHash}, AutoSilent: {autoSilent}");
+                
                 string zipFilePath = "";
                 string zipFileName = "Wold_Firma_Digital.zip";
 
@@ -341,6 +360,7 @@ namespace VisorSingularity
                     // Guardado automático silencioso en Escritorio al arrancar
                     string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                     zipFilePath = Path.Combine(desktopPath, zipFileName);
+                    LogDebug($"[DEBUG-ZIP] Modo autoSilent. Ruta: {zipFilePath}");
                 }
                 else
                 {
@@ -351,13 +371,16 @@ namespace VisorSingularity
                     saveFileDialog.Title = "Selecciona el directorio para guardar tu Firma Digital";
                     saveFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
+                    LogDebug($"[DEBUG-ZIP] Abriendo SaveFileDialog...");
                     if (saveFileDialog.ShowDialog() == true)
                     {
                         zipFilePath = saveFileDialog.FileName;
                         zipFileName = Path.GetFileName(zipFilePath);
+                        LogDebug($"[DEBUG-ZIP] Diálogo confirmado. Ruta: {zipFilePath}, Nombre: {zipFileName}");
                     }
                     else
                     {
+                        LogDebug($"[DEBUG-ZIP] Diálogo cancelado por el usuario");
                         TxtFooterStatus.Text = "Exportación de firma cancelada por el usuario.";
                         TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
                         return false;
@@ -366,18 +389,31 @@ namespace VisorSingularity
 
                 // Create a temporary directory for the files to be zipped
                 string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                LogDebug($"[DEBUG-ZIP] Creando directorio temporal: {tempDir}");
                 Directory.CreateDirectory(tempDir);
+                LogDebug($"[DEBUG-ZIP] Directorio temporal creado exitosamente");
 
                 // Get detailed hardware information
+                LogDebug($"[DEBUG-ZIP] Obteniendo información del hardware...");
                 string osInfo = GetOperatingSystemInfo();
                 string cpuInfo = GetProcessorInfo();
                 string mbInfo = GetMotherboardInfo();
+                
+                LogDebug($"[DEBUG-ZIP] osInfo: {osInfo}");
+                LogDebug($"[DEBUG-ZIP] cpuInfo: {cpuInfo}");
+                LogDebug($"[DEBUG-ZIP] mbInfo: {mbInfo}");
 
                 // Create identity.json with detailed information
+                string usernameEscaped = EscapeJsonString(TxtUsername.Text);
+                string passwordEscaped = EscapeJsonString(TxtPassword.Password);
+                string walletEscaped = EscapeJsonString(_wallet);
+                
+                LogDebug($"[DEBUG-ZIP] Valores escapados - Usuario: {usernameEscaped}, Password: [PROTEGIDO], Wallet: {walletEscaped}");
+                
                 string identityJsonContent = $@"{{
     ""user"": {{
-        ""username"": ""{TxtUsername.Text}"",
-        ""password"": ""{TxtPassword.Password}"",
+        ""username"": ""{usernameEscaped}"",
+        ""password"": ""{passwordEscaped}"",
         ""registrationDate"": ""{DateTime.Now:yyyy-MM-dd HH:mm:ss}"",
         ""uuid"": ""{recoveryHash}""
     }},
@@ -388,11 +424,17 @@ namespace VisorSingularity
         ""motherboard"": {mbInfo}
     }},
     ""wallet"": {{
-        ""address"": ""{_wallet}"",
+        ""address"": ""{walletEscaped}"",
         ""connectedDate"": ""{DateTime.Now:yyyy-MM-dd HH:mm:ss}""
     }}
 }}";
-                File.WriteAllText(Path.Combine(tempDir, "identity.json"), identityJsonContent);
+                
+                LogDebug($"[DEBUG-ZIP] JSON generado (primeras 200 chars): {identityJsonContent.Substring(0, Math.Min(200, identityJsonContent.Length))}");
+                
+                string identityJsonPath = Path.Combine(tempDir, "identity.json");
+                LogDebug($"[DEBUG-ZIP] Guardando identity.json en: {identityJsonPath}");
+                File.WriteAllText(identityJsonPath, identityJsonContent);
+                LogDebug($"[DEBUG-ZIP] identity.json guardado exitosamente");
 
                 // Create hardware_details.json
                 string hardwareDetails = $@"{{
@@ -401,23 +443,36 @@ namespace VisorSingularity
     ""processor"": {cpuInfo},
     ""motherboard"": {mbInfo}
 }}";
-                File.WriteAllText(Path.Combine(tempDir, "hardware_details.json"), hardwareDetails);
+                
+                string hardwareDetailsPath = Path.Combine(tempDir, "hardware_details.json");
+                LogDebug($"[DEBUG-ZIP] Guardando hardware_details.json en: {hardwareDetailsPath}");
+                File.WriteAllText(hardwareDetailsPath, hardwareDetails);
+                LogDebug($"[DEBUG-ZIP] hardware_details.json guardado exitosamente");
 
                 // Create the ZIP file
+                LogDebug($"[DEBUG-ZIP] Creando archivo ZIP en: {zipFilePath}");
                 if (File.Exists(zipFilePath))
                 {
+                    LogDebug($"[DEBUG-ZIP] Archivo ZIP existente, eliminando...");
                     File.Delete(zipFilePath);
+                    LogDebug($"[DEBUG-ZIP] Archivo ZIP anterior eliminado");
                 }
+                
                 ZipFile.CreateFromDirectory(tempDir, zipFilePath);
+                LogDebug($"[DEBUG-ZIP] Archivo ZIP creado exitosamente. Tamaño: {new FileInfo(zipFilePath).Length} bytes");
 
                 // Clean up temporary directory
+                LogDebug($"[DEBUG-ZIP] Limpiando directorio temporal: {tempDir}");
                 Directory.Delete(tempDir, true);
+                LogDebug($"[DEBUG-ZIP] Directorio temporal eliminado");
 
+                LogDebug($"[DEBUG-ZIP] Generación de ZIP completada exitosamente");
                 return true;
             }
             catch (Exception ex)
             {
-                LogDebug($"Error generating identity ZIP: {ex.Message}");
+                LogDebug($"[DEBUG-ZIP] ERROR generando ZIP: {ex.Message}");
+                LogDebug($"[DEBUG-ZIP] StackTrace: {ex.StackTrace}");
                 MessageBox.Show($"Error al generar la firma digital: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
@@ -787,6 +842,55 @@ namespace VisorSingularity
                 _httpListener = null;
                 LogDebug("HTTP Listener stopped.");
             }
+        }
+
+        // Helper method to escape JSON strings
+        private string EscapeJsonString(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                return "";
+            }
+            
+            StringBuilder sb = new StringBuilder();
+            foreach (char c in input)
+            {
+                switch (c)
+                {
+                    case '\\':
+                        sb.Append("\\\\");
+                        break;
+                    case '\"':
+                        sb.Append("\\\"");
+                        break;
+                    case '\b':
+                        sb.Append("\\b");
+                        break;
+                    case '\f':
+                        sb.Append("\\f");
+                        break;
+                    case '\n':
+                        sb.Append("\\n");
+                        break;
+                    case '\r':
+                        sb.Append("\\r");
+                        break;
+                    case '\t':
+                        sb.Append("\\t");
+                        break;
+                    default:
+                        if (c < 32 || c > 126)
+                        {
+                            sb.AppendFormat("\\u{0:X4}", (int)c);
+                        }
+                        else
+                        {
+                            sb.Append(c);
+                        }
+                        break;
+                }
+            }
+            return sb.ToString();
         }
 
         // Helper method to parse query string manually

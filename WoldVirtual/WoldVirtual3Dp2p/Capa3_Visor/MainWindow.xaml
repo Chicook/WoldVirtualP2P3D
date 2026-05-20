@@ -129,7 +129,7 @@
                                 <TextBox x:Name="TxtUsername" Style="{StaticResource CyberTextBox}" Margin="0,0,0,20"/>
 
                                 <TextBlock Text="Contraseña" Style="{StaticResource CyberLabel}"/>
-                                <PasswordBox x:Name="TxtPassword" Style="{StaticResource CyberTextBox}" Margin="0,0,0,20"/>
+                                <PasswordBox x:Name="TxtPassword" Style="{StaticResource CyberPasswordBox}" Margin="0,0,0,20"/>
 
                                 <TextBlock Text="Firma de Hardware (Fingerprint)" Style="{StaticResource CyberLabel}"/>
                                 <TextBox x:Name="TxtHardwareFingerprint" Style="{StaticResource CyberTextBox}" IsReadOnly="True" Text="Generando..." Margin="0,0,0,20"/>
