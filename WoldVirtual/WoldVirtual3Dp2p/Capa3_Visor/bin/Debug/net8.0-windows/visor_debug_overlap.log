@@ -187,3 +187,31 @@
 [20:45:43.226] Cleanup started
 [20:45:43.226] Cleanup: Hiding and closing Godot window natively
 [20:45:43.229] Cleanup completed
+[21:58:18.705] MainWindow constructor started
+[21:58:18.855] InitializeComponent completed
+[21:58:19.005] MainWindow_Loaded started
+[21:58:19.109] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[21:58:19.111] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[21:58:19.111] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[21:59:23.442] EnterDashboard called - isNewRegistration: False
+[21:59:23.649] Godot Process ID: 1200
+[22:00:25.125] MainWindow_Closed called - forcing exit
+[22:00:25.126] Cleanup started
+[22:00:25.126] Cleanup: Hiding and closing Godot window natively
+[22:00:25.252] Cleanup: Killing Godot process
+[22:00:25.310] Godot process exited - shutting down visor
+[22:00:25.310] Cleanup started
+[22:00:25.310] Cleanup: Hiding and closing Godot window natively
+[22:00:25.314] Cleanup completed
+[17:21:30.522] MainWindow constructor started
+[17:21:30.713] InitializeComponent completed
+[17:21:30.904] MainWindow_Loaded started
+[17:21:31.600] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[17:21:31.602] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[17:21:31.603] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[17:22:38.474] EnterDashboard called - isNewRegistration: False
+[17:22:40.363] Godot Process ID: 3048
+[17:23:33.607] Godot process exited - shutting down visor
+[17:23:33.608] Cleanup started
+[17:23:33.611] Cleanup: Hiding and closing Godot window natively
+[17:23:33.615] Cleanup completed
