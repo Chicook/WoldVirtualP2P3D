@@ -151,6 +151,46 @@ namespace VisorSingularity
             
             GodotPlaceholder.SizeChanged += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
             GodotPlaceholder.LayoutUpdated += (s, e) => _viewer?.UpdatePosition(GodotPlaceholder, this);
+            
+            // Configurar manejador de eventos para el panel izquierdo para capturar clics
+            PanLeftSidebar.PreviewMouseDown += PanLeftSidebar_PreviewMouseDown;
+        }
+        
+        private void PanLeftSidebar_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            LogDebug("🎯 PanLeftSidebar_PreviewMouseDown DISPARADO");
+            
+            // Verificar si el clic fue en el botón de cerrar sesión
+            var source = e.OriginalSource as DependencyObject;
+            if (source != null)
+            {
+                var button = FindVisualParent<Button>(source);
+                if (button != null && button.Name == "BtnCerrarSesion")
+                {
+                    LogDebug("🎯 Clic detectado en botón 'BtnCerrarSesion' a través de PanLeftSidebar");
+                    LogDebug($"📊 Posición del clic relativa al botón: X={e.GetPosition(button).X}, Y={e.GetPosition(button).Y}");
+                    
+                    // Ejecutar el cierre de sesión manualmente
+                    BtnCerrarSesion_Click(button, new RoutedEventArgs());
+                    
+                    // Marcar el evento como manejado para evitar procesamiento duplicado
+                    e.Handled = true;
+                }
+            }
+        }
+        
+        // Helper method to find visual parent of a specific type
+        private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T parent)
+                    return parent;
+                    
+                child = VisualTreeHelper.GetParent(child);
+            }
+            
+            return null;
         }
 
         // Helper method to find visual children of a specific type
@@ -555,6 +595,88 @@ namespace VisorSingularity
             PanLeftSidebar.Visibility = Visibility.Visible;
             PanRightSidebar.Visibility = Visibility.Visible;
 
+            // Verificar estado del botón de cerrar sesión cuando el dashboard se activa
+            #region debug-point enter-dashboard-1
+            LogDebug("🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...");
+            var cerrarSesionButton = FindName("BtnCerrarSesion") as Button;
+            if (cerrarSesionButton != null)
+            {
+                LogDebug($"✅ Botón 'BtnCerrarSesion' encontrado en EnterDashboard");
+                LogDebug($"📊 Estado del botón: IsEnabled={cerrarSesionButton.IsEnabled}, Visibility={cerrarSesionButton.Visibility}, IsVisible={cerrarSesionButton.IsVisible}");
+                LogDebug($"📊 Panel padre (PanLeftSidebar): Visibility={PanLeftSidebar.Visibility}, IsVisible={PanLeftSidebar.IsVisible}");
+                
+                // Verificar si el botón tiene manejadores de eventos
+                LogDebug($"📊 Manejadores de evento Click: Verificado en tiempo de ejecución");
+                
+                // Añadir manejador de evento Loaded para verificar cuando el botón se carga completamente
+                cerrarSesionButton.Loaded += (s, e) =>
+                {
+                    LogDebug("🎯 Botón 'BtnCerrarSesion' LOADED - Evento Loaded disparado");
+                    LogDebug($"📊 Estado en Loaded: IsEnabled={cerrarSesionButton.IsEnabled}, Visibility={cerrarSesionButton.Visibility}, IsVisible={cerrarSesionButton.IsVisible}");
+                    
+                    // Verificar si el botón es clickeable
+                    LogDebug($"🔍 IsHitTestVisible={cerrarSesionButton.IsHitTestVisible}, Opacity={cerrarSesionButton.Opacity}");
+                    
+                    // Forzar que el botón sea completamente interactivo
+                    cerrarSesionButton.IsHitTestVisible = true;
+                    cerrarSesionButton.Focusable = true;
+                    
+                    // Añadir manejador de evento MouseEnter para verificar interacción
+                    cerrarSesionButton.MouseEnter += (sender, args) =>
+                    {
+                        LogDebug("🐭 MouseEnter en botón 'BtnCerrarSesion'");
+                    };
+                };
+                
+                // Forzar que el botón esté habilitado y visible
+                if (!cerrarSesionButton.IsEnabled)
+                {
+                    LogDebug("⚠️ Botón NO está habilitado - forzando IsEnabled=true");
+                    cerrarSesionButton.IsEnabled = true;
+                }
+                
+                if (cerrarSesionButton.Visibility != Visibility.Visible)
+                {
+                    LogDebug($"⚠️ Botón Visibility={cerrarSesionButton.Visibility} - forzando Visibility=Visible");
+                    cerrarSesionButton.Visibility = Visibility.Visible;
+                }
+                
+                // Asegurar que el botón es completamente interactivo
+                cerrarSesionButton.IsHitTestVisible = true;
+                cerrarSesionButton.Focusable = true;
+                cerrarSesionButton.Cursor = System.Windows.Input.Cursors.Hand;
+                
+                // Configurar un manejador de eventos alternativo usando AddHandler con handledEventsToo=true
+                // Esto captura eventos incluso si ya fueron marcados como manejados
+                cerrarSesionButton.AddHandler(Button.ClickEvent, new RoutedEventHandler(BtnCerrarSesion_Click_Alternative), true);
+                
+                LogDebug("✅ Configuración de interactividad del botón completada");
+            }
+            else
+            {
+                LogDebug("❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard");
+                LogDebug("🔍 Buscando botón en el árbol visual...");
+                var buttons = FindVisualChildren<Button>(this);
+                int buttonCount = buttons.Count();
+                LogDebug($"🔍 Total de botones en el árbol visual: {buttonCount}");
+                
+                foreach (var btn in buttons.Take(10))
+                {
+                    LogDebug($"🔍 Botón encontrado: Content='{btn.Content}', Name='{btn.Name}', IsEnabled={btn.IsEnabled}, Visibility={btn.Visibility}");
+                    
+                    // Si encontramos un botón con el contenido correcto, configurarlo
+                    if (btn.Content != null && btn.Content.ToString().Contains("CERRAR SESIÓN"))
+                    {
+                        LogDebug($"🎯 Botón de cerrar sesión encontrado por contenido: '{btn.Content}'");
+                        btn.Name = "BtnCerrarSesion_Fallback";
+                        btn.Click += BtnCerrarSesion_Click;
+                        btn.PreviewMouseDown += BtnCerrarSesion_PreviewMouseDown;
+                        btn.AddHandler(Button.ClickEvent, new RoutedEventHandler(BtnCerrarSesion_Click_Alternative), true);
+                    }
+                }
+            }
+            #endregion
+
             // Actualizar la dirección IPFS del nodo
             TxtIpfsAddress.Text = $"http://localhost:8080/node/{_username.ToLower(CultureInfo.InvariantCulture)}.ipfs";
 
@@ -777,6 +899,27 @@ namespace VisorSingularity
             {
                 LogDebug("✅ El evento no está Handled - debería propagarse normalmente");
             }
+        }
+        
+        // Método alternativo que captura eventos incluso si están marcados como manejados
+        private void BtnCerrarSesion_Click_Alternative(object sender, RoutedEventArgs e)
+        {
+            #region debug-point logout-alternative-1
+            LogDebug("🔄 BtnCerrarSesion_Click_Alternative DISPARADO - Evento alternativo activado");
+            LogDebug($"📌 Parámetros alternativos: sender={sender?.GetType().Name}, e.Handled={e.Handled}");
+            #endregion
+            
+            // Verificar si el evento principal ya fue manejado
+            if (e.Handled)
+            {
+                LogDebug("⚠️ El evento principal ya está Handled - usando método alternativo");
+            }
+            
+            // Llamar al método principal de cierre de sesión
+            BtnCerrarSesion_Click(sender, e);
+            
+            // Marcar como manejado para evitar propagación adicional
+            e.Handled = true;
         }
         
         private void CleanupWithTimeout()

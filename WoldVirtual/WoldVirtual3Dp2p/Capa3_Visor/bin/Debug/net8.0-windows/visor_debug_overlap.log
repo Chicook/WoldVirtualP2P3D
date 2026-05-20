@@ -384,3 +384,25 @@
 [18:58:32.387] Cleanup: Posting WM_CLOSE to Godot window
 [18:58:36.483] Cleanup: Unsubscribing from Godot process Exited event
 [18:58:40.570] Cleanup completed
+[19:16:06.208] MainWindow constructor started
+[19:16:11.170] InitializeComponent completed
+[19:16:15.627] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:16:19.752] 🔍 Buscando botón en el árbol visual...
+[19:16:24.391] 🔍 Total de botones en el árbol visual: 0
+[19:16:28.611] MainWindow_Loaded started
+[19:16:32.849] Hardware fingerprint: ebb9b5dffa01c6e9b770f69d508b1265fe24a436fa98daf590dd43e6d88edc58
+[19:16:36.948] Window dimensions on load: Width=1600, Height=950, ActualWidth=1600, ActualHeight=950
+[19:16:41.052] GodotPlaceholder dimensions on load: ActualWidth=0, ActualHeight=0
+[19:18:10.213] EnterDashboard called - isNewRegistration: False
+[19:18:14.294] 🔍 Verificando estado del botón de cerrar sesión en EnterDashboard...
+[19:18:18.381] ❌ Botón 'BtnCerrarSesion' NO encontrado en EnterDashboard
+[19:18:22.473] 🔍 Buscando botón en el árbol visual...
+[19:18:26.483] MainWindow_Closed called - forcing exit
+[19:18:30.557] 🧹 Cleanup INICIADO - Punto de instrumentación 21
+[19:18:31.561] MainWindow constructor started
+[19:18:34.647] 📊 Estado inicial: _isClosing=True, _ignoreGodotExit=False, _godotProcess=null
+[19:18:35.894] InitializeComponent completed
+[19:18:38.728] 🌐 Deteniendo HTTP listener porque _isClosing=true
+[19:18:39.991] ❌ Botón 'BtnCerrarSesion' NO ENCONTRADO después de InitializeComponent
+[19:18:42.835] Cleanup completed
+[19:18:44.093] 🔍 Buscando botón en el árbol visual...
