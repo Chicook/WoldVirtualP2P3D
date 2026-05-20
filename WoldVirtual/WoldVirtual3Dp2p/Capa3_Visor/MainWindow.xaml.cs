@@ -253,13 +253,39 @@ namespace VisorSingularity
                 string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
                 Directory.CreateDirectory(tempDir);
 
-                // Create identity.json
-                string identityJsonContent = $"{{\"username\": \"{TxtUsername.Text}\", \"hardwareFingerprint\": \"{_hardwareFingerprint}\", \"recoveryHash\": \"{recoveryHash}\"}}";
+                // Get detailed hardware information
+                string osInfo = GetOperatingSystemInfo();
+                string cpuInfo = GetProcessorInfo();
+                string mbInfo = GetMotherboardInfo();
+
+                // Create identity.json with detailed information
+                string identityJsonContent = $@"{{
+    ""user"": {{
+        ""username"": ""{TxtUsername.Text}"",
+        ""registrationDate"": ""{DateTime.Now:yyyy-MM-dd HH:mm:ss}"",
+        ""uuid"": ""{recoveryHash}""
+    }},
+    ""hardware"": {{
+        ""fingerprint"": ""{_hardwareFingerprint}"",
+        ""operatingSystem"": {osInfo},
+        ""processor"": {cpuInfo},
+        ""motherboard"": {mbInfo}
+    }},
+    ""wallet"": {{
+        ""address"": ""{_wallet}"",
+        ""connectedDate"": ""{DateTime.Now:yyyy-MM-dd HH:mm:ss}""
+    }}
+}}";
                 File.WriteAllText(Path.Combine(tempDir, "identity.json"), identityJsonContent);
 
-                // Create wallet.json (placeholder for now)
-                string walletJsonContent = $"{{\"walletAddress\": \"{_wallet}\"}}";
-                File.WriteAllText(Path.Combine(tempDir, "wallet.json"), walletJsonContent);
+                // Create hardware_details.json
+                string hardwareDetails = $@"{{
+    ""hardware_fingerprint"": ""{_hardwareFingerprint}"",
+    ""operating_system"": {osInfo},
+    ""processor"": {cpuInfo},
+    ""motherboard"": {mbInfo}
+}}";
+                File.WriteAllText(Path.Combine(tempDir, "hardware_details.json"), hardwareDetails);
 
                 // Create the ZIP file
                 if (File.Exists(zipFilePath))
@@ -281,15 +307,136 @@ namespace VisorSingularity
             }
         }
 
-        // STEP 2 Handlers
-        private void BtnConnectMetaMask_Click(object sender, RoutedEventArgs e)
+        // Get detailed Operating System information
+        private string GetOperatingSystemInfo()
         {
-            // Logic for connecting MetaMask will go here
-            // For now, just enable the next button and set a dummy wallet
-            TxtWalletAddress.Text = "0x1234...ABCD"; // Dummy wallet
-            BtnStep2Next.IsEnabled = true;
-            TxtFooterStatus.Text = "MetaMask conectado. Haz clic en Siguiente para continuar.";
-            TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Caption, Version, SerialNumber, OSArchitecture, BuildNumber FROM Win32_OperatingSystem"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        return $@"{{
+            ""name"": ""{mo["Caption"]?.ToString()?.Replace("\"", "\\\"")}"",
+            ""version"": ""{mo["Version"]?.ToString()}"",
+            ""serial"": ""{mo["SerialNumber"]?.ToString()}"",
+            ""architecture"": ""{mo["OSArchitecture"]?.ToString()}"",
+            ""build"": ""{mo["BuildNumber"]?.ToString()}""
+        }}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error getting OS info: {ex.Message}");
+            }
+            return "\"unknown\"";
+        }
+
+        // Get detailed Processor information
+        private string GetProcessorInfo()
+        {
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Name, ProcessorId, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed FROM Win32_Processor"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        return $@"{{
+            ""name"": ""{mo["Name"]?.ToString()?.Replace("\"", "\\\"")}"",
+            ""id"": ""{mo["ProcessorId"]?.ToString()}"",
+            ""cores"": {mo["NumberOfCores"]?.ToString() ?? "0"},
+            ""threads"": {mo["NumberOfLogicalProcessors"]?.ToString() ?? "0"},
+            ""maxClockSpeed"": {mo["MaxClockSpeed"]?.ToString() ?? "0"}
+        }}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error getting CPU info: {ex.Message}");
+            }
+            return "\"unknown\"";
+        }
+
+        // Get detailed Motherboard information
+        private string GetMotherboardInfo()
+        {
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Manufacturer, Product, SerialNumber, Version FROM Win32_BaseBoard"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
+                    {
+                        return $@"{{
+            ""manufacturer"": ""{mo["Manufacturer"]?.ToString()?.Replace("\"", "\\\"")}"",
+            ""product"": ""{mo["Product"]?.ToString()?.Replace("\"", "\\\"")}"",
+            ""serial"": ""{mo["SerialNumber"]?.ToString()}"",
+            ""version"": ""{mo["Version"]?.ToString()}""
+        }}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error getting motherboard info: {ex.Message}");
+            }
+            return "\"unknown\"";
+        }
+
+        // STEP 2 Handlers
+        private async void BtnConnectMetaMask_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Disable the button to prevent multiple clicks
+                BtnConnectMetaMask.IsEnabled = false;
+                TxtFooterStatus.Text = "Iniciando conexión con MetaMask...";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
+                
+                // Show waiting overlay
+                PanMetaMaskWaitOverlay.Visibility = Visibility.Visible;
+                
+                LogDebug("Starting MetaMask connection process...");
+                
+                // Start HTTP bridge to receive MetaMask response
+                string walletAddress = await StartMetaMaskBridge(_ctsMetaMaskBridge.Token);
+                
+                if (!string.IsNullOrEmpty(walletAddress))
+                {
+                    // Successfully connected to MetaMask
+                    _wallet = walletAddress;
+                    TxtWalletAddress.Text = walletAddress;
+                    BtnStep2Next.IsEnabled = true;
+                    TxtFooterStatus.Text = "MetaMask conectado exitosamente. Haz clic en Siguiente para continuar.";
+                    TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+                    
+                    LogDebug($"MetaMask connected successfully. Wallet: {walletAddress}");
+                    
+                    // Update confirmation display
+                    TxtConfirmWallet.Text = walletAddress;
+                }
+                else
+                {
+                    // Failed to connect
+                    TxtFooterStatus.Text = "Conexión con MetaMask cancelada o fallida.";
+                    TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
+                    MessageBox.Show("No se pudo conectar con MetaMask. Por favor, intenta nuevamente.", "Error de Conexión", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    
+                    LogDebug("MetaMask connection failed or was canceled.");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error connecting to MetaMask: {ex.Message}");
+                MessageBox.Show($"Error al conectar con MetaMask: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                // Re-enable the button and hide waiting overlay
+                BtnConnectMetaMask.IsEnabled = true;
+                PanMetaMaskWaitOverlay.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void BtnStep2Back_Click(object sender, RoutedEventArgs e)
@@ -324,23 +471,77 @@ namespace VisorSingularity
         private void GenerateRandomIslandCoordinates()
         {
             Random rand = new Random();
-            int x = rand.Next(0, 1000);
-            int y = rand.Next(0, 1000);
-            int z = rand.Next(0, 1000);
+            int x, y, z;
+            
+            // Generate random coordinates, but avoid "0:0:0" 
+            // since that's reserved for the first node
+            do
+            {
+                x = rand.Next(0, 1000);
+                y = rand.Next(0, 1000);
+                z = rand.Next(0, 1000);
+            } while (x == 0 && y == 0 && z == 0);
+            
             TxtIslandCoordinates.Text = $"{x}:{y}:{z}";
             TxtIslandName.Text = $"Isla {x}-{y}-{z}";
         }
 
         // STEP 4 Handlers
-        private void BtnEnterMetaverse_Click(object sender, RoutedEventArgs e)
+        private async void BtnEnterMetaverse_Click(object sender, RoutedEventArgs e)
         {
-            // Final step, enter the metaverse
-            _username = TxtUsername.Text;
-            _wallet = TxtWalletAddress.Text;
-            // Ensure _islandId is "0:0:0" if not explicitly set or invalid
-            _islandId = string.IsNullOrWhiteSpace(TxtIslandCoordinates.Text) ? "0:0:0" : TxtIslandCoordinates.Text;
-
-            EnterDashboard(true); // Assuming new registration for now
+            try
+            {
+                // Disable button to prevent multiple clicks
+                BtnEnterMetaverse.IsEnabled = false;
+                TxtFooterStatus.Text = "Entrando al Metaverso...";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
+                
+                // Final step, enter the metaverse
+                _username = TxtUsername.Text;
+                _wallet = TxtWalletAddress.Text;
+                
+                // Check if this is the first node (no island coordinates set)
+                // If it's the first node, set location to "0.0.0"
+                if (string.IsNullOrWhiteSpace(TxtIslandCoordinates.Text) || TxtIslandCoordinates.Text == "0:0:0")
+                {
+                    _islandId = "0.0.0";
+                    TxtIslandCoordinates.Text = "0.0.0";
+                    TxtIslandName.Text = "Nodo Principal (0.0.0)";
+                    LogDebug("First node detected, setting location to 0.0.0");
+                }
+                else
+                {
+                    _islandId = TxtIslandCoordinates.Text;
+                }
+                
+                // Update confirmation displays
+                TxtConfirmUsername.Text = _username;
+                TxtConfirmWallet.Text = _wallet;
+                TxtConfirmIsland.Text = _islandId;
+                
+                LogDebug($"Entering metaverse with - User: {_username}, Wallet: {_wallet}, Island: {_islandId}");
+                
+                // Launch Godot with the EscenaPrincipal.tscn
+                // The Godot project path should point to the project containing EscenaPrincipal.tscn
+                await LaunchGodot(_username, _wallet, _islandId, true);
+                
+                TxtFooterStatus.Text = "¡Bienvenido al Metaverso Wold Virtual!";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
+                
+                LogDebug("Successfully entered the metaverse.");
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Error entering metaverse: {ex.Message}");
+                MessageBox.Show($"Error al entrar al Metaverso: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                TxtFooterStatus.Text = "Error al entrar al Metaverso.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
+            }
+            finally
+            {
+                // Re-enable button
+                BtnEnterMetaverse.IsEnabled = true;
+            }
         }
 
         private void BtnStep4Back_Click(object sender, RoutedEventArgs e)
@@ -355,32 +556,39 @@ namespace VisorSingularity
             {
                 StringBuilder sb = new StringBuilder();
 
-                // Get CPU ID
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor"))
+                // Get Operating System Information
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Caption, Version, SerialNumber FROM Win32_OperatingSystem"))
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        sb.Append(mo["ProcessorId"]?.ToString());
+                        sb.Append($"OS:{mo["Caption"]?.ToString()}|");
+                        sb.Append($"OSVersion:{mo["Version"]?.ToString()}|");
+                        sb.Append($"OSSerial:{mo["SerialNumber"]?.ToString()}|");
                     }
                 }
 
-                // Get BaseBoard Serial Number
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_BaseBoard"))
+                // Get Processor Information
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Name, ProcessorId, NumberOfCores, MaxClockSpeed FROM Win32_Processor"))
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        sb.Append(mo["SerialNumber"]?.ToString());
+                        sb.Append($"CPU:{mo["Name"]?.ToString()}|");
+                        sb.Append($"CPUID:{mo["ProcessorId"]?.ToString()}|");
+                        sb.Append($"Cores:{mo["NumberOfCores"]?.ToString()}|");
+                        sb.Append($"Clock:{mo["MaxClockSpeed"]?.ToString()}|");
                     }
                 }
 
-                // Get OS Serial Number
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_OperatingSystem"))
+                // Get Motherboard Information
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT Manufacturer, Product, SerialNumber FROM Win32_BaseBoard"))
+                {
+                    foreach (ManagementObject mo in searcher.Get())
                     {
-                        foreach (ManagementObject mo in searcher.Get())
-                        {
-                            sb.Append(mo["SerialNumber"]?.ToString());
-                        }
+                        sb.Append($"MBManufacturer:{mo["Manufacturer"]?.ToString()}|");
+                        sb.Append($"MBProduct:{mo["Product"]?.ToString()}|");
+                        sb.Append($"MBSerial:{mo["SerialNumber"]?.ToString()}|");
                     }
+                }
 
                 // Hash the combined string
                 using (SHA256 sha256Hash = SHA256.Create())
