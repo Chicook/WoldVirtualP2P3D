@@ -1,25 +1,24 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Management; // Added for WMI
 using System.Net;
+using System.Security.Cryptography; // Added for SHA256
 using System.Text;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using System.Runtime.InteropServices;
-using System.Windows.Interop;
-using System.Collections.Generic;
-using System.Management; // Added for WMI
 
-
-using Color = System.Windows.Media.Color;
+using Application = System.Windows.Application;
 using Button = System.Windows.Controls.Button;
-using System.Security.Cryptography; // Added for SHA256
+using Color = System.Windows.Media.Color;
 using MessageBox = System.Windows.MessageBox;
 
 namespace VisorSingularity
