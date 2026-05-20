@@ -279,5 +279,23 @@
                 </StackPanel>
             </Grid>
         </Border>
+
+        <!-- ==================== AVATAR & USER STATUS OVERLAY ==================== -->
+        <Grid Grid.RowSpan="3" Panel.ZIndex="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,80,30,0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- User Status Indicator -->
+                <Ellipse Width="10" Height="10" Fill="#00FF8C" Margin="0,0,8,0">
+                    <Ellipse.Effect>
+                        <StaticResource ResourceKey="GlowOnlineStatus"/>
+                    </Ellipse.Effect>
+                </Ellipse>
+                <!-- Username -->
+                <TextBlock x:Name="TxtOverlayUsername" Text="Usuario" Style="{StaticResource CyberLabel}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <!-- Avatar Placeholder -->
+                <Border Width="40" Height="40" CornerRadius="20" Background="#1A00E5FF" BorderBrush="#00E5FF" BorderThickness="1">
+                    <TextBlock Text="AV" Foreground="#00E5FF" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

@@ -15,18 +15,27 @@ using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Collections.Generic;
 using System.Management; // Added for WMI
-using System.Security.Cryptography; // Added for SHA256
+
 
 using Color = System.Windows.Media.Color;
 using Button = System.Windows.Controls.Button;
-using Application = System.Windows.Application;
+using System.Security.Cryptography; // Added for SHA256
 using MessageBox = System.Windows.MessageBox;
 
+namespace VisorSingularity
+{
+    public partial class MainWindow : Window
+    {
         // ── Datos de la Sesión (minimal for now) ──
         private string _username = "";
         private string _wallet = "";
         private string _islandId = "137 : 190.1.0";
         private string _hardwareFingerprint = ""; // Added for hardware fingerprint
+
+        // ── MetaMask HTTP Bridge ──
+        private HttpListener? _httpListener;
+        private const string MetaMaskBridgeUrl = "http://localhost:8080/";
+        private CancellationTokenSource _ctsMetaMaskBridge = new CancellationTokenSource();
 
         // ── Componentes de Ejecución (minimal for now) ──
         private Process? _godotProcess;
@@ -102,6 +111,20 @@ using MessageBox = System.Windows.MessageBox;
         private void EnterDashboard(bool isNewRegistration = false)
         {
             LogDebug($"EnterDashboard called - isNewRegistration: {isNewRegistration}");
+
+            if (isNewRegistration)
+            {
+                // If it's a new registration, we assume the username is already set from TxtUsername.Text
+                // and the wallet from TxtWalletAddress.Text during the wizard flow.
+                // We just need to update the overlay.
+                TxtOverlayUsername.Text = _username;
+            }
+            else
+            {
+                // For existing users, we might load their profile data here
+                // For now, we'll just use the existing _username
+                TxtOverlayUsername.Text = _username;
+            }
 
             // Hide the wizard
             WizardContainer.Visibility = Visibility.Collapsed;
@@ -313,152 +336,8 @@ using MessageBox = System.Windows.MessageBox;
             // Final step, enter the metaverse
             _username = TxtUsername.Text;
             _wallet = TxtWalletAddress.Text;
-            _islandId = TxtIslandCoordinates.Text; // Using coordinates as island ID for now
-
-            EnterDashboard(true); // Assuming new registration for now
-        }
-
-        private void BtnStep4Back_Click(object sender, RoutedEventArgs e)
-        {
-            GoToPreviousStep();
-        }
-
-        // ── Hardware Fingerprint Generation ──
-        private string GenerateHardwareFingerprint()
-        {
-            try
-            {
-                StringBuilder sb = new StringBuilder();
-
-                // Get CPU ID
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor"))
-                {
-                    foreach (ManagementObject mo in searcher.Get())
-                    {
-                        sb.Append(mo["ProcessorId"]?.ToString());
-                    }
-                }
-
-                // Get BaseBoard Serial Number
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_BaseBoard"))
-                {
-                    foreach (ManagementObject mo in searcher.Get())
-                    {
-                        sb.Append(mo["SerialNumber"]?.ToString());
-                    }
-                }
-
-                // Get OS Serial Number
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT SerialNumber FROM Win32_OperatingSystem"))
-                    {
-                        foreach (ManagementObject mo in searcher.Get())
-                        {
-                            sb.Append(mo["SerialNumber"]?.ToString());
-                        }
-                    }
-
-                // Hash the combined string
-                using (SHA256 sha256Hash = SHA256.Create())
-                {
-                    byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
-                    StringBuilder builder = new StringBuilder();
-                    for (int i = 0; i < bytes.Length; i++)
-                    {
-                        builder.Append(bytes[i].ToString("x2"));
-                    }
-                    return builder.ToString().ToUpper();
-                }
-            }
-            catch (Exception ex)
-            {
-                LogDebug($"Error generating hardware fingerprint: {ex.Message}");
-                return "ERROR_FINGERPRINT";
-            }
-        }
-    }
-}
-
-        // ── Wizard Navigation ──
-        private void GoToNextStep()
-        {
-            if (WizardTabControl.SelectedIndex < WizardTabControl.Items.Count - 1)
-            {
-                WizardTabControl.SelectedIndex++;
-            }
-        }
-
-        private void GoToPreviousStep()
-        {
-            if (WizardTabControl.SelectedIndex > 0)
-            {
-                WizardTabControl.SelectedIndex--;
-            }
-        }
-
-        // STEP 1 Handlers
-        private void BtnGenerateSignature_Click(object sender, RoutedEventArgs e)
-        {
-            // Logic for generating signature will go here
-            // For now, just enable the next button
-            BtnStep1Next.IsEnabled = true;
-            TxtFooterStatus.Text = "Firma Digital generada. Haz clic en Siguiente para continuar.";
-            TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-        }
-
-        private void BtnStep1Next_Click(object sender, RoutedEventArgs e)
-        {
-            GoToNextStep();
-        }
-
-        // STEP 2 Handlers
-        private void BtnConnectMetaMask_Click(object sender, RoutedEventArgs e)
-        {
-            // Logic for connecting MetaMask will go here
-            // For now, just enable the next button and set a dummy wallet
-            TxtWalletAddress.Text = "0x1234...ABCD"; // Dummy wallet
-            BtnStep2Next.IsEnabled = true;
-            TxtFooterStatus.Text = "MetaMask conectado. Haz clic en Siguiente para continuar.";
-            TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-        }
-
-        private void BtnStep2Back_Click(object sender, RoutedEventArgs e)
-        {
-            GoToPreviousStep();
-        }
-
-        private void BtnStep2Next_Click(object sender, RoutedEventArgs e)
-        {
-            GoToNextStep();
-        }
-
-        // STEP 3 Handlers
-        private void BtnSelectIsland_Click(object sender, RoutedEventArgs e)
-        {
-            // Logic for selecting random island will go here
-            // For now, just set dummy coordinates
-            TxtIslandCoordinates.Text = "100:200:50";
-            TxtIslandName.Text = "Isla Aleatoria";
-            TxtFooterStatus.Text = "Isla seleccionada. Haz clic en Siguiente para continuar.";
-            TxtFooterStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 255, 140));
-        }
-
-        private void BtnStep3Back_Click(object sender, RoutedEventArgs e)
-        {
-            GoToPreviousStep();
-        }
-
-        private void BtnStep3Next_Click(object sender, RoutedEventArgs e)
-        {
-            GoToNextStep();
-        }
-
-        // STEP 4 Handlers
-        private void BtnEnterMetaverse_Click(object sender, RoutedEventArgs e)
-        {
-            // Final step, enter the metaverse
-            _username = TxtUsername.Text;
-            _wallet = TxtWalletAddress.Text;
-            _islandId = TxtIslandCoordinates.Text; // Using coordinates as island ID for now
+            // Ensure _islandId is "0:0:0" if not explicitly set or invalid
+            _islandId = string.IsNullOrWhiteSpace(TxtIslandCoordinates.Text) ? "0:0:0" : TxtIslandCoordinates.Text;
 
             EnterDashboard(true); // Assuming new registration for now
         }
@@ -530,7 +409,7 @@ using MessageBox = System.Windows.MessageBox;
             LogDebug($"HTTP Listener started on {MetaMaskBridgeUrl}");
 
             // Open browser to initiate MetaMask connection
-            string metamaskConnectUrl = $"https://metamask.github.io/metamask-deeplinks/connect?dappUrl={HttpUtility.UrlEncode(MetaMaskBridgeUrl)}";
+            string metamaskConnectUrl = $"https://metamask.github.io/metamask-deeplinks/connect?dappUrl={System.Net.WebUtility.UrlEncode(MetaMaskBridgeUrl)}";
             Process.Start(new ProcessStartInfo(metamaskConnectUrl) { UseShellExecute = true });
             LogDebug($"Opened browser for MetaMask connection: {metamaskConnectUrl}");
 
@@ -551,7 +430,7 @@ using MessageBox = System.Windows.MessageBox;
                     context.Response.OutputStream.Close();
 
                     // Extract wallet address from query string
-                    string? walletAddress = HttpUtility.ParseQueryString(context.Request.Url?.Query ?? "").Get("address");
+                    string? walletAddress = System.Uri.ParseQueryString(context.Request.Url?.Query ?? "").Get("address");
                     LogDebug($"Wallet address received: {walletAddress}");
 
                     return walletAddress ?? string.Empty;
@@ -583,5 +462,7 @@ using MessageBox = System.Windows.MessageBox;
                 LogDebug("HTTP Listener stopped.");
             }
         }
+    }
+}
     }
 }
