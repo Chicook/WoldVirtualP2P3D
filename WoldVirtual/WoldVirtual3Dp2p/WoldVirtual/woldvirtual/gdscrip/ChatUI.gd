@@ -1,14 +1,13 @@
 extends Control
 
 var udp_server: PacketPeerUDP
-var chat_log: RichTextLabel
+var chat_container: VBoxContainer
 var chunk_manager: Node3D
 
 func _ready():
 	# Configurar el contenedor principal
-	set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	size = Vector2(350, 180)
-	position = Vector2(15, get_viewport_rect().size.y - 200)
+	_adjust_position()
 	
 	# Crear el Panel translúcido de fondo programáticamente
 	var panel = Panel.new()
@@ -30,15 +29,13 @@ func _ready():
 	title.visible = false # Ocultar cabecera
 	panel.add_child(title)
 	
-	# RichTextLabel para el historial de chat con scroll automático
-	chat_log = RichTextLabel.new()
-	chat_log.name = "ChatLog"
-	chat_log.bbcode_enabled = true
-	chat_log.scroll_following = true
-	chat_log.position = Vector2(0, 0)
-	chat_log.size = Vector2(350, 180)
-	chat_log.add_theme_font_size_override("normal_font_size", 12)
-	panel.add_child(chat_log)
+	# VBoxContainer para los mensajes auto-desvanecibles
+	chat_container = VBoxContainer.new()
+	chat_container.name = "ChatContainer"
+	chat_container.position = Vector2(0, 0)
+	chat_container.size = Vector2(350, 180)
+	chat_container.alignment = BoxContainer.ALIGNMENT_END # Mensajes acumulados abajo
+	panel.add_child(chat_container)
 
 	# Localizar el ChunkManager
 	chunk_manager = get_node_or_null("/root/EscenaPrincipal/Metaverso3D/ChunkManager")
@@ -54,10 +51,8 @@ func _ready():
 		_add_log_message("[color=#ff4d4d][System] Error al abrir puerto de chat 50007.[/color]")
 
 func _process(_delta):
-	# Auto-ajustar altura si el usuario redimensiona la ventana
-	var target_y = get_viewport_rect().size.y - 200
-	if abs(position.y - target_y) > 1.0:
-		position.y = target_y
+	# Auto-ajustar posición si el usuario redimensiona la ventana
+	_adjust_position()
 
 	# Procesar paquetes UDP entrantes sin bloquear
 	if udp_server and udp_server.is_bound():
@@ -65,6 +60,13 @@ func _process(_delta):
 			var packet = udp_server.get_packet()
 			var data_str = packet.get_string_from_utf8()
 			_process_chat_packet(data_str)
+
+func _adjust_position():
+	var vp_size = get_viewport_rect().size
+	var target_x = (vp_size.x - size.x) / 2
+	var target_y = vp_size.y - size.y - 20
+	if abs(position.x - target_x) > 1.0 or abs(position.y - target_y) > 1.0:
+		position = Vector2(target_x, target_y)
 
 func _process_chat_packet(json_str: String):
 	var json = JSON.new()
@@ -83,8 +85,20 @@ func _process_chat_packet(json_str: String):
 			_trigger_bubble_on_avatar(user, text)
 
 func _add_log_message(msg: String):
-	if chat_log:
-		chat_log.append_text(msg + "\n")
+	if chat_container:
+		var label = RichTextLabel.new()
+		label.bbcode_enabled = true
+		label.fit_content = true
+		label.text = msg
+		label.add_theme_font_size_override("normal_font_size", 12)
+		label.custom_minimum_size = Vector2(350, 0)
+		chat_container.add_child(label)
+		
+		# Desvanecer después de 8 segundos de visualización
+		var tween = create_tween()
+		tween.tween_interval(8.0)
+		tween.tween_property(label, "modulate:a", 0.0, 2.0)
+		tween.tween_callback(label.queue_free)
 
 func _trigger_bubble_on_avatar(username: String, message: String):
 	if !is_instance_valid(chunk_manager):
