@@ -1,20 +1,15 @@
 using System;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
-using System.Windows.Interop;
 
 namespace VisorSingularity
 {
-    public class GodotViewer : HwndHost
+    public class GodotViewer : UserControl
     {
         private readonly GodotEmbedder _godotEmbedder;
         private readonly string _godotExecutablePath;
         private readonly string _godotProjectPath;
         private readonly string _godotArgs;
-
-        private Panel? _hostPanel; // Windows Forms Panel to host Godot
-
-        public Panel? HostPanel => _hostPanel;
 
         public GodotViewer(GodotEmbedder godotEmbedder, string godotExecutablePath, string godotProjectPath, string godotArgs)
         {
@@ -22,39 +17,41 @@ namespace VisorSingularity
             _godotExecutablePath = godotExecutablePath;
             _godotProjectPath = godotProjectPath;
             _godotArgs = godotArgs;
+            
+            // Set up the control
+            BackColor = System.Drawing.Color.Black;
+            Dock = DockStyle.Fill;
         }
 
-        protected override System.Runtime.InteropServices.HandleRef BuildWindowCore(System.Runtime.InteropServices.HandleRef hwndParent)
+        protected override void OnHandleCreated(EventArgs e)
         {
-            _hostPanel = new Panel
+            base.OnHandleCreated(e);
+            
+            // Launch and embed Godot when the control is created
+            if (!DesignMode)
             {
-                // Set initial size, will be resized by WPF layout
-                Width = (int)ActualWidth,
-                Height = (int)ActualHeight,
-                BackColor = System.Drawing.Color.Black // Background for the panel
-            };
-
-            // Launch and embed Godot
-            _ = _godotEmbedder.LaunchAndEmbed(_godotExecutablePath, _godotProjectPath, _hostPanel, _godotArgs);
-
-            return new System.Runtime.InteropServices.HandleRef(this, _hostPanel.Handle);
-        }
-
-        protected override void DestroyWindowCore(System.Runtime.InteropServices.HandleRef hwnd)
-        {
-            _godotEmbedder.StopGodot();
-            _hostPanel.Dispose();
-        }
-
-        protected override void OnRenderSizeChanged(System.Windows.SizeChangedInfo sizeInfo)
-        {
-            base.OnRenderSizeChanged(sizeInfo);
-            if (_hostPanel != null && _godotEmbedder.IsGodotRunning)
-            {
-                _hostPanel.Width = (int)sizeInfo.NewSize.Width;
-                _hostPanel.Height = (int)sizeInfo.NewSize.Height;
-                _godotEmbedder.ResizeGodotWindow(_hostPanel.Width, _hostPanel.Height);
+                _ = _godotEmbedder.LaunchAndEmbed(_godotExecutablePath, _godotProjectPath, this, _godotArgs);
             }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            
+            // Resize Godot window when control is resized
+            if (_godotEmbedder.IsGodotRunning)
+            {
+                _godotEmbedder.ResizeGodotWindow(Width, Height);
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _godotEmbedder.StopGodot();
+            }
+            base.Dispose(disposing);
         }
     }
 }

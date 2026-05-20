@@ -97,14 +97,11 @@ namespace VisorSingularity
 
             try
             {
-                // Create a WindowsFormsHost to host the GodotViewer (HwndHost)
-                System.Windows.Forms.Integration.WindowsFormsHost host = new System.Windows.Forms.Integration.WindowsFormsHost();
+                // Create the GodotViewer control
                 GodotViewer godotViewer = new GodotViewer(_godotEmbedder, _godotExecutablePath, _godotProjectPath, godotArgs);
-                host.Child = godotViewer;
-                GodotHost.Child = host; // Assign the WindowsFormsHost to the WPF element
+                GodotHost.Child = godotViewer; // Assign the GodotViewer control to the WindowsFormsHost
 
                 LogDebug("GodotViewer assigned to GodotHost.Child.");
-                // GodotViewer will launch Godot internally in BuildWindowCore
             }
             catch (Exception ex)
             {
@@ -167,14 +164,13 @@ namespace VisorSingularity
 
         private void PanViewportContainer_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (_godotEmbedder.IsGodotRunning && GodotHost.Child is System.Windows.Forms.Integration.WindowsFormsHost host && host.Child is GodotViewer godotViewer)
+            if (_godotEmbedder.IsGodotRunning && GodotHost.Child is GodotViewer godotViewer)
             {
-                // The GodotViewer (HwndHost) handles its own OnRenderSizeChanged,
-                // which in turn calls GodotEmbedder.ResizeGodotWindow.
-                // So, we just need to ensure the GodotHost (WindowsFormsHost) itself resizes.
-                // This is usually handled by WPF layout, but explicit call ensures it.
-                godotViewer.InvalidateMeasure();
-                godotViewer.UpdateLayout();
+                // The GodotViewer control handles resizing in its OnResize method
+                // which calls GodotEmbedder.ResizeGodotWindow.
+                // We just need to ensure the control is properly sized.
+                godotViewer.Invalidate();
+                godotViewer.Update();
             }
         }
 
