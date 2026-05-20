@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="System.Management" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

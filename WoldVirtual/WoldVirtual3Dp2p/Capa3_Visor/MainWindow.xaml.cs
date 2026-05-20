@@ -79,6 +79,7 @@ namespace VisorSingularity
         {
             LogDebug("MainWindow Closed.");
             _godotEmbedder.StopGodot(); // Ensure Godot process is stopped
+            StopMetaMaskBridge(); // Ensure HTTP listener is stopped
         }
 
         // Method to launch and embed Godot
@@ -461,7 +462,5 @@ namespace VisorSingularity
                 LogDebug("HTTP Listener stopped.");
             }
         }
-    }
-}
     }
 }

@@ -3,3 +3,4 @@ D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net10.0-windows
 D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net10.0-windows\App.g.cs
 D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net10.0-windows\VisorSingularity_MarkupCompile.cache
 D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net10.0-windows\VisorSingularity_MarkupCompile.lref
+D:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\Capa3_Visor\obj\Debug\net10.0-windows\VisorSingularity.csproj.AssemblyReference.cache

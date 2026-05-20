@@ -118,7 +118,7 @@ namespace VisorSingularity
             int style = GetWindowLong(_godotWindowHandle, GWL_STYLE);
             style = style & ~WS_CAPTION & ~WS_BORDER & ~WS_POPUP; // Remove caption, border, popup style
             style = style | WS_CHILD; // Add child style
-            SetWindowLong(_godotWindowHandle, GWL_STYLE, style);
+            SetWindowLong(_godotWindowHandle, (int)GWL_STYLE, style);
 
             // Resize and show Godot window
             ResizeGodotWindow(parentControl.Width, parentControl.Height);
