@@ -590,11 +590,17 @@ namespace VisorSingularity
                 TxtStep1LoggedUser.Text = _username.ToUpper(CultureInfo.InvariantCulture);
                 PanStep1Login.Visibility = Visibility.Visible;
                 BtnStep1Action.Content = "INICIAR SESIÓN / ACCEDER AL METAVERSO";
+                BtnStep1Action.IsEnabled = true;
+                TxtFooterStatus.Text = $"Identidad '{_username}' detectada de forma segura en este ordenador.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.White);
             }
             else
             {
                 PanStep1Login.Visibility = Visibility.Collapsed;
                 BtnStep1Action.Content = "VINCULAR MAQUINA / SIGUIENTE";
+                BtnStep1Action.IsEnabled = false;
+                TxtFooterStatus.Text = "Por favor, genera y guarda tu Firma Digital (.zip) primero para continuar.";
+                TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Yellow);
             }
 
             TxtStep1Password.Clear();
@@ -1103,10 +1109,46 @@ namespace VisorSingularity
         private void Cleanup()
         {
             LogDebug("Cleanup started");
-            try { _httpListener?.Stop(); _httpListener?.Close(); } catch { }
-            _httpListener = null;
+            
+            // Solo detener y cerrar el puente HTTP si la ventana del visor se está cerrando por completo.
+            // Al cerrar sesión, queremos mantener el puerto 8080 abierto para futuros inicios de sesión / registros.
+            if (_isClosing)
+            {
+                try { _httpListener?.Stop(); _httpListener?.Close(); } catch { }
+                _httpListener = null;
+            }
 
-            // 1. Intentar ocultar y cerrar la ventana de Godot nativamente para respuesta instantánea
+            // 1. Ocultar inmediatamente las ventanas de Godot para que no tapen la interfaz de WPF.
+            // Esto es crucial porque Godot corre en una ventana top-level flotante e independiente.
+            try
+            {
+                if (_viewer != null)
+                {
+                    IntPtr hwnd = _viewer.GetGodotHwnd();
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        LogDebug("Cleanup: Hiding Godot window via _viewer");
+                        ShowWindow(hwnd, 0); // SW_HIDE = 0
+                    }
+                }
+
+                // Asegurar ocultando cualquier proceso residual de Godot
+                foreach (var p in Process.GetProcessesByName("Godot_v4.6.2-stable_mono_win64"))
+                {
+                    IntPtr hwnd = p.MainWindowHandle;
+                    if (hwnd != IntPtr.Zero)
+                    {
+                        LogDebug($"Cleanup: Hiding window of residual process {p.Id}");
+                        ShowWindow(hwnd, 0); // SW_HIDE = 0
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Cleanup Window Hide Error: {ex.Message}");
+            }
+
+            // 2. Intentar cerrar la ventana de Godot de forma nativa enviando un mensaje WM_CLOSE
             if (_viewer != null)
             {
                 try
@@ -1114,18 +1156,17 @@ namespace VisorSingularity
                     IntPtr hwnd = _viewer.GetGodotHwnd();
                     if (hwnd != IntPtr.Zero)
                     {
-                        LogDebug("Cleanup: Hiding and closing Godot window natively");
-                        ShowWindow(hwnd, 0); // SW_HIDE = 0
+                        LogDebug("Cleanup: Posting WM_CLOSE to Godot window");
                         PostMessage(hwnd, 0x0010, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE = 0x0010
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogDebug($"Cleanup Window Native Error: {ex.Message}");
+                    LogDebug($"Cleanup Window Native Close Error: {ex.Message}");
                 }
             }
 
-            // 2. Terminar el proceso a nivel de Process StartInfo
+            // 3. Terminar el proceso de Godot a nivel de control de proceso si sigue activo
             try 
             { 
                 if (_godotProcess != null)
@@ -1144,13 +1185,14 @@ namespace VisorSingularity
             }
             _godotProcess = null;
 
-            // 3. Matar cualquier proceso de Godot residual por su nombre para asegurar que nada queda flotando
+            // 4. Matar cualquier proceso de Godot residual por su nombre para asegurar que nada queda flotando
             try
             {
                 foreach (var p in Process.GetProcessesByName("Godot_v4.6.2-stable_mono_win64"))
                 {
                     LogDebug($"Cleanup: Terminating residual Godot process: {p.Id}");
                     p.Kill();
+                    p.WaitForExit(1000);
                 }
             }
             catch { }
