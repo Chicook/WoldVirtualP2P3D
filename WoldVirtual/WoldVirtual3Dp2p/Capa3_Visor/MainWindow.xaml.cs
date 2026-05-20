@@ -62,6 +62,27 @@ namespace VisorSingularity
                 System.IO.File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] {message}\r\n");
             }
             catch { }
+            
+            // Enviar log al servidor de depuración
+            SendDebugLog(message);
+        }
+        
+        private static void SendDebugLog(string message)
+        {
+            try
+            {
+                using (var client = new System.Net.WebClient())
+                {
+                    string url = "http://localhost:3001/log";
+                    string json = $"{{\"session\":\"visor-logout-failure\",\"level\":\"info\",\"message\":\"{System.Net.WebUtility.HtmlEncode(message)}\",\"timestamp\":\"{DateTime.Now:yyyy-MM-ddTHH:mm:ss.fff}\"}}";
+                    client.Headers[System.Net.HttpRequestHeader.ContentType] = "application/json";
+                    client.UploadString(url, "POST", json);
+                }
+            }
+            catch
+            {
+                // Silenciar errores de envío de logs
+            }
         }
 
         public MainWindow()
@@ -568,44 +589,76 @@ namespace VisorSingularity
 
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
         {
-            LogDebug("BtnCerrarSesion_Click iniciado");
+            #region debug-point logout-1
+            LogDebug("🚀 BtnCerrarSesion_Click INICIADO - Punto de instrumentación 1");
+            LogDebug($"📌 Parámetros: sender={sender?.GetType().Name}, e={e?.GetType().Name}");
+            #endregion
             
             // Deshabilitar botón para prevenir múltiples clics
             if (sender is Button btn) btn.IsEnabled = false;
             
             try
             {
+                #region debug-point logout-2
+                LogDebug("🔄 Estableciendo _ignoreGodotExit = true");
+                #endregion
+                
                 // Marcar que estamos en proceso de cierre de sesión (no cierre completo de aplicación)
                 _ignoreGodotExit = true;
-                LogDebug($"Set _ignoreGodotExit = true for logout");
+                LogDebug($"✅ Set _ignoreGodotExit = true for logout (valor actual: {_ignoreGodotExit})");
+                
+                #region debug-point logout-3
+                LogDebug("🔧 Llamando a CleanupWithTimeout()");
+                #endregion
                 
                 // 1. Limpiar recursos de Godot de forma más agresiva
                 CleanupWithTimeout();
                 
+                #region debug-point logout-4
+                LogDebug("👁️ Llamando a HideDashboardShowWizard()");
+                #endregion
+                
                 // 2. Ocultar Dashboard y mostrar Wizard
                 HideDashboardShowWizard();
+                
+                #region debug-point logout-5
+                LogDebug("🔄 Llamando a ResetSessionData()");
+                #endregion
                 
                 // 3. Resetear datos de sesión
                 ResetSessionData();
                 
+                #region debug-point logout-6
+                LogDebug("🎨 Llamando a UpdateInterfaceAfterLogout()");
+                #endregion
+                
                 // 4. Actualizar estado de la interfaz
                 UpdateInterfaceAfterLogout();
+                
+                #region debug-point logout-7
+                LogDebug("🧹 Ejecutando GC.Collect()");
+                #endregion
                 
                 // 5. Forzar recolección de basura para liberar memoria
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 
+                #region debug-point logout-8
+                LogDebug("🔄 Restableciendo _ignoreGodotExit = false");
+                #endregion
+                
                 // 6. Restablecer el flag para futuras sesiones
                 _ignoreGodotExit = false;
-                LogDebug($"Set _ignoreGodotExit = false after successful logout");
+                LogDebug($"✅ Set _ignoreGodotExit = false after successful logout (valor actual: {_ignoreGodotExit})");
                 
-                LogDebug("Cierre de sesión completado exitosamente");
+                LogDebug("🎉 Cierre de sesión completado exitosamente");
                 TxtFooterStatus.Text = "Sesión cerrada correctamente. Puedes iniciar sesión nuevamente.";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Colors.LimeGreen);
             }
             catch (Exception ex)
             {
-                LogDebug($"Error en cierre de sesión: {ex.Message}");
+                LogDebug($"❌ Error en cierre de sesión: {ex.Message}");
+                LogDebug($"📋 Stack trace: {ex.StackTrace}");
                 TxtFooterStatus.Text = $"Error al cerrar sesión: {ex.Message}";
                 TxtFooterStatus.Foreground = new SolidColorBrush(Colors.Red);
                 
@@ -614,10 +667,14 @@ namespace VisorSingularity
                 
                 // Asegurar que el flag se restablece incluso en caso de error
                 _ignoreGodotExit = false;
-                LogDebug($"Set _ignoreGodotExit = false after error");
+                LogDebug($"✅ Set _ignoreGodotExit = false after error (valor actual: {_ignoreGodotExit})");
             }
             finally
             {
+                #region debug-point logout-9
+                LogDebug("🔚 Entrando en bloque finally");
+                #endregion
+                
                 // Rehabilitar botón después de un breve delay
                 if (sender is Button button)
                 {
@@ -626,32 +683,52 @@ namespace VisorSingularity
                         Dispatcher.Invoke(() => button.IsEnabled = true);
                     });
                 }
+                
+                #region debug-point logout-10
+                LogDebug("🏁 BtnCerrarSesion_Click FINALIZADO");
+                #endregion
             }
         }
         
         private void CleanupWithTimeout()
         {
-            LogDebug("CleanupWithTimeout iniciado");
+            #region debug-point cleanup-timeout-1
+            LogDebug("⏱️ CleanupWithTimeout INICIADO - Punto de instrumentación 11");
+            LogDebug($"📊 Estado: _ignoreGodotExit={_ignoreGodotExit}, _godotProcess={_godotProcess?.Id.ToString() ?? "null"}, _viewer={_viewer?.GetType().Name ?? "null"}");
+            #endregion
             
             // Crear un token de cancelación con timeout de 3 segundos
             var cts = new CancellationTokenSource(3000);
             
             try
             {
+                #region debug-point cleanup-timeout-2
+                LogDebug("🧵 Creando tarea de limpieza con timeout de 3 segundos");
+                #endregion
+                
                 // Ejecutar limpieza en un hilo separado con timeout
                 var cleanupTask = Task.Run(() => Cleanup(), cts.Token);
                 cleanupTask.Wait(cts.Token);
+                
+                #region debug-point cleanup-timeout-3
+                LogDebug("✅ Cleanup completado dentro del timeout");
+                #endregion
             }
             catch (OperationCanceledException)
             {
-                LogDebug("Cleanup timeout - forzando terminación de procesos");
+                LogDebug("⏰ Cleanup timeout - forzando terminación de procesos");
                 ForceKillGodotProcesses();
             }
             catch (Exception ex)
             {
-                LogDebug($"Error en CleanupWithTimeout: {ex.Message}");
+                LogDebug($"❌ Error en CleanupWithTimeout: {ex.Message}");
+                LogDebug($"📋 Stack trace: {ex.StackTrace}");
                 ForceKillGodotProcesses();
             }
+            
+            #region debug-point cleanup-timeout-4
+            LogDebug("🏁 CleanupWithTimeout FINALIZADO");
+            #endregion
         }
         
         private void HideDashboardShowWizard()
@@ -1284,14 +1361,27 @@ namespace VisorSingularity
 
         private void Cleanup()
         {
-            LogDebug("Cleanup started");
+            #region debug-point cleanup-1
+            LogDebug("🧹 Cleanup INICIADO - Punto de instrumentación 21");
+            LogDebug($"📊 Estado inicial: _isClosing={_isClosing}, _ignoreGodotExit={_ignoreGodotExit}, _godotProcess={_godotProcess?.Id.ToString() ?? "null"}");
+            #endregion
             
             // Solo detener y cerrar el puente HTTP si la ventana del visor se está cerrando por completo.
-            // Al cerrar sesión, queremos mantener el puerto 8080 abierto para futuros inicios de sesión / registros.
+            // Al cerrar sesión, queremos mantener el puente 8080 abierto para futuros inicios de sesión / registros.
             if (_isClosing)
             {
+                #region debug-point cleanup-2
+                LogDebug("🌐 Deteniendo HTTP listener porque _isClosing=true");
+                #endregion
+                
                 try { _httpListener?.Stop(); _httpListener?.Close(); } catch { }
                 _httpListener = null;
+            }
+            else
+            {
+                #region debug-point cleanup-3
+                LogDebug("🌐 Manteniendo HTTP listener porque _isClosing=false (solo cierre de sesión)");
+                #endregion
             }
 
             // 1. Ocultar inmediatamente las ventanas de Godot para que no tapen la interfaz de WPF.
