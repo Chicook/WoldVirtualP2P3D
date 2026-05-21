@@ -991,9 +991,9 @@ namespace VisorSingularity
 
             if (P2PWebNodePopup != null && P2PWebNodePopup.IsOpen)
             {
-                // Calcular posición horizontal centrada y vertical en la parte superior
-                double targetLeft = (GodotPlaceholder.ActualWidth - 360) / 2;
-                double targetTop = 15; // Just below the top edge of Godot viewport
+                // Posicionar a la izquierda-centro (después de los menús) y al tope del visor 3D
+                double targetLeft = 330;
+                double targetTop = 10;
 
                 P2PWebNodePopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
                 P2PWebNodePopup.HorizontalOffset = targetLeft;

@@ -246,10 +246,9 @@ namespace VisorSingularity
 
                 // Ignorar directorios pesados y de compilación
                 if (dirName == ".git" || 
-                    dirName == ".godot" || 
                     dirName == ".gemini" || 
                     dirName == "obj" || 
-                    dirName == "estado_global" || 
+                    dirName == "peers" || 
                     dirName == "logs" || 
                     dirName == "temp" || 
                     dirName == "tmp" ||
