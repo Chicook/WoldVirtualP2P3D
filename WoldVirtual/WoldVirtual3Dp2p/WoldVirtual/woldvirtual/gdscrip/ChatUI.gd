@@ -1,72 +1,42 @@
 extends Control
 
 var udp_server: PacketPeerUDP
-var chat_container: VBoxContainer
+var udp_client: PacketPeerUDP
 var chunk_manager: Node3D
 
 func _ready():
-	# Configurar el contenedor principal
-	size = Vector2(350, 180)
-	_adjust_position()
-	
-	# Crear el Panel translúcido de fondo programáticamente
-	var panel = Panel.new()
-	panel.name = "Panel"
-	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.size = Vector2(350, 180)
-	add_child(panel)
-	
-	# Usar StyleBoxEmpty para que no tenga recuadro (fondo invisible y sin bordes)
-	var sb_empty = StyleBoxEmpty.new()
-	panel.add_theme_stylebox_override("panel", sb_empty)
-	
-	# Título de cabecera del chat (se oculta para dejar solo los mensajes)
-	var title = Label.new()
-	title.text = "💬 CHAT DE PROXIMIDAD"
-	title.position = Vector2(10, 5)
-	title.add_theme_font_size_override("font_size", 11)
-	title.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0))
-	title.visible = false # Ocultar cabecera
-	panel.add_child(title)
-	
-	# VBoxContainer para los mensajes auto-desvanecibles
-	chat_container = VBoxContainer.new()
-	chat_container.name = "ChatContainer"
-	chat_container.position = Vector2(0, 0)
-	chat_container.size = Vector2(350, 180)
-	chat_container.alignment = BoxContainer.ALIGNMENT_END # Mensajes acumulados abajo
-	panel.add_child(chat_container)
+	# Este nodo ahora es "headless" (sin UI) para delegar el chat al visor C# (WPF).
+	# Se mantiene activo únicamente para procesar los sockets UDP y las burbujas 3D de los avatars.
+	visible = false
 
 	# Localizar el ChunkManager
 	chunk_manager = get_node_or_null("/root/EscenaPrincipal/Metaverso3D/ChunkManager")
 
-	# Inicializar el socket UDP
+	# Inicializar el cliente UDP para enviar mensajes a WPF (puerto 50008)
+	udp_client = PacketPeerUDP.new()
+	var client_err = udp_client.connect_to_host("127.0.0.1", 50008)
+	if client_err == OK:
+		print("Cliente UDP de chat conectado a 127.0.0.1:50008")
+	else:
+		print("Error al conectar cliente UDP: ", client_err)
+
+	# Inicializar el socket UDP para recibir mensajes de WPF (puerto 50007)
 	udp_server = PacketPeerUDP.new()
 	var err = udp_server.bind(50007, "127.0.0.1")
 	if err == OK:
 		print("Servidor UDP de chat iniciado en 127.0.0.1:50007")
-		_add_log_message("[color=#45A29E][System] Canal de chat local enlazado.[/color]")
+		_send_system_message_to_wpf("Canal de chat local enlazado.")
 	else:
 		print("Error al iniciar UDP chat server: ", err)
-		_add_log_message("[color=#ff4d4d][System] Error al abrir puerto de chat 50007.[/color]")
+		_send_system_message_to_wpf("Error al abrir puerto de chat 50007.")
 
 func _process(_delta):
-	# Auto-ajustar posición si el usuario redimensiona la ventana
-	_adjust_position()
-
 	# Procesar paquetes UDP entrantes sin bloquear
 	if udp_server and udp_server.is_bound():
 		while udp_server.get_available_packet_count() > 0:
 			var packet = udp_server.get_packet()
 			var data_str = packet.get_string_from_utf8()
 			_process_chat_packet(data_str)
-
-func _adjust_position():
-	var vp_size = get_viewport_rect().size
-	var target_x = (vp_size.x - size.x) / 2
-	var target_y = vp_size.y - size.y - 20
-	if abs(position.x - target_x) > 1.0 or abs(position.y - target_y) > 1.0:
-		position = Vector2(target_x, target_y)
 
 func _process_chat_packet(json_str: String):
 	var json = JSON.new()
@@ -77,28 +47,30 @@ func _process_chat_packet(json_str: String):
 			var user = data.get("user", "Anonymous")
 			var text = data.get("text", "")
 			
-			# Añadir al visor log
-			var formatted_msg = "[color=#66FCF1][b]%s:[/b][/color] %s" % [user, text]
-			_add_log_message(formatted_msg)
+			# Reenviar el mensaje al visor C# (WPF) para su representación
+			_send_chat_message_to_wpf(user, text)
 			
-			# Disparar la burbuja 3D flotante
+			# Disparar la burbuja 3D flotante sobre el avatar correspondiente
 			_trigger_bubble_on_avatar(user, text)
 
-func _add_log_message(msg: String):
-	if chat_container:
-		var label = RichTextLabel.new()
-		label.bbcode_enabled = true
-		label.fit_content = true
-		label.text = msg
-		label.add_theme_font_size_override("normal_font_size", 12)
-		label.custom_minimum_size = Vector2(350, 0)
-		chat_container.add_child(label)
-		
-		# Desvanecer después de 8 segundos de visualización
-		var tween = create_tween()
-		tween.tween_interval(8.0)
-		tween.tween_property(label, "modulate:a", 0.0, 2.0)
-		tween.tween_callback(label.queue_free)
+func _send_chat_message_to_wpf(user: String, text: String):
+	if udp_client:
+		var data = {
+			"type": "chat",
+			"user": user,
+			"text": text
+		}
+		var packet_data = JSON.stringify(data).to_utf8_buffer()
+		udp_client.put_packet(packet_data)
+
+func _send_system_message_to_wpf(text: String):
+	if udp_client:
+		var data = {
+			"type": "system",
+			"text": text
+		}
+		var packet_data = JSON.stringify(data).to_utf8_buffer()
+		udp_client.put_packet(packet_data)
 
 func _trigger_bubble_on_avatar(username: String, message: String):
 	if !is_instance_valid(chunk_manager):

@@ -1,40 +1,105 @@
 extends CharacterBody3D
 
-const SPEED = 8.0
+const WALK_SPEED = 6.0
+const RUN_SPEED = 12.0
 const JUMP = 5.0
 var sensitivity: float = 0.008
 var es_local: bool = false
 
+# Estados de teclas manuales para evitar problemas de foco de OS en ventanas embebidas
+var _key_up: bool = false
+var _key_down: bool = false
+var _key_left: bool = false
+var _key_right: bool = false
+var _key_ctrl: bool = false
+var _key_0: bool = false
+var _key_space: bool = false
+
+var _was_zero_pressed: bool = false
+var _was_space_pressed: bool = false
+
 # Cámara interna eliminada para evitar conflictos con el visor global
-# @onready var anim: AnimationPlayer = find_child("AnimationPlayer")
 func _ready() -> void:
 	# Movimiento y físicas únicamente
 	if !es_local:
-		set_process_unhandled_input(false)
+		set_process_input(false)
 		set_physics_process(false) # Ahorro masivo de CPU en remotos
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion && Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		# Rotación únicamente en el eje Y (Avatar)
 		rotate_y(-event.relative.x * sensitivity)
+
+	if event is InputEventKey:
+		# Actualizar el estado de nuestras teclas manuales
+		match event.keycode:
+			KEY_UP, KEY_W:
+				_key_up = event.pressed
+			KEY_DOWN, KEY_S:
+				_key_down = event.pressed
+			KEY_LEFT, KEY_A:
+				_key_left = event.pressed
+			KEY_RIGHT, KEY_D:
+				_key_right = event.pressed
+			KEY_CTRL:
+				_key_ctrl = event.pressed
+			KEY_0, KEY_KP_0:
+				_key_0 = event.pressed
+			KEY_SPACE:
+				_key_space = event.pressed
 
 func _physics_process(delta: float) -> void:
 	if !is_on_floor():
 		velocity += get_gravity() * delta
 
-	if Input.is_action_just_pressed("ui_accept") && is_on_floor():
+	# Comprobación de salto con Espacio o Cero "0"
+	var zero_just_pressed = _key_0 and not _was_zero_pressed
+	_was_zero_pressed = _key_0
+	
+	var space_just_pressed = _key_space and not _was_space_pressed
+	_was_space_pressed = _key_space
+
+	if (space_just_pressed or zero_just_pressed) and is_on_floor():
 		velocity.y = JUMP
 
 	# Movimiento relativo al Avatar (transform.basis)
-	var dir_input := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	var current_speed = WALK_SPEED
+	var dir_input = Vector2.ZERO
+
+	# Si se mantiene pulsada la tecla Control, corre hacia adelante (puede combinar con strafe)
+	if _key_ctrl:
+		current_speed = RUN_SPEED
+		var left_right = 0.0
+		if _key_left:
+			left_right -= 1.0
+		if _key_right:
+			left_right += 1.0
+		dir_input = Vector2(left_right, -1.0).normalized()
+	else:
+		# Movimiento estándar con flechas o WASD
+		var forward_back = 0.0
+		var left_right = 0.0
+		
+		if _key_up:
+			forward_back -= 1.0
+		if _key_down:
+			forward_back += 1.0
+		if _key_left:
+			left_right -= 1.0
+		if _key_right:
+			left_right += 1.0
+			
+		if forward_back != 0.0 or left_right != 0.0:
+			dir_input = Vector2(left_right, forward_back).normalized()
+
 	var dir := (transform.basis * Vector3(dir_input.x, 0, dir_input.y)).normalized()
 	
 	if dir:
-		velocity.x = dir.x * SPEED
-		velocity.z = dir.z * SPEED
+		velocity.x = dir.x * current_speed
+		velocity.z = dir.z * current_speed
 	else:
-		velocity.x = move_toward(velocity.x, 0, SPEED)
-		velocity.z = move_toward(velocity.z, 0, SPEED)
+		velocity.x = move_toward(velocity.x, 0, current_speed)
+		velocity.z = move_toward(velocity.z, 0, current_speed)
 
 	move_and_slide()
 	

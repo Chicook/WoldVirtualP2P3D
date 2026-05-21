@@ -12,6 +12,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using System.Text.Json;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Threading;
 
 namespace VisorSingularity
 {
@@ -29,6 +35,9 @@ namespace VisorSingularity
         private bool _isClosing = false;
         private GodotHwndHost? _godotHost;
         private string _currentUsername = "Anonymous";
+        private UdpClient? _udpListener;
+        private CancellationTokenSource? _udpCancellationTokenSource;
+        private P2PWebNode? _p2pNode;
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -47,6 +56,9 @@ namespace VisorSingularity
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "GetClassNameW")]
         private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetFocus(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -69,6 +81,11 @@ namespace VisorSingularity
             // Vincular eventos del Chat P2P
             BtnSendChat.Click += BtnSendChat_Click;
             TxtChatMessage.KeyDown += TxtChatMessage_KeyDown;
+            BtnCopyP2PLink.Click += BtnCopyP2PLink_Click;
+
+            // Vincular eventos de redimensionado/movimiento de ventana para el Popup del Chat
+            this.LocationChanged += (s, ev) => UpdatePopupPosition();
+            this.SizeChanged += (s, ev) => UpdatePopupPosition();
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -561,6 +578,13 @@ namespace VisorSingularity
 
                     // Hook de desvío de teclado
                     ComponentDispatcher.ThreadFilterMessage += ComponentDispatcher_ThreadFilterMessage;
+
+                    // Iniciar el listener de chat UDP en WPF (puerto 50008)
+                    StartUdpChatListener();
+
+                    // Iniciar nodo P2P WebNode para compartir el visor
+                    string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
+                    StartP2PWebNode(user, repoPath);
                 }
                 else
                 {
@@ -689,7 +713,9 @@ namespace VisorSingularity
                         int key = (int)msg.wParam;
                         if (key == 0x57 || key == 0x41 || key == 0x53 || key == 0x44 || // W A S D
                             key == 0x20 || // Espacio
-                            key == 0x25 || key == 0x26 || key == 0x27 || key == 0x28) // Flechas
+                            key == 0x25 || key == 0x26 || key == 0x27 || key == 0x28 || // Flechas
+                            key == 0x11 || // Control
+                            key == 0x30 || key == 0x60) // Cero (0) y Numpad 0
                         {
                             handled = true;
                         }
@@ -700,6 +726,21 @@ namespace VisorSingularity
 
         private void Cleanup()
         {
+            StopUdpChatListener();
+            if (_p2pNode != null)
+            {
+                try { _p2pNode.Stop(); } catch { }
+                _p2pNode = null;
+            }
+            if (ChatOverlayPopup != null)
+            {
+                ChatOverlayPopup.IsOpen = false;
+            }
+            if (P2PWebNodePopup != null)
+            {
+                P2PWebNodePopup.IsOpen = false;
+            }
+
             if (_httpListener != null)
             {
                 try
@@ -759,10 +800,245 @@ namespace VisorSingularity
                     udpClient.Send(data, data.Length, "127.0.0.1", 50007);
                 }
                 TxtChatMessage.Text = "";
+
+                // Devolver el foco al motor 3D de Godot
+                System.Windows.Input.Keyboard.ClearFocus();
+                if (_godotHwnd != IntPtr.Zero)
+                {
+                    SetFocus(_godotHwnd);
+                }
+                if (_godotHost != null)
+                {
+                    _godotHost.Focus();
+                }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error al enviar mensaje UDP: {ex.Message}");
+            }
+        }
+
+        private void StartUdpChatListener()
+        {
+            StopUdpChatListener();
+
+            _udpCancellationTokenSource = new CancellationTokenSource();
+            var token = _udpCancellationTokenSource.Token;
+
+            try
+            {
+                _udpListener = new UdpClient(50008);
+                Task.Run(async () =>
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            var result = await _udpListener.ReceiveAsync();
+                            string jsonStr = Encoding.UTF8.GetString(result.Buffer);
+
+                            // Procesar el mensaje JSON recibido de Godot
+                            ProcessUdpChatMessage(jsonStr);
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            break; // El socket fue cerrado
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error en UDP Listener recibiendo paquete: {ex.Message}");
+                        }
+                    }
+                }, token);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error al iniciar UDP Chat Listener en puerto 50008: {ex.Message}");
+            }
+        }
+
+        private void StopUdpChatListener()
+        {
+            if (_udpCancellationTokenSource != null)
+            {
+                _udpCancellationTokenSource.Cancel();
+                _udpCancellationTokenSource.Dispose();
+                _udpCancellationTokenSource = null;
+            }
+            if (_udpListener != null)
+            {
+                _udpListener.Close();
+                _udpListener = null;
+            }
+        }
+
+        private void ProcessUdpChatMessage(string jsonStr)
+        {
+            try
+            {
+                using (var doc = JsonDocument.Parse(jsonStr))
+                {
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "chat")
+                    {
+                        string user = root.TryGetProperty("user", out var userProp) ? userProp.GetString() ?? "Anonymous" : "Anonymous";
+                        string text = root.TryGetProperty("text", out var textProp) ? textProp.GetString() ?? "" : "";
+                        AddProximityChatMessage(user, text);
+                    }
+                    else if (root.TryGetProperty("type", out var sysProp) && sysProp.GetString() == "system")
+                    {
+                        string text = root.TryGetProperty("text", out var textProp) ? textProp.GetString() ?? "" : "";
+                        AddProximityChatMessage("", text, isSystem: true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error al parsear chat UDP JSON: {ex.Message}");
+            }
+        }
+
+        private void AddProximityChatMessage(string user, string text, bool isSystem = false)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                // Asegurar que el popup esté abierto
+                if (!ChatOverlayPopup.IsOpen)
+                {
+                    ChatOverlayPopup.IsOpen = true;
+                }
+
+                // Crear el TextBlock para el mensaje
+                var tb = new TextBlock
+                {
+                    TextAlignment = TextAlignment.Center,
+                    TextWrapping = TextWrapping.Wrap,
+                    FontSize = 13,
+                    FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
+                    Margin = new Thickness(0, 3, 0, 3)
+                };
+
+                // Añadir sombra para legibilidad
+                var shadow = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = System.Windows.Media.Color.FromRgb(0, 0, 0),
+                    BlurRadius = 3,
+                    ShadowDepth = 1.5,
+                    Direction = 315
+                };
+                tb.Effect = shadow;
+
+                if (isSystem)
+                {
+                    tb.Inlines.Add(new Run(text)
+                    {
+                        Foreground = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#45A29E")),
+                        FontWeight = FontWeights.SemiBold
+                    });
+                }
+                else
+                {
+                    tb.Inlines.Add(new Run(user + ": ")
+                    {
+                        Foreground = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#66FCF1")),
+                        FontWeight = FontWeights.Bold
+                    });
+                    tb.Inlines.Add(new Run(text)
+                    {
+                        Foreground = System.Windows.Media.Brushes.White
+                    });
+                }
+
+                ChatOverlayPanel.Children.Add(tb);
+
+                // Forzar actualización de posición del Popup para acomodar el nuevo elemento
+                UpdatePopupPosition();
+
+                // Animación de desvanecimiento
+                var fadeOutAnimation = new DoubleAnimation
+                {
+                    From = 1.0,
+                    To = 0.0,
+                    Duration = new Duration(TimeSpan.FromSeconds(2.0)),
+                    BeginTime = TimeSpan.FromSeconds(8.0) // Esperar 8 segundos antes de iniciar el desvanecimiento
+                };
+
+                fadeOutAnimation.Completed += (s, ev) =>
+                {
+                    ChatOverlayPanel.Children.Remove(tb);
+                    if (ChatOverlayPanel.Children.Count == 0)
+                    {
+                        ChatOverlayPopup.IsOpen = false;
+                    }
+                };
+
+                tb.BeginAnimation(UIElement.OpacityProperty, fadeOutAnimation);
+            });
+        }
+
+        private void UpdatePopupPosition()
+        {
+            if (ChatOverlayPopup != null && ChatOverlayPopup.IsOpen)
+            {
+                // Calcular posición horizontal centrada y vertical en la parte inferior
+                double targetLeft = (GodotPlaceholder.ActualWidth - 450) / 2;
+                double targetTop = GodotPlaceholder.ActualHeight - 180;
+
+                ChatOverlayPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
+                ChatOverlayPopup.HorizontalOffset = targetLeft;
+                ChatOverlayPopup.VerticalOffset = targetTop;
+            }
+
+            if (P2PWebNodePopup != null && P2PWebNodePopup.IsOpen)
+            {
+                // Calcular posición horizontal centrada y vertical en la parte superior
+                double targetLeft = (GodotPlaceholder.ActualWidth - 360) / 2;
+                double targetTop = 15; // Just below the top edge of Godot viewport
+
+                P2PWebNodePopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
+                P2PWebNodePopup.HorizontalOffset = targetLeft;
+                P2PWebNodePopup.VerticalOffset = targetTop;
+            }
+        }
+
+        private void StartP2PWebNode(string username, string repoPath)
+        {
+            try
+            {
+                _p2pNode = new P2PWebNode(username, repoPath);
+
+                // Suscribirse a cambios de estado del zipping/servidor
+                _p2pNode.OnStatusChanged += (status) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        TxtP2PStatus.Text = status;
+                    });
+                };
+
+                _p2pNode.Start();
+
+                // Actualizar interfaz con los datos del nodo
+                TxtP2PNodeId.Text = $"NODO P2P: {_p2pNode.SimulatedUrl}";
+                TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
+                TxtP2PStatus.Text = "Inicializando nodo...";
+
+                // Abrir el popup
+                P2PWebNodePopup.IsOpen = true;
+                UpdatePopupPosition();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error al iniciar P2PWebNode: {ex.Message}");
+            }
+        }
+
+        private void BtnCopyP2PLink_Click(object sender, RoutedEventArgs e)
+        {
+            if (_p2pNode != null)
+            {
+                Clipboard.SetText(_p2pNode.LocalUrl);
+                MessageBox.Show($"Enlace de invitación copiado al portapapeles:\n\n{_p2pNode.LocalUrl}\n\nEnvíalo a tus amigos para que descarguen el visor y se unan como nodos de la red.", "Enlace Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
     }

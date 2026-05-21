@@ -278,6 +278,61 @@
                 </Grid>
             </Border>
 
+            <!-- Popup del Chat de Proximidad flotante (C# WPF) -->
+            <Popup x:Name="ChatOverlayPopup"
+                   AllowsTransparency="True"
+                   Placement="Relative"
+                   PlacementTarget="{Binding ElementName=GodotPlaceholder}"
+                   IsOpen="False"
+                   Focusable="False"
+                   PopupAnimation="Fade">
+                <Border Background="Transparent" Width="450" Padding="10">
+                    <StackPanel x:Name="ChatOverlayPanel"/>
+                </Border>
+            </Popup>
+
+            <!-- Popup del P2P WebNode (C# WPF) -->
+            <Popup x:Name="P2PWebNodePopup"
+                   AllowsTransparency="True"
+                   Placement="Relative"
+                   PlacementTarget="{Binding ElementName=GodotPlaceholder}"
+                   IsOpen="False"
+                   Focusable="False"
+                   PopupAnimation="Fade">
+                <Border CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12">
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="#45A29E"/>
+                    </Border.BorderBrush>
+                    <Border.Background>
+                        <SolidColorBrush Color="#0F172A" Opacity="0.9"/>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect Color="#66FCF1" BlurRadius="10" ShadowDepth="0" Opacity="0.4"/>
+                    </Border.Effect>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Icon -->
+                        <TextBlock Grid.Column="0" Text="🕸️" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                        <!-- Node & Status -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="TxtP2PNodeId" Text="NODO P2P: www.ND35665.ipfs" Foreground="#66FCF1" FontSize="11" FontWeight="Bold"/>
+                            <TextBlock x:Name="TxtP2PLink" Text="Enlace: http://127.0.0.1:8082" Foreground="#C5C6C7" FontSize="9" Margin="0,2,0,0"/>
+                            <TextBlock x:Name="TxtP2PStatus" Text="Generando Visor (.ZIP)..." Foreground="#00ff8c" FontSize="9" FontWeight="SemiBold" Margin="0,1,0,0"/>
+                        </StackPanel>
+
+                        <!-- Copy Button -->
+                        <Button Grid.Column="2" x:Name="BtnCopyP2PLink" Content="COPIAR" Style="{StaticResource SingularityButton}" Padding="8,4" FontSize="9" Height="25" VerticalAlignment="Center" Cursor="Hand"/>
+                    </Grid>
+                </Border>
+            </Popup>
+
             <!-- Bottom Chat Bar (Cyberpunk Chat Look) -->
             <Border x:Name="BorderBottomLoginBar" Grid.Row="2" Height="80" Background="#111625" BorderBrush="#45A29E" BorderThickness="0,1,0,0">
                 <Grid Margin="20,10">
