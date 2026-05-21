@@ -1,0 +1,6 @@
+tree e524d1bf624d4571ca311eb2b34a745a410dea69
+parent 57bde087134aae37b4766877c461bf8285fba8cc
+author Juan Angel Lopez Diaz <102910494+Chicook@users.noreply.github.com> 1779127119 +0200
+committer Juan Angel Lopez Diaz <102910494+Chicook@users.noreply.github.com> 1779127119 +0200
+
+feat: implement SQLite support and initial build configuration for VisorSingularity

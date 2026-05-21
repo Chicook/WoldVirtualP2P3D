@@ -436,11 +436,3 @@ Por favor, responde con **TODOS** estos detalles:
 
 ### 🎯 **OBJETIVO**
 Entender **exactamente** en qué punto falla el cierre de sesión para implementar una solución precisa y efectiva.
-
----
-
-**Nota**: Esta instrumentación es temporal y se eliminará una vez que resolvamos el problema. Los logs contienen emojis para facilitar la identificación de diferentes etapas del proceso.
-
----
-
-**Nota**: Todas las implementaciones están completas en el código, pero el problema persiste debido a que el evento no se está disparando. Se requiere análisis de tiempo de ejecución para identificar la causa raíz exacta.
