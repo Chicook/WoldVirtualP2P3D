@@ -1,0 +1,8 @@
+# Excluir archivos .exe grandes temporalmente
+WoldVirtual/servidorinterno/Godot_v4.6.2-stable_mono_win64.exe
+WoldVirtual/servidorinterno/Godot_v4.6.2-stable_mono_win64_console.exe
+
+# Excluir directorios de build
+Capa3_Visor/CapaVisor3D/bin/
+Capa3_Visor/CapaVisor3D/obj/
+WoldVirtual/.godot/
