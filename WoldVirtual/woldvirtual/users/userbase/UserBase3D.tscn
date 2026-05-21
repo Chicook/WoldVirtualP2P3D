@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://c6m64eqc13dtx"]
+
+[ext_resource type="Script" uid="uid://bd6as3g0evjy7" path="res://woldvirtual/gdscrip/userbase3d.gd" id="1_vtpl3"]
+[ext_resource type="PackedScene" uid="uid://dubyn2t3uxn5b" path="res://woldvirtual/users/userbase/baseuser.fbx" id="1_y0gpb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_vtpl3"]
+radius = 0.38134766
+height = 1.9016113
+
+[node name="UserBase3D" type="CharacterBody3D" unique_id=754599001]
+script = ExtResource("1_vtpl3")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1263204795]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8519287, 0)
+shape = SubResource("CapsuleShape3D_vtpl3")
+
+[node name="baseuser" parent="." unique_id=1235075860 instance=ExtResource("1_y0gpb")]

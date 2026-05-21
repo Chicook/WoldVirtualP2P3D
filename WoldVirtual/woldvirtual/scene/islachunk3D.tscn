@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://cke6ysj8j866s"]
+
+[ext_resource type="PackedScene" uid="uid://bg3yhykcyv3j" path="res://woldvirtual/imporchunkblend/islachunk.blend" id="1_tt8p8"]
+
+[node name="islachunk3D" type="Node3D" unique_id=1095206588]
+
+[node name="islachunk" parent="." unique_id=2012424846 instance=ExtResource("1_tt8p8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -106.29138, 0)
