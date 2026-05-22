@@ -1006,12 +1006,17 @@ namespace VisorSingularity
             {
                 _p2pNode = new P2PWebNode(username, repoPath);
 
-                // Suscribirse a cambios de estado del zipping/servidor
+                // Suscribirse a cambios de estado del zipping/servidor/IPFS
                 _p2pNode.OnStatusChanged += (status) =>
                 {
                     Dispatcher.Invoke(() =>
                     {
                         TxtP2PStatus.Text = status;
+                        if (_p2pNode.IsOnIpfs && !string.IsNullOrEmpty(_p2pNode.GatewayUrl))
+                        {
+                            TxtP2PNodeId.Text = $"IPFS CID: {(_p2pNode.RealCid != null && _p2pNode.RealCid.Length > 12 ? _p2pNode.RealCid.Substring(0, 10) + "..." : _p2pNode.RealCid)}";
+                            TxtP2PLink.Text = $"Enlace: {_p2pNode.GatewayUrl}";
+                        }
                     });
                 };
 
@@ -1035,8 +1040,17 @@ namespace VisorSingularity
         {
             if (_p2pNode != null)
             {
-                Clipboard.SetText(_p2pNode.LocalUrl);
-                MessageBox.Show($"Enlace de invitación copiado al portapapeles:\n\n{_p2pNode.LocalUrl}\n\nEnvíalo a tus amigos para que descarguen el visor y se unan como nodos de la red.", "Enlace Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                string urlToCopy = !string.IsNullOrEmpty(_p2pNode.GatewayUrl) ? _p2pNode.GatewayUrl : _p2pNode.LocalUrl;
+                Clipboard.SetText(urlToCopy);
+
+                if (!string.IsNullOrEmpty(_p2pNode.GatewayUrl))
+                {
+                    MessageBox.Show($"Enlace de IPFS público copiado al portapapeles:\n\n{urlToCopy}\n\nEnvíalo a tus amigos. Cualquiera con este enlace podrá descargar el visor y conectarse a la red P2P.", "Enlace IPFS Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show($"Enlace de invitación local copiado al portapapeles:\n\n{urlToCopy}\n\nEnvíalo a tus amigos para que descarguen el visor y se unan como nodos de la red.", "Enlace Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             }
         }
     }
