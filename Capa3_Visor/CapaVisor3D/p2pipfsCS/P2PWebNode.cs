@@ -7,39 +7,50 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using Ipfs.Engine;
 
 namespace VisorSingularity
 {
     /// <summary>
     /// Nodo P2P del Visor WoldVirtual.
-    /// — Servidor HTTP local (LAN / fallback) en puerto dinámico.
-    /// — Motor IPFS real (Ipfs.Engine, C# puro) para publicar el ZIP en la red
-    ///   IPFS pública y generar un enlace que cualquiera puede abrir desde internet.
+    ///
+    /// Flujo CORRECTO y SECUENCIAL (sin IPFS Engine local):
+    ///   1. GenerateRepositoryZip()          → crea el ZIP del visor localmente
+    ///   2. UploadFileToCatboxAsync(zip)      → sube el ZIP → catboxZipUrl permanente
+    ///   3. BuildFinalInviteHtml(catboxZipUrl)→ genera HTML con la URL YA INCRUSTADA
+    ///   4. UploadFileToCatboxAsync(html)     → sube el HTML → catboxHtmlUrl permanente
+    ///   5. GatewayUrl = catboxHtmlUrl        → este es el enlace final a compartir
+    ///
+    /// El servidor HTTP local sirve el ZIP y el HTML como fallback LAN.
+    /// Catbox.moe sirve los archivos con el Content-Type correcto desde su CDN global.
     /// </summary>
     public class P2PWebNode
     {
         // ── Propiedades públicas ──────────────────────────────────────────────
-        public string NodeId        { get; private set; }
-        public string SimulatedUrl  { get; private set; }   // www.NDxxxxx.ipfs  (visual)
-        public int    Port          { get; private set; } = 8082;
-        public string LocalUrl      { get; private set; }   // http://127.0.0.1:PORT/
-        public string ZipPath       { get; private set; }
+        public string NodeId       { get; private set; }
+        public string SimulatedUrl { get; private set; }
+        public int    Port         { get; private set; } = 8082;
+        public string LocalUrl     { get; private set; }
+        public string ZipPath      { get; private set; }
 
         // Estado ZIP
-        public bool IsZipping  { get; private set; } = false;
-        public bool ZipReady   { get; private set; } = false;
+        public bool IsZipping { get; private set; } = false;
+        public bool ZipReady  { get; private set; } = false;
 
-        // IPFS real
-        public string? RealCid     { get; private set; }   // CIDv1 del ZIP en IPFS
-        public string? GatewayUrl  { get; private set; }   // https://ipfs.io/ipfs/<CID>
-        public bool    IsOnIpfs    { get; private set; } = false;
+        // Enlace público del ZIP (Catbox)
+        public string? ZipPublicUrl { get; private set; }
+
+        // Enlace público de la página HTML de invitación (Catbox)
+        // GatewayUrl = catboxHtmlUrl — esto es lo que se copia y se comparte
+        public string? GatewayUrl { get; private set; }
+        public bool    IsOnIpfs   { get; private set; } = false;   // Reutilizado: "enlace público listo"
+
+        // RealCid para compatibilidad con MainWindow.xaml.cs (vacío, no usamos IPFS Engine)
+        public string? RealCid => null;
 
         // ── Campos privados ───────────────────────────────────────────────────
-        private HttpListener              _listener;
-        private CancellationTokenSource?  _cts;
-        private string                    _repoPath;
-        private IpfsEngine?               _ipfsEngine;
+        private HttpListener             _listener;
+        private CancellationTokenSource? _cts;
+        private string                   _repoPath;
 
         public event Action<string>? OnStatusChanged;
 
@@ -48,16 +59,13 @@ namespace VisorSingularity
         {
             _repoPath = repoPath;
 
-            // NodeId único por sesión
-            int seed = Math.Abs((username + DateTime.Now.Ticks).GetHashCode()) % 90000 + 10000;
+            int seed    = Math.Abs((username + DateTime.Now.Ticks).GetHashCode()) % 90000 + 10000;
             NodeId       = $"ND{seed}";
             SimulatedUrl = $"www.{NodeId}.ipfs";
 
-            // Puerto disponible a partir del 8082
             Port     = FindAvailablePort(8082);
             LocalUrl = $"http://127.0.0.1:{Port}/";
 
-            // Ruta del ZIP temporal
             string tempDir = Path.Combine(Path.GetTempPath(), "WoldVirtualP2P");
             Directory.CreateDirectory(tempDir);
             ZipPath = Path.Combine(tempDir, $"wold_virtual_visor_{NodeId}.zip");
@@ -73,13 +81,10 @@ namespace VisorSingularity
             _cts = new CancellationTokenSource();
             _listener.Start();
 
-            // Servidor HTTP local (LAN / fallback)
             Task.Run(() => ListenLoop(_cts.Token));
+            Task.Run(() => RunMainFlowAsync());
 
-            // Generar ZIP y luego subirlo a IPFS en segundo plano
-            Task.Run(() => GenerateZipThenUploadToIpfs());
-
-            LogStatus($"Nodo local activo: {LocalUrl} — conectando a IPFS...");
+            LogStatus("Comprimiendo visor...");
         }
 
         // ── Parada ────────────────────────────────────────────────────────────
@@ -90,149 +95,124 @@ namespace VisorSingularity
             _cts = null;
 
             if (_listener?.IsListening == true)
-            {
                 try { _listener.Stop(); _listener.Close(); } catch { }
-            }
-
-            if (_ipfsEngine != null)
-            {
-                try { _ipfsEngine.StopAsync().Wait(3000); } catch { }
-                _ipfsEngine = null;
-            }
 
             if (File.Exists(ZipPath))
-            {
                 try { File.Delete(ZipPath); } catch { }
-            }
 
             LogStatus("Nodo P2P apagado.");
         }
 
-        // ── Flujo principal: ZIP → Servidor Público / IPFS ──────────────────────
-        private async Task GenerateZipThenUploadToIpfs()
+        // ── Flujo principal SECUENCIAL: ZIP → Catbox(ZIP) → HTML → Catbox(HTML) ─
+        private async Task RunMainFlowAsync()
         {
-            // 1. Generar ZIP del visor
+            // ── Paso 1: Generar ZIP ────────────────────────────────────────────
+            LogStatus("Comprimiendo el visor (puede tardar 1-2 min)...");
             GenerateRepositoryZip();
-            if (!ZipReady) return;
-
-            // 2. Subir a Catbox.moe para tener enlace público rápido y garantizado (evita 502 Gateway de IPFS)
-            string? catboxUrl = await UploadToCatboxAsync(ZipPath);
-            if (!string.IsNullOrEmpty(catboxUrl))
+            if (!ZipReady)
             {
-                GatewayUrl = catboxUrl;
-                IsOnIpfs = true; // Para actualizar el estado visual en WPF y habilitar el botón de copiado
-                LogStatus("✅ Enlace público listo. Inicializando motor IPFS en segundo plano...");
-            }
-
-            // 3. Iniciar motor IPFS (puro C#, sin binarios externos) de respaldo/local
-            try
-            {
-                string ipfsRepo = Path.Combine(
-                    _repoPath, "..", "Estado_Global", ".ipfs-woldvirtual");
-
-                _ipfsEngine = new IpfsEngine("WoldVirtualP2P_Node".ToCharArray());
-                _ipfsEngine.Options.Repository.Folder = Path.GetFullPath(ipfsRepo);
-
-                Debug.WriteLine("[IPFS] Iniciando motor IPFS...");
-                await _ipfsEngine.StartAsync();
-                Debug.WriteLine("[IPFS] Motor IPFS activo. Subiendo ZIP a IPFS...");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[IPFS] IPFS no disponible ({ex.Message}).");
-                if (string.IsNullOrEmpty(GatewayUrl))
-                {
-                    LogStatus($"IPFS no disponible. Enlace local activo.");
-                }
-                else
-                {
-                    LogStatus($"Enlace público activo (Catbox). IPFS no disponible.");
-                }
+                LogStatus("❌ Error al generar el ZIP. Nodo en modo local.");
                 return;
             }
+            double mb = GetFileSizeMB(ZipPath);
+            LogStatus($"ZIP listo ({mb:F1} MB). Subiendo a servidor público...");
 
-            // 4. Añadir ZIP a IPFS → obtener CID público (como segundo canal de respaldo)
-            await AddZipToIpfsAsync();
+            // ── Paso 2: Subir ZIP a Catbox ─────────────────────────────────────
+            string? catboxZipUrl = await UploadFileToCatboxAsync(ZipPath, "application/zip",
+                                                                  $"WoldVirtualVisor_{NodeId}.zip");
+            if (string.IsNullOrEmpty(catboxZipUrl))
+            {
+                // Fallback: enlace local
+                ZipPublicUrl = $"{LocalUrl}visor.zip";
+                LogStatus("⚠️ No se pudo subir el ZIP a Catbox. Usando enlace local.");
+            }
+            else
+            {
+                ZipPublicUrl = catboxZipUrl;
+                LogStatus("ZIP en Catbox ✅. Generando página de invitación...");
+            }
+
+            // ── Paso 3: Construir HTML con la URL del ZIP ya incrustada ────────
+            // Este HTML tiene el botón de descarga apuntando a catboxZipUrl (URL real y permanente)
+            string html = BuildFinalInviteHtml(ZipPublicUrl!);
+
+            // ── Paso 4: Subir el HTML a Catbox ─────────────────────────────────
+            string htmlTempPath = Path.Combine(
+                Path.GetTempPath(), "WoldVirtualP2P", $"invite_{NodeId}.html");
+            await File.WriteAllTextAsync(htmlTempPath, html, Encoding.UTF8);
+
+            string? catboxHtmlUrl = await UploadFileToCatboxAsync(
+                htmlTempPath, "text/html", $"WoldVirtualInvite_{NodeId}.html");
+
+            // Limpieza del HTML temporal
+            try { File.Delete(htmlTempPath); } catch { }
+
+            if (!string.IsNullOrEmpty(catboxHtmlUrl))
+            {
+                GatewayUrl = catboxHtmlUrl;
+                IsOnIpfs   = true;   // reutilizamos el flag para indicar "enlace público listo"
+                LogStatus($"✅ Enlace de invitación listo. ¡Cópialo y compártelo!");
+            }
+            else if (!string.IsNullOrEmpty(catboxZipUrl))
+            {
+                // Al menos tenemos el ZIP en Catbox — compartir enlace directo al ZIP
+                GatewayUrl = catboxZipUrl;
+                IsOnIpfs   = true;
+                LogStatus($"✅ Enlace al ZIP listo (sin página HTML).");
+            }
+            else
+            {
+                // Solo enlace local
+                GatewayUrl = LocalUrl;
+                LogStatus($"⚠️ Solo enlace local disponible: {LocalUrl}");
+            }
         }
 
-        private async Task AddZipToIpfsAsync()
+        // ── Subida genérica a Catbox.moe ──────────────────────────────────────
+        private async Task<string?> UploadFileToCatboxAsync(
+            string filePath, string contentType, string fileName)
         {
             try
             {
-                await using var stream = File.OpenRead(ZipPath);
-                var node = await _ipfsEngine!.FileSystem.AddAsync(
-                    stream,
-                    $"WoldVirtual_Visor_{NodeId}.zip",
-                    new Ipfs.CoreApi.AddFileOptions { Pin = true });
-
-                RealCid = node.Id.ToString();
-                
-                // Si la subida a Catbox falló, usamos el link de IPFS como fallback
-                if (string.IsNullOrEmpty(GatewayUrl))
-                {
-                    GatewayUrl = $"https://ipfs.io/ipfs/{RealCid}";
-                    IsOnIpfs = true;
-                }
-
-                LogStatus($"✅ ZIP en IPFS | CID: {RealCid[..14]}...");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[IPFS] Error al subir a IPFS: {ex.Message}");
-                if (string.IsNullOrEmpty(GatewayUrl))
-                {
-                    LogStatus($"Error al subir a IPFS: {ex.Message}");
-                }
-            }
-        }
-
-        // ── Subida anónima a Catbox.moe (HTTP POST Multipart Form-Data) ─────────
-        private async Task<string?> UploadToCatboxAsync(string filePath)
-        {
-            try
-            {
-                LogStatus("Subiendo ZIP a servidor público (Catbox)...");
                 using var httpClient = new HttpClient();
-                httpClient.Timeout = TimeSpan.FromMinutes(10); // Permitir tiempo para subir archivos de hasta 200MB
+                httpClient.Timeout = TimeSpan.FromMinutes(15);
 
                 using var form = new MultipartFormDataContent();
                 form.Add(new StringContent("fileupload"), "reqtype");
 
-                // Cargar archivo asíncronamente como stream
-                using var fileStream = File.OpenRead(filePath);
-                var streamContent = new StreamContent(fileStream);
-                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
-                form.Add(streamContent, "fileToUpload", Path.GetFileName(filePath));
+                using var fileStream    = File.OpenRead(filePath);
+                var       streamContent = new StreamContent(fileStream);
+                streamContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+                form.Add(streamContent, "fileToUpload", fileName);
 
-                var response = await httpClient.PostAsync("https://catbox.moe/user/api.php", form);
+                var response = await httpClient.PostAsync(
+                    "https://catbox.moe/user/api.php", form);
+
                 if (response.IsSuccessStatusCode)
                 {
-                    string responseText = await response.Content.ReadAsStringAsync();
-                    string url = responseText.Trim();
-                    if (url.StartsWith("http://") || url.StartsWith("https://"))
+                    string result = (await response.Content.ReadAsStringAsync()).Trim();
+                    if (result.StartsWith("http://") || result.StartsWith("https://"))
                     {
-                        LogStatus("✅ ZIP subido correctamente a Catbox.");
-                        return url;
+                        Debug.WriteLine($"[Catbox] ✅ {fileName} → {result}");
+                        return result;
                     }
-                    else
-                    {
-                        LogStatus($"Catbox retornó error: {url}");
-                    }
+                    Debug.WriteLine($"[Catbox] Respuesta inesperada: {result}");
                 }
                 else
                 {
-                    LogStatus($"Error HTTP al subir a Catbox: {response.StatusCode}");
+                    Debug.WriteLine($"[Catbox] HTTP {response.StatusCode}");
                 }
             }
             catch (Exception ex)
             {
-                LogStatus($"Error al subir a Catbox: {ex.Message}");
-                Debug.WriteLine($"[Catbox] Error: {ex}");
+                Debug.WriteLine($"[Catbox] Error: {ex.Message}");
+                LogStatus($"Error Catbox: {ex.Message}");
             }
             return null;
         }
 
-        // ── Servidor HTTP local ───────────────────────────────────────────────
+        // ── Servidor HTTP local (fallback LAN) ────────────────────────────────
         private async Task ListenLoop(CancellationToken token)
         {
             while (!token.IsCancellationRequested && _listener.IsListening)
@@ -240,9 +220,8 @@ namespace VisorSingularity
                 try
                 {
                     var ctx      = await _listener.GetContextAsync();
-                    var request  = ctx.Request;
                     var response = ctx.Response;
-                    string path  = request.Url?.AbsolutePath.ToLower() ?? "/";
+                    string path  = ctx.Request.Url?.AbsolutePath.ToLower() ?? "/";
 
                     if (path == "/visor.zip")
                     {
@@ -250,9 +229,11 @@ namespace VisorSingularity
                     }
                     else
                     {
-                        byte[] buf = Encoding.UTF8.GetBytes(GetInvitePageHtml());
-                        response.StatusCode   = 200;
-                        response.ContentType  = "text/html; charset=UTF-8";
+                        // Sirve el HTML con la URL actual (puede ser local o Catbox)
+                        string url  = ZipPublicUrl ?? (ZipReady ? "/visor.zip" : "#");
+                        byte[] buf  = Encoding.UTF8.GetBytes(BuildFinalInviteHtml(url));
+                        response.StatusCode      = 200;
+                        response.ContentType     = "text/html; charset=UTF-8";
                         response.ContentLength64 = buf.Length;
                         await response.OutputStream.WriteAsync(buf, 0, buf.Length);
                     }
@@ -274,7 +255,7 @@ namespace VisorSingularity
                 await response.OutputStream.WriteAsync(err, 0, err.Length);
                 return;
             }
-            response.StatusCode = 200;
+            response.StatusCode  = 200;
             response.ContentType = "application/zip";
             response.AddHeader("Content-Disposition",
                 $"attachment; filename=\"WoldVirtual_Visor_{NodeId}.zip\"");
@@ -289,18 +270,13 @@ namespace VisorSingularity
             if (IsZipping) return;
             IsZipping = true;
             ZipReady  = false;
-            LogStatus("Comprimiendo visor (excluyendo carpetas pesadas)...");
-
             try
             {
                 if (File.Exists(ZipPath)) File.Delete(ZipPath);
-
                 using var zipStream = new FileStream(ZipPath, FileMode.Create);
                 using var archive   = new ZipArchive(zipStream, ZipArchiveMode.Create);
                 AddDirectoryToZip(archive, _repoPath, _repoPath);
-
                 ZipReady = true;
-                LogStatus("ZIP listo. Subiendo a IPFS...");
             }
             catch (Exception ex)
             {
@@ -314,7 +290,7 @@ namespace VisorSingularity
         {
             foreach (string file in Directory.GetFiles(sourceDir))
             {
-                string ext = Path.GetExtension(file).ToLower();
+                string ext  = Path.GetExtension(file).ToLower();
                 if (ext is ".zip" or ".tmp" or ".log") continue;
                 string name = Path.GetFileName(file).ToLower();
                 if (name == "vram_status.json") continue;
@@ -323,7 +299,6 @@ namespace VisorSingularity
                 try { archive.CreateEntryFromFile(file, rel); }
                 catch (Exception ex) { Debug.WriteLine($"[ZIP-skip] {rel}: {ex.Message}"); }
             }
-
             foreach (string dir in Directory.GetDirectories(sourceDir))
             {
                 string d = Path.GetFileName(dir).ToLower();
@@ -334,21 +309,14 @@ namespace VisorSingularity
             }
         }
 
-        // ── Página de invitación HTML ─────────────────────────────────────────
-        private string GetInvitePageHtml()
+        // ── HTML de invitación con URL de descarga INCRUSTADA ─────────────────
+        private string BuildFinalInviteHtml(string downloadUrl)
         {
-            bool   hasIpfs      = IsOnIpfs && GatewayUrl != null;
-            string downloadUrl  = hasIpfs ? GatewayUrl! : (ZipReady ? "/visor.zip" : "#");
-            string statusMsg    = hasIpfs
-                ? $"✅ Disponible para descarga directa sin instalar nada."
-                : (ZipReady
-                    ? "ZIP listo en servidor local. Subiendo a servidor público..."
-                    : "Generando el paquete del visor, por favor espera...");
-            string btnClass     = (hasIpfs || ZipReady) ? "" : "disabled";
-            string cidBlock     = hasIpfs && !string.IsNullOrEmpty(RealCid)
-                ? $"<div class=\"cid-row\"><span class=\"lbl\">CID IPFS</span>" +
-                  $"<span class=\"cid\">{RealCid}</span></div>"
-                : "";
+            bool   hasLink  = !string.IsNullOrEmpty(downloadUrl) && downloadUrl != "#";
+            string btnClass = hasLink ? "" : "disabled";
+            string status   = hasLink
+                ? "✅ Descarga directa disponible."
+                : "Preparando enlace...";
 
             return $@"<!DOCTYPE html>
 <html lang=""es"">
@@ -358,49 +326,23 @@ namespace VisorSingularity
 <title>Invitación — Wold Virtual P2P 3D</title>
 <link href=""https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap"" rel=""stylesheet"">
 <style>
-:root{{--bg:#060913;--card:rgba(17,22,37,.7);--cyan:#66FCF1;--teal:#45A29E;
-      --green:#00ff8c;--text:#C5C6C7;--white:#FFF;}}
+:root{{--bg:#060913;--card:rgba(17,22,37,.7);--cyan:#66FCF1;--teal:#45A29E;--green:#00ff8c;--text:#C5C6C7;--white:#FFF;}}
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;
-     min-height:100vh;display:flex;align-items:center;justify-content:center}}
-body::before{{content:'';position:fixed;inset:0;
-     background-image:linear-gradient(rgba(102,252,241,.03)1px,transparent 1px),
-                      linear-gradient(90deg,rgba(102,252,241,.03)1px,transparent 1px);
-     background-size:30px 30px;pointer-events:none}}
-.card{{width:90%;max-width:560px;background:var(--card);border:1px solid var(--teal);
-      border-top:2px solid var(--cyan);border-radius:16px;padding:40px;
-      backdrop-filter:blur(12px);
-      box-shadow:0 8px 32px rgba(0,0,0,.37),0 0 20px rgba(102,252,241,.15);
-      text-align:center}}
-.icon{{font-size:52px;margin-bottom:12px;
-       filter:drop-shadow(0 0 10px var(--cyan))}}
-h1{{font-size:26px;font-weight:800;color:var(--white);letter-spacing:2px;
-    text-transform:uppercase;text-shadow:0 0 12px rgba(102,252,241,.4)}}
-.sub{{color:var(--cyan);font-size:12px;font-weight:600;letter-spacing:3px;
-     text-transform:uppercase;margin:6px 0 28px}}
-.info-box{{background:rgba(6,9,19,.8);border:1px dashed rgba(102,252,241,.3);
-          border-radius:8px;padding:16px;margin-bottom:22px;text-align:left}}
-.lbl{{font-size:10px;text-transform:uppercase;letter-spacing:2px;
-     color:var(--teal);display:block;margin-bottom:3px}}
-.val{{font-size:15px;font-weight:600;color:var(--green);
-     text-shadow:0 0 8px rgba(0,255,140,.3);word-break:break-all}}
-.cid-row{{margin-top:12px;padding-top:12px;
-         border-top:1px solid rgba(102,252,241,.1)}}
-.cid{{font-size:10px;font-family:monospace;color:var(--cyan);
-     word-break:break-all;display:block;margin-top:3px}}
+body{{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}}
+body::before{{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(102,252,241,.03)1px,transparent 1px),linear-gradient(90deg,rgba(102,252,241,.03)1px,transparent 1px);background-size:30px 30px;pointer-events:none}}
+.card{{width:90%;max-width:560px;background:var(--card);border:1px solid var(--teal);border-top:2px solid var(--cyan);border-radius:16px;padding:40px;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,.37),0 0 20px rgba(102,252,241,.15);text-align:center}}
+.icon{{font-size:52px;margin-bottom:12px;filter:drop-shadow(0 0 10px var(--cyan))}}
+h1{{font-size:26px;font-weight:800;color:var(--white);letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 12px rgba(102,252,241,.4)}}
+.sub{{color:var(--cyan);font-size:12px;font-weight:600;letter-spacing:3px;text-transform:uppercase;margin:6px 0 28px}}
+.info-box{{background:rgba(6,9,19,.8);border:1px dashed rgba(102,252,241,.3);border-radius:8px;padding:16px;margin-bottom:22px;text-align:left}}
+.lbl{{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--teal);display:block;margin-bottom:3px}}
+.val{{font-size:15px;font-weight:600;color:var(--green);text-shadow:0 0 8px rgba(0,255,140,.3);word-break:break-all}}
 p.desc{{font-size:14px;line-height:1.7;margin-bottom:28px}}
-a.btn{{display:block;background:transparent;color:var(--cyan);
-      border:2px solid var(--cyan);padding:14px 24px;font-size:14px;
-      font-weight:600;text-transform:uppercase;letter-spacing:2px;
-      border-radius:8px;text-decoration:none;
-      transition:all .25s ease;
-      box-shadow:0 0 10px rgba(102,252,241,.1)}}
-a.btn:hover:not(.disabled){{background:var(--cyan);color:var(--bg);
-      box-shadow:0 0 24px rgba(102,252,241,.4);transform:translateY(-2px)}}
+a.btn{{display:block;background:transparent;color:var(--cyan);border:2px solid var(--cyan);padding:14px 24px;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:2px;border-radius:8px;text-decoration:none;transition:all .25s ease;box-shadow:0 0 10px rgba(102,252,241,.1)}}
+a.btn:hover:not(.disabled){{background:var(--cyan);color:var(--bg);box-shadow:0 0 24px rgba(102,252,241,.4);transform:translateY(-2px)}}
 a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allowed}}
 .status{{margin-top:14px;font-size:12px;color:var(--green)}}
-.footer{{margin-top:30px;font-size:10px;color:rgba(197,198,199,.35);
-        text-transform:uppercase;letter-spacing:1px}}
+.footer{{margin-top:30px;font-size:10px;color:rgba(197,198,199,.35);text-transform:uppercase;letter-spacing:1px}}
 </style>
 </head>
 <body>
@@ -408,29 +350,30 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
   <div class=""icon"">🌐</div>
   <h1>Wold Virtual 3D</h1>
   <div class=""sub"">P2P Network — Invitación</div>
-
   <div class=""info-box"">
-    <span class=""lbl"">Dirección del Nodo</span>
+    <span class=""lbl"">Nodo</span>
     <span class=""val"">{SimulatedUrl}</span>
-    {cidBlock}
   </div>
-
   <p class=""desc"">
-    Tu amigo te invita a unirte al metaverso 3D descentralizado.<br>
-    Descarga el visor, descomprímelo y ejecútalo para crear tu avatar y conectarte a la red P2P.
+    Tu amigo te invita al metaverso 3D descentralizado.<br>
+    Descarga el visor, descomprímelo y ejecútalo para crear tu avatar.
   </p>
-
-  <a href=""{downloadUrl}"" class=""btn {btnClass}"">
+  <a href=""{downloadUrl}"" class=""btn {btnClass}"" download>
     ⬇ Descargar Visor (.ZIP)
   </a>
-  <div class=""status"">{statusMsg}</div>
-  <div class=""footer"">Powered by IPFS · WoldVirtual P2P Engine · C#</div>
+  <div class=""status"">{status}</div>
+  <div class=""footer"">Powered by Catbox · WoldVirtual P2P Engine · C#</div>
 </div>
 </body>
 </html>";
         }
 
         // ── Utilidades ────────────────────────────────────────────────────────
+        private double GetFileSizeMB(string path)
+        {
+            try { return new FileInfo(path).Length / 1_048_576.0; } catch { return 0; }
+        }
+
         private int FindAvailablePort(int start)
         {
             for (int port = start; port < start + 100; port++)
