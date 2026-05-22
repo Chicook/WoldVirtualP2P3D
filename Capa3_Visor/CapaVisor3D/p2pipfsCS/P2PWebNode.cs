@@ -15,14 +15,12 @@ namespace VisorSingularity
     /// <summary>
     /// Nodo P2P del Visor WoldVirtual.
     ///
-    /// Flujo P2P descentralizado prioritario (IPFS):
-    ///   1. GenerateRepositoryZip()  → Comprime el visor completo a disco temporal (330 MB)
-    ///   2. Arranca IPFS local      → Inicializa el daemon de Kubo en puerto 5001 / 8080 (Perfil Servidor + UPnP activo)
-    ///   3. Publica el ZIP en IPFS   → Obtiene el CID del archivo ZIP
-    ///   4. Genera landing HTML      → Crea un index.html con un enlace RELATIVO (/ipfs/CID) para evitar bloqueos
-    ///   5. Publica la landing       → Obtiene el CID de la página de descarga y la comparte
-    ///   6. Pre-carga Activa         → Dispara peticiones HTTP paralelas a 5 pasarelas globales
-    ///                                 para forzar el enrutamiento DHT instantáneo de tus archivos.
+    /// Flujo P2P (túmel SSH prioritario):
+    ///   1. GenerateRepositoryZip()  → Comprime el visor completo a disco temporal (~330 MB)
+    ///   2. Túmel SSH Reverso       → Expone el servidor local (puerto 8082) a internet via serveo.net/localhost.run
+    ///                                 URL activa SOLO mientras el avatar esté conectado. Al apagar: URL desaparece.
+    ///   3. IPFS en background       → Kubo anuncia el contenido en el DHT para seeding P2P adicional
+    ///   4. Fallback CDN             → Pixeldrain/GoFile/Transfer.sh si SSH e IPFS fallan ambos
     /// </summary>
     public class P2PWebNode
     {
@@ -52,6 +50,7 @@ namespace VisorSingularity
 
         private IpfsManager?             _ipfsManager;
         private IpfsPublisher?           _ipfsPublisher;
+        private Process?                 _tunnelProcess;   // Proceso SSH del túmel reverso activo
 
         public event Action<string>? OnStatusChanged;
 
@@ -96,6 +95,14 @@ namespace VisorSingularity
             _cts?.Dispose();
             _cts = null;
 
+            // Matar túmel SSH — cuando muere, la URL pública deja de funcionar (diseño intencional)
+            if (_tunnelProcess != null)
+            {
+                try { _tunnelProcess.Kill(entireProcessTree: true); } catch { }
+                try { _tunnelProcess.Dispose(); }                    catch { }
+                _tunnelProcess = null;
+            }
+
             if (_listener?.IsListening == true)
                 try { _listener.Stop(); _listener.Close(); } catch { }
 
@@ -111,7 +118,7 @@ namespace VisorSingularity
             LogStatus("⏹ Nodo P2P apagado.");
         }
 
-        // ── Flujo principal SECUENCIAL (IPFS prioritario) ──────────────────────
+        // ── Flujo principal: Túmel SSH (prioritario) → IPFS/CDN (background) ──────────────────────
         private async Task RunMainFlowAsync()
         {
             // Paso 1 — Generar ZIP
@@ -124,93 +131,194 @@ namespace VisorSingularity
             }
 
             double mb = GetFileSizeMB(ZipPath);
-            LogStatus($"✅ ZIP listo ({mb:F1} MB). Arrancando red IPFS...");
+            LogStatus($"✅ ZIP listo ({mb:F1} MB). Estableciendo presencia en red...");
 
-            // Paso 2 — Intentar arrancar daemon de IPFS local
-            _ipfsManager = new IpfsManager();
-            _ipfsManager.OnStatusChanged += (msg) => LogStatus(msg);
+            // Paso 2 — Túmel SSH reverso (PC-a-PC, visible mientras conectado, desaparece al cerrar)
+            string? tunnelUrl = await TryEstablishTunnelAsync(_cts?.Token ?? default);
+            if (!string.IsNullOrEmpty(tunnelUrl))
+            {
+                ZipPublicUrl = $"{tunnelUrl}/visor.zip";
+                GatewayUrl   = tunnelUrl;
+                IsOnIpfs     = false;
+                LogStatus("🌍 ¡Nodo visible! URL activa mientras estés conectado.");
+
+                // IPFS en paralelo para seeding DHT adicional (no bloquea)
+                _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
+                return;
+            }
+
+            // Paso 3 — SSH no disponible: intentar IPFS + CDN
+            LogStatus("⚠️ Túmel SSH no disponible. Intentando IPFS + CDN...");
+            await RunIpfsBackgroundAsync(_cts?.Token ?? default);
+        }
+
+        // ── Túmel SSH Reverso ────────────────────────────────────────────────────────────────────
+        /// <summary>
+        /// Conecta el servidor HTTP local (puerto <see cref="Port"/>) a un servicio de túmel
+        /// gratuito (serveo.net, localhost.run) mediante SSH reverso.
+        /// El URL público devuelto es válido solo mientras el proceso SSH esté activo.
+        /// OpenSSH está integrado en Windows 10 y 11 (no requiere instalación extra).
+        /// </summary>
+        private async Task<string?> TryEstablishTunnelAsync(CancellationToken token)
+        {
+            LogStatus("🔌 Estableciendo túmel SSH público PC-a-PC...");
+
+            string sshExe = @"C:\Windows\System32\OpenSSH\ssh.exe";
+            if (!File.Exists(sshExe)) sshExe = "ssh";
+
+            var candidates = new[]
+            {
+                new {
+                    Name = "serveo.net",
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:localhost:{Port} serveo.net",
+                    Pat  = @"https://[\w\-]+\.serveo\.net"
+                },
+                new {
+                    Name = "serveo.net:443",
+                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:localhost:{Port} serveo.net",
+                    Pat  = @"https://[\w\-]+\.serveo\.net"
+                },
+                new {
+                    Name = "localhost.run",
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:localhost:{Port} nokey@localhost.run",
+                    Pat  = @"https://[\w\-]+\.lhr\.rocks"
+                }
+            };
+
+            foreach (var c in candidates)
+            {
+                if (token.IsCancellationRequested) return null;
+                LogStatus($"   → {c.Name}...");
+
+                Process? proc   = null;
+                string?  found  = null;
+
+                try
+                {
+                    proc = Process.Start(new ProcessStartInfo
+                    {
+                        FileName               = sshExe,
+                        Arguments              = c.Args,
+                        UseShellExecute        = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError  = true,
+                        CreateNoWindow         = true
+                    });
+                    if (proc == null) continue;
+
+                    using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    scanCts.CancelAfter(22000);
+
+                    async Task Scan(StreamReader sr)
+                    {
+                        try
+                        {
+                            while (!scanCts.IsCancellationRequested && !proc.HasExited)
+                            {
+                                string? ln = await sr.ReadLineAsync();
+                                if (ln == null) break;
+                                Debug.WriteLine($"[SSH-{c.Name}] {ln}");
+                                var m = System.Text.RegularExpressions.Regex.Match(ln, c.Pat);
+                                if (m.Success) { found = m.Value; scanCts.Cancel(); return; }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    await Task.WhenAny(
+                        Scan(proc.StandardOutput),
+                        Scan(proc.StandardError),
+                        Task.Delay(23000, scanCts.Token).ContinueWith(_ => { })
+                    );
+
+                    if (!string.IsNullOrEmpty(found) && !proc.HasExited)
+                    {
+                        _tunnelProcess = proc;
+                        LogStatus($"🌍 Túmel activo — {c.Name}: {found}");
+                        return found;
+                    }
+
+                    try { proc.Kill(entireProcessTree: true); } catch { }
+                    proc.Dispose();
+                    proc = null;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[SSH] {c.Name} fallo: {ex.Message}");
+                    try { proc?.Kill(entireProcessTree: true); proc?.Dispose(); } catch { }
+                }
+            }
+
+            LogStatus("⚠️ Túmel SSH no disponible.");
+            return null;
+        }
+
+        // ── IPFS + CDN (ejecutado en background o como fallback si SSH falla) ────────────────────
+        private async Task RunIpfsBackgroundAsync(CancellationToken token)
+        {
+            _ipfsManager   = new IpfsManager();
+            _ipfsManager.OnStatusChanged += msg => LogStatus(msg);
             _ipfsPublisher = new IpfsPublisher(_ipfsManager);
 
             bool ipfsReady = false;
-            try
-            {
-                ipfsReady = await _ipfsManager.EnsureReadyAsync(_cts?.Token ?? default);
-            }
-            catch (Exception ex)
-            {
-                LogStatus($"⚠️ Error al arrancar IPFS: {ex.Message}");
-            }
+            try   { ipfsReady = await _ipfsManager.EnsureReadyAsync(token); }
+            catch (Exception ex) { LogStatus($"⚠️ IPFS: {ex.Message}"); }
 
-            // Paso 3 — Si IPFS arrancó bien, publicar el ZIP y la Landing descentralizadamente
             if (ipfsReady && _ipfsPublisher != null)
             {
-                LogStatus("🚀 Publicando archivo ZIP completo en IPFS local...");
-                string? zipCid = await _ipfsPublisher.PublishAndPinAsync(ZipPath, _cts?.Token ?? default);
+                LogStatus("🚀 [IPFS BG] Publicando ZIP en la red IPFS...");
+                string? zipCid = await _ipfsPublisher.PublishAndPinAsync(ZipPath, token);
 
                 if (!string.IsNullOrEmpty(zipCid))
                 {
-                    LogStatus("✅ ZIP en IPFS. Creando y publicando la página de descarga...");
+                    string tempDir = Path.Combine(Path.GetTempPath(), $"WVHtml_{NodeId}");
+                    Directory.CreateDirectory(tempDir);
+                    File.WriteAllText(Path.Combine(tempDir, "index.html"),
+                        GetLandingHtml($"/ipfs/{zipCid}", isIpfsHosted: true, zipCid: zipCid),
+                        Encoding.UTF8);
 
-                    // Crear directorio temporal para el index.html de descarga
-                    string tempHtmlDir = Path.Combine(Path.GetTempPath(), $"WoldVirtualHtml_{NodeId}");
-                    Directory.CreateDirectory(tempHtmlDir);
-                    string indexHtmlPath = Path.Combine(tempHtmlDir, "index.html");
-
-                    // Enlace IPFS relativo: esto garantiza que el ZIP se descargue usando la misma pasarela que abrió la landing
-                    string relativeZipUrl = $"/ipfs/{zipCid}";
-
-                    // Generar HTML hermoso apuntando a la descarga IPFS relativa
-                    string htmlContent = GetLandingHtml(relativeZipUrl, isIpfsHosted: true, zipCid: zipCid);
-                    File.WriteAllText(indexHtmlPath, htmlContent, Encoding.UTF8);
-
-                    LogStatus("🚀 Publicando página de descarga en la red IPFS...");
-                    string? landingCid = await _ipfsPublisher.PublishDirectoryAsync(tempHtmlDir, _cts?.Token ?? default);
-
-                    try { Directory.Delete(tempHtmlDir, true); } catch { }
+                    string? landingCid = await _ipfsPublisher.PublishDirectoryAsync(tempDir, token);
+                    try { Directory.Delete(tempDir, true); } catch { }
 
                     if (!string.IsNullOrEmpty(landingCid))
                     {
-                        // Seleccionar dinámicamente la mejor pasarela pública no bloqueada por el ISP
-                        string bestGatewayUrl = await SelectBestGatewayUrlAsync(landingCid);
-                        
-                        // Determinar el prefijo correspondiente
-                        string gwPrefix = "https://ipfs.io/ipfs/";
-                        int ipfsIdx = bestGatewayUrl.IndexOf("/ipfs/");
-                        if (ipfsIdx > 0)
+                        // Solo actualizar GatewayUrl si el túmel no está activo
+                        if (string.IsNullOrEmpty(GatewayUrl) || GatewayUrl == LocalUrl)
                         {
-                            gwPrefix = bestGatewayUrl.Substring(0, ipfsIdx + 6);
+                            string bestGw = await SelectBestGatewayUrlAsync(landingCid);
+                            int    idx    = bestGw.IndexOf("/ipfs/");
+                            string pfx    = idx > 0 ? bestGw.Substring(0, idx + 6) : "https://ipfs.io/ipfs/";
+                            ZipPublicUrl  = $"{pfx}{zipCid}";
+                            GatewayUrl    = bestGw;
+                            IsOnIpfs      = true;
+                            LogStatus("✅ [IPFS] Enlace IPFS listo. Cópialo y compártelo.");
                         }
-
-                        ZipPublicUrl = $"{gwPrefix}{zipCid}";
-                        GatewayUrl   = bestGatewayUrl;
-                        IsOnIpfs     = true;
-
-                        // Precargar activamente en pasarelas globales en segundo plano para enrutar el DHT
+                        else
+                        {
+                            LogStatus($"📌 [IPFS BG] Seeding DHT activo — CID landing: {landingCid}");
+                        }
                         PreloadCidsOnPublicGateways(landingCid, zipCid);
-
-                        LogStatus("✅ ¡Enlace IPFS público listo! Cópialo y compártelo.");
-                        return; // Flujo IPFS exitoso
+                        return;
                     }
                 }
             }
 
-            // Paso 4 — Si IPFS falla o no se pudo publicar, ir a la cadena de servicios tradicionales
-            LogStatus("⚠️ IPFS no disponible. Intentando subida pública tradicional...");
-            string? publicUrl = await TryUploadZipAsync();
+            // CDN fallback (solo si no hay túnel ni IPFS)
+            if (!string.IsNullOrEmpty(GatewayUrl) && GatewayUrl != LocalUrl) return;
 
-            if (!string.IsNullOrEmpty(publicUrl))
+            LogStatus("⚠️ IPFS no disponible. Intentando CDN...");
+            string? cdnUrl = await TryUploadZipAsync();
+            if (!string.IsNullOrEmpty(cdnUrl))
             {
-                ZipPublicUrl = publicUrl;
-                GatewayUrl   = publicUrl;
+                ZipPublicUrl = cdnUrl;
+                GatewayUrl   = cdnUrl;
                 IsOnIpfs     = true;
-                LogStatus("✅ ¡Enlace público listo! Cópialo y compártelo.");
+                LogStatus("✅ Enlace CDN listo. Cópialo y compártelo.");
             }
             else
             {
-                // Fallback final: Servir localmente desde el nodo actual
-                ZipPublicUrl = $"{LocalUrl}visor.zip";
-                GatewayUrl   = LocalUrl;
-                LogStatus($"⚠️ Upload falló. Solo enlace local activo: {LocalUrl}");
+                GatewayUrl = LocalUrl;
+                LogStatus($"⚠️ Solo enlace local activo: {LocalUrl}");
             }
         }
 
@@ -609,16 +717,29 @@ namespace VisorSingularity
 
         private async Task ServeLandingAsync(HttpListenerResponse r)
         {
-            string dl = ZipPublicUrl ?? (ZipReady ? "/visor.zip" : "#");
-            bool isIpfs = IsOnIpfs && ZipPublicUrl != null && ZipPublicUrl.Contains("/ipfs/");
+            // Si el ZIP está listo localmente (o via túmel) usamos ruta relativa.
+            // Así funciona tanto en localhost:8082 como a través del túmel (que proxea al mismo servidor).
+            string dl;
+            bool   isIpfs  = false;
             string? zipCid = null;
-            if (isIpfs && ZipPublicUrl != null)
+
+            if (ZipReady)
             {
-                int lastSlash = ZipPublicUrl.LastIndexOf('/');
-                if (lastSlash >= 0)
+                dl = "/visor.zip";   // relativo — siempre correcto sea cual sea el host
+            }
+            else if (!string.IsNullOrEmpty(ZipPublicUrl))
+            {
+                dl     = ZipPublicUrl;
+                isIpfs = IsOnIpfs && ZipPublicUrl.Contains("/ipfs/");
+                if (isIpfs)
                 {
-                    zipCid = ZipPublicUrl.Substring(lastSlash + 1);
+                    int ls = ZipPublicUrl.LastIndexOf('/');
+                    if (ls >= 0) zipCid = ZipPublicUrl.Substring(ls + 1);
                 }
+            }
+            else
+            {
+                dl = "#";  // ZIP aún no listo
             }
 
             byte[] buf = Encoding.UTF8.GetBytes(GetLandingHtml(dl, isIpfs, zipCid));
