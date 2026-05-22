@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -107,14 +108,23 @@ namespace VisorSingularity
             LogStatus("Nodo P2P apagado.");
         }
 
-        // ── Flujo principal: ZIP → IPFS ───────────────────────────────────────
+        // ── Flujo principal: ZIP → Servidor Público / IPFS ──────────────────────
         private async Task GenerateZipThenUploadToIpfs()
         {
             // 1. Generar ZIP del visor
             GenerateRepositoryZip();
             if (!ZipReady) return;
 
-            // 2. Iniciar motor IPFS (puro C#, sin binarios externos)
+            // 2. Subir a Catbox.moe para tener enlace público rápido y garantizado (evita 502 Gateway de IPFS)
+            string? catboxUrl = await UploadToCatboxAsync(ZipPath);
+            if (!string.IsNullOrEmpty(catboxUrl))
+            {
+                GatewayUrl = catboxUrl;
+                IsOnIpfs = true; // Para actualizar el estado visual en WPF y habilitar el botón de copiado
+                LogStatus("✅ Enlace público listo. Inicializando motor IPFS en segundo plano...");
+            }
+
+            // 3. Iniciar motor IPFS (puro C#, sin binarios externos) de respaldo/local
             try
             {
                 string ipfsRepo = Path.Combine(
@@ -123,17 +133,25 @@ namespace VisorSingularity
                 _ipfsEngine = new IpfsEngine("WoldVirtualP2P_Node".ToCharArray());
                 _ipfsEngine.Options.Repository.Folder = Path.GetFullPath(ipfsRepo);
 
-                LogStatus("Iniciando motor IPFS...");
+                Debug.WriteLine("[IPFS] Iniciando motor IPFS...");
                 await _ipfsEngine.StartAsync();
-                LogStatus("Motor IPFS activo. Subiendo ZIP a la red...");
+                Debug.WriteLine("[IPFS] Motor IPFS activo. Subiendo ZIP a IPFS...");
             }
             catch (Exception ex)
             {
-                LogStatus($"IPFS no disponible ({ex.Message}). Enlace local activo.");
+                Debug.WriteLine($"[IPFS] IPFS no disponible ({ex.Message}).");
+                if (string.IsNullOrEmpty(GatewayUrl))
+                {
+                    LogStatus($"IPFS no disponible. Enlace local activo.");
+                }
+                else
+                {
+                    LogStatus($"Enlace público activo (Catbox). IPFS no disponible.");
+                }
                 return;
             }
 
-            // 3. Añadir ZIP a IPFS → obtener CID público
+            // 4. Añadir ZIP a IPFS → obtener CID público (como segundo canal de respaldo)
             await AddZipToIpfsAsync();
         }
 
@@ -147,17 +165,71 @@ namespace VisorSingularity
                     $"WoldVirtual_Visor_{NodeId}.zip",
                     new Ipfs.CoreApi.AddFileOptions { Pin = true });
 
-                RealCid    = node.Id.ToString();
-                GatewayUrl = $"https://ipfs.io/ipfs/{RealCid}";
-                IsOnIpfs   = true;
+                RealCid = node.Id.ToString();
+                
+                // Si la subida a Catbox falló, usamos el link de IPFS como fallback
+                if (string.IsNullOrEmpty(GatewayUrl))
+                {
+                    GatewayUrl = $"https://ipfs.io/ipfs/{RealCid}";
+                    IsOnIpfs = true;
+                }
 
                 LogStatus($"✅ ZIP en IPFS | CID: {RealCid[..14]}...");
             }
             catch (Exception ex)
             {
-                LogStatus($"Error al subir a IPFS: {ex.Message}");
-                Debug.WriteLine($"[IPFS] Error: {ex}");
+                Debug.WriteLine($"[IPFS] Error al subir a IPFS: {ex.Message}");
+                if (string.IsNullOrEmpty(GatewayUrl))
+                {
+                    LogStatus($"Error al subir a IPFS: {ex.Message}");
+                }
             }
+        }
+
+        // ── Subida anónima a Catbox.moe (HTTP POST Multipart Form-Data) ─────────
+        private async Task<string?> UploadToCatboxAsync(string filePath)
+        {
+            try
+            {
+                LogStatus("Subiendo ZIP a servidor público (Catbox)...");
+                using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromMinutes(10); // Permitir tiempo para subir archivos de hasta 200MB
+
+                using var form = new MultipartFormDataContent();
+                form.Add(new StringContent("fileupload"), "reqtype");
+
+                // Cargar archivo asíncronamente como stream
+                using var fileStream = File.OpenRead(filePath);
+                var streamContent = new StreamContent(fileStream);
+                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+                form.Add(streamContent, "fileToUpload", Path.GetFileName(filePath));
+
+                var response = await httpClient.PostAsync("https://catbox.moe/user/api.php", form);
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseText = await response.Content.ReadAsStringAsync();
+                    string url = responseText.Trim();
+                    if (url.StartsWith("http://") || url.StartsWith("https://"))
+                    {
+                        LogStatus("✅ ZIP subido correctamente a Catbox.");
+                        return url;
+                    }
+                    else
+                    {
+                        LogStatus($"Catbox retornó error: {url}");
+                    }
+                }
+                else
+                {
+                    LogStatus($"Error HTTP al subir a Catbox: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogStatus($"Error al subir a Catbox: {ex.Message}");
+                Debug.WriteLine($"[Catbox] Error: {ex}");
+            }
+            return null;
         }
 
         // ── Servidor HTTP local ───────────────────────────────────────────────
@@ -268,12 +340,12 @@ namespace VisorSingularity
             bool   hasIpfs      = IsOnIpfs && GatewayUrl != null;
             string downloadUrl  = hasIpfs ? GatewayUrl! : (ZipReady ? "/visor.zip" : "#");
             string statusMsg    = hasIpfs
-                ? $"✅ Disponible en IPFS — descarga directa sin instalar nada."
+                ? $"✅ Disponible para descarga directa sin instalar nada."
                 : (ZipReady
-                    ? "ZIP listo en servidor local. Conectando a IPFS..."
+                    ? "ZIP listo en servidor local. Subiendo a servidor público..."
                     : "Generando el paquete del visor, por favor espera...");
             string btnClass     = (hasIpfs || ZipReady) ? "" : "disabled";
-            string cidBlock     = hasIpfs
+            string cidBlock     = hasIpfs && !string.IsNullOrEmpty(RealCid)
                 ? $"<div class=\"cid-row\"><span class=\"lbl\">CID IPFS</span>" +
                   $"<span class=\"cid\">{RealCid}</span></div>"
                 : "";

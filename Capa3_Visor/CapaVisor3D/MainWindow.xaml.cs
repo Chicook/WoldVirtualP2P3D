@@ -1014,7 +1014,14 @@ namespace VisorSingularity
                         TxtP2PStatus.Text = status;
                         if (_p2pNode.IsOnIpfs && !string.IsNullOrEmpty(_p2pNode.GatewayUrl))
                         {
-                            TxtP2PNodeId.Text = $"IPFS CID: {(_p2pNode.RealCid != null && _p2pNode.RealCid.Length > 12 ? _p2pNode.RealCid.Substring(0, 10) + "..." : _p2pNode.RealCid)}";
+                            if (!string.IsNullOrEmpty(_p2pNode.RealCid))
+                            {
+                                TxtP2PNodeId.Text = $"IPFS CID: {(_p2pNode.RealCid.Length > 12 ? _p2pNode.RealCid.Substring(0, 10) + "..." : _p2pNode.RealCid)}";
+                            }
+                            else
+                            {
+                                TxtP2PNodeId.Text = $"NODO P2P: {_p2pNode.SimulatedUrl}";
+                            }
                             TxtP2PLink.Text = $"Enlace: {_p2pNode.GatewayUrl}";
                         }
                     });
@@ -1045,7 +1052,7 @@ namespace VisorSingularity
 
                 if (!string.IsNullOrEmpty(_p2pNode.GatewayUrl))
                 {
-                    MessageBox.Show($"Enlace de IPFS público copiado al portapapeles:\n\n{urlToCopy}\n\nEnvíalo a tus amigos. Cualquiera con este enlace podrá descargar el visor y conectarse a la red P2P.", "Enlace IPFS Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"Enlace público de descarga del visor copiado al portapapeles:\n\n{urlToCopy}\n\nEnvíalo a tus amigos. Cualquiera con este enlace podrá descargar el visor y conectarse a la red P2P.", "Enlace Público Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
