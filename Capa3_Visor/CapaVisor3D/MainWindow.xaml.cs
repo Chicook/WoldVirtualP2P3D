@@ -736,9 +736,10 @@ namespace VisorSingularity
             {
                 ChatOverlayPopup.IsOpen = false;
             }
-            if (P2PWebNodePopup != null)
+            // P2PNodeBar es un Border incrustado, basta con ocultarlo
+            if (P2PNodeBar != null)
             {
-                P2PWebNodePopup.IsOpen = false;
+                P2PNodeBar.Visibility = Visibility.Collapsed;
             }
 
             if (_httpListener != null)
@@ -989,16 +990,7 @@ namespace VisorSingularity
                 ChatOverlayPopup.VerticalOffset = targetTop;
             }
 
-            if (P2PWebNodePopup != null && P2PWebNodePopup.IsOpen)
-            {
-                // Calcular posición horizontal centrada y vertical en la parte superior
-                double targetLeft = (GodotPlaceholder.ActualWidth - 360) / 2;
-                double targetTop = 15; // Just below the top edge of Godot viewport
-
-                P2PWebNodePopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
-                P2PWebNodePopup.HorizontalOffset = targetLeft;
-                P2PWebNodePopup.VerticalOffset = targetTop;
-            }
+            // P2PNodeBar está incrustado en la barra de menú — no requiere cálculo de posición
         }
 
         private void StartP2PWebNode(string username, string repoPath)
@@ -1023,9 +1015,8 @@ namespace VisorSingularity
                 TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
                 TxtP2PStatus.Text = "Inicializando nodo...";
 
-                // Abrir el popup
-                P2PWebNodePopup.IsOpen = true;
-                UpdatePopupPosition();
+                // Mostrar el widget en la barra de menú
+                P2PNodeBar.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
             {
