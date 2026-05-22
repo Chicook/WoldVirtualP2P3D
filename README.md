@@ -126,6 +126,219 @@ Se ha implementado una interfaz visual de altísima calidad inspirada en las mej
 
 ---
 
+## 🕸️ Hoja de Ruta: IPFS Real en C# (`p2pipfsCS`)
+
+> **📁 Carpeta:** [`Capa3_Visor/CapaVisor3D/p2pipfsCS/`](file:///d:/WCVcoinMTB/Capa3_Visor/CapaVisor3D/p2pipfsCS)
+> **🗂️ Archivo principal:** [`P2PWebNode.cs`](file:///d:/WCVcoinMTB/Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs)
+
+### 🎯 Objetivo
+
+Evolucionar el nodo P2P simulado (HTTP local con ZIP) hacia un **nodo IPFS nativo en C#**, capaz de publicar contenido en la red descentralizada real de IPFS sin depender de Go-IPFS ni de binarios externos. El widget `P2PNodeBar` ya está integrado en la barra de menú del visor WPF y será la ventana de estado de este sistema.
+
+---
+
+### 📊 Estado Actual de `P2PWebNode.cs`
+
+| Componente | Estado | Descripción |
+|---|---|---|
+| `HttpListener` local (puerto 8082) | ✅ **COMPLETO** | Servidor HTTP embebido en C# funcionando |
+| Generación de `NodeId` (`NDxxxxx`) | ✅ **COMPLETO** | ID único por sesión basado en hash del usuario |
+| `SimulatedUrl` (`www.NDxxxxx.ipfs`) | ✅ **COMPLETO** | URL IPFS simulada para identificación visual |
+| ZIP del repositorio bajo demanda | ✅ **COMPLETO** | Compresión async excluyendo `.git`, `obj`, `peers` |
+| Landing page de invitación (HTML/CSS) | ✅ **COMPLETO** | Página Cyberpunk de descarga servida en `/` |
+| `P2PNodeBar` en barra de menú WPF | ✅ **COMPLETO** | Widget incrustado — reemplaza Popup flotante |
+| `OnStatusChanged` event | ✅ **COMPLETO** | Eventos de estado conectados a `TxtP2PStatus` |
+| **IPFS real (Content Addressing)** | 🔴 **PENDIENTE** | No hay hashing CIDv1 ni protocolo libp2p real |
+| **DHT Kademlia / descubrimiento de pares** | 🔴 **PENDIENTE** | Sin descubrimiento de nodos en red pública |
+| **Transferencia bitswap** | 🔴 **PENDIENTE** | Sin protocolo de intercambio de bloques IPFS |
+| **Publicación en red pública IPFS** | 🔴 **PENDIENTE** | Sin conexión a bootstrap nodes de IPFS |
+| **TLS / cifrado de transporte** | 🔴 **PENDIENTE** | HTTP plano sin TLS ni Noise Protocol |
+
+---
+
+### 🗺️ Hoja de Ruta por Pasos — Integración IPFS Real en C#
+
+#### Paso 1 — CID Real (Content Identifier v1) `[ ]`
+> **Estado:** 🔴 No iniciado
+
+Implementar el **hash criptográfico SHA2-256 + codificación multihash** para calcular el `CIDv1` real de cada bloque de contenido. Este es el núcleo de IPFS: el contenido se identifica por su hash, no por su URL.
+
+```csharp
+// En P2PWebNode.cs — nuevo método a añadir
+private string ComputeCidV1(byte[] data)
+{
+    // 1. SHA-256 del bloque
+    using var sha = System.Security.Cryptography.SHA256.Create();
+    byte[] hash = sha.ComputeHash(data);
+
+    // 2. Multihash prefix: 0x12 (sha2-256) + 0x20 (32 bytes)
+    byte[] multihash = new byte[] { 0x12, 0x20 }.Concat(hash).ToArray();
+
+    // 3. CIDv1: version=1 + codec=dag-pb(0x70) + multihash → Base32
+    byte[] cidBytes = new byte[] { 0x01, 0x70 }.Concat(multihash).ToArray();
+    return "b" + Base32.ToBase32(cidBytes).ToLower(); // CIDv1 base32lower
+}
+```
+
+**Paquete NuGet requerido:** `SimpleBase` (Base32/Base58 encoding)
+
+---
+
+#### Paso 2 — Estructura de Bloques DAG-PB `[ ]`
+> **Estado:** 🔴 No iniciado
+
+IPFS estructura los archivos en **bloques de 256 KB** enlazados como un DAG (Grafo Acíclico Dirigido). El archivo ZIP del visor se divide en bloques, cada uno con su CIDv1, y se crea un nodo raíz que los enlaza.
+
+```csharp
+// Clase a crear: IpfsBlock.cs en p2pipfsCS/
+public class IpfsBlock
+{
+    public byte[] Data { get; set; }
+    public string Cid { get; set; }        // CIDv1 calculado
+    public List<string> Links { get; set; } // CIDs de sub-bloques
+    public long Size { get; set; }
+}
+```
+
+**Archivo nuevo:** `p2pipfsCS/IpfsBlock.cs`
+
+---
+
+#### Paso 3 — Almacén Local de Bloques (Blockstore) `[ ]`
+> **Estado:** 🔴 No iniciado
+
+Directorio local donde se persisten los bloques IPFS. Cada bloque se guarda como `<CID>.block` en disco. Esto permite que el nodo sirva su contenido a otros pares aunque se reinicie.
+
+```
+Estado_Global/
+└── ipfs_blockstore/
+    ├── bafybei...abc.block   ← bloque de datos
+    ├── bafybei...def.block
+    └── bafybei...ghi.block   ← nodo raíz (enlaza todos)
+```
+
+**Integración:** El `BASE_DIR` de `NetworkLayer.gd` ya apunta a `Estado_Global/` — el blockstore se añade como subdirectorio.
+
+---
+
+#### Paso 4 — Protocolo libp2p: Transport TCP + Noise `[ ]`
+> **Estado:** 🔴 No iniciado
+
+Sustituir el `HttpListener` plano por un **socket TCP libp2p con Noise Protocol** para cifrado de transporte. libp2p es la capa de red de IPFS.
+
+**Paquete NuGet:** `Nethermind.Libp2p` (implementación C# de libp2p)
+
+```csharp
+// Esquema de reemplazo en P2PWebNode.cs
+// ANTES: HttpListener _listener
+// DESPUÉS:
+private IHost _libp2pHost;
+
+private async Task StartLibp2pNode()
+{
+    var builder = new ServiceCollection()
+        .AddLibp2p(b => b.WithTcp().WithNoise().WithMplex())
+        .BuildServiceProvider();
+
+    _libp2pHost = builder.GetRequiredService<IHost>();
+    await _libp2pHost.StartAsync();
+    LocalPeerId = _libp2pHost.GetPeerId().ToString();
+}
+```
+
+---
+
+#### Paso 5 — DHT Kademlia: Descubrimiento de Pares `[ ]`
+> **Estado:** 🔴 No iniciado
+
+Conectar a los **bootstrap nodes públicos de IPFS** para unirse a la DHT Kademlia y ser descubrible por otros nodos. Los bootstrap nodes oficiales son:
+
+```
+/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN
+/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa
+```
+
+```csharp
+// Método a añadir: ConnectToBootstrapNodes()
+private static readonly string[] BootstrapNodes = {
+    "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+    "/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ"
+};
+```
+
+---
+
+#### Paso 6 — Protocolo Bitswap: Intercambio de Bloques `[ ]`
+> **Estado:** 🔴 No iniciado
+
+**Bitswap** es el protocolo de intercambio de bloques de IPFS. Los nodos anuncian qué bloques tienen (`HAVE`) y solicitan los que les faltan (`WANT`). Reemplaza la descarga directa del ZIP.
+
+```csharp
+// Nuevo archivo: p2pipfsCS/BitswapSession.cs
+public class BitswapSession
+{
+    public async Task<byte[]> GetBlock(string cid, CancellationToken token)
+    {
+        // 1. Buscar el bloque en el blockstore local
+        // 2. Si no está, anunciar WANT a pares conectados via DHT
+        // 3. Recibir el bloque, verificar CID, almacenar
+        // 4. Propagar a otros pares interesados (seeding)
+    }
+}
+```
+
+---
+
+#### Paso 7 — IPNS: Nombre Estable para el Nodo `[ ]`
+> **Estado:** 🔴 No iniciado
+
+**IPNS (InterPlanetary Name System)** permite publicar un nombre estable (`/ipns/<PeerID>`) que apunta al CID raíz del visor. Así, aunque el ZIP se actualice y su CID cambie, la URL del nodo permanece constante.
+
+```csharp
+// El SimulatedUrl actual: "www.NDxxxxx.ipfs" (solo visual)
+// Con IPNS real: "/ipns/12D3KooW..." → apunta siempre al último ZIP
+public string IpnsAddress => $"/ipns/{LocalPeerId}";
+```
+
+---
+
+#### Paso 8 — Integración Final con `P2PNodeBar` y Godot `[ ]`
+> **Estado:** 🔴 No iniciado
+
+- `TxtP2PNodeId` mostrará el **PeerID libp2p real** en formato `12D3KooW...`
+- `TxtP2PLink` mostrará la **dirección multiaddr** del nodo (`/ip4/x.x.x.x/tcp/4001`)
+- `TxtP2PStatus` reflejará el estado DHT: `Conectado a X pares | Y bloques servidos`
+- El `NetworkLayer.gd` de Godot recibirá el PeerID real vía IPC para mostrarlo en el panel lateral RED P2P
+
+---
+
+### 📦 Dependencias NuGet a Añadir
+
+```xml
+<!-- En VisorSingularity.csproj -->
+<PackageReference Include="Nethermind.Libp2p"     Version="1.*" />
+<PackageReference Include="SimpleBase"             Version="4.*" />
+<PackageReference Include="Google.Protobuf"        Version="3.*" />
+```
+
+---
+
+### ⏱️ Estimación de Esfuerzo
+
+| Paso | Descripción | Horas estimadas | Prioridad |
+|------|-------------|-----------------|-----------|
+| 1 | CIDv1 en C# | 4 h | 🔥 Alta |
+| 2 | DAG-PB bloques | 6 h | 🔥 Alta |
+| 3 | Blockstore local | 3 h | 🔥 Alta |
+| 4 | libp2p TCP+Noise | 12 h | 🟠 Media |
+| 5 | DHT Kademlia | 10 h | 🟠 Media |
+| 6 | Bitswap | 14 h | 🟠 Media |
+| 7 | IPNS | 8 h | 🟡 Baja |
+| 8 | Integración WPF+Godot | 4 h | 🔥 Alta |
+| **Total** | | **~61 h** | |
+
+---
+
 ## 📋 **SESIÓN ACTUAL - RAMA: DevTraeIA**
 
 ### 🚀 **LO DESARROLLADO HOY (20 de mayo de 2026)**

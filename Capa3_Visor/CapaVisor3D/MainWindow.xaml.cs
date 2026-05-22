@@ -38,6 +38,7 @@ namespace VisorSingularity
         private UdpClient? _udpListener;
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
+        private bool _p2pNodeStarted = false; // evita activar el nodo antes de que el avatar esté en la isla
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -545,17 +546,25 @@ namespace VisorSingularity
             _godotProcess.StartInfo = startInfo;
             _godotProcess.EnableRaisingEvents = true;
 
-            // Escuchar la salida estándar de Godot para saber cuándo se registra el avatar
+            // Escuchar la salida estándar de Godot para saber cuándo el avatar está en la isla
+            string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
             _godotProcess.OutputDataReceived += (s, ev) =>
             {
                 if (!string.IsNullOrEmpty(ev.Data))
                 {
-                    // Si se registra el perfil de usuario en Godot, mostramos la barra inferior de conexión en WPF
+                    // Avatar registrado en la isla → mostrar barra de chat e iniciar nodo P2P
                     if (ev.Data.Contains("Usuario guardado") || ev.Data.Contains("current_user.json"))
                     {
                         Dispatcher.Invoke(() =>
                         {
                             BorderBottomLoginBar.Visibility = Visibility.Visible;
+
+                            // Activar nodo P2P solo la primera vez que el avatar llega a la isla
+                            if (!_p2pNodeStarted)
+                            {
+                                _p2pNodeStarted = true;
+                                StartP2PWebNode(user, repoPath);
+                            }
                         });
                     }
                 }
@@ -581,10 +590,7 @@ namespace VisorSingularity
 
                     // Iniciar el listener de chat UDP en WPF (puerto 50008)
                     StartUdpChatListener();
-
-                    // Iniciar nodo P2P WebNode para compartir el visor
-                    string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
-                    StartP2PWebNode(user, repoPath);
+                    // El nodo P2P se activa más tarde, cuando Godot confirme el avatar en la isla
                 }
                 else
                 {
@@ -732,6 +738,7 @@ namespace VisorSingularity
                 try { _p2pNode.Stop(); } catch { }
                 _p2pNode = null;
             }
+            _p2pNodeStarted = false; // permite reactivar el nodo en el próximo inicio de sesión
             if (ChatOverlayPopup != null)
             {
                 ChatOverlayPopup.IsOpen = false;
