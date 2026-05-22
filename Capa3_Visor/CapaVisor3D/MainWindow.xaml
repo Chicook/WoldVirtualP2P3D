@@ -299,7 +299,7 @@
                    IsOpen="False"
                    Focusable="False"
                    PopupAnimation="Fade">
-                <Border CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12">
+                <Border x:Name="P2PNodeBar" CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12">
                     <Border.BorderBrush>
                         <SolidColorBrush Color="#45A29E"/>
                     </Border.BorderBrush>

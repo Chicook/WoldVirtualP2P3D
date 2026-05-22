@@ -649,3 +649,68 @@ Por favor, responde con **TODOS** estos detalles:
 
 ### 🎯 **OBJETIVO**
 Entender **exactamente** en qué punto falla el cierre de sesión para implementar una solución precisa y efectiva.
+
+---
+
+## 🐛 Diagnóstico Técnico de Errores en la Solución (¡Importante!)
+
+Tras un análisis exhaustivo del código y de la compilación limpia del proyecto (`dotnet clean; dotnet build`), se han detectado los siguientes problemas críticos y advertencias estructurales:
+
+1. **Error de Compilación por Desincronización del Caché de WPF (`P2PNodeBar` no encontrado):**
+   * **Problema:** El código C# en [MainWindow.xaml.cs](file:///d:/WCVcoinMTB/Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs) hace referencia directa a un control llamado `P2PNodeBar` para ocultarlo o mostrarlo. Sin embargo, en el archivo [MainWindow.xaml](file:///d:/WCVcoinMTB/Capa3_Visor/CapaVisor3D/MainWindow.xaml) original no existía ningún control con `x:Name="P2PNodeBar"`.
+   * **Causa:** El visor compilaba anteriormente porque Visual Studio/MSBuild mantenía en la carpeta `obj/` una versión en caché del archivo autogenerado `MainWindow.g.cs` que sí contenía dicha referencia. Al hacer una limpieza del proyecto (`clean`), el caché se eliminó y la compilación falló inmediatamente con errores CS0103.
+   * **Solución:** Se asignó el identificador `x:Name="P2PNodeBar"` al elemento `<Border>` contenedor del popup `P2PWebNodePopup` en `MainWindow.xaml` para restablecer el enlace con el code-behind y permitir compilar con éxito.
+
+2. **Inconsistencias en el Cierre de Sesión (`BtnCerrarSesion_Click` y Menú Lateral):**
+   * **Problema:** En el código-detrás (`MainWindow.xaml.cs`) y la documentación interna se hace mención a un sistema de cierre de sesión con el botón `BtnCerrarSesion` y el panel de menú lateral `PanLeftSidebar`.
+   * **Detalle:** En la interfaz XAML real, **no existe ningún botón `BtnCerrarSesion`** ni el panel lateral `PanLeftSidebar` en la vista principal. Las referencias del cierre de sesión y la lógica de dispatching quedaron como fragmentos de código huérfanos o pertenecientes a una versión de diseño distinta, lo que causa inconsistencia funcional.
+
+3. **Arquitectura P2P / IPFS en Estado de Simulación o Dependencia Externa:**
+   * **Problema:** El nodo P2P (`P2PWebNode.cs`) está diseñado para crear un archivo `.zip` del visor entero y enviarlo por HTTP local a través de un túnel SSH reverso (`cloudflared`, `serveo.net`, `localhost.run`) o subirlo a CDNs públicas como Pixeldrain/GoFile.
+   * **Detalle:** Aunque hay clases dedicadas a IPFS (`IpfsManager.cs`, `IpfsPublisher.cs`), éstas no son una implementación nativa en C# de IPFS. Dependen por completo de la descarga automática, inicialización y ejecución en segundo plano del binario externo `ipfs.exe` de Kubo (go-ipfs daemon), consumiendo recursos de red locales y puertos adicionales (`5001`, `8080`).
+
+---
+
+## 🔒 Código Intocable (Ya Funciona)
+
+Los siguientes módulos y funciones han demostrado ser estables y funcionales. Se consideran **código crítico intocable** para evitar regresiones o fallos en el comportamiento del metaverso:
+
+1. **Escáner de Hardware y Firma Criptográfica (`MainWindow.xaml.cs`):**
+   * Métodos `RunHardwareScanAsync()`, `GetOSName()`, `GetCpuName()`, `GetMotherboardName()`, y `GenerateSHA256Signature()`. Obtienen correctamente el identificador de placa base, CPU y OS vía consultas WMI asíncronas para generar el fingerprint SHA-256 de hardware del equipo de manera robusta.
+
+2. **Puente HTTP Local para MetaMask (`MainWindow.xaml.cs`):**
+   * Métodos `StartHttpBridge()` y `ListenLoop()`. Crean e inician un `HttpListener` en el puerto `8080` que intercepta con éxito las credenciales y firmas criptográficas enviadas desde el navegador y MetaMask para transferirlas directamente a la aplicación WPF de escritorio.
+
+3. **Mapeador e Incrustador Nativo de Godot (`GodotHwndHost.cs` y `MainWindow.xaml.cs`):**
+   * Clase `GodotHwndHost` y método `ScanForGodotWindow()`. Se encargan de enumerar las ventanas de Windows mediante la API Win32 nativa (`EnumWindows`, `IsWindowVisible`) para detectar la ventana principal del motor 3D de Godot (`Engine`) por su PID e incrustarla limpiamente dentro del panel WPF, eliminando la vibración del avatar y garantizando el foco del teclado a través del filtro de hilos (`ComponentDispatcher_ThreadFilterMessage`).
+
+4. **Compresión Segura de Repositorio (`P2PWebNode.cs`):**
+   * Métodos `GenerateRepositoryZip()` y `AddDirectoryToZip()`. Comprimen asíncronamente el repositorio local excluyendo correctamente directorios masivos como `.git`, `.godot`, `obj`, `bin` y carpetas de depuración, previniendo loops infinitos y manteniendo el tamaño del ZIP por debajo del límite práctico de la red.
+
+5. **Proxy de Reescritura de Cabeceras HTTP (`P2PWebNode.cs`):**
+   * Métodos `ProxyLoop()`, `HandleProxyClientAsync()` y `FindBytes()`. Actúan como un proxy TCP local para desviar las peticiones al puerto `8082`, reescribir de forma transparente la cabecera `Host` a `localhost` y evitar el error HTTP 400 que inyectan los proxies de túneles como Serveo.
+
+6. **Movimiento Físico del Avatar en 3D (`userbase3d.gd`):**
+   * Lógica de captura de teclado asíncrona y procesamiento físico `_physics_process()` en Godot. Permite el control fluido del personaje (caminar, correr, saltar) y dibuja correctamente los chats flotantes mediante el nodo `Label3D` con comportamiento billboard y desvanecimiento progresivo vía Tweens.
+
+---
+
+## 🚀 Puntos Fuertes a Mejorar este Verano
+
+Para el período de desarrollo intensivo de verano, se proponen los siguientes puntos de optimización y evolución técnica sobre el núcleo del sistema:
+
+1. **Migración a IPFS Nativo en C# (Bypass de Kubo CLI):**
+   * **Objetivo:** Eliminar la dependencia de descargar y arrancar el daemon `ipfs.exe` de Kubo (25MB de descarga y consumo elevado de recursos en segundo plano).
+   * **Acción:** Integrar librerías nativas en C# como `Nethermind.Libp2p` y codificación multihash para realizar el direccionamiento de contenido (CIDv1) e intercambio directo de bloques (Bitswap) desde el propio código del visor.
+
+2. **Refactorización Completa y Sincronización del Estado del Metaverso:**
+   * **Objetivo:** Sustituir la sincronización actual basada en archivos JSON del directorio local por un sistema de consistencia eventual real.
+   * **Acción:** Implementar tipos de datos replicados libres de conflictos (CRDTs) con marcas de tiempo (Relojes de Lamport) para fusionar de manera atómica el archivo `estado_metaverso.json` cuando varios nodos editan o plantan islas concurrentemente.
+
+3. **Consolidación de la Interfaz y Controles del Visor (Cerrar Sesión):**
+   * **Objetivo:** Eliminar el código huérfano y consolidar la barra lateral de navegación en la interfaz WPF.
+   * **Acción:** Integrar formalmente un botón estético de "Cerrar Sesión" en la UI de WPF que realice la llamada segura a `Cleanup()`, mate los subprocesos residuales de Godot de forma garantizada y retorne la interfaz al Wizard de MetaMask, evitando bloqueos de sockets o fugas de procesos en memoria.
+
+4. **Optimización del Túnel de Conexión Pública (Autodespliegue de cloudflared):**
+   * **Objetivo:** Mejorar la fiabilidad de las conexiones entrantes sin depender de advertencias del navegador de serveo/localhost.run.
+   * **Acción:** Refinar el arranque asíncrono y la descarga de `cloudflared.exe` para asegurar que el túnel rápido se autolefante en menos de 5 segundos de forma invisible para el usuario.
