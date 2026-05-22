@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -42,6 +43,9 @@ namespace VisorSingularity
         /// <summary>URL del gateway local en puerto 8082 para acceder a cualquier CID IPFS.</summary>
         public string LocalIpfsGatewayUrl => $"http://127.0.0.1:{Port}/ipfs/";
 
+        /// <summary>True si hay un túmel SSH reverso activo hacia internet.</summary>
+        public bool IsTunnelActive => _tunnelProcess != null && !_tunnelProcess.HasExited;
+
         // ── Campos privados ───────────────────────────────────────────────────
         private HttpListener             _listener;
         private CancellationTokenSource? _cts;
@@ -51,6 +55,8 @@ namespace VisorSingularity
         private IpfsManager?             _ipfsManager;
         private IpfsPublisher?           _ipfsPublisher;
         private Process?                 _tunnelProcess;   // Proceso SSH del túmel reverso activo
+        private int                      _internalPort;
+        private TcpListener?             _proxyListener;   // Proxy TCP local para reescribir Host header
 
         public event Action<string>? OnStatusChanged;
 
@@ -63,16 +69,17 @@ namespace VisorSingularity
             NodeId       = $"ND{seed}";
             SimulatedUrl = $"www.{NodeId}.woldvirtual";
 
-            Port     = FindAvailablePort(8082);
-            LocalUrl = $"http://127.0.0.1:{Port}/";
+            Port          = FindAvailablePort(8082);
+            _internalPort = FindAvailablePort(Port + 1);
+            LocalUrl      = $"http://127.0.0.1:{Port}/";
 
             string tempDir = Path.Combine(Path.GetTempPath(), "WoldVirtualP2P");
             Directory.CreateDirectory(tempDir);
             ZipPath = Path.Combine(tempDir, $"WoldVirtualVisor_{NodeId}.zip");
 
             _listener = new HttpListener();
-            _listener.Prefixes.Add(LocalUrl);
-            _listener.Prefixes.Add($"http://localhost:{Port}/");
+            _listener.Prefixes.Add($"http://127.0.0.1:{_internalPort}/");
+            _listener.Prefixes.Add($"http://localhost:{_internalPort}/");
 
             // TimeOut global generoso para archivos grandes
             _http.Timeout = TimeSpan.FromMinutes(20);
@@ -84,6 +91,20 @@ namespace VisorSingularity
             _cts = new CancellationTokenSource();
             _listener.Start();
             Task.Run(() => ListenLoop(_cts.Token));
+
+            // Iniciar proxy TCP para reescribir Host header (evita HTTP 400 por Host de Serveo)
+            try
+            {
+                _proxyListener = new TcpListener(IPAddress.Loopback, Port);
+                _proxyListener.Start();
+                Task.Run(() => ProxyLoop(_cts.Token));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Proxy-Start] Error: {ex.Message}");
+                LogStatus($"⚠️ Error iniciando proxy local: {ex.Message}");
+            }
+
             Task.Run(() => RunMainFlowAsync());
             LogStatus("📦 Comprimiendo visor...");
         }
@@ -94,6 +115,13 @@ namespace VisorSingularity
             _cts?.Cancel();
             _cts?.Dispose();
             _cts = null;
+
+            // Detener proxy TCP
+            if (_proxyListener != null)
+            {
+                try { _proxyListener.Stop(); } catch { }
+                _proxyListener = null;
+            }
 
             // Matar túmel SSH — cuando muere, la URL pública deja de funcionar (diseño intencional)
             if (_tunnelProcess != null)
@@ -152,17 +180,38 @@ namespace VisorSingularity
             await RunIpfsBackgroundAsync(_cts?.Token ?? default);
         }
 
-        // ── Túmel SSH Reverso ────────────────────────────────────────────────────────────────────
+        // ── Túnel Público ────────────────────────────────────────────────────────────────────────
         /// <summary>
-        /// Conecta el servidor HTTP local (puerto <see cref="Port"/>) a un servicio de túmel
-        /// gratuito (serveo.net, localhost.run) mediante SSH reverso.
-        /// El URL público devuelto es válido solo mientras el proceso SSH esté activo.
-        /// OpenSSH está integrado en Windows 10 y 11 (no requiere instalación extra).
+        /// Prioridad:
+        ///   1. Cloudflare Quick Tunnel (cloudflared) → HTTPS, SIN página de advertencia ✅
+        ///   2. Serveo.net HTTP (port 80)              → HTTPS con página de advertencia ⚠️
+        ///   3. Serveo.net port 443                   → HTTPS con página de advertencia ⚠️
+        ///   4. localhost.run                          → HTTPS con página de advertencia ⚠️
         /// </summary>
         private async Task<string?> TryEstablishTunnelAsync(CancellationToken token)
         {
-            LogStatus("🔌 Estableciendo túmel SSH público PC-a-PC...");
+            LogStatus("🔌 Estableciendo túnel público PC-a-PC...");
 
+            // ── Opción 1: cloudflared (HTTPS sin advertencia de seguridad) ──────────
+            string? cfExe = await FindOrDownloadCloudflaredAsync(token);
+            if (cfExe != null)
+            {
+                LogStatus("   → Cloudflare Quick Tunnel (sin advertencia)...");
+                string? cfUrl = await TryRunProcessTunnelAsync(
+                    cfExe,
+                    $"tunnel --url http://127.0.0.1:{Port} --no-autoupdate",
+                    @"https://[\w\-]+\.trycloudflare\.com",
+                    35000, token);
+                if (!string.IsNullOrEmpty(cfUrl))
+                {
+                    LogStatus($"🌍 Túnel activo — Cloudflare: {cfUrl}");
+                    return cfUrl;
+                }
+                LogStatus("   ↳ cloudflared sin respuesta. Probando SSH...");
+            }
+
+
+            // ── Opciones 2-4: SSH reverso (Serveo, localhost.run) ──────────────────
             string sshExe = @"C:\Windows\System32\OpenSSH\ssh.exe";
             if (!File.Exists(sshExe)) sshExe = "ssh";
 
@@ -170,18 +219,18 @@ namespace VisorSingularity
             {
                 new {
                     Name = "serveo.net",
-                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:localhost:{Port} serveo.net",
-                    Pat  = @"https://[\w\-]+\.serveo\.net"
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "serveo.net:443",
-                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:localhost:{Port} serveo.net",
-                    Pat  = @"https://[\w\-]+\.serveo\.net"
+                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "localhost.run",
-                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:localhost:{Port} nokey@localhost.run",
-                    Pat  = @"https://[\w\-]+\.lhr\.rocks"
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} nokey@localhost.run",
+                    Pat  = @"https://[\w\-]+\.lhr\\.rocks"
                 }
             };
 
@@ -190,68 +239,164 @@ namespace VisorSingularity
                 if (token.IsCancellationRequested) return null;
                 LogStatus($"   → {c.Name}...");
 
-                Process? proc   = null;
-                string?  found  = null;
+                string? url = await TryRunProcessTunnelAsync(sshExe, c.Args, c.Pat, 23000, token);
+                if (!string.IsNullOrEmpty(url))
+                {
+                    LogStatus($"🌍 Túnel activo — {c.Name}: {url}");
+                    return url;
+                }
+            }
 
+            LogStatus("⚠️ Túnel no disponible.");
+            return null;
+        }
+
+        // ── Buscar (y descargar si no existe) cloudflared ────────────────────────
+        private async Task<string?> FindOrDownloadCloudflaredAsync(CancellationToken token)
+        {
+            string localApp  = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string appBase   = AppDomain.CurrentDomain.BaseDirectory;
+
+            // Ruta local donde lo descargamos si no está instalado
+            string localCf = Path.Combine(appBase, "cloudflared.exe");
+
+            string[] locations =
+            {
+                "cloudflared",       // En el PATH del sistema
+                localCf,
+                Path.Combine(localApp, "Programs", "cloudflared", "cloudflared.exe"),
+                Path.Combine(progFiles, "Cloudflare", "cloudflared.exe"),
+                @"C:\ProgramData\chocolatey\bin\cloudflared.exe",
+                Path.Combine(localApp, "Microsoft", "WinGet", "Links", "cloudflared.exe"),
+            };
+
+            // ── 1. Buscar en el sistema ───────────────────────────────────────────
+            foreach (var loc in locations)
+            {
                 try
                 {
-                    proc = Process.Start(new ProcessStartInfo
+                    using var test = Process.Start(new ProcessStartInfo
                     {
-                        FileName               = sshExe,
-                        Arguments              = c.Args,
+                        FileName               = loc,
+                        Arguments              = "--version",
                         UseShellExecute        = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError  = true,
                         CreateNoWindow         = true
                     });
-                    if (proc == null) continue;
-
-                    using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-                    scanCts.CancelAfter(22000);
-
-                    async Task Scan(StreamReader sr)
+                    if (test != null && test.WaitForExit(3000) && test.ExitCode == 0)
                     {
-                        try
-                        {
-                            while (!scanCts.IsCancellationRequested && !proc.HasExited)
-                            {
-                                string? ln = await sr.ReadLineAsync();
-                                if (ln == null) break;
-                                Debug.WriteLine($"[SSH-{c.Name}] {ln}");
-                                var m = System.Text.RegularExpressions.Regex.Match(ln, c.Pat);
-                                if (m.Success) { found = m.Value; scanCts.Cancel(); return; }
-                            }
-                        }
-                        catch { }
+                        Debug.WriteLine($"[Cloudflared] Encontrado: {loc}");
+                        return loc;
                     }
-
-                    await Task.WhenAny(
-                        Scan(proc.StandardOutput),
-                        Scan(proc.StandardError),
-                        Task.Delay(23000, scanCts.Token).ContinueWith(_ => { })
-                    );
-
-                    if (!string.IsNullOrEmpty(found) && !proc.HasExited)
-                    {
-                        _tunnelProcess = proc;
-                        LogStatus($"🌍 Túmel activo — {c.Name}: {found}");
-                        return found;
-                    }
-
-                    try { proc.Kill(entireProcessTree: true); } catch { }
-                    proc.Dispose();
-                    proc = null;
                 }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[SSH] {c.Name} fallo: {ex.Message}");
-                    try { proc?.Kill(entireProcessTree: true); proc?.Dispose(); } catch { }
-                }
+                catch { }
             }
 
-            LogStatus("⚠️ Túmel SSH no disponible.");
+            // ── 2. No encontrado → descargar automáticamente ──────────────────────
+            LogStatus("⬇️ Descargando cloudflared (túnel sin advertencia)...");
+            try
+            {
+                const string cfUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe";
+                using var dl = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
+                dl.DefaultRequestHeaders.UserAgent.ParseAdd("WoldVirtualP2P/1.0");
+
+                using var resp = await dl.GetAsync(cfUrl, HttpCompletionOption.ResponseHeadersRead, token);
+                if (resp.IsSuccessStatusCode)
+                {
+                    await using var fs = File.Create(localCf);
+                    await resp.Content.CopyToAsync(fs, token);
+                    LogStatus("✅ cloudflared descargado correctamente.");
+                    Debug.WriteLine($"[Cloudflared] Descargado en: {localCf}");
+                    return localCf;
+                }
+                LogStatus($"⚠️ Descarga de cloudflared falló: HTTP {(int)resp.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                LogStatus($"⚠️ No se pudo descargar cloudflared: {ex.Message}");
+                Debug.WriteLine($"[Cloudflared-DL] {ex}");
+            }
+
             return null;
         }
+
+        // ── Ejecutor genérico de proceso de túnel ────────────────────────────────
+        /// <summary>
+        /// Lanza un proceso de túnel (cloudflared, ssh, etc.), escanea stdout+stderr
+        /// buscando una URL con <paramref name="urlPattern"/> y devuelve la URL al detectarla.
+        /// Si no la encuentra dentro de <paramref name="timeoutMs"/>, mata el proceso y devuelve null.
+        /// </summary>
+        private async Task<string?> TryRunProcessTunnelAsync(
+            string exe, string args, string urlPattern, int timeoutMs, CancellationToken token)
+        {
+            Process? proc  = null;
+            string?  found = null;
+
+            try
+            {
+                proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName               = exe,
+                    Arguments              = args,
+                    UseShellExecute        = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError  = true,
+                    CreateNoWindow         = true
+                });
+                if (proc == null) return null;
+
+                using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                scanCts.CancelAfter(timeoutMs);
+
+                async Task Scan(StreamReader sr, string label)
+                {
+                    try
+                    {
+                        while (!scanCts.IsCancellationRequested && !proc.HasExited)
+                        {
+                            string? ln = await sr.ReadLineAsync();
+                            if (ln == null) break;
+                            Debug.WriteLine($"[{label}] {ln}");
+                            var m = System.Text.RegularExpressions.Regex.Match(ln, urlPattern);
+                            if (m.Success)
+                            {
+                                string matched = m.Value;
+                                if (!matched.StartsWith("http://") && !matched.StartsWith("https://"))
+                                    matched = "http://" + matched;
+                                found = matched;
+                                scanCts.Cancel();
+                                return;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                await Task.WhenAny(
+                    Scan(proc.StandardOutput, exe),
+                    Scan(proc.StandardError,  exe),
+                    Task.Delay(timeoutMs + 1000, scanCts.Token).ContinueWith(_ => { })
+                );
+
+                if (!string.IsNullOrEmpty(found) && !proc.HasExited)
+                {
+                    _tunnelProcess = proc;
+                    return found;
+                }
+
+                try { proc.Kill(entireProcessTree: true); } catch { }
+                proc.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TryRunProcessTunnel] {exe}: {ex.Message}");
+                try { proc?.Kill(entireProcessTree: true); proc?.Dispose(); } catch { }
+            }
+            return null;
+        }
+
 
         // ── IPFS + CDN (ejecutado en background o como fallback si SSH falla) ────────────────────
         private async Task RunIpfsBackgroundAsync(CancellationToken token)
@@ -796,15 +941,23 @@ namespace VisorSingularity
         private string GetLandingHtml(string downloadUrl, bool isIpfsHosted = false, string? zipCid = null)
         {
             bool   hasLink     = !string.IsNullOrEmpty(downloadUrl) && downloadUrl != "#";
-            bool   isPublic    = hasLink && !downloadUrl.StartsWith("/") && !downloadUrl.StartsWith("http://127");
+            // Es "público" si la URL es absoluta Y externa, O si es relativa pero hay túmel activo
+            bool   isPublic    = hasLink && (
+                                    (downloadUrl.StartsWith("https://") || downloadUrl.StartsWith("http://")) &&
+                                    !downloadUrl.StartsWith("http://127")
+                                 ) || (downloadUrl.StartsWith("/") && IsTunnelActive);
+
             string btnClass    = hasLink ? "" : "disabled";
             string statusColor = isPublic ? "#00ff8c" : "#FBB824";
             string statusMsg   = isPublic
-                ? (isIpfsHosted ? "✅ Descarga descentralizada IPFS disponible." : "✅ Descarga directa disponible.")
+                ? (IsTunnelActive && downloadUrl.StartsWith("/")
+                    ? "✅ Nodo activo. Descarga directa desde tu PC."
+                    : isIpfsHosted ? "✅ Descarga descentralizada IPFS disponible." : "✅ Descarga directa disponible.")
                 : (ZipReady ? "⚠️ Solo red local. Subiendo a servidor..." : "⏳ Generando ZIP...");
 
             string service = isPublic
-                ? (isIpfsHosted ? "Red IPFS (P2P)"
+                ? (IsTunnelActive && downloadUrl.StartsWith("/") ? "Túmel SSH Directo (PC-a-PC)"
+                   : isIpfsHosted ? "Red IPFS (P2P)"
                    : downloadUrl.Contains("pixeldrain") ? "Pixeldrain"
                    : downloadUrl.Contains("gofile")   ? "GoFile.io"
                    : downloadUrl.Contains("transfer")  ? "Transfer.sh"
@@ -894,6 +1047,128 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
                 catch { return port; }
             }
             return start;
+        }
+
+        // ── Proxy TCP Local (Reescritura de Cabecera Host) ───────────────────
+        private async Task ProxyLoop(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    TcpClient client = await _proxyListener!.AcceptTcpClientAsync(token);
+                    _ = Task.Run(() => HandleProxyClientAsync(client, token));
+                }
+                catch (ObjectDisposedException) { break; }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Proxy] Error de aceptación: {ex.Message}");
+                }
+            }
+        }
+
+        private async Task HandleProxyClientAsync(TcpClient client, CancellationToken token)
+        {
+            using (client)
+            {
+                client.NoDelay = true;
+                using TcpClient target = new TcpClient();
+                try
+                {
+                    await target.ConnectAsync("127.0.0.1", _internalPort, token);
+                    target.NoDelay = true;
+
+                    using NetworkStream clientStream = client.GetStream();
+                    using NetworkStream targetStream = target.GetStream();
+
+                    byte[] buffer = new byte[8192];
+                    int bytesRead = 0;
+                    using MemoryStream ms = new MemoryStream();
+
+                    // Leer cabeceras HTTP (máximo 16 KB)
+                    while (true)
+                    {
+                        int read = await clientStream.ReadAsync(buffer, 0, buffer.Length, token);
+                        if (read <= 0) break;
+                        ms.Write(buffer, 0, read);
+                        bytesRead += read;
+
+                        byte[] currentBytes = ms.ToArray();
+                        if (FindBytes(currentBytes, new byte[] { 13, 10, 13, 10 }) != -1 || bytesRead > 16384)
+                        {
+                            break;
+                        }
+                    }
+
+                    byte[] requestBytes = ms.ToArray();
+                    if (requestBytes.Length > 0)
+                    {
+                        byte[] separator = new byte[] { 13, 10, 13, 10 };
+                        int headerEndIdx = FindBytes(requestBytes, separator);
+                        
+                        if (headerEndIdx >= 0)
+                        {
+                            // Convertir cabeceras a string para manipulación segura
+                            string headersStr = Encoding.UTF8.GetString(requestBytes, 0, headerEndIdx);
+                            
+                            // Reemplazar la cabecera Host por la del servidor local interno
+                            var hostRegex = new System.Text.RegularExpressions.Regex(@"\r\nHost:\s*[^\r\n]+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            if (hostRegex.IsMatch(headersStr))
+                            {
+                                headersStr = hostRegex.Replace(headersStr, $"\r\nHost: localhost:{_internalPort}");
+                            }
+                            else
+                            {
+                                headersStr += $"\r\nHost: localhost:{_internalPort}";
+                            }
+
+                            byte[] headerBytes = Encoding.UTF8.GetBytes(headersStr);
+                            await targetStream.WriteAsync(headerBytes, 0, headerBytes.Length, token);
+                            await targetStream.WriteAsync(separator, 0, separator.Length, token);
+
+                            // Enviar bytes del cuerpo leídos de forma anticipada
+                            int bodyOffset = headerEndIdx + separator.Length;
+                            int bodyLength = requestBytes.Length - bodyOffset;
+                            if (bodyLength > 0)
+                            {
+                                await targetStream.WriteAsync(requestBytes, bodyOffset, bodyLength, token);
+                            }
+                        }
+                        else
+                        {
+                            await targetStream.WriteAsync(requestBytes, 0, requestBytes.Length, token);
+                        }
+                    }
+
+                    // Copiar bidireccionalmente el tráfico de red remanente
+                    var clientToTarget = clientStream.CopyToAsync(targetStream, token);
+                    var targetToClient = targetStream.CopyToAsync(clientStream, token);
+
+                    await Task.WhenAll(clientToTarget, targetToClient);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Proxy-Session] Error de comunicación: {ex.Message}");
+                }
+            }
+        }
+
+        private int FindBytes(byte[] src, byte[] find)
+        {
+            for (int i = 0; i < src.Length - find.Length + 1; i++)
+            {
+                bool match = true;
+                for (int j = 0; j < find.Length; j++)
+                {
+                    if (src[i + j] != find[j])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return i;
+            }
+            return -1;
         }
 
         private void LogStatus(string msg) => OnStatusChanged?.Invoke(msg);

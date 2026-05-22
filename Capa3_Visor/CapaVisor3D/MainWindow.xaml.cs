@@ -1005,8 +1005,8 @@ namespace VisorSingularity
                     Dispatcher.Invoke(() =>
                     {
                         TxtP2PStatus.Text = status;
-                        // Actualizar el enlace en la barra cuando el link público esté listo
-                        if (_p2pNode.IsOnIpfs && !string.IsNullOrEmpty(_p2pNode.GatewayUrl))
+                        // Actualizar el enlace en la barra cuando el link público esté listo (IPFS o Túnel SSH)
+                        if ((_p2pNode.IsOnIpfs || _p2pNode.IsTunnelActive) && !string.IsNullOrEmpty(_p2pNode.GatewayUrl))
                         {
                             TxtP2PLink.Text = $"Enlace: {_p2pNode.GatewayUrl}";
                             TxtP2PNodeId.Text = $"NODO: {_p2pNode.NodeId}";
@@ -1041,7 +1041,7 @@ namespace VisorSingularity
 
                 Clipboard.SetText(urlToCopy);
 
-                bool esPublico = _p2pNode.IsOnIpfs && !string.IsNullOrEmpty(_p2pNode.GatewayUrl);
+                bool esPublico = (_p2pNode.IsOnIpfs || _p2pNode.IsTunnelActive) && !string.IsNullOrEmpty(_p2pNode.GatewayUrl);
                 if (esPublico)
                 {
                     MessageBox.Show(
