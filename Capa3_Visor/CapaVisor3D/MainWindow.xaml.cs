@@ -38,7 +38,6 @@ namespace VisorSingularity
         private UdpClient? _udpListener;
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
-        private bool _p2pNodeStarted = false; // evita activar el nodo antes de que el avatar esté en la isla
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -546,25 +545,17 @@ namespace VisorSingularity
             _godotProcess.StartInfo = startInfo;
             _godotProcess.EnableRaisingEvents = true;
 
-            // Escuchar la salida estándar de Godot para saber cuándo el avatar está en la isla
-            string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
+            // Escuchar la salida estándar de Godot para saber cuándo se registra el avatar
             _godotProcess.OutputDataReceived += (s, ev) =>
             {
                 if (!string.IsNullOrEmpty(ev.Data))
                 {
-                    // Avatar registrado en la isla → mostrar barra de chat e iniciar nodo P2P
+                    // Si se registra el perfil de usuario en Godot, mostramos la barra inferior de conexión en WPF
                     if (ev.Data.Contains("Usuario guardado") || ev.Data.Contains("current_user.json"))
                     {
                         Dispatcher.Invoke(() =>
                         {
                             BorderBottomLoginBar.Visibility = Visibility.Visible;
-
-                            // Activar nodo P2P solo la primera vez que el avatar llega a la isla
-                            if (!_p2pNodeStarted)
-                            {
-                                _p2pNodeStarted = true;
-                                StartP2PWebNode(user, repoPath);
-                            }
                         });
                     }
                 }
@@ -590,7 +581,10 @@ namespace VisorSingularity
 
                     // Iniciar el listener de chat UDP en WPF (puerto 50008)
                     StartUdpChatListener();
-                    // El nodo P2P se activa más tarde, cuando Godot confirme el avatar en la isla
+
+                    // Iniciar nodo P2P WebNode para compartir el visor
+                    string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
+                    StartP2PWebNode(user, repoPath);
                 }
                 else
                 {
@@ -738,15 +732,13 @@ namespace VisorSingularity
                 try { _p2pNode.Stop(); } catch { }
                 _p2pNode = null;
             }
-            _p2pNodeStarted = false; // permite reactivar el nodo en el próximo inicio de sesión
             if (ChatOverlayPopup != null)
             {
                 ChatOverlayPopup.IsOpen = false;
             }
-            // P2PNodeBar es un Border incrustado, basta con ocultarlo
-            if (P2PNodeBar != null)
+            if (P2PWebNodePopup != null)
             {
-                P2PNodeBar.Visibility = Visibility.Collapsed;
+                P2PWebNodePopup.IsOpen = false;
             }
 
             if (_httpListener != null)
@@ -997,7 +989,16 @@ namespace VisorSingularity
                 ChatOverlayPopup.VerticalOffset = targetTop;
             }
 
-            // P2PNodeBar está incrustado en la barra de menú — no requiere cálculo de posición
+            if (P2PWebNodePopup != null && P2PWebNodePopup.IsOpen)
+            {
+                // Calcular posición horizontal centrada y vertical en la parte superior
+                double targetLeft = (GodotPlaceholder.ActualWidth - 360) / 2;
+                double targetTop = 15; // Just below the top edge of Godot viewport
+
+                P2PWebNodePopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
+                P2PWebNodePopup.HorizontalOffset = targetLeft;
+                P2PWebNodePopup.VerticalOffset = targetTop;
+            }
         }
 
         private void StartP2PWebNode(string username, string repoPath)
@@ -1006,24 +1007,12 @@ namespace VisorSingularity
             {
                 _p2pNode = new P2PWebNode(username, repoPath);
 
-                // Suscribirse a cambios de estado del zipping/servidor/IPFS
+                // Suscribirse a cambios de estado del zipping/servidor
                 _p2pNode.OnStatusChanged += (status) =>
                 {
                     Dispatcher.Invoke(() =>
                     {
                         TxtP2PStatus.Text = status;
-                        if (_p2pNode.IsOnIpfs && !string.IsNullOrEmpty(_p2pNode.GatewayUrl))
-                        {
-                            if (!string.IsNullOrEmpty(_p2pNode.RealCid))
-                            {
-                                TxtP2PNodeId.Text = $"IPFS CID: {(_p2pNode.RealCid.Length > 12 ? _p2pNode.RealCid.Substring(0, 10) + "..." : _p2pNode.RealCid)}";
-                            }
-                            else
-                            {
-                                TxtP2PNodeId.Text = $"NODO P2P: {_p2pNode.SimulatedUrl}";
-                            }
-                            TxtP2PLink.Text = $"Enlace: {_p2pNode.GatewayUrl}";
-                        }
                     });
                 };
 
@@ -1034,8 +1023,9 @@ namespace VisorSingularity
                 TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
                 TxtP2PStatus.Text = "Inicializando nodo...";
 
-                // Mostrar el widget en la barra de menú
-                P2PNodeBar.Visibility = Visibility.Visible;
+                // Abrir el popup
+                P2PWebNodePopup.IsOpen = true;
+                UpdatePopupPosition();
             }
             catch (Exception ex)
             {
@@ -1047,17 +1037,8 @@ namespace VisorSingularity
         {
             if (_p2pNode != null)
             {
-                string urlToCopy = !string.IsNullOrEmpty(_p2pNode.GatewayUrl) ? _p2pNode.GatewayUrl : _p2pNode.LocalUrl;
-                Clipboard.SetText(urlToCopy);
-
-                if (!string.IsNullOrEmpty(_p2pNode.GatewayUrl))
-                {
-                    MessageBox.Show($"Enlace público de descarga del visor copiado al portapapeles:\n\n{urlToCopy}\n\nEnvíalo a tus amigos. Cualquiera con este enlace podrá descargar el visor y conectarse a la red P2P.", "Enlace Público Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    MessageBox.Show($"Enlace de invitación local copiado al portapapeles:\n\n{urlToCopy}\n\nEnvíalo a tus amigos para que descarguen el visor y se unan como nodos de la red.", "Enlace Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                Clipboard.SetText(_p2pNode.LocalUrl);
+                MessageBox.Show($"Enlace de invitación copiado al portapapeles:\n\n{_p2pNode.LocalUrl}\n\nEnvíalo a tus amigos para que descarguen el visor y se unan como nodos de la red.", "Enlace Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
     }
