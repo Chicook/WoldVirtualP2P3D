@@ -736,9 +736,10 @@ namespace VisorSingularity
             {
                 ChatOverlayPopup.IsOpen = false;
             }
-            if (P2PWebNodePopup != null)
+            // P2PNodeBar es un Border en la barra de menú — basta con ocultarlo
+            if (P2PNodeBar != null)
             {
-                P2PWebNodePopup.IsOpen = false;
+                P2PNodeBar.Visibility = Visibility.Collapsed;
             }
 
             if (_httpListener != null)
@@ -989,16 +990,7 @@ namespace VisorSingularity
                 ChatOverlayPopup.VerticalOffset = targetTop;
             }
 
-            if (P2PWebNodePopup != null && P2PWebNodePopup.IsOpen)
-            {
-                // Calcular posición horizontal centrada y vertical en la parte superior
-                double targetLeft = (GodotPlaceholder.ActualWidth - 360) / 2;
-                double targetTop = 15; // Just below the top edge of Godot viewport
-
-                P2PWebNodePopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
-                P2PWebNodePopup.HorizontalOffset = targetLeft;
-                P2PWebNodePopup.VerticalOffset = targetTop;
-            }
+            // P2PNodeBar está incrustado en la barra de menú — no requiere posicionamiento dinámico
         }
 
         private void StartP2PWebNode(string username, string repoPath)
@@ -1007,25 +999,30 @@ namespace VisorSingularity
             {
                 _p2pNode = new P2PWebNode(username, repoPath);
 
-                // Suscribirse a cambios de estado del zipping/servidor
+                // Suscribirse a cambios de estado del zipping/upload
                 _p2pNode.OnStatusChanged += (status) =>
                 {
                     Dispatcher.Invoke(() =>
                     {
                         TxtP2PStatus.Text = status;
+                        // Actualizar el enlace en la barra cuando el link público esté listo
+                        if (_p2pNode.IsOnIpfs && !string.IsNullOrEmpty(_p2pNode.GatewayUrl))
+                        {
+                            TxtP2PLink.Text = $"Enlace: {_p2pNode.GatewayUrl}";
+                            TxtP2PNodeId.Text = $"NODO: {_p2pNode.NodeId}";
+                        }
                     });
                 };
 
                 _p2pNode.Start();
 
-                // Actualizar interfaz con los datos del nodo
+                // Actualizar interfaz inicial
                 TxtP2PNodeId.Text = $"NODO P2P: {_p2pNode.SimulatedUrl}";
                 TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
-                TxtP2PStatus.Text = "Inicializando nodo...";
+                TxtP2PStatus.Text = "Generando ZIP...";
 
-                // Abrir el popup
-                P2PWebNodePopup.IsOpen = true;
-                UpdatePopupPosition();
+                // Mostrar el widget P2P en la barra de menú
+                P2PNodeBar.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
             {
@@ -1037,8 +1034,28 @@ namespace VisorSingularity
         {
             if (_p2pNode != null)
             {
-                Clipboard.SetText(_p2pNode.LocalUrl);
-                MessageBox.Show($"Enlace de invitación copiado al portapapeles:\n\n{_p2pNode.LocalUrl}\n\nEnvíalo a tus amigos para que descarguen el visor y se unan como nodos de la red.", "Enlace Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Preferir URL pública (0x0.st / Catbox / transfer.sh); si no, la local
+                string urlToCopy = !string.IsNullOrEmpty(_p2pNode.GatewayUrl)
+                    ? _p2pNode.GatewayUrl
+                    : _p2pNode.LocalUrl;
+
+                Clipboard.SetText(urlToCopy);
+
+                bool esPublico = _p2pNode.IsOnIpfs && !string.IsNullOrEmpty(_p2pNode.GatewayUrl);
+                if (esPublico)
+                {
+                    MessageBox.Show(
+                        $"Enlace público de descarga copiado al portapapeles:\n\n{urlToCopy}\n\n" +
+                        "Envíaselo a tu primo — podrá descargar el visor directamente desde el navegador.",
+                        "Enlace Público Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"Enlace LOCAL copiado (solo red local):\n\n{urlToCopy}\n\n" +
+                        "Espera a que el ZIP se suba a un servidor público para compartirlo por internet.",
+                        "Enlace Local", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
         }
     }
