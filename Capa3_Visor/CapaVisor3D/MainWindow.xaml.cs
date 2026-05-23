@@ -990,17 +990,7 @@ namespace VisorSingularity
                 ChatOverlayPopup.VerticalOffset = targetTop;
             }
 
-            // P2PNodeBar está incrustado en la barra de menú — no requiere posicionamiento dinámico
-            if (P2PWebNodePopup != null && P2PWebNodePopup.IsOpen)
-            {
-                // Calcular posición para la esquina superior derecha
-                double p2pTargetLeft = GodotPlaceholder.ActualWidth - P2PNodeBar.ActualWidth - 20; // 20px de margen derecho
-                double p2pTargetTop = 20; // 20px de margen superior
-
-                P2PWebNodePopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
-                P2PWebNodePopup.HorizontalOffset = p2pTargetLeft;
-                P2PWebNodePopup.VerticalOffset = p2pTargetTop;
-            }
+            // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
         }
 
         private void StartP2PWebNode(string username, string repoPath)
@@ -1031,9 +1021,8 @@ namespace VisorSingularity
                 TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
                 TxtP2PStatus.Text = "Generando ZIP...";
 
-                // Mostrar el widget P2P en la barra de menú
+                // Mostrar el widget P2P fijo en la esquina superior derecha del visor
                 P2PNodeBar.Visibility = Visibility.Visible;
-                P2PWebNodePopup.IsOpen = true;
             }
             catch (Exception ex)
             {

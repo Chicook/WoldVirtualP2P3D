@@ -264,42 +264,25 @@
                 <MenuItem Header="Advanced" Style="{StaticResource SingularityMenuItem}"/>
             </Menu>
 
-            <!-- Central Black Area (Where Godot will be embedded) -->
-            <Border Grid.Row="1" Background="#000000" BorderBrush="#45A29E" BorderThickness="0,1,0,1">
-                <!-- Placeholder for Godot Engine -->
-                <Grid x:Name="GodotPlaceholder">
-                    <TextBlock x:Name="TxtGodotPlaceholder" Text="[ ESPACIO RESERVADO PARA MOTOR 3D GODOT ]" 
-                               Foreground="#45A29E" 
-                               HorizontalAlignment="Center" 
-                               VerticalAlignment="Center" 
-                               FontSize="18" 
-                               FontWeight="Bold"
-                               Opacity="0.5"/>
-                </Grid>
-            </Border>
-
-            <!-- Popup del Chat de Proximidad flotante (C# WPF) -->
-            <Popup x:Name="ChatOverlayPopup"
-                   AllowsTransparency="True"
-                   Placement="Relative"
-                   PlacementTarget="{Binding ElementName=GodotPlaceholder}"
-                   IsOpen="False"
-                   Focusable="False"
-                   PopupAnimation="Fade">
-                <Border Background="Transparent" Width="450" Padding="10">
-                    <StackPanel x:Name="ChatOverlayPanel"/>
+            <!-- Central Black Area (Where Godot will be embedded) + Overlay P2P Panel -->
+            <Grid Grid.Row="1">
+                <Border Background="#000000" BorderBrush="#45A29E" BorderThickness="0,1,0,1">
+                    <!-- Placeholder for Godot Engine -->
+                    <Grid x:Name="GodotPlaceholder">
+                        <TextBlock x:Name="TxtGodotPlaceholder" Text="[ ESPACIO RESERVADO PARA MOTOR 3D GODOT ]" 
+                                   Foreground="#45A29E" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center" 
+                                   FontSize="18" 
+                                   FontWeight="Bold"
+                                   Opacity="0.5"/>
+                    </Grid>
                 </Border>
-            </Popup>
 
-            <!-- Popup del P2P WebNode (C# WPF) -->
-            <Popup x:Name="P2PWebNodePopup"
-                   AllowsTransparency="True"
-                   Placement="Relative"
-                   PlacementTarget="{Binding ElementName=GodotPlaceholder}"
-                   IsOpen="False"
-                   Focusable="False"
-                   PopupAnimation="Fade">
-                <Border x:Name="P2PNodeBar" CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12">
+                <!-- Panel P2P WebNode fijo en esquina superior derecha del visor (overlay) -->
+                <Border x:Name="P2PNodeBar" CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12"
+                        VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,10,10,0"
+                        Visibility="Collapsed">
                     <Border.BorderBrush>
                         <SolidColorBrush Color="#45A29E"/>
                     </Border.BorderBrush>
@@ -330,6 +313,19 @@
                         <!-- Copy Button -->
                         <Button Grid.Column="2" x:Name="BtnCopyP2PLink" Content="COPIAR" Style="{StaticResource SingularityButton}" Padding="8,4" FontSize="9" Height="25" VerticalAlignment="Center" Cursor="Hand"/>
                     </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Popup del Chat de Proximidad flotante (C# WPF) -->
+            <Popup x:Name="ChatOverlayPopup"
+                   AllowsTransparency="True"
+                   Placement="Relative"
+                   PlacementTarget="{Binding ElementName=GodotPlaceholder}"
+                   IsOpen="False"
+                   Focusable="False"
+                   PopupAnimation="Fade">
+                <Border Background="Transparent" Width="450" Padding="10">
+                    <StackPanel x:Name="ChatOverlayPanel"/>
                 </Border>
             </Popup>
 
