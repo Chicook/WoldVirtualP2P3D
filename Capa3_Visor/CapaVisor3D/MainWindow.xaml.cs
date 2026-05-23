@@ -38,6 +38,7 @@ namespace VisorSingularity
         private UdpClient? _udpListener;
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
+        private bool _metaverseUiActivated = false;
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -509,6 +510,8 @@ namespace VisorSingularity
                 return;
             }
 
+            _metaverseUiActivated = false;
+
             // Buscar rutas de Godot localmente
             var (projectDir, exePath) = FindLocalGodotPaths();
 
@@ -523,6 +526,7 @@ namespace VisorSingularity
 
             // Ocultar barra inferior de conexión inicialmente mientras se registra el avatar en Godot
             BorderBottomLoginBar.Visibility = Visibility.Collapsed;
+            P2PNodeBar.Visibility = Visibility.Collapsed;
 
             // Configurar resolución de inicio
             int width = (int)Math.Max(800, GodotPlaceholder.ActualWidth);
@@ -530,6 +534,7 @@ namespace VisorSingularity
 
             // Argumentos de línea de comandos de Godot (apuntando a EscenaPrincipal.tscn)
             string arguments = $"--path \"{projectDir}\" res://EscenaPrincipal.tscn --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
 
             var startInfo = new ProcessStartInfo
             {
@@ -552,11 +557,11 @@ namespace VisorSingularity
                 if (!string.IsNullOrEmpty(ev.Data))
                 {
                     // Si se registra el perfil de usuario en Godot, mostramos la barra inferior de conexión en WPF
-                    if (ev.Data.Contains("Usuario guardado") || ev.Data.Contains("current_user.json"))
+                    if (ev.Data.Contains("AVATAR_LOGIN_CLICKED"))
                     {
                         Dispatcher.Invoke(() =>
                         {
-                            BorderBottomLoginBar.Visibility = Visibility.Visible;
+                            ActivateMetaverseUi(user, repoPath);
                         });
                     }
                 }
@@ -582,10 +587,6 @@ namespace VisorSingularity
 
                     // Iniciar el listener de chat UDP en WPF (puerto 50008)
                     StartUdpChatListener();
-
-                    // Iniciar nodo P2P WebNode para compartir el visor
-                    string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
-                    StartP2PWebNode(user, repoPath);
                 }
                 else
                 {
@@ -727,6 +728,7 @@ namespace VisorSingularity
 
         private void Cleanup()
         {
+            _metaverseUiActivated = false;
             if (_p2pNode != null)
             {
                 try { _p2pNode.Stop(); } catch { }
@@ -993,6 +995,22 @@ namespace VisorSingularity
             // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
         }
 
+        private void ActivateMetaverseUi(string username, string repoPath)
+        {
+            if (_metaverseUiActivated)
+            {
+                return;
+            }
+
+            _metaverseUiActivated = true;
+            BorderBottomLoginBar.Visibility = Visibility.Visible;
+
+            if (_p2pNode == null)
+            {
+                StartP2PWebNode(username, repoPath);
+            }
+        }
+
         private void StartP2PWebNode(string username, string repoPath)
         {
             try
@@ -1021,7 +1039,7 @@ namespace VisorSingularity
                 TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
                 TxtP2PStatus.Text = "Generando ZIP...";
 
-                // Mostrar el widget P2P fijo en la esquina superior derecha del visor
+                // Mostrar el widget P2P solo cuando el usuario ya estÃ¡ dentro del metaverso
                 P2PNodeBar.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
