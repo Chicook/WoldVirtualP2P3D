@@ -264,6 +264,42 @@
                 <MenuItem Header="Advanced" Style="{StaticResource SingularityMenuItem}"/>
             </Menu>
 
+            <!-- Panel P2P WebNode fijo en esquina superior derecha -->
+            <Border x:Name="P2PNodeBar" Grid.Row="0" CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12"
+                    VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,8,4"
+                    Visibility="Collapsed" Panel.ZIndex="1">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#45A29E"/>
+                </Border.BorderBrush>
+                <Border.Background>
+                    <SolidColorBrush Color="#0F172A" Opacity="0.9"/>
+                </Border.Background>
+                <Border.Effect>
+                    <DropShadowEffect Color="#66FCF1" BlurRadius="10" ShadowDepth="0" Opacity="0.4"/>
+                </Border.Effect>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Icon -->
+                    <TextBlock Grid.Column="0" Text="ðŸ•¸ï¸" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                    <!-- Node & Status -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtP2PNodeId" Text="NODO P2P: www.ND35665.ipfs" Foreground="#66FCF1" FontSize="11" FontWeight="Bold"/>
+                        <TextBlock x:Name="TxtP2PLink" Text="Enlace: http://127.0.0.1:8082" Foreground="#C5C6C7" FontSize="9" Margin="0,2,0,0"/>
+                        <TextBlock x:Name="TxtP2PStatus" Text="Generando Visor (.ZIP)..." Foreground="#00ff8c" FontSize="9" FontWeight="SemiBold" Margin="0,1,0,0"/>
+                    </StackPanel>
+
+                    <!-- Copy Button -->
+                    <Button Grid.Column="2" x:Name="BtnCopyP2PLink" Content="COPIAR" Style="{StaticResource SingularityButton}" Padding="8,4" FontSize="9" Height="25" VerticalAlignment="Center" Cursor="Hand"/>
+                </Grid>
+            </Border>
+
             <!-- Central Black Area (Where Godot will be embedded) + Overlay P2P Panel -->
             <Grid Grid.Row="1">
                 <Border Background="#000000" BorderBrush="#45A29E" BorderThickness="0,1,0,1">
