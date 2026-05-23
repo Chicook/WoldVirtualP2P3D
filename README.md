@@ -338,6 +338,44 @@ Los siguientes pasos tienen mas valor practico sobre el estado actual del repo:
 
 ---
 
+## Errores pendientes
+
+### Panel IPFS/P2P aparece antes de tiempo en el registro de avatar
+
+Estado observado a fecha `2026-05-23`:
+
+- El panel superior derecho `P2PNodeBar` sigue apareciendo mientras la pantalla de `Registro de Avatar` de Godot aun esta visible.
+- El comportamiento esperado definido hoy es distinto: el panel deberia empezar a aparecer justo despues de pulsar el boton `INICIAR SESION`, no antes.
+- La incidencia sigue abierta aunque se hicieron varios intentos de retrasar el disparo.
+
+Evidencia visual local:
+
+![Error pendiente: el panel IPFS aparece antes de tiempo](C:/Users/Usuario/Downloads/Desktop-screenshot-05-23-2026_10_53_PM.png)
+
+Resumen de lo intentado hoy:
+
+- Se movio `P2PNodeBar` a la barra superior del visor WPF para estabilizar su posicion arriba a la derecha.
+- Se intento retrasar la activacion del panel hasta despues del guardado del avatar.
+- Se intento retrasar la activacion hasta una marca de escena lista (`METAVERSE_READY`) emitida por Godot.
+- Se cambio despues el disparo para usar una marca mas exacta desde el boton del registro de avatar (`AVATAR_LOGIN_CLICKED`).
+- Se forzo `P2PNodeBar.Visibility = Collapsed` al entrar en la fase de registro de avatar para evitar arrastre visual.
+- Se eliminaron disparos tempranos residuales de `METAVERSE_READY` en `ChunkManager.gd`.
+- Se verifico que las compilaciones alternativas del visor completan correctamente, por lo que el problema actual parece de logica/tiempo de ejecucion o de binario cargado en sesion.
+
+Hipotesis pendientes de confirmar:
+
+- Puede existir un camino adicional de activacion temprana no identificado todavia.
+- Puede estar ejecutandose una instancia previa del binario que no refleja el ultimo estado del codigo.
+- Puede haber una condicion de carrera entre el embebido de Godot, el cambio de escena y la visibilidad del panel WPF.
+
+Proximo paso recomendado cuando se retome:
+
+1. Instrumentar con trazas visibles y unicas el momento exacto en que se llama a `ActivateMetaverseUi`, `StartP2PWebNode` y `P2PNodeBar.Visibility = Visible`.
+2. Confirmar en ejecucion real si la instancia abierta corresponde al ultimo binario compilado.
+3. Si el problema persiste, desacoplar por completo la visibilidad del panel de cualquier logica de salida estandar de Godot y activarlo desde un handshake mas determinista.
+
+---
+
 ## Nota final
 
 Este README describe el estado real del codigo del repositorio a fecha 23 de mayo de 2026: un prototipo funcional, embebido y distribuible, con una base tecnica interesante pero todavia en transicion entre demo local, sincronizacion por archivos y una vision P2P mas ambiciosa.
