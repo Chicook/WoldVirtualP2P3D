@@ -158,10 +158,17 @@ Responsabilidades actuales:
 | `IpfsPublisher.cs` | Activo | Publica archivos o directorios por CLI de Kubo |
 | `P2PNodeBar` | Activo | Widget WPF fijado arriba a la derecha |
 
+**Objetivo Final:** Lanzamiento de la versión Alpha 1.0.0 del core P2P completamente funcional, capaz de:
+1. Conectar múltiples jugadores directamente sin servidores centrales
+2. Distribuir el juego completo mediante transferencias P2P con límites de ancho de banda
+3. Sincronizar el estado global del metaverso de forma descentralizada
+4. Integrar perfectamente el motor 3D de Godot con la red P2P
+
 ---
 
 ## Estado P2P e IPFS hoy
 
+<<<<<<< Updated upstream
 Lo que ya existe de verdad en el codigo:
 
 - HTTP local del nodo del visor en `127.0.0.1:8082`.
@@ -178,11 +185,51 @@ Lo que todavia no es un nodo P2P puro de metaverso:
 - No hay descubrimiento de pares del metaverso sobre una DHT propia.
 - La sincronizacion principal de avatars/islas sigue basada en archivos JSON locales.
 - El reparto de mundo sigue siendo prototipo, no una red publica multijugador validada.
+=======
+#### **Distribución del Flujo de Trabajo (4 Horas/Día):**
+* **⏱️ Hora 1 (Antigravity - Arquitectura & Diseño):**
+  * Análisis algorítmico y viabilidad de los modelos de Hash para identificación de hardware
+  * Diseño del esquema de seguridad SHA-256 + Salts aleatorios para extraer IDs únicos de CPU, Placa Base y Sistema Operativo
+  * Garantía de colisiones nulas y mitigación de vectores de ataque de suplantación de identidad
+  * Modelado del protocolo de handshake criptográfico para autenticación mutua
+
+* **⏱️ Hora 2 (Cursor - Desarrollo Core C#):**
+  * Implementación exhaustiva de la lógica de identidad en `HardwareFingerprint.cs`
+  * Programación de consultas WMI (Windows Management Instrumentation) seguras para extracción de información de hardware
+  * Serialización y encapsulación de firmas digitales en paquetes comprimidos y encriptados `.zip`
+  * Desarrollo del sistema de exportación/importación de claves criptográficas
+
+* **⏱️ Hora 3 (Trae - Implementación de Red):**
+  * Programación del servidor TCP/IP asíncrono con `TcpListener` para comunicación P2P
+  * Creación de pools de hilos de alto rendimiento para manejo concurrente de conexiones
+  * Implementación de rutinas de *heartbeat* (latidos) para mantener sockets activos
+  * Manejo de desconexiones súbitas y recuperación de sesiones
+
+* **⏱️ Hora 4 (VS Code - QA, Refactor y Testing):**
+  * Consolidación estructural del código y refactorización de componentes
+  * Ejecución de pruebas de humo (*smoke testing*) con múltiples instancias en loopback (`127.0.0.1`)
+  * Validación de persistencia en SQLite y verificación de integridad de datos
+  * Detección y corrección de fugas de sockets no cerrados
+
+#### **Entregables Específicos:**
+1. **Clase `HardwareFingerprint`:** Generación de IDs únicos basados en hardware
+2. **Protocolo de Handshake:** Autenticación mutua criptográfica entre nodos
+3. **Sistema de Sockets Base:** Comunicación TCP/IP asíncrona estable
+4. **Base de Datos SQLite:** Persistencia de identidades y sesiones
+5. **Sistema de Exportación:** Paquetes `.zip` encriptados para transferencia segura
+
+#### **Métricas de Éxito:**
+* ✅ Dos instancias del Visor pueden conectarse directamente sin intermediarios
+* ✅ Handshake criptográfico completado en < 500ms
+* ✅ Identidades únicas generadas con 0% de colisiones en pruebas de 10,000 iteraciones
+* ✅ Persistencia de sesiones con 100% de recuperación tras reinicios
+>>>>>>> Stashed changes
 
 ---
 
 ## Estructura del repositorio
 
+<<<<<<< Updated upstream
 ```text
 D:\WCVcoinMTB
 ├─ Capa3_Visor/
@@ -204,11 +251,52 @@ D:\WCVcoinMTB
 │  └─ DevTraeIA/
 └─ README.md
 ```
+=======
+#### **Distribución del Flujo de Trabajo (4 Horas/Día):**
+* **⏱️ Hora 1 (Antigravity - Arquitectura & Diseño):**
+  * Diseño del algoritmo *Token Bucket* para modelación precisa del ancho de banda
+  * Análisis de fragmentación óptima de paquetes (tamaños entre 64KB y 1MB)
+  * Prevención de interbloqueos en enrutadores domésticos con buffers limitados
+  * Modelado de distribución justa de recursos entre conexiones concurrentes
+
+* **⏱️ Hora 2 (Cursor - Desarrollo Core C#):**
+  * Codificación del motor de transferencia por *chunks* asíncronos en RAM
+  * Implementación de limitadores de subida mediante `Task.Delay` dinámicos
+  * Calibración milisegundo a milisegundo de *bytes-per-second* en transmisión
+  * Sistema de reanudación de transferencias tras interrupciones
+
+* **⏱️ Hora 3 (Trae - Implementación de Red):**
+  * Gestión multiplexada de conexiones masivas concurrentes (hasta 50 conexiones simultáneas)
+  * Distribución matemática justa del ancho de banda (ej. 30 MB por conexión con 10 usuarios)
+  * Prevención de estrangulamiento de la línea del anfitrión
+  * Sistema de descubrimiento de peers con mejores tasas de transferencia
+
+* **⏱️ Hora 4 (VS Code - QA, Refactor y Testing):**
+  * Profiling de estrés en entornos simulados de red con latencias de 50-500ms
+  * Monitoreo automatizado del consumo de ancho de banda en el Administrador de Tareas
+  * Validación del límite estricto de 300 MB de subida por nodo
+  * Pruebas de transferencia de archivos grandes (1GB+) con interrupciones controladas
+
+#### **Entregables Específicos:**
+1. **Motor de Transferencia P2P:** Sistema de file-sharing descentralizado
+2. **Algoritmo de Throttling:** Control preciso de ancho de banda con Token Bucket
+3. **Gestor de Conexiones:** Manejo de múltiples conexiones concurrentes
+4. **Sistema de Descubrimiento:** Encuentro automático de peers disponibles
+5. **Monitor de Recursos:** Seguimiento en tiempo real del consumo de red
+
+#### **Métricas de Éxito:**
+* ✅ Límite de 300 MB de subida respetado en 100% de las pruebas
+* ✅ Distribución justa de ancho de banda entre conexiones concurrentes
+* ✅ Transferencia de archivos de 500MB completada en < 30 minutos en red local
+* ✅ Tolerancia a interrupciones con reanudación automática
+* ✅ Consumo de CPU < 15% durante transferencias intensivas
+>>>>>>> Stashed changes
 
 ---
 
 ## Como compilar y ejecutar
 
+<<<<<<< Updated upstream
 ### Requisitos reales
 
 - Windows.
@@ -244,11 +332,52 @@ Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\VisorSingularity.exe
 | `50007` | WPF -> Godot chat UDP |
 | `50008` | Godot -> WPF chat UDP |
 | `5001` | API local de Kubo/IPFS |
+=======
+#### **Distribución del Flujo de Trabajo (4 Horas/Día):**
+* **⏱️ Hora 1 (Antigravity - Arquitectura & Diseño):**
+  * Modelado estructural de base de datos JSON con esquemas CRDT (*Conflict-free Replicated Data Types*)
+  * Estrategia heurística basada en Relojes de Lamport para resolución de conflictos
+  * Algoritmo de fusión automática para islas creadas en la misma coordenada temporal
+  * Diseño del protocolo de "Cero Absoluto" para inicialización de redes aisladas
+
+* **⏱️ Hora 2 (Cursor - Desarrollo Core C#):**
+  * Implementación de la directiva algorítmica del "Cero Absoluto" `(0, 0, 0)`
+  * Lógica genética para inicialización de tablas vacías cuando no hay peers disponibles
+  * Generación automática de coordenada base Génesis en redes aisladas
+  * Sistema de persistencia atómica de JSON con verificación de integridad
+
+* **⏱️ Hora 3 (Trae - Implementación de Red):**
+  * Sincronización diferencial extrema (*Delta Syncing*) para minimizar tráfico de red
+  * Algoritmos de comparación que extraen únicamente registros modificados (Deltas)
+  * Reducción del consumo de red a < 10KB por minuto en estado estable
+  * Sistema de compresión de deltas con ratio > 80%
+
+* **⏱️ Hora 4 (VS Code - QA, Refactor y Testing):**
+  * Simulaciones intensivas de "Cerebro Dividido" (*Split-brain network partitioning*)
+  * Aislamiento controlado de grupos de nodos y posterior reconexión
+  * Validación de fusión inteligente y fluida del JSON tras particiones de red
+  * Pruebas de consistencia eventual con hasta 100 nodos simultáneos
+
+#### **Entregables Específicos:**
+1. **Base de Datos CRDT:** Sistema de sincronización descentralizada sin conflictos
+2. **Motor de Delta Syncing:** Transmisión eficiente de solo cambios incrementales
+3. **Protocolo "Cero Absoluto":** Inicialización robusta de redes aisladas
+4. **Sistema de Fusión JSON:** Algoritmos inteligentes de resolución de conflictos
+5. **Monitor de Consistencia:** Verificación en tiempo real de la coherencia del estado global
+
+#### **Métricas de Éxito:**
+* ✅ Sincronización completa de estado entre 10 nodos en < 5 segundos
+* ✅ Resolución automática de 100% de conflictos de creación simultánea
+* ✅ Consumo de red < 1MB/hora en estado estable con 50 nodos activos
+* ✅ Recuperación completa tras particiones de red de hasta 24 horas
+* ✅ Persistencia de 100% de datos tras múltiples ciclos de reinicio
+>>>>>>> Stashed changes
 
 ---
 
 ## Estado actual de datos persistidos
 
+<<<<<<< Updated upstream
 Archivos observables hoy en el repo:
 
 - `WoldVirtual/Estado_Global/estado.json`: estado base del metaverso.
@@ -379,3 +508,72 @@ Proximo paso recomendado cuando se retome:
 ## Nota final
 
 Este README describe el estado real del codigo del repositorio a fecha 23 de mayo de 2026: un prototipo funcional, embebido y distribuible, con una base tecnica interesante pero todavia en transicion entre demo local, sincronizacion por archivos y una vision P2P mas ambiciosa.
+=======
+#### **Distribución del Flujo de Trabajo (4 Horas/Día):**
+* **⏱️ Hora 1 (Antigravity - Arquitectura & Diseño):**
+  * Profiling final de paralelismo multihilo entre procesos .NET y Godot
+  * Identificación y eliminación de *Deadlocks* en comunicación IPC (Inter-Process)
+  * Optimización del flujo de datos entre WPF (.NET 8) y motor nativo de Godot
+  * Diseño del sistema de precarga predictiva de assets basado en trayectoria del avatar
+
+* **⏱️ Hora 2 (Cursor - Desarrollo Core C#):**
+  * Implementación del transpositor universal de coordenadas espaciales
+  * Algoritmo crítico: `Posición Matemática Real = Eje de la Isla Macro + Posición de Avatar Micro`
+  * Refactorización orientada a dobles (`double precision`) para precisión extrema
+  * Prevención de colapsos de cálculo flotante en límites lejanos del metaverso
+
+* **⏱️ Hora 3 (Trae - Implementación de Red):**
+  * Enrutamiento predictivo basado en patrones de movimiento del avatar
+  * Sistema de "Co-Seeding" preventivo de assets (modelos, texturas, shaders)
+  * Precarga en segundo plano de fragmentos de mapa extrapolando trayectorias
+  * Experiencia inmersiva con cero pantallas de carga perceptibles
+
+* **⏱️ Hora 4 (VS Code - QA, Refactor y Testing):**
+  * Pulido terminal del árbol de ramas en GitHub con commits limpios y documentados
+  * Incorporación integral de XML Docs en 100% de interfaces y clases públicas C#
+  * Formateo general con linting y cumplimiento de estándares de código
+  * Cierre absoluto de incidencias residuales para compilación Release perfecta
+
+#### **Entregables Específicos:**
+1. **Puente IPC .NET-Godot:** Comunicación fluida entre procesos con latencia < 16ms
+2. **Sistema de Coordenadas Universal:** Precisión de doble flotante en todo el metaverso
+3. **Motor de Precarga Predictiva:** Cero tiempos de carga perceptibles
+4. **Documentación Completa:** XML Docs + READMEs técnicos + guías de integración
+5. **Release Alpha 1.0.0:** Paquete completo listo para distribución P2P
+
+#### **Métricas de Éxito:**
+* ✅ FPS estable > 60 en hardware moderado durante sesiones P2P intensivas
+* ✅ Latencia IPC < 16ms (un frame a 60FPS) para interacción en tiempo real
+* ✅ Cero advertencias del compilador en configuración Release
+* ✅ Documentación completa cubriendo 100% de APIs públicas
+* ✅ Paquete de distribución < 500MB listo para propagación viral P2P
+
+---
+
+### 🎯 **Resumen de Objetivos por Fase:**
+
+| Fase | Duración | Objetivo Principal | Entregable Clave | Métrica de Éxito |
+|------|----------|-------------------|------------------|------------------|
+| **Fase 1** | Días 1-20 | Identidad y Sockets Base | Librería Core de enlace P2P | Handshake < 500ms, 0% colisiones |
+| **Fase 2** | Días 21-40 | Distribución Descentralizada | Motor de transferencia P2P | Límite 300MB respetado, distribución justa |
+| **Fase 3** | Días 41-60 | Sincronización Global | Base de datos CRDT JSON | Sincronización < 5s, 100% conflictos resueltos |
+| **Fase 4** | Días 61-67 | Integración 3D y Release | Alpha 1.0.0 completa | FPS > 60, latencia IPC < 16ms |
+
+### 🔧 **Stack Tecnológico del Core P2P:**
+* **Lenguaje Principal:** C# (.NET 8)
+* **Motor 3D:** Godot 4.6.2 (Mono/C#)
+* **Base de Datos:** SQLite + JSON CRDT
+* **Red:** TCP/IP asíncrono + Protocolo personalizado
+* **Criptografía:** SHA-256 + Salts aleatorios
+* **Interfaz:** WPF moderno con estética cyberpunk
+* **Comunicación:** IPC entre procesos .NET y Godot
+
+### 📊 **Recursos y Capacidades:**
+* **Horas Totales:** 268 horas (67 días × 4 horas/día)
+* **Entornos Paralelos:** 4 (Antigravity, Cursor, Trae, VS Code)
+* **Horas por Entorno:** 67 horas cada uno
+* **Metodología:** Desarrollo AI-Assisted con paralelismo cognitivo
+* **Objetivo Final:** Metaverso P2P completamente descentralizado y autosuficiente
+
+Este roadmap representa un plan de desarrollo ambicioso pero realista, diseñado para aprovechar al máximo las capacidades de desarrollo asistido por IA durante el verano. Cada fase está cuidadosamente estructurada para construir sobre los cimientos de la anterior, culminando en un sistema P2P completo y robusto listo para distribución abierta.
+>>>>>>> Stashed changes
