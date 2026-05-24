@@ -55,6 +55,7 @@ namespace VisorSingularity
         private IpfsManager?             _ipfsManager;
         private IpfsPublisher?           _ipfsPublisher;
         private Process?                 _tunnelProcess;   // Proceso SSH del túmel reverso activo
+        private volatile bool            _ipfsStarted;
         private int                      _internalPort;
         private TcpListener?             _proxyListener;   // Proxy TCP local para reescribir Host header
 
@@ -106,6 +107,7 @@ namespace VisorSingularity
             }
 
             Task.Run(() => RunMainFlowAsync());
+            _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
             LogStatus("📦 Comprimiendo visor...");
         }
 
@@ -169,15 +171,14 @@ namespace VisorSingularity
                 GatewayUrl   = tunnelUrl;
                 IsOnIpfs     = false;
                 LogStatus("🌍 ¡Nodo visible! URL activa mientras estés conectado.");
-
-                // IPFS en paralelo para seeding DHT adicional (no bloquea)
-                _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
+                // IPFS ya está corriendo en segundo plano desde Start()
                 return;
             }
 
-            // Paso 3 — SSH no disponible: intentar IPFS + CDN
-            LogStatus("⚠️ Túmel SSH no disponible. Intentando IPFS + CDN...");
-            await RunIpfsBackgroundAsync(_cts?.Token ?? default);
+            // Paso 3 — SSH no disponible: IPFS ya está corriendo en segundo plano desde Start()
+            if (!_ipfsStarted)
+                _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
+            LogStatus("⚠️ Túnel no disponible. IPFS en segundo plano...");
         }
 
         // ── Túnel Público ────────────────────────────────────────────────────────────────────────
@@ -201,7 +202,7 @@ namespace VisorSingularity
                     cfExe,
                     $"tunnel --url http://127.0.0.1:{Port} --no-autoupdate",
                     @"https://[\w\-]+\.trycloudflare\.com",
-                    35000, token);
+                    20000, token);
                 if (!string.IsNullOrEmpty(cfUrl))
                 {
                     LogStatus($"🌍 Túnel activo — Cloudflare: {cfUrl}");
@@ -239,7 +240,7 @@ namespace VisorSingularity
                 if (token.IsCancellationRequested) return null;
                 LogStatus($"   → {c.Name}...");
 
-                string? url = await TryRunProcessTunnelAsync(sshExe, c.Args, c.Pat, 23000, token);
+                string? url = await TryRunProcessTunnelAsync(sshExe, c.Args, c.Pat, 15000, token);
                 if (!string.IsNullOrEmpty(url))
                 {
                     LogStatus($"🌍 Túnel activo — {c.Name}: {url}");
@@ -299,7 +300,7 @@ namespace VisorSingularity
             try
             {
                 const string cfUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe";
-                using var dl = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
+                using var dl = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 dl.DefaultRequestHeaders.UserAgent.ParseAdd("WoldVirtualP2P/1.0");
 
                 using var resp = await dl.GetAsync(cfUrl, HttpCompletionOption.ResponseHeadersRead, token);
@@ -401,6 +402,8 @@ namespace VisorSingularity
         // ── IPFS + CDN (ejecutado en background o como fallback si SSH falla) ────────────────────
         private async Task RunIpfsBackgroundAsync(CancellationToken token)
         {
+            if (_ipfsStarted) return;
+            _ipfsStarted = true;
             _ipfsManager   = new IpfsManager();
             _ipfsManager.OnStatusChanged += msg => LogStatus(msg);
             _ipfsPublisher = new IpfsPublisher(_ipfsManager);
@@ -904,6 +907,12 @@ namespace VisorSingularity
                 using var zip     = new FileStream(ZipPath, FileMode.Create);
                 using var archive = new ZipArchive(zip, ZipArchiveMode.Create);
                 AddDirectoryToZip(archive, _repoPath, _repoPath);
+                // Incluir VisorSingularity.exe compilado (excluido del scan recursivo por "bin")
+                string buildDir = Path.Combine(_repoPath, @"Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows");
+                if (!Directory.Exists(buildDir))
+                    buildDir = Path.Combine(_repoPath, @"Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows");
+                if (Directory.Exists(buildDir))
+                    AddDirectoryToZip(archive, buildDir, _repoPath);
                 ZipReady = true;
             }
             catch (Exception ex)
@@ -932,7 +941,7 @@ namespace VisorSingularity
                 // Excluir solo lo estrictamente necesario para reducir tamaño
                 if (d is ".git" or ".gemini" or ".ipfs-woldvirtual" or ".godot"
                        or "peers" or "logs" or "temp" or "tmp" or "wcvcoinmtb"
-                       or "obj") continue;
+                       or "obj" or "bin") continue;
                 AddDirectoryToZip(archive, dir, rootDir);
             }
         }
