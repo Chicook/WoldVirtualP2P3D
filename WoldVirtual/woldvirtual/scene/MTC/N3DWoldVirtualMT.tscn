@@ -6,7 +6,6 @@
 [ext_resource type="Script" uid="uid://bkf56gkqihh28" path="res://woldvirtual/gdscrip/ChunkManager.gd" id="4_iyycb"]
 [ext_resource type="PackedScene" uid="uid://cke6ysj8j866s" path="res://woldvirtual/scene/islachunk3D.tscn" id="5_ll5l3"]
 [ext_resource type="PackedScene" uid="uid://c6m64eqc13dtx" path="res://woldvirtual/users/userbase/UserBase3D.tscn" id="6_sao71"]
-[ext_resource type="Shader" uid="uid://kns5lhdepluh" path="res://woldvirtual/shaders/Oceano.gdshader" id="7_q0pyr"]
 [ext_resource type="Script" uid="uid://clfw74w2lcump" path="res://woldvirtual/gdscrip/TeleportUI.gd" id="8_2mwb8"]
 [ext_resource type="Script" path="res://woldvirtual/gdscrip/WalletUI.gd" id="9_wallet"]
 
@@ -46,17 +45,12 @@ seamless = true
 as_normal_map = true
 bump_strength = 1.0
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ocean_high_res"]
-render_priority = 0
-shader = ExtResource("7_q0pyr")
-shader_parameter/color_shallow = Color(0.1, 0.5, 0.6, 1)
-shader_parameter/color_deep = Color(0.01, 0.05, 0.15, 1)
-shader_parameter/absorption_coeff = 1.2
-shader_parameter/roughness = 0.08
-shader_parameter/specular = 0.6
-shader_parameter/metallic = 0.15
-shader_parameter/texture_normal_1 = SubResource("NoiseTexture2D_bc3aw")
-shader_parameter/texture_normal_2 = SubResource("NoiseTexture2D_r4hkp")
+[sub_resource type="StandardMaterial3D" id="ShaderMaterial_ocean_high_res"]
+albedo_color = Color(0.1, 0.4, 0.6, 0.85)
+transparency = 1
+metallic = 0.1
+roughness = 0.08
+normal_texture = SubResource("NoiseTexture2D_bc3aw")
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_7d81o"]
 material = SubResource("ShaderMaterial_ocean_high_res")
