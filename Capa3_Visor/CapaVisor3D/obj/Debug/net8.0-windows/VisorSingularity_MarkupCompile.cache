@@ -12,8 +12,13 @@ TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\App.xaml
 11407045341
 
+<<<<<<< Updated upstream:Capa3_Visor/CapaVisor3D/obj/Debug/net8.0-windows/VisorSingularity_MarkupCompile.cache
 72053378482
 199-1316227566
+=======
+61747801420
+212-1238514563
+>>>>>>> Stashed changes:WoldVirtual/WoldVirtual3Dp2p/Capa3_Visor/obj/Debug/net8.0-windows/VisorSingularity_MarkupCompile.cache
 MainWindow.xaml;
 
 False
