@@ -16,7 +16,7 @@ signal network_updated(data)
 # --- Compatibility Layer (RF-02 Refactor) ---
 var local_id: String: get = _get_local_id
 var my_avatar: CharacterBody3D: get = _get_my_avatar
-const HEIGHT = 50.0
+const HEIGHT = 28.0
 
 var _local_island_data: Dictionary = {}
 var _persistent_island_id: String = ""
@@ -52,7 +52,6 @@ func _ready() -> void:
 	_initialize_sub_controllers()
 	_setup_connections()
 	_setup_dynamic_chat_ui()
-	_add_ground_collision()
 
 func _initialize_sub_controllers():
 	# Cargar NetworkLayer modular
@@ -167,17 +166,6 @@ func _setup_camera_controller(av: Node3D):
 		cam_ctrl.name = "CameraController"
 		add_child(cam_ctrl)
 	cam_ctrl.set_target(av)
-
-func _add_ground_collision():
-	var floor_body = StaticBody3D.new()
-	floor_body.name = "GroundCollision"
-	var shape = CollisionShape3D.new()
-	var box = BoxShape3D.new()
-	box.size = Vector3(10000, 1, 10000)
-	shape.shape = box
-	floor_body.add_child(shape)
-	floor_body.position = Vector3(0, -2, 0)
-	add_child(floor_body)
 
 func _setup_dynamic_chat_ui():
 	# Buscar el CanvasLayer UI_Layer (padre de ChunkManager es N3DWoldVirtualMT)

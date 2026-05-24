@@ -13,15 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VisorSingularity")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-<<<<<<< Updated upstream:Capa3_Visor/CapaVisor3D/obj/Debug/net8.0-windows/VisorSingularity.AssemblyInfo.cs
-<<<<<<< Updated upstream:Capa3_Visor/CapaVisor3D/obj/Debug/net8.0-windows/VisorSingularity.AssemblyInfo.cs
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7e9bb48d1eab88ad499ae0deb761af4e5ce71c5a")]
-=======
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+02b9424cd4b99718f570257abb1033f8f81563b3")]
->>>>>>> Stashed changes:WoldVirtual/WoldVirtual3Dp2p/Capa3_Visor/obj/Debug/net8.0-windows/VisorSingularity.AssemblyInfo.cs
-=======
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+02b9424cd4b99718f570257abb1033f8f81563b3")]
->>>>>>> Stashed changes:WoldVirtual/WoldVirtual3Dp2p/Capa3_Visor/obj/Debug/net8.0-windows/VisorSingularity.AssemblyInfo.cs
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+482a92c7b4f95d03e1b0235d1c5e6ac6b3fea824")]
 [assembly: System.Reflection.AssemblyProductAttribute("VisorSingularity")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VisorSingularity")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
