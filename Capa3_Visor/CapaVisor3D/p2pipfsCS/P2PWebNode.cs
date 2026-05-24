@@ -929,10 +929,9 @@ namespace VisorSingularity
             foreach (string dir in Directory.GetDirectories(sourceDir))
             {
                 string d = Path.GetFileName(dir).ToLower();
-                // Excluir carpetas pesadas o innecesarias
+                // Excluir solo lo estrictamente necesario para reducir tamaño
                 if (d is ".git" or ".gemini" or ".ipfs-woldvirtual" or ".godot"
-                       or "obj" or "bin" or "peers" or "logs"
-                       or "temp" or "tmp" or "wcvcoinmtb") continue;
+                       or "peers" or "logs" or "temp" or "tmp" or "wcvcoinmtb") continue;
                 AddDirectoryToZip(archive, dir, rootDir);
             }
         }
