@@ -230,7 +230,7 @@ namespace VisorSingularity
                 new {
                     Name = "localhost.run",
                     Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} nokey@localhost.run",
-                    Pat  = @"https://[\w\-]+\.lhr\\.rocks"
+                    Pat  = @"https://[\w\-]+\.lhr\.rocks"
                 }
             };
 
@@ -931,7 +931,8 @@ namespace VisorSingularity
                 string d = Path.GetFileName(dir).ToLower();
                 // Excluir solo lo estrictamente necesario para reducir tamaño
                 if (d is ".git" or ".gemini" or ".ipfs-woldvirtual" or ".godot"
-                       or "peers" or "logs" or "temp" or "tmp" or "wcvcoinmtb") continue;
+                       or "peers" or "logs" or "temp" or "tmp" or "wcvcoinmtb"
+                       or "obj") continue;
                 AddDirectoryToZip(archive, dir, rootDir);
             }
         }
