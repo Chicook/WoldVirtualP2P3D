@@ -9,26 +9,25 @@ extends Control
 var _full_wallet := ""
 
 func _ready():
-	# Leer wallet del perfil JSON
-	var user_path = "res://woldvirtual/scene/MTC/users3D/current_user.json"
-	var file = FileAccess.open(user_path, FileAccess.READ)
-	
-	if file:
-		var json_text = file.get_as_text()
-		file.close()
-		var json = JSON.new()
-		if json.parse(json_text) == OK:
-			var data = json.data
-			if data.has("wallet") and data["wallet"] != "":
-				_full_wallet = data["wallet"]
-			else:
-				_full_wallet = ""
-	else:
-		var args = OS.get_cmdline_args()
-		for i in range(args.size()):
-			if args[i] == "--wallet" and i + 1 < args.size():
-				_full_wallet = args[i+1]
-				break
+	# Primero, intentar leer la wallet desde los argumentos de la línea de comandos
+	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
+	for i in range(args.size()):
+		if args[i] == "--wallet" and i + 1 < args.size():
+			_full_wallet = args[i+1]
+			break
+
+	# Si no se recibió en los argumentos, buscar en el perfil JSON local
+	if _full_wallet == "":
+		var user_path = "res://woldvirtual/scene/MTC/users3D/current_user.json"
+		var file = FileAccess.open(user_path, FileAccess.READ)
+		if file:
+			var json_text = file.get_as_text()
+			file.close()
+			var json = JSON.new()
+			if json.parse(json_text) == OK:
+				var data = json.get_data()
+				if typeof(data) == TYPE_DICTIONARY and data.has("wallet") and data["wallet"] != "":
+					_full_wallet = data["wallet"]
 
 	# Mostrar wallet TRUNCADA (profesional)
 	if _full_wallet.length() > 10:

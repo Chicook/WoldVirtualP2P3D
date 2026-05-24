@@ -22,7 +22,7 @@ var _local_island_data: Dictionary = {}
 var _persistent_island_id: String = ""
 
 func _parse_cmdline_args():
-	var args = OS.get_cmdline_args()
+	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
 	for i in args.size():
 		if args[i] == "--island-id" and i + 1 < args.size():
 			_persistent_island_id = args[i+1]
@@ -51,6 +51,7 @@ func _ready() -> void:
 	_parse_cmdline_args()
 	_initialize_sub_controllers()
 	_setup_connections()
+	_setup_dynamic_chat_ui()
 
 func _initialize_sub_controllers():
 	# Cargar NetworkLayer modular
@@ -103,11 +104,20 @@ func _on_network_updated(state: Dictionary):
 		if p_coords != Vector2.ZERO:
 			slot = p_coords
 
+		# Si solo hay un usuario conectado, su ubicacion por defecto es 0,0,0 (evita tembleque de floats)
+		var is_alone = true
+		for uid in users:
+			if uid != lid:
+				is_alone = false
+				break
+		if is_alone:
+			slot = Vector2.ZERO
+
 		var me_data = {
 			"ix": slot.x, "iz": slot.y,
-			"x": slot.x * spacing + randf_range(-2.0, 2.0),
-			"y": HEIGHT, # 🔥 Usar HEIGHT corregida
-			"z": slot.y * spacing + randf_range(-2.0, 2.0),
+			"x": slot.x * spacing,
+			"y": HEIGHT,
+			"z": slot.y * spacing,
 			"r": 0.0, "t": Time.get_unix_time_from_system()
 		}
 		var island_name = "Isla de " + lid.substr(0, 4)
@@ -156,3 +166,16 @@ func _setup_camera_controller(av: Node3D):
 		cam_ctrl.name = "CameraController"
 		add_child(cam_ctrl)
 	cam_ctrl.set_target(av)
+
+func _setup_dynamic_chat_ui():
+	# Buscar el CanvasLayer UI_Layer (padre de ChunkManager es N3DWoldVirtualMT)
+	var ui_layer = get_parent().get_node_or_null("UI_Layer")
+	if is_instance_valid(ui_layer):
+		# Instanciar el control de Chat
+		var chat_control = Control.new()
+		chat_control.name = "ChatUI"
+		chat_control.set_script(load("res://woldvirtual/gdscrip/ChatUI.gd"))
+		ui_layer.add_child(chat_control)
+		print("ChatUI instanciado dinámicamente en UI_Layer.")
+	else:
+		print("Error: No se encontró UI_Layer para inyectar el ChatUI.")

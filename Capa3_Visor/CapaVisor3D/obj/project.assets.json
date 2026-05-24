@@ -73,11 +73,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+      "projectUniqueName": "C:\\Users\\Usuario\\Downloads\\WoldVirtual_Visor_ND66269\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
       "projectName": "VisorSingularity",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+      "projectPath": "C:\\Users\\Usuario\\Downloads\\WoldVirtual_Visor_ND66269\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
       "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-      "outputPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
+      "outputPath": "C:\\Users\\Usuario\\Downloads\\WoldVirtual_Visor_ND66269\\Capa3_Visor\\CapaVisor3D\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
