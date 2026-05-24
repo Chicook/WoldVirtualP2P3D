@@ -90,7 +90,40 @@ namespace VisorSingularity
         public void Start()
         {
             _cts = new CancellationTokenSource();
-            _listener.Start();
+
+            // Intentar iniciar listener HTTP — puede fallar por falta de URLACL
+            try
+            {
+                _listener.Start();
+            }
+            catch (HttpListenerException) when (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                // Auto-registrar URLACL en Windows (pide UAC al usuario una sola vez)
+                try
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "netsh",
+                        Arguments = $"http add urlacl url=http://127.0.0.1:{_internalPort}/ user=Users",
+                        UseShellExecute = true,
+                        Verb = "runas",
+                        WindowStyle = ProcessWindowStyle.Hidden
+                    };
+                    using var p = Process.Start(psi);
+                    p?.WaitForExit(15000);
+                }
+                catch { }
+
+                // Reintentar después de registrar URLACL
+                try { _listener.Start(); }
+                catch (Exception ex2)
+                {
+                    Debug.WriteLine($"[HTTP] No se pudo iniciar listener incluso tras URLACL: {ex2.Message}");
+                    LogStatus($"❌ Error: ejecuta como administrador una vez (HTTP listener: {ex2.Message})");
+                    return;
+                }
+            }
+
             Task.Run(() => ListenLoop(_cts.Token));
 
             // Iniciar proxy TCP para reescribir Host header (evita HTTP 400 por Host de Serveo)
@@ -1237,7 +1270,16 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
         private void LogStatus(string msg)
         {
             Debug.WriteLine($"[P2P] {msg}");
-            try { OnStatusChanged?.Invoke(msg); }
+            try { OnStatusChanged?.Invoke(msg); } catch { }
+            // Fallback visible: actualizar título de la ventana
+            try
+            {
+                var w = System.Windows.Application.Current?.MainWindow;
+                if (w != null && !w.Dispatcher.CheckAccess())
+                    w.Dispatcher.Invoke(() => w.Title = msg);
+                else if (w != null)
+                    w.Title = msg;
+            }
             catch { }
         }
     }
