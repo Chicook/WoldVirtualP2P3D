@@ -10,8 +10,8 @@ var save_path = "res://woldvirtual/scene/MTC/users3D/current_user.json"
 var wallet_full = ""
 
 func _ready():
-	# Leer argumentos de línea de comandos pasados por C# (incluyendo argumentos de usuario)
-	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
+	# Leer argumentos de línea de comandos pasados por C#
+	var args = OS.get_cmdline_args()
 	
 	for i in range(args.size()):
 		if args[i] == "--wallet" and i + 1 < args.size():
@@ -58,7 +58,6 @@ func _on_login_pressed():
 	if file:
 		file.store_string(JSON.stringify(data, "\t"))
 		file.close()
-		print("AVATAR_LOGIN_CLICKED")
 		print("Usuario guardado en: ", save_path)
 		
 		# Cambiar Escena

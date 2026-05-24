@@ -39,7 +39,7 @@ func _input(event):
 	else:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-func _physics_process(delta):
+func _process(delta):
 	if !is_instance_valid(target_node): return
 	
 	match current_profile:
@@ -55,11 +55,11 @@ func _update_fpv(_delta):
 	target_node.global_rotation.y = _rot_y
 	cam.global_rotation = Vector3(_rot_x, _rot_y, 0)
 
-func _update_tpv(delta):
+func _update_tpv(_delta):
 	# Si no estamos orbitando, la cámara intenta seguir la espalda del avatar
 	if !Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		_rot_y = lerp_angle(_rot_y, target_node.global_rotation.y, delta * 4.0)
-		_rot_x = lerp(_rot_x, -0.2, delta * 4.0) # Inclinar un poco hacia abajo por defecto
+		_rot_y = lerp_angle(_rot_y, target_node.global_rotation.y, 0.1)
+		_rot_x = lerp(_rot_x, -0.2, 0.1) # Inclinar un poco hacia abajo por defecto
 	
 	var distance = 2.5
 	var height = 1.8
@@ -68,14 +68,14 @@ func _update_tpv(delta):
 	var basis = Basis(Vector3.UP, _rot_y) * Basis(Vector3.RIGHT, _rot_x)
 	var target_pos = target_node.global_position + (basis * Vector3(0, 1.8, -2.5))
 	
-	# Suavizado de posición con delta (independiente de FPS)
-	cam.global_position = cam.global_position.lerp(target_pos, delta * lerp_speed_base * 10.0)
+	# Suavizado de posición
+	cam.global_position = cam.global_position.lerp(target_pos, 0.15)
 	cam.look_at(target_node.global_position + Vector3(0, 1.2, 0))
 	
 	# Si el avatar se mueve y estamos orbitando, el avatar gira hacia donde mira la cámara
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
 		if target_node is CharacterBody3D and target_node.velocity.length() > 0.5:
-			target_node.global_rotation.y = lerp_angle(target_node.global_rotation.y, _rot_y, delta * 4.0)
+			target_node.global_rotation.y = lerp_angle(target_node.global_rotation.y, _rot_y, 0.1)
 
 func _update_cinematic(delta):
 	# Movimiento orbital lento automático
