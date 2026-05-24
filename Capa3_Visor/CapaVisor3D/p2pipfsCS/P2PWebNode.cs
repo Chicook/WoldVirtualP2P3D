@@ -148,34 +148,47 @@ namespace VisorSingularity
             LogStatus("⏹ Nodo P2P apagado.");
         }
 
-        // ── Flujo principal: Túmel SSH (prioritario) → IPFS/CDN (background) ──────────────────────
+        // ── Flujo principal: Túnel inmediato, ZIP en paralelo ─────────────────────────────────
         private async Task RunMainFlowAsync()
         {
-            // Paso 1 — Generar ZIP
-            GenerateRepositoryZip();
-            if (!ZipReady)
+            LogStatus("🔌 Estableciendo túnel público...");
+
+            // Lanzar ZIP en segundo plano (no bloquea el túnel)
+            var zipTask = Task.Run(() => GenerateRepositoryZip());
+
+            // Túnel inmediato — la URL se sirve aunque el ZIP tarde
+            string? tunnelUrl = await TryEstablishTunnelAsync(_cts?.Token ?? default);
+            if (!string.IsNullOrEmpty(tunnelUrl))
+            {
+                GatewayUrl   = tunnelUrl;
+                IsOnIpfs     = false;
+                LogStatus($"🌍 ¡Nodo visible! {tunnelUrl}");
+
+                // Esperar ZIP (ya no bloquea la URL)
+                await zipTask;
+                if (ZipReady)
+                {
+                    ZipPublicUrl = $"{tunnelUrl}/visor.zip";
+                    double mb = GetFileSizeMB(ZipPath);
+                    LogStatus($"✅ ZIP listo ({mb:F1} MB). Descarga: {tunnelUrl}/visor.zip");
+                }
+                return;
+            }
+
+            // Túnel falló — esperar ZIP e intentar IPFS
+            await zipTask;
+            if (ZipReady)
+            {
+                double mb = GetFileSizeMB(ZipPath);
+                LogStatus($"✅ ZIP listo ({mb:F1} MB). Buscando alternativa IPFS...");
+            }
+            else
             {
                 LogStatus("❌ Error generando ZIP. Solo enlace local disponible.");
                 GatewayUrl = LocalUrl;
                 return;
             }
 
-            double mb = GetFileSizeMB(ZipPath);
-            LogStatus($"✅ ZIP listo ({mb:F1} MB). Estableciendo presencia en red...");
-
-            // Paso 2 — Túmel SSH reverso (PC-a-PC, visible mientras conectado, desaparece al cerrar)
-            string? tunnelUrl = await TryEstablishTunnelAsync(_cts?.Token ?? default);
-            if (!string.IsNullOrEmpty(tunnelUrl))
-            {
-                ZipPublicUrl = $"{tunnelUrl}/visor.zip";
-                GatewayUrl   = tunnelUrl;
-                IsOnIpfs     = false;
-                LogStatus("🌍 ¡Nodo visible! URL activa mientras estés conectado.");
-                // IPFS ya está corriendo en segundo plano desde Start()
-                return;
-            }
-
-            // Paso 3 — SSH no disponible: IPFS ya está corriendo en segundo plano desde Start()
             if (!_ipfsStarted)
                 _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
             LogStatus("⚠️ Túnel no disponible. IPFS en segundo plano...");
@@ -903,16 +916,11 @@ namespace VisorSingularity
             IsZipping = true; ZipReady = false;
             try
             {
+                LogStatus("📦 Comprimiendo visor (esto puede tomar unos segundos)...");
                 if (File.Exists(ZipPath)) File.Delete(ZipPath);
                 using var zip     = new FileStream(ZipPath, FileMode.Create);
                 using var archive = new ZipArchive(zip, ZipArchiveMode.Create);
                 AddDirectoryToZip(archive, _repoPath, _repoPath);
-                // Incluir VisorSingularity.exe compilado (excluido del scan recursivo por "bin")
-                string buildDir = Path.Combine(_repoPath, @"Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows");
-                if (!Directory.Exists(buildDir))
-                    buildDir = Path.Combine(_repoPath, @"Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows");
-                if (Directory.Exists(buildDir))
-                    AddDirectoryToZip(archive, buildDir, _repoPath);
                 ZipReady = true;
             }
             catch (Exception ex)
@@ -932,7 +940,7 @@ namespace VisorSingularity
                 if (Path.GetFileName(file).ToLower() is "vram_status.json") continue;
 
                 string rel = Path.GetRelativePath(rootDir, file);
-                try { archive.CreateEntryFromFile(file, rel); }
+                try { archive.CreateEntryFromFile(file, rel, CompressionLevel.Fastest); }
                 catch (Exception ex) { Debug.WriteLine($"[ZIP-skip] {rel}: {ex.Message}"); }
             }
             foreach (string dir in Directory.GetDirectories(sourceDir))
@@ -940,8 +948,7 @@ namespace VisorSingularity
                 string d = Path.GetFileName(dir).ToLower();
                 // Excluir solo lo estrictamente necesario para reducir tamaño
                 if (d is ".git" or ".gemini" or ".ipfs-woldvirtual" or ".godot"
-                       or "peers" or "logs" or "temp" or "tmp" or "wcvcoinmtb"
-                       or "obj" or "bin") continue;
+                       or "peers" or "logs" or "temp" or "tmp" or "wcvcoinmtb") continue;
                 AddDirectoryToZip(archive, dir, rootDir);
             }
         }
@@ -1180,6 +1187,11 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
             return -1;
         }
 
-        private void LogStatus(string msg) => OnStatusChanged?.Invoke(msg);
+        private void LogStatus(string msg)
+        {
+            Debug.WriteLine($"[P2P] {msg}");
+            try { OnStatusChanged?.Invoke(msg); }
+            catch { }
+        }
     }
 }
