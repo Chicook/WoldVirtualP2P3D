@@ -226,8 +226,7 @@ namespace VisorSingularity
 
 
             // ── Opciones 2-4: SSH reverso (Serveo, localhost.run) ──────────────────
-            string sshExe = @"C:\Windows\System32\OpenSSH\ssh.exe";
-            if (!File.Exists(sshExe)) sshExe = "ssh";
+            string sshExe = await EnsureSshAsync(token);
 
             var candidates = new[]
             {
@@ -309,31 +308,79 @@ namespace VisorSingularity
             }
 
             // ── 2. No encontrado → descargar automáticamente ──────────────────────
-            LogStatus("⬇️ Descargando cloudflared (túnel sin advertencia)...");
+            LogStatus("⬇️ Descargando cloudflared...");
+            string[] cfUrls =
+            {
+                "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe",
+                "https://github.com/cloudflare/cloudflared/releases/download/2024.12.0/cloudflared-windows-amd64.exe",
+            };
+            foreach (string cfUrl in cfUrls)
+            {
+                try
+                {
+                    using var dl = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+                    dl.DefaultRequestHeaders.UserAgent.ParseAdd("WoldVirtualP2P/1.0");
+                    using var resp = await dl.GetAsync(cfUrl, HttpCompletionOption.ResponseHeadersRead, token);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        await using var fs = File.Create(localCf);
+                        await resp.Content.CopyToAsync(fs, token);
+                        LogStatus("✅ cloudflared descargado.");
+                        Debug.WriteLine($"[Cloudflared] {localCf}");
+                        return localCf;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Cloudflared-DL] {cfUrl}: {ex.Message}");
+                }
+            }
+            LogStatus("⚠️ No se pudo descargar cloudflared.");
+            return null;
+        }
+
+        // ── Asegurar SSH portable (descarga OpenSSH si no está instalado) ─────────
+        private async Task<string> EnsureSshAsync(CancellationToken token)
+        {
+            // Buscar en ubicaciones estándar
+            string[] sshLocations =
+            {
+                @"C:\Windows\System32\OpenSSH\ssh.exe",
+                @"C:\Windows\SysWOW64\OpenSSH\ssh.exe",
+                @"ssh.exe",
+            };
+            foreach (var loc in sshLocations)
+                if (File.Exists(loc)) return loc;
+            // Buscar en PATH
+            try { using var p = Process.Start(new ProcessStartInfo { FileName = "ssh", Arguments = "-V", RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true }); if (p != null) { p.WaitForExit(2000); return "ssh"; } } catch { }
+            // No encontrado → descargar portable
+            string sshDir = Path.Combine(Path.GetTempPath(), "WoldVirtualP2P", "OpenSSH");
+            string sshExe = Path.Combine(sshDir, "ssh.exe");
+            if (File.Exists(sshExe)) return sshExe;
+            LogStatus("⬇️ Descargando OpenSSH portable...");
             try
             {
-                const string cfUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe";
-                using var dl = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+                using var dl = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
                 dl.DefaultRequestHeaders.UserAgent.ParseAdd("WoldVirtualP2P/1.0");
-
-                using var resp = await dl.GetAsync(cfUrl, HttpCompletionOption.ResponseHeadersRead, token);
-                if (resp.IsSuccessStatusCode)
+                string url = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.5.0.0p1-Beta/OpenSSH-Win64.zip";
+                var respMsg = await dl.GetAsync(url, token);
+                using var resp = respMsg;
+                if (!resp.IsSuccessStatusCode) { LogStatus("⚠️ No se pudo descargar OpenSSH."); return "ssh"; }
+                byte[] zipBytes = await resp.Content.ReadAsByteArrayAsync(token);
+                Directory.CreateDirectory(sshDir);
+                using var ms = new MemoryStream(zipBytes);
+                using var archive = new ZipArchive(ms);
+                foreach (var entry in archive.Entries)
                 {
-                    await using var fs = File.Create(localCf);
-                    await resp.Content.CopyToAsync(fs, token);
-                    LogStatus("✅ cloudflared descargado correctamente.");
-                    Debug.WriteLine($"[Cloudflared] Descargado en: {localCf}");
-                    return localCf;
+                    if (!entry.FullName.StartsWith("OpenSSH-Win64/", StringComparison.OrdinalIgnoreCase)) continue;
+                    string target = Path.Combine(sshDir, entry.FullName.Substring("OpenSSH-Win64/".Length));
+                    if (entry.Name == "") { Directory.CreateDirectory(target); continue; }
+                    entry.ExtractToFile(target, overwrite: true);
                 }
-                LogStatus($"⚠️ Descarga de cloudflared falló: HTTP {(int)resp.StatusCode}");
+                if (File.Exists(sshExe)) { LogStatus("✅ OpenSSH portable listo."); return sshExe; }
             }
-            catch (Exception ex)
-            {
-                LogStatus($"⚠️ No se pudo descargar cloudflared: {ex.Message}");
-                Debug.WriteLine($"[Cloudflared-DL] {ex}");
-            }
-
-            return null;
+            catch (Exception ex) { LogStatus($"⚠️ OpenSSH download: {ex.Message}"); }
+            return "ssh";
         }
 
         // ── Ejecutor genérico de proceso de túnel ────────────────────────────────
