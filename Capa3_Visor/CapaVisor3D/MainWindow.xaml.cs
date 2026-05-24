@@ -526,7 +526,6 @@ namespace VisorSingularity
 
             // Ocultar barra inferior de conexión inicialmente mientras se registra el avatar en Godot
             BorderBottomLoginBar.Visibility = Visibility.Collapsed;
-            P2PNodeBar.Visibility = Visibility.Collapsed;
 
             // Configurar resolución de inicio
             int width = (int)Math.Max(800, GodotPlaceholder.ActualWidth);
