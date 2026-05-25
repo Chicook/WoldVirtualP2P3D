@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +8,7 @@ namespace VisorSingularity
 {
     public class IPFSTunnelConnector : IDisposable
     {
-        private Process? _sshProcess;
+        private Process? _cfProcess;
         private CancellationTokenSource? _cts;
         private bool _disposed;
         private readonly int _localPort;
@@ -34,50 +33,48 @@ namespace VisorSingularity
         private void ConnectInternal()
         {
             DisconnectInternal();
-            LogStatus("Estableciendo túnel SSH a localhost.run...");
+            LogStatus("Iniciando túnel Cloudflare (cloudflared)...");
 
             try
             {
                 var psi = new ProcessStartInfo
                 {
-                    FileName = "ssh",
-                    Arguments = $"-o StrictHostKeyChecking=no -R 80:127.0.0.1:{_localPort} localhost.run",
+                    FileName = "cloudflared",
+                    Arguments = $"tunnel --url http://127.0.0.1:{_localPort}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 };
 
-                _sshProcess = new Process { StartInfo = psi };
+                _cfProcess = new Process { StartInfo = psi };
                 _cts = new CancellationTokenSource();
 
-                _sshProcess.Start();
+                _cfProcess.Start();
 
-                // Capturar la URL desde la salida del proceso SSH
-                _sshProcess.ErrorDataReceived += OnSshOutput;
-                _sshProcess.BeginErrorReadLine();
-                _sshProcess.OutputDataReceived += OnSshOutput;
-                _sshProcess.BeginOutputReadLine();
+                _cfProcess.ErrorDataReceived += OnCfOutput;
+                _cfProcess.BeginErrorReadLine();
+                _cfProcess.OutputDataReceived += OnCfOutput;
+                _cfProcess.BeginOutputReadLine();
 
                 IsConnected = true;
                 OnConnectionChanged?.Invoke(true);
-                LogStatus("Túnel SSH establecido. Esperando URL pública...");
+                LogStatus("Proxy cloudflared iniciado. Esperando URL pública...");
             }
             catch (Exception ex)
             {
                 IsConnected = false;
                 OnConnectionChanged?.Invoke(false);
-                LogStatus($"Error al crear túnel SSH: {ex.Message}");
+                LogStatus($"Error al iniciar cloudflared: {ex.Message}. Asegúrate de tener cloudflared instalado o descárgalo de https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
                 Cleanup();
             }
         }
 
-        private void OnSshOutput(object sender, DataReceivedEventArgs e)
+        private void OnCfOutput(object sender, DataReceivedEventArgs e)
         {
             if (string.IsNullOrEmpty(e.Data)) return;
 
-            // localhost.run devuelve la URL en el formato: https://xxxx-xxxx-xxxx.loca.lt
-            var match = Regex.Match(e.Data, @"(https?://[a-zA-Z0-9_-]+\.loca\.lt)");
+            var match = Regex.Match(e.Data, @"(https?://[a-zA-Z0-9_-]+\.trycloudflare\.com)");
             if (match.Success && PublicUrl == null)
             {
                 PublicUrl = match.Groups[1].Value;
@@ -86,7 +83,7 @@ namespace VisorSingularity
                 LogStatus($"¡Nodo público en: {PublicUrl}");
             }
 
-            Debug.WriteLine($"[localhost.run] {e.Data}");
+            Debug.WriteLine($"[cloudflared] {e.Data}");
         }
 
         public void Disconnect()
@@ -100,7 +97,7 @@ namespace VisorSingularity
             IsConnected = false;
             PublicUrl = null;
             OnConnectionChanged?.Invoke(false);
-            LogStatus("Túnel SSH cerrado.");
+            LogStatus("Túnel Cloudflare cerrado.");
         }
 
         private void Cleanup()
@@ -109,12 +106,12 @@ namespace VisorSingularity
             {
                 _cts?.Cancel();
 
-                if (_sshProcess != null && !_sshProcess.HasExited)
+                if (_cfProcess != null && !_cfProcess.HasExited)
                 {
-                    _sshProcess.Kill(entireProcessTree: true);
-                    _sshProcess.WaitForExit(3000);
-                    _sshProcess.Dispose();
-                    _sshProcess = null;
+                    _cfProcess.Kill(entireProcessTree: true);
+                    _cfProcess.WaitForExit(3000);
+                    _cfProcess.Dispose();
+                    _cfProcess = null;
                 }
             }
             catch { }

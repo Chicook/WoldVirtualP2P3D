@@ -215,12 +215,6 @@ namespace VisorSingularity
         {
             foreach (string file in Directory.GetFiles(sourceDir))
             {
-                string ext = Path.GetExtension(file).ToLower();
-                if (ext == ".zip" || ext == ".tmp" || ext == ".log") continue;
-
-                string fileName = Path.GetFileName(file).ToLower();
-                if (fileName == "vram_status.json") continue;
-
                 string relativePath = Path.GetRelativePath(rootDir, file);
                 try { archive.CreateEntryFromFile(file, relativePath); }
                 catch (Exception ex) { Debug.WriteLine($"No se pudo añadir {relativePath}: {ex.Message}"); }
@@ -229,9 +223,7 @@ namespace VisorSingularity
             foreach (string dir in Directory.GetDirectories(sourceDir))
             {
                 string dirName = Path.GetFileName(dir).ToLower();
-                if (dirName == ".git" || dirName == ".gemini" || dirName == "obj" ||
-                    dirName == "peers" || dirName == "logs" || dirName == "temp" ||
-                    dirName == "tmp" || dirName == "wcvcoinmtb")
+                if (dirName == ".git")
                     continue;
 
                 AddDirectoryToZip(archive, dir, rootDir);
@@ -422,7 +414,7 @@ namespace VisorSingularity
         {tunnelInfo}
 
         <div class=""footer"">
-            Powered by localhost.run & C# WoldVirtual P2P Engine
+            Powered by Cloudflare Tunnel & C# WoldVirtual P2P Engine
         </div>
     </div>
 </body>
