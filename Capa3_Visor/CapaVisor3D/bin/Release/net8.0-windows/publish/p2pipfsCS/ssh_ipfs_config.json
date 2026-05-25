@@ -1,0 +1,5 @@
+{
+  "tunnel_service": "localhost.run",
+  "command": "ssh -o StrictHostKeyChecking=no -R 80:127.0.0.1:{PUERTO} localhost.run",
+  "note": "Usa OpenSSH nativo de Windows. La URL pública se obtiene automáticamente y cambia cada sesion."
+}

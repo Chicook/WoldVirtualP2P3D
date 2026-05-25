@@ -1006,23 +1006,25 @@ namespace VisorSingularity
             {
                 _p2pNode = new P2PWebNode(username, repoPath);
 
-                // Suscribirse a cambios de estado del zipping/servidor
                 _p2pNode.OnStatusChanged += (status) =>
                 {
                     Dispatcher.Invoke(() =>
                     {
                         TxtP2PStatus.Text = status;
+                        // Si llegó la URL pública del túnel, actualizar
+                        if (_p2pNode != null && !string.IsNullOrEmpty(_p2pNode.PublicUrl))
+                        {
+                            TxtP2PNodeId.Text = $"🌐 P2P: {_p2pNode.PublicUrl}";
+                            TxtP2PLink.Text = $"Enlace público: {_p2pNode.PublicUrl}";
+                        }
                     });
                 };
 
                 _p2pNode.Start();
 
-                // Actualizar interfaz con los datos del nodo
-                TxtP2PNodeId.Text = $"NODO P2P: {_p2pNode.SimulatedUrl}";
-                TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
+                TxtP2PNodeId.Text = $"NODO P2P: {_p2pNode.NodeId}";
+                TxtP2PLink.Text = $"Local: {_p2pNode.LocalUrl}";
                 TxtP2PStatus.Text = "Inicializando nodo...";
-
-                // Mostrar el widget en la barra de menú
                 P2PNodeBar.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
@@ -1035,8 +1037,13 @@ namespace VisorSingularity
         {
             if (_p2pNode != null)
             {
-                Clipboard.SetText(_p2pNode.LocalUrl);
-                MessageBox.Show($"Enlace de invitación copiado al portapapeles:\n\n{_p2pNode.LocalUrl}\n\nEnvíalo a tus amigos para que descarguen el visor y se unan como nodos de la red.", "Enlace Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                string link = !string.IsNullOrEmpty(_p2pNode.PublicUrl)
+                    ? _p2pNode.PublicUrl : _p2pNode.LocalUrl;
+                Clipboard.SetText(link);
+                MessageBox.Show($"Enlace de invitación copiado al portapapeles:\n\n{link}" +
+                    $"\n\n{(_p2pNode.PublicUrl != null ? "🔓 URL pública (válida solo esta sesión)" : "🔒 URL local")}" +
+                    $"\n\nEnvíalo a tus amigos para que descarguen el visor y se unan como nodos de la red.",
+                    "Enlace Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
     }
