@@ -1,22 +1,67 @@
+<!--
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║                  PROJECT CONFIGURATION FILE                      ║
+  ║              Windows Presentation Foundation (WPF)               ║
+  ║                     Target: .NET 8.0 (Windows)                   ║
+  ╚══════════════════════════════════════════════════════════════════╝
+-->
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net8.0-windows</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <UseWPF>true</UseWPF>
-        <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
-        <DefaultItemExcludes>$(DefaultItemExcludes);jsonDeEstado\**;servidor_interno\**;DTBSINT\**</DefaultItemExcludes>
-    </PropertyGroup>
+  <!-- ═══════════════════════════════════════════════════════════════
+       BUILD & OUTPUT CONFIGURATION
+       ═══════════════════════════════════════════════════════════════ -->
+  <PropertyGroup>
+    <!-- Application entry point compiled as Windows executable -->
+    <OutputType>WinExe</OutputType>
 
-    <ItemGroup>
-        <PackageReference Include="System.Management" Version="8.0.0" />
-    </ItemGroup>
+    <!-- Target framework: .NET 8 LTS with Windows-specific APIs -->
+    <TargetFramework>net8.0-windows</TargetFramework>
 
-    <ItemGroup>
-        <None Update="www\**\*">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
+    <!-- Enforce nullable reference type annotations across the project -->
+    <Nullable>enable</Nullable>
+
+    <!-- Enable C# global implicit using directives -->
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Activate WPF UI framework support -->
+    <UseWPF>true</UseWPF>
+
+    <!-- Allow SDK to auto-include compile items -->
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+
+    <!--
+      Exclude internal/runtime-only directories from compilation:
+        · jsonDeEstado     — runtime state snapshots
+        · servidor_interno — internal server modules
+        · DTBSINT          — internal database layer
+    -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);jsonDeEstado\**;servidor_interno\**;DTBSINT\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       NUGET PACKAGE DEPENDENCIES
+       ═══════════════════════════════════════════════════════════════ -->
+  <ItemGroup>
+    <!--
+      System.Management v8.0.0
+      Provides access to WMI (Windows Management Instrumentation)
+      Used for hardware/OS information queries.
+    -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       STATIC ASSETS — WEB RESOURCES
+       ═══════════════════════════════════════════════════════════════ -->
+  <ItemGroup>
+    <!--
+      Copy the entire /www directory tree to the output folder.
+      Strategy: PreserveNewest — only copies files that have changed,
+      minimizing unnecessary I/O during incremental builds.
+    -->
+    <None Update="www\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
