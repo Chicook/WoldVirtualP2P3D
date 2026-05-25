@@ -49,3 +49,7 @@ D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\refint\VisorSingu
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\VisorSingularity.pdb
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\VisorSingularity.genruntimeconfig.cache
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\ref\VisorSingularity.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\BouncyCastle.Cryptography.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\Microsoft.Extensions.Logging.Abstractions.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\Renci.SshNet.dll
