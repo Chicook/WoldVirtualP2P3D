@@ -1,8 +1,0 @@
-c:\Users\Usuario\Downloads\WoldVirtual_Visor_ND66269\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.exe
-c:\Users\Usuario\Downloads\WoldVirtual_Visor_ND66269\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\www\metamask.html
-c:\Users\Usuario\Downloads\WoldVirtual_Visor_ND66269\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.dll
-c:\Users\Usuario\Downloads\WoldVirtual_Visor_ND66269\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.deps.json
-c:\Users\Usuario\Downloads\WoldVirtual_Visor_ND66269\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.runtimeconfig.json
-c:\Users\Usuario\Downloads\WoldVirtual_Visor_ND66269\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.pdb
-c:\Users\Usuario\Downloads\WoldVirtual_Visor_ND66269\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\System.Management.dll
-c:\Users\Usuario\Downloads\WoldVirtual_Visor_ND66269\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\runtimes\win\lib\net8.0\System.Management.dll
