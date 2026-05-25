@@ -35,7 +35,6 @@ namespace VisorSingularity
         private bool _isClosing = false;
         private GodotHwndHost? _godotHost;
         private string _currentUsername = "Anonymous";
-        private string _currentWallet = "";
         private UdpClient? _udpListener;
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
@@ -85,9 +84,6 @@ namespace VisorSingularity
             BtnSendChat.Click += BtnSendChat_Click;
             TxtChatMessage.KeyDown += TxtChatMessage_KeyDown;
             BtnCopyP2PLink.Click += BtnCopyP2PLink_Click;
-
-            // Vincular evento agregar WCV token
-            BtnAddToken.Click += BtnAddToken_Click;
 
             // Vincular eventos de redimensionado/movimiento de ventana para el Popup del Chat
             this.LocationChanged += (s, ev) => UpdatePopupPosition();
@@ -469,7 +465,6 @@ namespace VisorSingularity
                             GridMainViewer.Visibility = Visibility.Visible;
 
                             _currentUsername = user;
-                            _currentWallet = wallet;
                             TxtChatActiveUser.Text = $"Usuario: {user}";
 
                             LaunchAndEmbedGodot(wallet, user, island);
@@ -998,92 +993,6 @@ namespace VisorSingularity
             }
 
             // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
-        }
-
-        // ── AGREGAR WCVCOIN A METAMASK ──
-        private void BtnAddToken_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                StartAddTokenServer();
-                string url = $"http://localhost:8081/addtoken?wallet={Uri.EscapeDataString(_currentWallet)}";
-                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error al abrir navegador: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-        }
-
-        private void StartAddTokenServer()
-        {
-            Task.Run(async () =>
-            {
-                try
-                {
-                    using var listener = new HttpListener();
-                    listener.Prefixes.Add("http://localhost:8081/");
-                    listener.Start();
-
-                    var context = await listener.GetContextAsync();
-                    var response = context.Response;
-
-                    string html = @"<html><head><meta charset='UTF-8'><title>WCVcoin - Agregar a MetaMask</title>
-<style>
-body{background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:40px 20px;}
-h1{color:#66FCF1;font-size:24px;}
-.card{background:#111625;border:1px solid #45A29E;border-radius:12px;padding:40px;max-width:520px;margin:20px auto;box-shadow:0 0 30px rgba(102,252,241,0.15);}
-.status{font-size:15px;margin-top:16px;line-height:1.5;}
-.success{color:#00ff8c;}
-.error{color:#ff6b6b;}
-.loading{color:#45A29E;}
-.address{background:#0a0f1a;border:1px solid #45A29E;border-radius:6px;padding:10px 14px;font-family:monospace;font-size:13px;color:#66FCF1;margin:12px auto;display:inline-block;word-break:break-all;}
-.btn{display:inline-block;background:#45A29E;color:#0B0C10;padding:10px 20px;border:none;font-weight:bold;font-size:13px;border-radius:6px;cursor:pointer;margin:6px;text-decoration:none;}
-.btn:hover{background:#66FCF1;}
-.manual{margin-top:16px;font-size:13px;color:#C5C6C7;text-align:left;}
-.manual ol{padding-left:20px;}
-.manual li{margin:6px 0;}
-</style></head><body>
-<h1>✦ WCVcoin Token</h1>
-<div class='card'>
-<p class='status loading' id='status'>Solicitando a MetaMask...</p>
-<div id='fallback' style='display:none;'>
-<div class='address' id='contractAddr'>0xA7877e1De6D97256250dD5479217bFE2f5a8A666</div>
-<br/>
-<button class='btn' onclick='copyAddress()'>COPIAR DIRECCIÓN</button>
-<div class='manual'>
-<p><strong>Agregar manualmente en MetaMask:</strong></p>
-<ol>
-<li>Abre MetaMask y ve a la pestaña <em>Tokens</em></li>
-<li>Haz clic en <em>Importar tokens</em> (abajo)</li>
-<li>Pega la dirección del contrato</li>
-<li>El símbolo (WCV) y decimales (18) se completarán solos</li>
-<li>Haz clic en <em>Agregar token personalizado</em></li>
-</ol>
-</div>
-</div>
-</div>
-<script>
-function copyAddress(){navigator.clipboard.writeText('0xA7877e1De6D97256250dD5479217bFE2f5a8A666').then(()=>{document.getElementById('status').innerHTML='✓ Dirección copiada al portapapeles';document.getElementById('status').className='status success';});}
-(async()=>{try{if(typeof window.ethereum==='undefined'){document.getElementById('status').innerHTML='MetaMask no detectado. <a href=""https://metamask.io"" class=""btn"" target=""_blank"">Instalar MetaMask</a>';document.getElementById('status').className='status error';document.getElementById('fallback').style.display='block';return;}
-try{const result=await window.ethereum.request({method:'wallet_watchAsset',params:{type:'ERC20',options:{address:'0xA7877e1De6D97256250dD5479217bFE2f5a8A666',symbol:'WCV',decimals:3}}});
-if(result){document.getElementById('status').innerHTML='✓ WCVcoin agregado exitosamente a tu wallet';document.getElementById('status').className='status success';}else{document.getElementById('status').innerHTML='Solicitud rechazada por el usuario';document.getElementById('status').className='status error';document.getElementById('fallback').style.display='block';}
-}catch(e){document.getElementById('status').innerHTML='⚠ '+(e.message||'Error al agregar el token');document.getElementById('status').className='status error';document.getElementById('fallback').style.display='block';}
-}catch(e){document.getElementById('status').innerHTML='Error: '+e.message;document.getElementById('status').className='status error';document.getElementById('fallback').style.display='block';}})();
-</script></body></html>";
-
-                    byte[] buffer = Encoding.UTF8.GetBytes(html);
-                    response.ContentLength64 = buffer.Length;
-                    response.ContentType = "text/html; charset=UTF-8";
-                    await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                    response.OutputStream.Close();
-                    listener.Stop();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error en AddTokenServer: {ex.Message}");
-                }
-            });
         }
 
         private void ActivateMetaverseUi(string username, string repoPath)
