@@ -36,17 +36,17 @@
 
                     <!-- Header -->
                     <StackPanel Grid.Row="0" Margin="0,0,0,15">
-                        <TextBlock Text="WOLD VIRTUAL â€” SISTEMA DE INGRESO" Foreground="#66FCF1" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center">
+                        <TextBlock Text="WOLD VIRTUAL — SISTEMA DE INGRESO" Foreground="#66FCF1" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center">
                             <TextBlock.Effect>
                                 <DropShadowEffect Color="#66FCF1" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
                             </TextBlock.Effect>
                         </TextBlock>
-                        <TextBlock Text="REGISTRO AUTOMÃTICO DE FIRMA DE HARDWARE" Foreground="#C5C6C7" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        <TextBlock Text="REGISTRO AUTOMÁTICO DE FIRMA DE HARDWARE" Foreground="#C5C6C7" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                     </StackPanel>
 
                     <!-- Scanning progress -->
                     <StackPanel Grid.Row="1" Margin="0,5,0,15">
-                        <TextBlock x:Name="TxtScanStatus" Text="Iniciando escÃ¡ner de hardware..." Foreground="#C5C6C7" FontSize="11" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                        <TextBlock x:Name="TxtScanStatus" Text="Iniciando escáner de hardware..." Foreground="#C5C6C7" FontSize="11" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                         <ProgressBar x:Name="ProgScan" Height="6" Background="#1F2833" BorderThickness="0" Foreground="#66FCF1" Minimum="0" Maximum="100" Value="0">
                             <ProgressBar.Template>
                                 <ControlTemplate TargetType="ProgressBar">
@@ -68,10 +68,10 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="ðŸ’»" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="💻" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="SISTEMA OPERATIVO" Foreground="#45A29E" FontSize="9" FontWeight="Bold"/>
-                                    <TextBlock x:Name="TxtOsName" Text="Obteniendo informaciÃ³n del sistema..." Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="TxtOsName" Text="Obteniendo información del sistema..." Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -83,7 +83,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="âš™ï¸" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="⚙️" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="PROCESADOR" Foreground="#45A29E" FontSize="9" FontWeight="Bold"/>
                                     <TextBlock x:Name="TxtCpuName" Text="Obteniendo especificaciones de la CPU..." Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
@@ -98,7 +98,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="ðŸ”Œ" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="🔌" FontSize="22" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="PLACA BASE (MOTHERBOARD)" Foreground="#45A29E" FontSize="9" FontWeight="Bold"/>
                                     <TextBlock x:Name="TxtMotherboardName" Text="Detectando placa base..." Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
@@ -116,7 +116,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox x:Name="TxtHardwareHash" IsReadOnly="True" Background="Transparent" Foreground="#66FCF1" BorderThickness="0" FontSize="11" FontFamily="Consolas" VerticalAlignment="Center" Text="GENERANDO FIRMA CRIPTOGRÃFICA..."/>
+                                <TextBox x:Name="TxtHardwareHash" IsReadOnly="True" Background="Transparent" Foreground="#66FCF1" BorderThickness="0" FontSize="11" FontFamily="Consolas" VerticalAlignment="Center" Text="GENERANDO FIRMA CRIPTOGRÁFICA..."/>
                                 <Button Grid.Column="1" Content="COPIAR" Style="{StaticResource SingularityButton}" Padding="8,2" FontSize="10" Cursor="Hand" x:Name="BtnCopyHash"/>
                             </Grid>
                         </StackPanel>
@@ -167,12 +167,12 @@
 
                     <!-- Header -->
                     <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                        <TextBlock Text="WOLD VIRTUAL â€” REGISTRO DE USUARIO" Foreground="#66FCF1" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center">
+                        <TextBlock Text="WOLD VIRTUAL — REGISTRO DE USUARIO" Foreground="#66FCF1" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center">
                             <TextBlock.Effect>
                                 <DropShadowEffect Color="#66FCF1" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
                             </TextBlock.Effect>
                         </TextBlock>
-                        <TextBlock Text="CREACIÃ“N DE IDENTIDAD Y ASIGNACIÃ“N DE CREDENCIALES" Foreground="#C5C6C7" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        <TextBlock Text="CREACIÓN DE IDENTIDAD Y ASIGNACIÓN DE CREDENCIALES" Foreground="#C5C6C7" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                     </StackPanel>
 
                     <!-- Form Fields -->
@@ -183,21 +183,21 @@
                             <TextBox x:Name="TxtRegUser" Style="{StaticResource SingularityTextBox}" Height="35" FontSize="13"/>
                         </StackPanel>
 
-                        <!-- ContraseÃ±a -->
+                        <!-- Contraseña -->
                         <StackPanel Margin="0,5">
-                            <Label Content="ContraseÃ±a:" Style="{StaticResource SingularityLabel}"/>
+                            <Label Content="Contraseña:" Style="{StaticResource SingularityLabel}"/>
                             <PasswordBox x:Name="TxtRegPass" Style="{StaticResource SingularityPasswordBox}" Height="35" FontSize="13"/>
                         </StackPanel>
 
-                        <!-- Repetir ContraseÃ±a -->
+                        <!-- Repetir Contraseña -->
                         <StackPanel Margin="0,5">
-                            <Label Content="Repetir ContraseÃ±a:" Style="{StaticResource SingularityLabel}"/>
+                            <Label Content="Repetir Contraseña:" Style="{StaticResource SingularityLabel}"/>
                             <PasswordBox x:Name="TxtRegPassConfirm" Style="{StaticResource SingularityPasswordBox}" Height="35" FontSize="13"/>
                         </StackPanel>
 
                         <!-- UUID Recuadro -->
                         <StackPanel Margin="0,5">
-                            <Label Content="Identificador Ãšnico Universal (UUID):" Style="{StaticResource SingularityLabel}"/>
+                            <Label Content="Identificador Único Universal (UUID):" Style="{StaticResource SingularityLabel}"/>
                             <TextBox x:Name="TxtRegUuid" Style="{StaticResource SingularityTextBox}" IsReadOnly="True" Height="35" FontSize="13" FontFamily="Consolas" Foreground="#66FCF1"/>
                         </StackPanel>
                     </StackPanel>
@@ -223,7 +223,7 @@
                                 <Border.Effect>
                                     <DropShadowEffect Color="#66FCF1" BlurRadius="15" ShadowDepth="0" Opacity="0.8"/>
                                 </Border.Effect>
-                                <TextBlock Text="ðŸ¦Š" FontSize="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,5"/>
+                                <TextBlock Text="🦊" FontSize="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,5"/>
                             </Border>
                             
                             <!-- Status Text -->
@@ -256,65 +256,93 @@
                 <RowDefinition Height="Auto"/> <!-- Bottom Login/Dashboard Bar -->
             </Grid.RowDefinitions>
 
-            <!-- Top Menu -->
-            <Menu Grid.Row="0" Style="{StaticResource SingularityMenu}">
-                <MenuItem Header="Archivo" Style="{StaticResource SingularityMenuItem}"/>
-                <MenuItem Header="Editar" Style="{StaticResource SingularityMenuItem}"/>
-                <MenuItem Header="Ayuda" Style="{StaticResource SingularityMenuItem}"/>
-                <MenuItem Header="Advanced" Style="{StaticResource SingularityMenuItem}"/>
-            </Menu>
+            <!-- Top Menu Bar: menús a la izquierda + widget P2P incrustado a la derecha -->
+            <DockPanel Grid.Row="0" LastChildFill="True">
 
-            <!-- Panel P2P WebNode fijo en esquina superior derecha -->
-            <Border x:Name="P2PNodeBar" Grid.Row="0" CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12"
-                    VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,8,4"
-                    Visibility="Collapsed" Panel.ZIndex="1">
-                <Border.BorderBrush>
-                    <SolidColorBrush Color="#45A29E"/>
-                </Border.BorderBrush>
-                <Border.Background>
-                    <SolidColorBrush Color="#0F172A" Opacity="0.9"/>
-                </Border.Background>
-                <Border.Effect>
-                    <DropShadowEffect Color="#66FCF1" BlurRadius="10" ShadowDepth="0" Opacity="0.4"/>
-                </Border.Effect>
+                <!-- Menús de la aplicación (izquierda) -->
+                <Menu DockPanel.Dock="Left" Style="{StaticResource SingularityMenu}" VerticalAlignment="Center">
+                    <MenuItem Header="Archivo" Style="{StaticResource SingularityMenuItem}"/>
+                    <MenuItem Header="Editar"  Style="{StaticResource SingularityMenuItem}"/>
+                    <MenuItem Header="Ayuda"   Style="{StaticResource SingularityMenuItem}"/>
+                    <MenuItem Header="Advanced" Style="{StaticResource SingularityMenuItem}"/>
+                </Menu>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <!-- Widget NODO P2P incrustado en la barra (espacio amarillo) -->
+                <Border x:Name="P2PNodeBar"
+                        DockPanel.Dock="Right"
+                        CornerRadius="6"
+                        BorderThickness="1"
+                        Margin="6,3"
+                        Padding="8,0"
+                        Visibility="Collapsed"
+                        VerticalAlignment="Center">
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="#45A29E"/>
+                    </Border.BorderBrush>
+                    <Border.Background>
+                        <SolidColorBrush Color="#0F172A" Opacity="0.92"/>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect Color="#66FCF1" BlurRadius="8" ShadowDepth="0" Opacity="0.35"/>
+                    </Border.Effect>
 
-                    <!-- Icon -->
-                    <TextBlock Grid.Column="0" Text="&#x1F310;" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                    <!-- Node & Status -->
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock x:Name="TxtP2PNodeId" Text="NODO P2P: www.ND35665.ipfs" Foreground="#66FCF1" FontSize="11" FontWeight="Bold"/>
-                        <TextBlock x:Name="TxtP2PLink" Text="Enlace: http://127.0.0.1:8082" Foreground="#C5C6C7" FontSize="9" Margin="0,2,0,0"/>
-                        <TextBlock x:Name="TxtP2PStatus" Text="Generando Visor (.ZIP)..." Foreground="#00ff8c" FontSize="9" FontWeight="SemiBold" Margin="0,1,0,0"/>
+                        <!-- Icono de red -->
+                        <TextBlock Text="🕸️" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+
+                        <!-- Datos del nodo (dos líneas compactas) -->
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,8,0">
+                            <TextBlock x:Name="TxtP2PNodeId"
+                                       Text="NODO P2P: www.ND35665.ipfs"
+                                       Foreground="#66FCF1"
+                                       FontSize="10"
+                                       FontWeight="Bold"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="TxtP2PLink"
+                                           Text="Enlace: http://127.0.0.1:8082"
+                                           Foreground="#C5C6C7"
+                                           FontSize="9"
+                                           Margin="0,0,6,0"/>
+                                <TextBlock x:Name="TxtP2PStatus"
+                                           Text="✅ ZIP listo"
+                                           Foreground="#00ff8c"
+                                           FontSize="9"
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Botón COPIAR compacto -->
+                        <Button x:Name="BtnCopyP2PLink"
+                                Content="COPIAR"
+                                Style="{StaticResource SingularityButton}"
+                                Padding="7,2"
+                                FontSize="9"
+                                Height="22"
+                                VerticalAlignment="Center"
+                                Cursor="Hand"/>
+
                     </StackPanel>
+                </Border>
 
-                    <!-- Copy Button -->
-                    <Button Grid.Column="2" x:Name="BtnCopyP2PLink" Content="COPIAR" Style="{StaticResource SingularityButton}" Padding="8,4" FontSize="9" Height="25" VerticalAlignment="Center" Cursor="Hand"/>
-                </Grid>
-            </Border>
+                <!-- Relleno central (ocupa el espacio sobrante entre menús y widget) -->
+                <Border Background="Transparent"/>
+
+            </DockPanel>
 
             <!-- Central Black Area (Where Godot will be embedded) -->
-            <Grid Grid.Row="1">
-                <Border Background="#000000" BorderBrush="#45A29E" BorderThickness="0,1,0,1">
-                    <!-- Placeholder for Godot Engine -->
-                    <Grid x:Name="GodotPlaceholder">
-                        <TextBlock x:Name="TxtGodotPlaceholder" Text="[ ESPACIO RESERVADO PARA MOTOR 3D GODOT ]" 
-                                   Foreground="#45A29E" 
-                                   HorizontalAlignment="Center" 
-                                   VerticalAlignment="Center" 
-                                   FontSize="18" 
-                                   FontWeight="Bold"
-                                   Opacity="0.5"/>
-                    </Grid>
-                </Border>
-            </Grid>
+            <Border Grid.Row="1" Background="#000000" BorderBrush="#45A29E" BorderThickness="0,1,0,1">
+                <!-- Placeholder for Godot Engine -->
+                <Grid x:Name="GodotPlaceholder">
+                    <TextBlock x:Name="TxtGodotPlaceholder" Text="[ ESPACIO RESERVADO PARA MOTOR 3D GODOT ]" 
+                               Foreground="#45A29E" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center" 
+                               FontSize="18" 
+                               FontWeight="Bold"
+                               Opacity="0.5"/>
+                </Grid>
+            </Border>
 
             <!-- Popup del Chat de Proximidad flotante (C# WPF) -->
             <Popup x:Name="ChatOverlayPopup"
@@ -328,6 +356,8 @@
                     <StackPanel x:Name="ChatOverlayPanel"/>
                 </Border>
             </Popup>
+
+            <!-- [P2PWebNodePopup eliminado: ahora el widget vive en P2PNodeBar dentro de la barra de menú] -->
 
             <!-- Bottom Chat Bar (Cyberpunk Chat Look) -->
             <Border x:Name="BorderBottomLoginBar" Grid.Row="2" Height="80" Background="#111625" BorderBrush="#45A29E" BorderThickness="0,1,0,0">

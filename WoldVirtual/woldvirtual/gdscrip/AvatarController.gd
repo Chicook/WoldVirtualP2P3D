@@ -1,6 +1,6 @@
 extends Node
 
-const HEIGHT = 50.0
+const HEIGHT = 28.0
 const OCEAN_LEVEL = 3.5
 
 var my_avatar: CharacterBody3D

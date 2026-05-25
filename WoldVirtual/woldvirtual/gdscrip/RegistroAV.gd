@@ -58,7 +58,6 @@ func _on_login_pressed():
 	if file:
 		file.store_string(JSON.stringify(data, "\t"))
 		file.close()
-		print("AVATAR_LOGIN_CLICKED")
 		print("Usuario guardado en: ", save_path)
 		
 		# Cambiar Escena

@@ -11,11 +11,15 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="SSH.NET" Version="2025.1.0" />
         <PackageReference Include="System.Management" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
         <None Update="www\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="p2pipfsCS\ssh_ipfs_config.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>

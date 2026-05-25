@@ -175,7 +175,18 @@ func find_slot(occ: Array) -> Vector2:
 
 	return Vector2.ZERO
 
-func _expand_ocean_to_block(_block_idx: int):
-	# El océano se queda fijo en su posición inicial, no se mueve.
-	# Ya es suficientemente grande (5000x5000) para cubrir todos los bloques visibles.
-	pass
+func _expand_ocean_to_block(block_idx: int):
+	# El océano es hijo de ChunkManager (abuelo de WorldManager)
+	var chunk_mgr = get_parent()
+	if !is_instance_valid(chunk_mgr): return
+	
+	var ocean = chunk_mgr.get_node_or_null("Oceano")
+	if is_instance_valid(ocean):
+		# Reposicionar el océano para cubrir el nuevo bloque
+		var target_x = (block_idx * -5 + 2) * spacing
+		var target_z = 2 * spacing
+		
+		if ocean.global_position.distance_to(Vector3(target_x, ocean.global_position.y, target_z)) > 10.0:
+			var tween = create_tween()
+			tween.tween_property(ocean, "global_position:x", target_x, 1.5).set_trans(Tween.TRANS_SINE)
+			tween.tween_property(ocean, "global_position:z", target_z, 1.5).set_trans(Tween.TRANS_SINE)
