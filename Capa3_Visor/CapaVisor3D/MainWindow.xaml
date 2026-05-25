@@ -283,6 +283,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- Icon -->
@@ -296,7 +297,10 @@
                     </StackPanel>
 
                     <!-- Copy Button -->
-                    <Button Grid.Column="2" x:Name="BtnCopyP2PLink" Content="COPIAR" Style="{StaticResource SingularityButton}" Padding="8,4" FontSize="9" Height="25" VerticalAlignment="Center" Cursor="Hand"/>
+                    <Button Grid.Column="2" x:Name="BtnCopyP2PLink" Content="COPIAR" Style="{StaticResource SingularityButton}" Padding="8,4" FontSize="9" Height="25" VerticalAlignment="Center" Cursor="Hand" Margin="0,0,5,0"/>
+
+                    <!-- Add WCV Token to MetaMask -->
+                    <Button Grid.Column="3" x:Name="BtnAddToken" Content="+ WCV" Style="{StaticResource SingularityButton}" Padding="8,4" FontSize="9" Height="25" VerticalAlignment="Center" Cursor="Hand"/>
                 </Grid>
             </Border>
 
