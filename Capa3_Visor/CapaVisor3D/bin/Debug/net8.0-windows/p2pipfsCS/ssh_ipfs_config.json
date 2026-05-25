@@ -1,6 +1,0 @@
-{
-  "tunnel_service": "trycloudflare.com",
-  "command": "cloudflared tunnel --url http://127.0.0.1:{PUERTO}",
-  "download_url": "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/",
-  "note": "Usa cloudflared de Cloudflare. URL efímera que cambia cada sesión. Debes tener cloudflared en PATH."
-}
