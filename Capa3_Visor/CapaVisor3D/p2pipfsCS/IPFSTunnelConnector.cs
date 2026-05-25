@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,9 +38,16 @@ namespace VisorSingularity
 
             try
             {
+                string? cfPath = ResolveCloudflared();
+                if (cfPath == null)
+                {
+                    LogStatus("ERROR: cloudflared no encontrado. Instálalo con: winget install cloudflare.cloudflared o descárgalo de https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
+                    return;
+                }
+
                 var psi = new ProcessStartInfo
                 {
-                    FileName = "cloudflared",
+                    FileName = cfPath,
                     Arguments = $"tunnel --url http://127.0.0.1:{_localPort}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -65,9 +73,70 @@ namespace VisorSingularity
             {
                 IsConnected = false;
                 OnConnectionChanged?.Invoke(false);
-                LogStatus($"Error: {ex.Message}. Descarga cloudflared desde https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
+                LogStatus($"Error al iniciar cloudflared: {ex.Message}");
                 Cleanup();
             }
+        }
+
+        private static string? ResolveCloudflared()
+        {
+            try
+            {
+                var proc = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "where",
+                        Arguments = "cloudflared",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        CreateNoWindow = true
+                    }
+                };
+                proc.Start();
+                string? line = proc.StandardOutput.ReadLine();
+                proc.WaitForExit(3000);
+                if (!string.IsNullOrEmpty(line) && File.Exists(line))
+                    return line;
+            }
+            catch { }
+
+            string[] candidates =
+            {
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    @"Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe\cloudflared.exe"),
+                @"C:\Program Files\Cloudflare\cloudflared.exe",
+                @"C:\Program Files (x86)\Cloudflare\cloudflared.exe"
+            };
+
+            foreach (var c in candidates)
+            {
+                if (File.Exists(c))
+                    return c;
+            }
+
+            try
+            {
+                var proc = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "cloudflared",
+                        Arguments = "--version",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        CreateNoWindow = true
+                    }
+                };
+                proc.Start();
+                proc.WaitForExit(3000);
+                if (proc.ExitCode == 0)
+                    return "cloudflared";
+            }
+            catch { }
+
+            return null;
         }
 
         private void OnOutput(object sender, DataReceivedEventArgs e)

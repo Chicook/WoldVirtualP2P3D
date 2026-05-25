@@ -62,22 +62,31 @@ namespace VisorSingularity
 
         private async Task StartTunnel()
         {
-            _tunnel = new IPFSTunnelConnector(Port);
-            _tunnel.OnStatusChanged += msg => LogStatus(msg);
-            _tunnel.OnUrlReceived += url =>
+            try
             {
-                PublicUrl = url;
-                SimulatedUrl = url;
-                TunnelConnected = true;
-                LogStatus($"Nodo público: {url}");
-            };
-            _tunnel.OnConnectionChanged += connected =>
-            {
-                TunnelConnected = connected;
-                if (!connected) PublicUrl = null;
-            };
+                _tunnel = new IPFSTunnelConnector(Port);
+                _tunnel.OnStatusChanged += msg => LogStatus(msg);
+                _tunnel.OnUrlReceived += url =>
+                {
+                    PublicUrl = url;
+                    SimulatedUrl = url;
+                    TunnelConnected = true;
+                    LogStatus($"Nodo público: {url}");
+                };
+                _tunnel.OnConnectionChanged += connected =>
+                {
+                    TunnelConnected = connected;
+                    if (!connected) PublicUrl = null;
+                };
 
-            await _tunnel.ConnectAsync();
+                await _tunnel.ConnectAsync();
+            }
+            catch (Exception ex)
+            {
+                LogStatus($"Error en túnel: {ex.Message}");
+                _tunnel?.Dispose();
+                _tunnel = null;
+            }
         }
 
         public void Stop()
