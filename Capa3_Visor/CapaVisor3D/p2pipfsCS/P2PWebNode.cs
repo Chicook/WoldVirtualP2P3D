@@ -86,15 +86,7 @@ namespace VisorSingularity
             try { _cts?.Dispose(); } catch { }
             _cts = null;
 
-            try
-            {
-                if (_listener.IsListening)
-                {
-                    _listener.Stop();
-                    _listener.Close();
-                }
-            }
-            catch { }
+            try { if (_listener.IsListening) _listener.Stop(); } catch { }
 
             try { _tunnel?.Disconnect(); } catch { }
             try { _tunnel?.Dispose(); } catch { }
