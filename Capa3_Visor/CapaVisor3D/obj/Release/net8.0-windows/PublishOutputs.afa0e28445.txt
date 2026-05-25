@@ -1,5 +1,4 @@
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.exe
-d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\p2pipfsCS\ssh_ipfs_config.json
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\www\metamask.html
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.dll
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.deps.json

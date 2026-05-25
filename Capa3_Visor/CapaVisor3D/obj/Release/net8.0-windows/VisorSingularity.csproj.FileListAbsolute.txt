@@ -53,4 +53,3 @@ d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\refint\VisorSin
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\VisorSingularity.pdb
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\VisorSingularity.genruntimeconfig.cache
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\ref\VisorSingularity.dll
-d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\p2pipfsCS\ssh_ipfs_config.json
