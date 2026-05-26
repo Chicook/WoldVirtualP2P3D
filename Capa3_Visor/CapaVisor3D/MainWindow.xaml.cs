@@ -18,7 +18,6 @@ using System.Windows.Media.Animation;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Threading;
-using VisorSingularity.ServidorDescentralizado;
 
 namespace VisorSingularity
 {
@@ -40,7 +39,6 @@ namespace VisorSingularity
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
         private bool _metaverseUiActivated = false;
-        private ResourceMonitor? _resourceMonitor;
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -465,14 +463,9 @@ namespace VisorSingularity
                             GridMetaMaskOverlay.Visibility = Visibility.Collapsed;
                             GridUserRegistration.Visibility = Visibility.Collapsed;
                             GridMainViewer.Visibility = Visibility.Visible;
-                            Debug.WriteLine($"GridMainViewer Visibility: {GridMainViewer.Visibility}");
 
                             _currentUsername = user;
                             TxtChatActiveUser.Text = $"Usuario: {user}";
-
-                            // Hacer visible el servidor descentralizado inmediatamente
-                            DecentralizedServerBar.Visibility = Visibility.Visible;
-                            Debug.WriteLine("DecentralizedServerBar hecho visible desde el registro de usuario");
 
                             LaunchAndEmbedGodot(wallet, user, island);
                         });
@@ -998,45 +991,31 @@ namespace VisorSingularity
                 ChatOverlayPopup.HorizontalOffset = targetLeft;
                 ChatOverlayPopup.VerticalOffset = targetTop;
             }
-            
+
             // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
         }
 
         private void ActivateMetaverseUi(string username, string repoPath)
         {
-            Debug.WriteLine($"ActivateMetaverseUi llamado con username: {username}");
-            
             if (_metaverseUiActivated)
             {
-                Debug.WriteLine("Metaverse UI ya estaba activado, retornando...");
                 return;
             }
 
             _metaverseUiActivated = true;
-            Debug.WriteLine("Metaverse UI activado");
-            
             BorderBottomLoginBar.Visibility = Visibility.Visible;
-            Debug.WriteLine("BorderBottomLoginBar hecho visible");
 
             if (_p2pNode == null)
             {
-                Debug.WriteLine("Iniciando P2PWebNode...");
                 StartP2PWebNode(username, repoPath);
-            }
-            else
-            {
-                Debug.WriteLine("P2PWebNode ya estaba iniciado");
             }
         }
 
         private void StartP2PWebNode(string username, string repoPath)
         {
-            Debug.WriteLine($"StartP2PWebNode llamado con username: {username}, repoPath: {repoPath}");
-            
             try
             {
                 _p2pNode = new P2PWebNode(username, repoPath);
-                Debug.WriteLine("P2PWebNode creado exitosamente");
 
                 // Suscribirse a cambios de estado del zipping/upload
                 _p2pNode.OnStatusChanged += (status) =>
@@ -1062,68 +1041,10 @@ namespace VisorSingularity
 
                 // Mostrar el widget P2P solo cuando el usuario ya estÃ¡ dentro del metaverso
                 P2PNodeBar.Visibility = Visibility.Visible;
-
-                // Iniciar el monitor de recursos del servidor descentralizado
-                StartDecentralizedServer();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error al iniciar P2PWebNode: {ex.Message}");
-            }
-        }
-
-        private void StartDecentralizedServer()
-        {
-            try
-            {
-                Debug.WriteLine("Iniciando servidor descentralizado...");
-                
-                // Verificar que el control estÃ© disponible en el Ã¡rbol visual
-                if (DecentralizedServerBar == null)
-                {
-                    Debug.WriteLine("ERROR: DecentralizedServerBar es null");
-                    return;
-                }
-                
-                // Mostrar el control del servidor descentralizado INMEDIATAMENTE
-                // para asegurar que sea visible incluso si falla la inicialización del monitor
-                DecentralizedServerBar.Visibility = Visibility.Visible;
-                
-                Debug.WriteLine("DecentralizedServerBar hecho visible explícitamente");
-                
-                if (DecentralizedServerControl == null)
-                {
-                    Debug.WriteLine("ERROR: DecentralizedServerControl es null");
-                    return;
-                }
-                
-                Debug.WriteLine($"DecentralizedServerBar encontrado, IsLoaded: {DecentralizedServerBar.IsLoaded}");
-                Debug.WriteLine($"DecentralizedServerControl encontrado, IsLoaded: {DecentralizedServerControl.IsLoaded}");
-                
-                // Crear e iniciar el monitor de recursos
-                _resourceMonitor = new ResourceMonitor();
-                Debug.WriteLine("ResourceMonitor creado");
-                
-                // Configurar lÃ­mites iniciales (total mÃ¡ximo 1GB)
-                // CPU: 10%, RAM: 256MB, Disco: 500MB, VRAM: 128MB, Ancho de banda: 10Mbps
-                _resourceMonitor.SetResourceLimits(10.0, 256, 500, 128, 10);
-                Debug.WriteLine("LÃ­mites de recursos configurados");
-                
-                // Conectar el monitor con el control de interfaz
-                Debug.WriteLine("DecentralizedServerControl encontrado, inicializando...");
-                DecentralizedServerControl.Initialize(_resourceMonitor);
-                Debug.WriteLine("DecentralizedServerControl inicializado");
-                
-                // Iniciar monitoreo
-                _resourceMonitor.StartMonitoring(1000);
-                Debug.WriteLine("Monitoreo de recursos iniciado");
-                
-                Debug.WriteLine("Servidor descentralizado iniciado exitosamente");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error al iniciar servidor descentralizado: {ex.Message}");
-                Debug.WriteLine($"StackTrace: {ex.StackTrace}");
             }
         }
 

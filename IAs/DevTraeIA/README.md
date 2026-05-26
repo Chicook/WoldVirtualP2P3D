@@ -1,244 +1,326 @@
-# Plan de Desarrollo - WoldVirtual P2P 3D
-## Análisis del Estado Actual (26 de mayo de 2026)
+# Rediseño Completo del Visor Wold Virtual P2P 3D
 
-### Problemas Identificados en el README Principal:
+## Problema Actual
+La pantalla del visor muestra una pantalla negra completa cuando debería mostrar el contenido 3D de Godot. El problema persiste a pesar de intentos previos de ajustes.
 
-1. **Panel IPFS/P2P aparece antes de tiempo**: El panel superior derecho `P2PNodeBar` aparece durante el registro de avatar en Godot, cuando debería aparecer solo después de pulsar "INICIAR SESIÓN".
+## Análisis del Problema
 
-2. **Sincronización de ubicaciones para nuevos usuarios**: Cuando un usuario se conecta, necesita asignársele una ubicación al lado de la isla anfitriona o la más próxima según el protocolo ya implementado en Godot.
+### Causas Identificadas:
+1. **Dimensiones iniciales 0x0**: El `GodotPlaceholder` tiene `ActualWidth=0` y `ActualHeight=0` al inicio
+2. **ClipToBounds problemático**: Los contenedores tienen `ClipToBounds="True"` que podría estar recortando el contenido
+3. **Fondos transparentes/negros**: Los fondos transparentes podrían estar ocultando el contenido de Godot
+4. **DPI Scaling no optimizado**: La transición entre Wizard y Viewport no maneja correctamente el escalado DPI
+5. **Estructura de layout compleja**: Múltiples Grids anidados causan problemas de cálculo de dimensiones
 
-3. **Script de compilación automática**: Falta un script que compile todo automáticamente al descomprimir el proyecto en otra máquina.
+### Estructura Actual Examinada:
+- **MainWindow.xaml**: 447 líneas de XAML complejo
+- **MainWindow.xaml.cs**: Lógica de control completa
+- **GodotEmbedder.cs**: Implementación profesional de incrustación Godot
+- **DatabaseManager.cs**: Gestión de base de datos SQLite
 
-4. **Completitud del ZIP compartido por IPFS**: Necesidad de asegurar que todos los archivos necesarios se incluyan en el ZIP que se comparte por IPFS.
+## Plan de Rediseño Completo
 
-### Cosas que NO se deben tocar (según instrucciones):
-- El espacio del IPFS ya está arreglado
-- No modificar la lógica core existente que funciona
-- Mantener el estilo cyberpunk y la arquitectura actual
+### Objetivos Principales:
+1. **Resolver pantalla negra**: Garantizar que Godot se vea correctamente
+2. **Mantener estilo cyberpunk**: Preservar colores neón, tipografía y efectos
+3. **No modificar lógica**: Mantener intacto el código C# existente
+4. **Optimizar DPI scaling**: Asegurar compatibilidad con diferentes resoluciones
+5. **Simplificar estructura**: Reducir complejidad del XAML
 
-## Plan de Desarrollo Detallado
+### Estilo Visual a Mantener:
 
-### Fase 1: Corrección del Panel IPFS/P2P (Prioridad Alta)
+#### Paleta de Colores:
+- **Fondos oscuros**: `#0A0E17`, `#070A10`, `#0E1524`, `#121B2D`
+- **Colores neón**: 
+  - Cian: `#00E5FF`
+  - Esmeralda: `#00FF8C` 
+  - Magenta: `#FF007F`
+- **Texto**: 
+  - Primario: `#FFFFFF`
+  - Secundario: `#8E9AA8`
+  - Claro: `#E2E8F0`
 
-**Problema**: El `P2PNodeBar` aparece durante `RegistroAV.tscn` en Godot.
+#### Tipografía:
+- **FontFamily**: "Segoe UI"
+- **Tamaños**: 9px a 18px según importancia
+- **FontWeight**: Bold, SemiBold, Medium
 
-**Solución propuesta**:
-1. **Instrumentar con trazas**: Añadir logs específicos en `MainWindow.xaml.cs` para rastrear:
-   - `ActivateMetaverseUi()` llamadas
-   - `StartP2PWebNode()` activación
-   - Cambios de visibilidad de `P2PNodeBar`
+#### Efectos:
+- **Bordes neón**: `BorderBrush="#00E5FF"`
+- **Esquinas redondeadas**: `CornerRadius="8"`, `CornerRadius="12"`
+- **Glassmorphism**: Transparencias y gradientes sutiles
 
-2. **Verificar binario actual**: Confirmar que se ejecuta la versión más reciente del visor.
+## Nueva Estructura XAML Propuesta
 
-3. **Implementar handshake determinista**:
-   - Crear señal específica desde Godot (`AVATAR_REGISTRATION_COMPLETE`)
-   - Sincronizar con evento `GridMainViewer` en WPF
-   - Desacoplar activación del panel de cualquier lógica genérica
+### 1. Layout Principal Simplificado
+```xml
+<Grid>
+    <!-- Header (60px) -->
+    <Grid.RowDefinitions>
+        <RowDefinition Height="60"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="45"/>
+    </Grid.RowDefinitions>
+    
+    <!-- Header existente -->
+    <!-- Main Content Area -->
+    <!-- Footer existente -->
+</Grid>
+```
 
-**Archivos a modificar**:
-- `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`
-- `WoldVirtual/woldvirtual/scene/MTC/RegistroAV.gd`
-- `WoldVirtual/woldvirtual/gdscrip/ChunkManager.gd`
+### 2. Área de Contenido Principal Rediseñada
+```xml
+<Grid Grid.Row="1">
+    <!-- Single Column Layout - Sin Sidebar por defecto -->
+    <Grid>
+        <!-- Wizard Container (Visible durante registro) -->
+        <Grid x:Name="WizardContainer" Visibility="Visible">
+            <!-- Contenido Wizard simplificado -->
+        </Grid>
+        
+        <!-- Godot Viewport Container (Visible durante metaverso) -->
+        <Grid x:Name="PanViewportContainer" Visibility="Collapsed">
+            <!-- Viewport Status Bar (45px) -->
+            <!-- Godot Container con dimensiones explícitas -->
+            <Border x:Name="GodotPlaceholder" Background="#070A10">
+                <!-- Godot se incrustará aquí -->
+            </Border>
+        </Grid>
+    </Grid>
+</Grid>
+```
 
-### Fase 2: Asignación de Ubicaciones para Nuevos Usuarios
+### 3. Cambios Clave en el Diseño:
 
-**Requisito**: Cuando un usuario se conecta, asignarle ubicación al lado de la isla anfitriona o la más próxima según protocolo existente.
+#### A. GodotPlaceholder Rediseñado:
+- **Fondo sólido**: `Background="#070A10"` (no transparente)
+- **Sin ClipToBounds**: Remover `ClipToBounds="True"`
+- **Dimensiones explícitas**: Usar `Width` y `Height` bindeados al contenedor padre
+- **Alineación**: `HorizontalAlignment="Stretch"`, `VerticalAlignment="Stretch"`
 
-**Análisis del protocolo actual**:
-Según el README, existe:
-- `WorldManager.gd`: Spawnea islas y usuarios, asigna slots
-- `IslandStateSync.gd`: Sincronización de estado de islas
-- `Estado_Global/peers/`: Archivos JSON con información de peers
+#### B. Contenedores Optimizados:
+- **Remover Grids anidados innecesarios**
+- **Usar StackPanels donde sea apropiado**
+- **Asegurar que todos los contenedores tengan dimensiones válidas**
 
-**Implementación**:
-1. **Extender `WorldManager.gd`**:
-   - Añadir método `assign_nearby_location(host_island_id, new_user_id)`
-   - Usar grid de posiciones predefinidas alrededor de islas
-   - Respetar protocolo de spacing existente
+#### C. Transición Wizard/Viewport Mejorada:
+- **Visibilidad mutuamente excluyente**: Nunca ambos visibles simultáneamente
+- **Forzar UpdateLayout()** después de cambios de visibilidad
+- **Manejar DPI scaling** en el evento `SizeChanged`
 
-2. **Integrar con sistema de peers**:
-   - Actualizar `peer_*.json` con coordenadas asignadas
-   - Sincronizar con `IslandStateManager.cs` en C#
+### 4. Solución para Dimensiones 0x0:
 
-3. **Protocolo de ubicaciones**:
-   - Radio base: 10 unidades desde centro de isla anfitriona
-   - Ángulos: 0°, 90°, 180°, 270° para primeras conexiones
-   - Expansión radial para múltiples usuarios
+#### Estrategia 1: Dimensiones Explícitas Iniciales
+```xml
+<Border x:Name="GodotPlaceholder" 
+        Background="#070A10"
+        Width="{Binding ActualWidth, ElementName=PanViewportContainer}"
+        Height="{Binding ActualHeight, ElementName=PanViewportContainer}"
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Stretch">
+</Border>
+```
 
-**Archivos a modificar**:
-- `WoldVirtual/woldvirtual/gdscrip/WorldManager.gd`
-- `WoldVirtual/woldvirtual/gdscrip/IslandStateSync.gd`
-- `WoldVirtual/Estado_Global/IslandStateManager.cs`
-- `WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd`
+#### Estrategia 2: Forzar Recalculo en Loaded
+```csharp
+private void EnsureGodotDimensions()
+{
+    if (GodotPlaceholder.ActualWidth == 0 || GodotPlaceholder.ActualHeight == 0)
+    {
+        GodotPlaceholder.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        GodotPlaceholder.Arrange(new Rect(0, 0, 
+            PanViewportContainer.ActualWidth, 
+            PanViewportContainer.ActualHeight));
+    }
+}
+```
 
-### Fase 3: Script de Compilación Automática
+#### Estrategia 3: Retrasar Inicialización de Godot
+```csharp
+private async Task LaunchGodotWithDelay()
+{
+    // Esperar a que el layout se estabilice
+    await Task.Delay(100);
+    await Dispatcher.InvokeAsync(() => GodotPlaceholder.UpdateLayout());
+    
+    // Solo entonces lanzar Godot
+    LaunchGodot(_wallet, _username, _islandId);
+}
+```
 
-**Requisito**: Script que compile todo al descomprimir el proyecto en otra máquina.
+## Implementación Paso a Paso
 
-**Implementación**:
-1. **Script PowerShell `build-all.ps1`**:
-   - Verificar requisitos (.NET 8, Godot ejecutable)
-   - Compilar proyecto WPF: `dotnet build Capa3_Visor\CapaVisor3D\VisorSingularity.csproj`
-   - Verificar estructura de archivos Godot
-   - Generar reporte de compilación
+### Fase 1: Análisis y Planificación (COMPLETADO)
+- [x] Investigar estructura actual del visor
+- [x] Analizar problema de pantalla negra
+- [x] Examinar estilo visual actual
+- [x] Crear plan de rediseño completo
 
-2. **Script de verificación `check-dependencies.ps1`**:
-   - Verificar .NET SDK instalado
-   - Verificar Godot ejecutable en `WoldVirtual/servidorinterno/`
-   - Verificar permisos de escritura
-   - Verificar puertos disponibles
+### Fase 2: Rediseño XAML (PRÓXIMO)
+- [ ] Crear nueva estructura XAML simplificada
+- [ ] Mantener recursos y estilos existentes
+- [ ] Optimizar contenedores para Godot
+- [ ] Asegurar compatibilidad con lógica C#
 
-3. **Documentación de despliegue**:
-   - Instrucciones paso a paso
-   - Solución de problemas comunes
-   - Requisitos mínimos del sistema
+### Fase 3: Pruebas y Validación
+- [ ] Probar nuevo diseño en diferentes DPI
+- [ ] Verificar que Godot se ve correctamente
+- [ ] Validar transición Wizard/Viewport
+- [ ] Ajustar dimensiones y posicionamiento
 
-**Archivos a crear**:
-- `build-all.ps1` (en raíz del proyecto)
-- `check-dependencies.ps1`
-- `DEPLOYMENT_GUIDE.md`
-
-### Fase 4: Completitud del ZIP para IPFS
-
-**Requisito**: Asegurar que todos los archivos necesarios se incluyan en el ZIP compartido por IPFS.
-
-**Análisis actual**:
-- `P2PWebNode.cs`: Genera ZIP del repositorio
-- `IpfsPublisher.cs`: Publica en IPFS
-- Necesidad de lista completa de archivos esenciales
-
-**Implementación**:
-1. **Extender `P2PWebNode.cs`**:
-   - Añadir método `GenerateCompleteZip()` con lista explícita
-   - Incluir todos los archivos del README más:
-     - `WoldVirtual/servidorinterno/Godot_v4.6.2-stable_mono_win64.exe`
-     - `Capa3_Visor/CapaVisor3D/bin/` (si existe compilado)
-     - `www/` directorio completo
-     - `IAs/` documentación
-
-2. **Lista de verificación**:
-   - [ ] Proyecto Godot completo
-   - [ ] Ejecutable Godot
-   - [ ] Código fuente WPF
-   - [ ] Assets 3D y texturas
-   - [ ] Scripts y configuraciones
-   - [ ] Documentación
-
-3. **Validación automática**:
-   - Script que verifica integridad del ZIP
-   - Checksum de archivos críticos
-   - Reporte de archivos faltantes
-
-**Archivos a modificar**:
-- `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs`
-- `Capa3_Visor/CapaVisor3D/p2pipfsCS/IpfsPublisher.cs`
-
-## Cronograma de Implementación
-
-### Semana 1: Correcciones Críticas
-- **Día 1-2**: Instrumentación y diagnóstico del panel IPFS
-- **Día 3-4**: Implementación de handshake determinista
-- **Día 5**: Pruebas y validación
-
-### Semana 2: Funcionalidad de Ubicaciones
-- **Día 1-2**: Extensión de `WorldManager.gd`
-- **Día 3-4**: Integración con sistema de peers
-- **Día 5**: Pruebas multiusuario
-
-### Semana 3: Automatización
-- **Día 1-2**: Scripts de compilación
-- **Día 3-4**: Completitud del ZIP para IPFS
-- **Día 5**: Documentación y pruebas finales
+### Fase 4: Optimización Final
+- [ ] Asegurar performance del layout
+- [ ] Verificar manejo de resizing
+- [ ] Documentar cambios realizados
+- [ ] Preparar para despliegue
 
 ## Consideraciones Técnicas
 
-### 1. Compatibilidad con Sistema Existente:
-- Mantener formato JSON de `Estado_Global`
-- Respetar protocolo UDP del chat (puertos 50007/50008)
-- No romper integración WPF-Godot
+### 1. Compatibilidad con GodotEmbedder:
+- El `GodotPlaceholder` debe proporcionar un HWND válido
+- Las dimensiones deben ser correctas antes de lanzar Godot
+- El DPI scaling debe propagarse correctamente
 
-### 2. Performance:
-- Asignación de ubicaciones debe ser O(1) para nuevos usuarios
-- ZIP generation no debe bloquear UI principal
-- Scripts de compilación optimizados para velocidad
+### 2. Mantenimiento de Funcionalidad:
+- Todos los botones deben mantener sus eventos `Click`
+- Los controles de entrada deben conservar sus bindings
+- La navegación entre pasos del Wizard debe funcionar
 
-### 3. Seguridad:
-- Validar inputs en asignación de ubicaciones
-- Sanitizar paths en generación de ZIP
-- Mantener firmas SHA-256 del hardware
+### 3. Performance:
+- Minimizar número de elementos visuales
+- Evitar animaciones complejas innecesarias
+- Optimizar uso de recursos gráficos
 
-### 4. UX/UI:
-- Panel IPFS visible solo cuando corresponde
-- Feedback visual durante asignación de ubicación
-- Mensajes claros en scripts de compilación
+## Archivos a Modificar
 
-## Métricas de Éxito
+### 1. MainWindow.xaml (PRINCIPAL)
+- **Rediseño completo**: Nueva estructura XAML
+- **Mantener recursos**: Todos los brushes y styles existentes
+- **Optimizar layout**: Simplificar Grids y contenedores
 
-### Corrección Panel IPFS:
-- [ ] Panel no visible durante `RegistroAV.tscn`
-- [ ] Panel visible inmediatamente después de "INICIAR SESIÓN"
-- [ ] Sin regresiones en otras funcionalidades
+### 2. Archivos de Soporte (NO MODIFICAR):
+- **MainWindow.xaml.cs**: Lógica intacta
+- **GodotEmbedder.cs**: Implementación profesional existente
+- **DatabaseManager.cs**: Gestión de datos intacta
 
-### Asignación de Ubicaciones:
-- [ ] Nuevos usuarios aparecen cerca de isla anfitriona
-- [ ] Protocolo de spacing respetado
-- [ ] Coordenadas persistidas en `peer_*.json`
-- [ ] Sincronización correcta entre nodos
+## Validación del Rediseño
 
-### Scripts de Automatización:
-- [ ] `build-all.ps1` compila proyecto completo
-- [ ] `check-dependencies.ps1` reporta problemas
-- [ ] ZIP contiene todos los archivos necesarios
-- [ ] Documentación clara y completa
+### Criterios de Éxito:
+1. **Godot visible**: Pantalla negra resuelta
+2. **Estilo mantenido**: Apariencia cyberpunk preservada
+3. **Funcionalidad completa**: Todas las features operativas
+4. **DPI compatible**: Funciona en diferentes resoluciones
+5. **Performance aceptable**: Sin lag o problemas de renderizado
 
-## Archivos Clave del Proyecto
+### Pruebas a Realizar:
+- [ ] Inicio de aplicación (Wizard visible)
+- [ ] Registro completo (4 pasos)
+- [ ] Transición a Viewport 3D
+- [ ] Visualización correcta de Godot
+- [ ] Resizing de ventana
+- [ ] DPI scaling en diferentes configuraciones
+- [ ] Funcionalidad Sidebar (teletransporte P2P)
 
-### WPF (.NET 8):
-- `Capa3_Visor/CapaVisor3D/MainWindow.xaml` - UI principal
-- `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs` - Lógica principal
-- `Capa3_Visor/CapaVisor3D/GodotHwndHost.cs` - Embebido Godot
-- `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs` - Nodo P2P
+## Notas Importantes
 
-### Godot (4.6.2):
-- `WoldVirtual/woldvirtual/gdscrip/WorldManager.gd` - Gestión mundo
-- `WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd` - Red
-- `WoldVirtual/woldvirtual/scene/MTC/RegistroAV.gd` - Registro avatar
-- `WoldVirtual/woldvirtual/gdscrip/IslandStateSync.gd` - Sincronización
+### Restricciones:
+- **NO modificar lógica C#**: Solo cambios en XAML
+- **NO cambiar nombres de controles**: Los eventos dependen de ellos
+- **NO alterar estructura de datos**: Bindings deben mantenerse
 
-### Estado Global (C#):
-- `WoldVirtual/Estado_Global/IslandStateManager.cs`
-- `WoldVirtual/Estado_Global/SessionManager.cs`
-- `WoldVirtual/Estado_Global/QuotaManager.cs`
+### Prioridades:
+1. **Resolver pantalla negra** (CRÍTICO)
+2. **Mantener funcionalidad existente** (IMPORTANTE)
+3. **Optimizar experiencia visual** (DESEABLE)
 
-## Próximos Pasos Inmediatos
+### Timeline Estimado:
+- **Análisis**: Completado
+- **Rediseño XAML**: 1-2 horas
+- **Pruebas y ajustes**: 1 hora
+- **Validación final**: 30 minutos
 
-1. **Diagnóstico profundo del panel IPFS**:
-   - Añadir logs con timestamps
-   - Capturar estado de visibilidad en cada transición
-   - Verificar eventos de Godot que disparan activación
+## Contacto y Seguimiento
 
-2. **Revisar protocolo de ubicaciones existente**:
-   - Analizar `WorldManager.gd` actual
-   - Documentar grid de posiciones
-   - Identificar puntos de extensión
+Este documento sirve como plan maestro para el rediseño completo del visor Wold Virtual P2P 3D. Todos los cambios se realizarán manteniendo la compatibilidad con la lógica existente y preservando el estilo visual cyberpunk característico de la aplicación.
 
-3. **Crear estructura base para scripts**:
-   - Plantilla PowerShell con manejo de errores
-   - Funciones de verificación comunes
-   - Sistema de logging unificado
+**Última actualización**: 2026-05-19
+**Estado actual**: Fase 1 completada, preparando Fase 2
 
-4. **Auditar generación de ZIP actual**:
-   - Listar archivos incluidos/excluidos
-   - Identificar dependencias críticas
-   - Definir criterios de completitud
+toolName: todo_write
+            
+status: success
+          
+Todos updated: 7 items
+          
 
-## Notas Finales
+        
+            
+toolName: todo_write
+            
+status: success
+          
+Todos updated: 7 items
+          
 
-Este plan se basa en el estado actual del repositorio descrito en el README principal (versión 23 de mayo de 2026). Las implementaciones respetarán:
+        
+            
+toolName: Write
+            
+status: success
+          
+            
+filePath: d:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\IAs\DevTraeIA\README.md
+          
+changes: undefined
+          
 
-- Arquitectura existente de 3 capas (WPF, Godot, Estado_Global)
-- Protocolos de comunicación actuales (UDP, JSON, HTTP local)
-- Estilo visual cyberpunk establecido
-- Integración WPF-Godot mediante `HwndHost`
+        
+            
+toolName: todo_write
+            
+status: success
+          
+Todos updated: 7 items
+          
+Perfecto, he creado un README completo con todo el plan de rediseño en [DevTraeIA/README.md](file:///d:/WCVcoinMTB/WoldVirtual/WoldVirtual3Dp2p/IAs/DevTraeIA/README.md). El documento incluye:
 
-Todas las modificaciones serán incrementales y compatibles con versiones anteriores, asegurando que el prototipo funcional actual siga operativo durante el desarrollo.
+## Resumen del Plan de Rediseño:
+
+### **Problema Identificado:**
+- Pantalla negra completa en el visor 3D de Godot
+- Dimensiones iniciales 0x0 del `GodotPlaceholder`
+- Estructura XAML compleja con múltiples Grids anidados
+- Problemas con `ClipToBounds` y DPI scaling
+
+### **Solución Propuesta:**
+1. **Rediseñar completamente el XAML** manteniendo la lógica C# intacta
+2. **Simplificar la estructura** de contenedores
+3. **Garantizar dimensiones válidas** para Godot desde el inicio
+4. **Optimizar DPI scaling** y manejo de resizing
+
+### **Cambios Clave:**
+- **GodotPlaceholder**: Fondo sólido `#070A10` (no transparente), sin `ClipToBounds`
+- **Layout simplificado**: Reducir Grids anidados, usar StackPanels donde sea apropiado
+- **Transición mejorada**: Visibilidad mutuamente excluyente entre Wizard y Viewport
+- **DPI handling**: Forzar `UpdateLayout()` y manejar correctamente el escalado
+
+### **Estrategias Técnicas:**
+1. Dimensiones explícitas con binding al contenedor padre
+2. Forzar recálculo del layout en eventos `Loaded` y `SizeChanged`
+3. Retrasar inicialización de Godot hasta que el layout esté estabilizado
+
+### **Fases de Implementación:**
+1. ✅ **Fase 1**: Análisis y planificación (completada)
+2. 🔄 **Fase 2**: Rediseño XAML (en progreso)
+3. ⏳ **Fase 3**: Pruebas y validación
+4. ⏳ **Fase 4**: Optimización final
+
+### **Validación:**
+- Godot visible y funcional
+- Estilo cyberpunk preservado
+- Todas las features operativas
+- Compatible con diferentes DPI y resoluciones
+
+Ahora voy a proceder con la **Fase 2: Rediseño XAML**. Voy a crear una nueva versión simplificada del `MainWindow.xaml` que resuelva el problema de la pantalla negra manteniendo el estilo y la funcionalidad existente.
+
+¿Quieres que comience con la implementación del nuevo diseño XAML ahora?

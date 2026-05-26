@@ -99,16 +99,7 @@ func _on_network_updated(state: Dictionary):
 	var islands = state.get("i", {})
 
 	if !users.has(lid):
-		# Determinar isla anfitriona (primera isla activa o isla 0)
-		var host_island_id = "0_0"
-		if not islands.is_empty():
-			for island_id in islands:
-				if islands[island_id].get("o", true):  # Isla activa
-					host_island_id = island_id
-					break
-		
-		# Asignar ubicación cercana a la isla anfitriona
-		var slot = world.assign_nearby_location(host_island_id, lid)
+		var slot = world.find_slot(users.values().map(func(u): return Vector2(u.get("ix", 0), u.get("iz", 0))))
 		var p_coords = get_persistent_coords()
 		if p_coords != Vector2.ZERO:
 			slot = p_coords
