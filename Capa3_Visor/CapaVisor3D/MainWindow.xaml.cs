@@ -662,7 +662,7 @@ namespace VisorSingularity
                 string checkProject = Path.Combine(dir.FullName, "WoldVirtual");
                 if (Directory.Exists(checkProject) && File.Exists(Path.Combine(checkProject, "project.godot")))
                 {
-                    string checkExe = Path.Combine(checkProject, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
+                    string checkExe = Path.Combine(checkProject, "servidorinterno", "Godot_v4.6.3-stable_win64.exe");
                     if (File.Exists(checkExe))
                     {
                         return (checkProject, checkExe);
@@ -671,7 +671,7 @@ namespace VisorSingularity
                 
                 if (dir.Name == "WoldVirtual" && File.Exists(Path.Combine(dir.FullName, "project.godot")))
                 {
-                    string checkExe = Path.Combine(dir.FullName, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
+                    string checkExe = Path.Combine(dir.FullName, "servidorinterno", "Godot_v4.6.3-stable_win64.exe");
                     if (File.Exists(checkExe))
                     {
                         return (dir.FullName, checkExe);
