@@ -99,19 +99,27 @@ func _on_network_updated(state: Dictionary):
 	var islands = state.get("i", {})
 
 	if !users.has(lid):
-		var slot = world.find_slot(users.values().map(func(u): return Vector2(u.get("ix", 0), u.get("iz", 0))))
-		var p_coords = get_persistent_coords()
-		if p_coords != Vector2.ZERO:
-			slot = p_coords
-
-		# Si solo hay un usuario conectado, su ubicacion por defecto es 0,0,0 (evita tembleque de floats)
 		var is_alone = true
 		for uid in users:
 			if uid != lid:
 				is_alone = false
 				break
-		if is_alone:
-			slot = Vector2.ZERO
+
+		var slot = Vector2.ZERO
+		var island_name = "Isla 1"
+		var display_id = lid
+
+		if !is_alone:
+			slot = world.find_slot(users.values().map(func(u): return Vector2(u.get("ix", 0), u.get("iz", 0))))
+			var p_coords = get_persistent_coords()
+			if p_coords != Vector2.ZERO:
+				slot = p_coords
+
+			island_name = "Isla de " + lid.substr(0, 4)
+			if _persistent_island_id != "":
+				display_id = _persistent_island_id
+				if ":" in _persistent_island_id:
+					island_name = "Isla " + _persistent_island_id.split(":")[0].strip_edges()
 
 		var me_data = {
 			"ix": slot.x, "iz": slot.y,
@@ -120,13 +128,6 @@ func _on_network_updated(state: Dictionary):
 			"z": slot.y * spacing,
 			"r": 0.0, "t": Time.get_unix_time_from_system()
 		}
-		var island_name = "Isla de " + lid.substr(0, 4)
-		var display_id = lid
-		
-		if _persistent_island_id != "":
-			display_id = _persistent_island_id
-			if ":" in _persistent_island_id:
-				island_name = "Isla " + _persistent_island_id.split(":")[0].strip_edges()
 
 		_local_island_data = {
 			"i": display_id,
