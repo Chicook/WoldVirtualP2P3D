@@ -6,8 +6,10 @@ namespace ServidorVirtualCS.Services;
 
 public sealed class ResourceContributionPlanner
 {
-    public ResourceContributionPlan CreatePlan(NodeResourceSnapshot snapshot)
+    public ResourceContributionPlan CreatePlan(NodeResourceSnapshot snapshot, double boostMultiplier = 1.0d)
     {
+        boostMultiplier = Math.Clamp(boostMultiplier, 1.0d, 1.8d);
+
         int cpuBudget = Math.Min((int)Math.Round(snapshot.LogicalCores * Math.Max(0.25, (100d - snapshot.CpuLoadPercent) / 100d) * 48d), 192);
         int ramBudget = Math.Min((int)(snapshot.AvailableRamMb * 0.12), 384);
         int vramBudget = Math.Min((int)(snapshot.DedicatedVramMb * 0.10), 160);
@@ -28,6 +30,11 @@ public sealed class ResourceContributionPlanner
             new("storage", storageBudget, Math.Min(Math.Max(storageBudget * 2, 384), 768)),
             new("bandwidth", bandwidthBudget, Math.Min(Math.Max(bandwidthBudget * 2, 96), 192))
         ];
+
+        foreach (ResourceBucket bucket in buckets)
+        {
+            bucket.Value = Math.Min(bucket.MaxValue, (int)Math.Round(bucket.Value * boostMultiplier));
+        }
 
         int total = 0;
         foreach (ResourceBucket bucket in buckets)

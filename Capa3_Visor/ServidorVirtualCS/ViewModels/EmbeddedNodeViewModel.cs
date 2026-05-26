@@ -22,6 +22,7 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
     private NodeResourceSnapshot? _lastSnapshot;
     private ResourceContributionPlan? _lastPlan;
     private bool _isPublishing;
+    private int _boostPercent = 100;
 
     public EmbeddedNodeViewModel()
     {
@@ -78,39 +79,38 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
 
     public Brush ActivityBrush { get; private set; }
 
+    public int BoostPercent
+    {
+        get => _boostPercent;
+        set
+        {
+            int clampedValue = Math.Clamp(value, 100, 180);
+            if (_boostPercent == clampedValue)
+            {
+                return;
+            }
+
+            _boostPercent = clampedValue;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(BoostLabel));
+
+            if (_lastSnapshot is not null)
+            {
+                ApplySnapshot(_lastSnapshot);
+            }
+        }
+    }
+
+    public string BoostLabel => $"{BoostPercent}%";
+
     public async Task RefreshAsync()
     {
         await _refreshLock.WaitAsync();
         try
         {
             NodeResourceSnapshot snapshot = await Task.Run(_hardwareProfileService.Capture);
-            ResourceContributionPlan plan = _planner.CreatePlan(snapshot);
-
             _lastSnapshot = snapshot;
-            _lastPlan = plan;
-
-            NodeName = snapshot.MachineName;
-            CpuText = $"{snapshot.CpuName} | {snapshot.LogicalCores} hilos | carga {snapshot.CpuLoadPercent:0}%";
-            RamText = $"{snapshot.AvailableRamMb} MB libres de {snapshot.TotalRamMb} MB";
-            VramText = $"{snapshot.GpuName} | {snapshot.DedicatedVramMb} MB VRAM";
-            StorageText = $"{snapshot.AvailableDiskMb} MB libres de {snapshot.TotalDiskMb} MB";
-            BandwidthText = $"{snapshot.NetworkBandwidthMbPerSecond:0.##} MB/s estimados";
-
-            CpuBudget = plan.CpuBudgetMb;
-            RamBudget = plan.RamBudgetMb;
-            VramBudget = plan.VramBudgetMb;
-            StorageBudget = plan.StorageBudgetMb;
-            BandwidthBudget = plan.BandwidthBudgetMb;
-            TotalBudget = plan.TotalBudgetMb;
-            MeetsMinimum = plan.MeetsMinimum;
-            TotalBudgetText = $"{plan.TotalBudgetMb} / {ResourceContributionPlan.MinimumTotalMb} MB";
-            StatusText = plan.MeetsMinimum
-                ? "Nodo equilibrado. El reparto mantiene margen local para una experiencia fluida."
-                : "Nodo conservador. Se comparte menos de 1 GB para evitar cortes en el equipo local.";
-            ActivityText = "ACTIVO";
-            ActivityBrush = plan.MeetsMinimum ? Brushes.LimeGreen : Brushes.Gold;
-
-            OnPropertyChanged(string.Empty);
+            ApplySnapshot(snapshot);
             _publishCommand.RaiseCanExecuteChanged();
         }
         catch
@@ -125,6 +125,35 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
         {
             _refreshLock.Release();
         }
+    }
+
+    private void ApplySnapshot(NodeResourceSnapshot snapshot)
+    {
+        ResourceContributionPlan plan = _planner.CreatePlan(snapshot, BoostPercent / 100d);
+        _lastPlan = plan;
+
+        NodeName = snapshot.MachineName;
+        CpuText = $"{snapshot.CpuName} | {snapshot.LogicalCores} hilos | carga {snapshot.CpuLoadPercent:0}%";
+        RamText = $"{snapshot.AvailableRamMb} MB libres de {snapshot.TotalRamMb} MB";
+        VramText = $"{snapshot.GpuName} | {snapshot.DedicatedVramMb} MB VRAM";
+        StorageText = $"{snapshot.AvailableDiskMb} MB libres de {snapshot.TotalDiskMb} MB";
+        BandwidthText = $"{snapshot.NetworkBandwidthMbPerSecond:0.##} MB/s estimados";
+
+        CpuBudget = plan.CpuBudgetMb;
+        RamBudget = plan.RamBudgetMb;
+        VramBudget = plan.VramBudgetMb;
+        StorageBudget = plan.StorageBudgetMb;
+        BandwidthBudget = plan.BandwidthBudgetMb;
+        TotalBudget = plan.TotalBudgetMb;
+        MeetsMinimum = plan.MeetsMinimum;
+        TotalBudgetText = $"{plan.TotalBudgetMb} / {ResourceContributionPlan.MinimumTotalMb} MB";
+        StatusText = plan.MeetsMinimum
+            ? $"Nodo activo. Compartiendo recursos al {BoostPercent}%."
+            : $"Nodo conservador. Compartiendo al {BoostPercent}% para evitar cortes.";
+        ActivityText = "ACTIVO";
+        ActivityBrush = plan.MeetsMinimum ? Brushes.LimeGreen : Brushes.Gold;
+
+        OnPropertyChanged(string.Empty);
     }
 
     public async Task PublishAsync()
