@@ -683,7 +683,7 @@ namespace VisorSingularity
 
             // Fallback por defecto relativo
             string defaultProject = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "WoldVirtual"));
-            string defaultExe = Path.Combine(defaultProject, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
+            string defaultExe = Path.Combine(defaultProject, "servidorinterno", "Godot_v4.6.3-stable_win64.exe");
             return (defaultProject, defaultExe);
         }
 
