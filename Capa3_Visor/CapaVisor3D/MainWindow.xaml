@@ -284,7 +284,7 @@
 
             <!-- Panel P2P WebNode fijo en esquina superior derecha -->
             <Border x:Name="P2PNodeBar" Grid.Row="0" CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12"
-                    VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,420,4"
+                    VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,8,4"
                     Visibility="Collapsed" Panel.ZIndex="1">
                 <Border.BorderBrush>
                     <SolidColorBrush Color="#45A29E"/>
