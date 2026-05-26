@@ -15,6 +15,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\ServidorVirtualCS\ServidorVirtualCS.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <None Update="www\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

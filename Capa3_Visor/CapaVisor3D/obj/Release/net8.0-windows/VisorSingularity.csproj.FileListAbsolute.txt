@@ -24,3 +24,8 @@ d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\refint\VisorSin
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\VisorSingularity.pdb
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\VisorSingularity.genruntimeconfig.cache
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\ref\VisorSingularity.dll
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\ServidorVirtualCS.deps.json
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\ServidorVirtualCS.runtimeconfig.json
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\ServidorVirtualCS.exe
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\ServidorVirtualCS.dll
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\ServidorVirtualCS.pdb
