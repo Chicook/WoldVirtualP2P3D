@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -67,8 +68,8 @@ namespace VisorSingularity.ServidorDescentralizado
                             IsLimitExceeded = metrics.IsBandwidthLimitExceeded
                         }
                     },
-                    TotalUsageBytes = metrics.TotalUsageBytes,
-                    IsSharingEnabled = metrics.IsSharingEnabled,
+                    TotalUsageBytes = metrics.TotalUsedBytes,
+                    IsSharingEnabled = true,
                     MiningRig = miningRig
                 };
                 
@@ -86,16 +87,13 @@ namespace VisorSingularity.ServidorDescentralizado
                 try
                 {
                     // Publicar en IPFS usando el sistema existente
-                    await _ipfsPublisher.PublishDirectoryAsync(Path.GetDirectoryName(tempFile)!, 
-                        includeSubdirectories: false);
-                    
-                    // Obtener CID
-                    string cid = _ipfsPublisher.LastCid;
+                    string? cid = await _ipfsPublisher.PublishDirectoryAsync(Path.GetDirectoryName(tempFile)!, 
+                        CancellationToken.None);
                     
                     if (string.IsNullOrEmpty(cid))
-                    {
-                        throw new InvalidOperationException("No se obtuvo CID después de publicar en IPFS");
-                    }
+                     {
+                         throw new InvalidOperationException("No se obtuvo CID después de publicar en IPFS");
+                     }
                     
                     // Crear URL IPFS
                     string ipfsUrl = $"ipfs://{cid}";
