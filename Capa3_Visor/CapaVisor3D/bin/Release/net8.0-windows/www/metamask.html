@@ -173,7 +173,7 @@
             </div>
             <div class="info-row">
                 <span class="info-label">ISLA ASIGNADA:</span>
-                <span class="info-val" id="lblIsland">137 : 190.1.0</span>
+                <span class="info-val" id="lblIsland">1 : 0.0.0</span>
             </div>
         </div>
 
@@ -184,7 +184,7 @@
         // Obtener parámetros de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const username = urlParams.get('user') || 'Usuario';
-        const islandId = urlParams.get('islandId') || '137 : 190.1.0';
+        const islandId = urlParams.get('islandId') || '1 : 0.0.0';
 
         document.getElementById('lblUser').innerText = username.toUpperCase();
         document.getElementById('lblIsland').innerText = islandId;

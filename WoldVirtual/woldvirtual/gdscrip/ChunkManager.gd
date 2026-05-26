@@ -99,24 +99,33 @@ func _on_network_updated(state: Dictionary):
 	var islands = state.get("i", {})
 
 	if !users.has(lid):
-		var is_alone = true
+		# A list of slots occupied by OTHER active users:
+		var occupied_slots = []
 		var now = Time.get_unix_time_from_system()
 		for uid in users:
 			if uid != lid:
 				var user_t = users[uid].get("t", 0)
-				if now - user_t < 25.0: # AVATAR_HEARTBEAT_TIMEOUT
-					is_alone = false
-					break
+				if now - user_t < 25.0: # active peer (AVATAR_HEARTBEAT_TIMEOUT)
+					occupied_slots.append(Vector2(users[uid].get("ix", 0), users[uid].get("iz", 0)))
+
+		var is_alone = occupied_slots.is_empty()
 
 		var slot = Vector2.ZERO
 		var island_name = "Isla 1"
 		var display_id = lid
 
 		if !is_alone:
-			slot = world.find_slot(users.values().map(func(u): return Vector2(u.get("ix", 0), u.get("iz", 0))))
+			slot = world.find_slot(occupied_slots)
 			var p_coords = get_persistent_coords()
 			if p_coords != Vector2.ZERO:
-				slot = p_coords
+				# Check if the persistent slot is occupied by any active user
+				var is_persistent_occupied = false
+				for occ in occupied_slots:
+					if occ.distance_to(p_coords) < 0.1:
+						is_persistent_occupied = true
+						break
+				if not is_persistent_occupied:
+					slot = p_coords
 
 			island_name = "Isla de " + lid.substr(0, 4)
 			if _persistent_island_id != "":
