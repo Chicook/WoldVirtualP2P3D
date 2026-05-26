@@ -100,10 +100,13 @@ func _on_network_updated(state: Dictionary):
 
 	if !users.has(lid):
 		var is_alone = true
+		var now = Time.get_unix_time_from_system()
 		for uid in users:
 			if uid != lid:
-				is_alone = false
-				break
+				var user_t = users[uid].get("t", 0)
+				if now - user_t < 25.0: # AVATAR_HEARTBEAT_TIMEOUT
+					is_alone = false
+					break
 
 		var slot = Vector2.ZERO
 		var island_name = "Isla 1"
