@@ -9,6 +9,17 @@
         <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
         <DefaultItemExcludes>$(DefaultItemExcludes);jsonDeEstado\**;servidor_interno\**;DTBSINT\**</DefaultItemExcludes>
     </PropertyGroup>
+    
+    <ItemGroup>
+        <Compile Include="..\ServidorDescentralizado\*.cs" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Page Include="..\ServidorDescentralizado\*.xaml">
+            <Generator>MSBuild:Compile</Generator>
+            <SubType>Designer</SubType>
+        </Page>
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="System.Management" Version="8.0.0" />

@@ -56,3 +56,11 @@ D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\VisorSingularity
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\VisorSingularity.pdb
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\System.Management.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\runtimes\win\lib\net8.0\System.Management.dll
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\VisorSingularity_MarkupCompile.lref
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\DecentralizedServerControl.g.cs
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\MiningRigDialog.g.cs
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\ResourceSettingsDialog.g.cs
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\DecentralizedServerControl.baml
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\MiningRigDialog.baml
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\ResourceSettingsDialog.baml

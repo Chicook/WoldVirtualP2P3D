@@ -18,6 +18,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Threading;
+using VisorSingularity.ServidorDescentralizado;
 
 namespace VisorSingularity
 {
@@ -39,6 +40,7 @@ namespace VisorSingularity
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
         private bool _metaverseUiActivated = false;
+        private ResourceMonitor? _resourceMonitor;
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -1041,10 +1043,42 @@ namespace VisorSingularity
 
                 // Mostrar el widget P2P solo cuando el usuario ya estÃ¡ dentro del metaverso
                 P2PNodeBar.Visibility = Visibility.Visible;
+
+                // Iniciar el monitor de recursos del servidor descentralizado
+                StartDecentralizedServer();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error al iniciar P2PWebNode: {ex.Message}");
+            }
+        }
+
+        private void StartDecentralizedServer()
+        {
+            try
+            {
+                // Crear e iniciar el monitor de recursos
+                _resourceMonitor = new ResourceMonitor();
+                
+                // Configurar lÃ­mites iniciales (total mÃ¡ximo 1GB)
+                // CPU: 10%, RAM: 256MB, Disco: 500MB, VRAM: 128MB, Ancho de banda: 10Mbps
+                _resourceMonitor.SetResourceLimits(10.0, 256, 500, 128, 10);
+                
+                // Conectar el monitor con el control de interfaz
+                if (DecentralizedServerControl != null)
+                {
+                    DecentralizedServerControl.Initialize(_resourceMonitor);
+                }
+                
+                // Iniciar monitoreo
+                _resourceMonitor.StartMonitoring(1000);
+                
+                // Mostrar el control del servidor descentralizado
+                DecentralizedServerBar.Visibility = Visibility.Visible;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error al iniciar servidor descentralizado: {ex.Message}");
             }
         }
 

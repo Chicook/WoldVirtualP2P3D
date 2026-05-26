@@ -1,0 +1,190 @@
+<Window x:Class="VisorSingularity.ServidorDescentralizado.ResourceSettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VisorSingularity.ServidorDescentralizado"
+        mc:Ignorable="d"
+        Title="Configurar Límites de Recursos" 
+        Height="450" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    
+    <Window.Resources>
+        <Style x:Key="HeaderStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#66FCF1"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+        
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#C5C6C7"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="10,5,5,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
+        <Style x:Key="SliderStyle" TargetType="Slider">
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Margin" Value="10,5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
+        <Style x:Key="ValueLabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#45A29E"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="5,5,10,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="MinWidth" Value="60"/>
+        </Style>
+        
+        <Style x:Key="ButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="80"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Background="#0A1520">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Título -->
+        <Border Grid.Row="0" Background="#1A2A3A" Padding="10">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="⚙️ " FontSize="16" Foreground="#66FCF1"/>
+                <TextBlock Text="Límites de Recursos Compartidos" 
+                          Foreground="#FFFFFF" FontSize="14" FontWeight="Bold"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Contenido -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="10">
+            <StackPanel>
+                <!-- Información -->
+                <Border Background="#1A2A3A" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                    <TextBlock Text="Configura los recursos que compartirás con la red descentralizada. El total no debe superar 1GB."
+                              Foreground="#C5C6C7" TextWrapping="Wrap"/>
+                </Border>
+                
+                <!-- CPU -->
+                <TextBlock Text="CPU (Procesador)" Style="{StaticResource HeaderStyle}"/>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Límite:" Style="{StaticResource LabelStyle}"/>
+                    <Slider Grid.Column="1" x:Name="CpuSlider" Style="{StaticResource SliderStyle}"
+                           Minimum="1" Maximum="50" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                    <TextBlock Grid.Column="2" x:Name="CpuValueLabel" Text="10%" Style="{StaticResource ValueLabelStyle}"/>
+                </Grid>
+                
+                <!-- RAM -->
+                <TextBlock Text="RAM (Memoria)" Style="{StaticResource HeaderStyle}"/>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Límite:" Style="{StaticResource LabelStyle}"/>
+                    <Slider Grid.Column="1" x:Name="RamSlider" Style="{StaticResource SliderStyle}"
+                           Minimum="64" Maximum="512" TickFrequency="32" IsSnapToTickEnabled="True"/>
+                    <TextBlock Grid.Column="2" x:Name="RamValueLabel" Text="256 MB" Style="{StaticResource ValueLabelStyle}"/>
+                </Grid>
+                
+                <!-- Disco -->
+                <TextBlock Text="Disco Duro" Style="{StaticResource HeaderStyle}"/>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Límite:" Style="{StaticResource LabelStyle}"/>
+                    <Slider Grid.Column="1" x:Name="DiskSlider" Style="{StaticResource SliderStyle}"
+                           Minimum="100" Maximum="1024" TickFrequency="64" IsSnapToTickEnabled="True"/>
+                    <TextBlock Grid.Column="2" x:Name="DiskValueLabel" Text="500 MB" Style="{StaticResource ValueLabelStyle}"/>
+                </Grid>
+                
+                <!-- VRAM -->
+                <TextBlock Text="VRAM (Tarjeta Gráfica)" Style="{StaticResource HeaderStyle}"/>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Límite:" Style="{StaticResource LabelStyle}"/>
+                    <Slider Grid.Column="1" x:Name="VramSlider" Style="{StaticResource SliderStyle}"
+                           Minimum="32" Maximum="256" TickFrequency="32" IsSnapToTickEnabled="True"/>
+                    <TextBlock Grid.Column="2" x:Name="VramValueLabel" Text="128 MB" Style="{StaticResource ValueLabelStyle}"/>
+                </Grid>
+                
+                <!-- Ancho de Banda -->
+                <TextBlock Text="Ancho de Banda" Style="{StaticResource HeaderStyle}"/>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Límite:" Style="{StaticResource LabelStyle}"/>
+                    <Slider Grid.Column="1" x:Name="BandwidthSlider" Style="{StaticResource SliderStyle}"
+                           Minimum="1" Maximum="50" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                    <TextBlock Grid.Column="2" x:Name="BandwidthValueLabel" Text="10 Mbps" Style="{StaticResource ValueLabelStyle}"/>
+                </Grid>
+                
+                <!-- Resumen -->
+                <Border Background="#1A2A3A" CornerRadius="4" Padding="10" Margin="0,15,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Resumen de Recursos" 
+                                  Foreground="#66FCF1" FontSize="12" FontWeight="Bold"/>
+                        
+                        <Grid Margin="0,5,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Text="Total estimado:" 
+                                      Foreground="#C5C6C7" FontSize="11"/>
+                            <TextBlock Grid.Column="1" x:Name="TotalSummaryLabel" 
+                                      Text="0 MB" Foreground="#45A29E" FontSize="11"/>
+                        </Grid>
+                        
+                        <TextBlock x:Name="LimitWarningLabel" 
+                                  Foreground="#FF6B6B" FontSize="10" Margin="0,5,0,0"
+                                  TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Botones -->
+        <Border Grid.Row="2" Background="#1A2A3A" Padding="10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="CancelButton" Content="Cancelar" Style="{StaticResource ButtonStyle}"
+                       Click="CancelButton_Click"/>
+                <Button x:Name="SaveButton" Content="Guardar" Style="{StaticResource ButtonStyle}"
+                       Background="#45A29E" Foreground="#FFFFFF" Click="SaveButton_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
