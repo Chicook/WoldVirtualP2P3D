@@ -4,111 +4,141 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="34"
+             d:DesignHeight="58"
              d:DesignWidth="404">
     <Border CornerRadius="4"
-            Padding="4,3"
+            Padding="5,4"
             Background="#CC0D1C29"
             BorderBrush="#1F8BD1"
             BorderThickness="1">
         <Grid VerticalAlignment="Center">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="6"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="6"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <Ellipse Grid.Column="0"
-                     Width="10"
-                     Height="10"
-                     VerticalAlignment="Center"
-                     Fill="{Binding ActivityBrush}"/>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                <TextBlock Text="SERVIDOR DESCENTRALIZADO"
-                           Foreground="#66FCF1"
-                           FontSize="9"
-                           FontWeight="Bold"/>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding ActivityText}"
-                               Foreground="{Binding ActivityBrush}"
+                <Ellipse Grid.Column="0"
+                         Width="10"
+                         Height="10"
+                         VerticalAlignment="Center"
+                         Fill="{Binding ActivityBrush}"/>
+
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <TextBlock Text="SERVIDOR DESCENTRALIZADO"
+                               Foreground="#66FCF1"
                                FontSize="9"
                                FontWeight="Bold"/>
-                    <TextBlock Text="  "
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding ActivityText}"
+                                   Foreground="{Binding ActivityBrush}"
+                                   FontSize="9"
+                                   FontWeight="Bold"/>
+                        <TextBlock Text="  "
+                                   FontSize="9"/>
+                        <TextBlock Text="{Binding NodeName}"
+                                   Foreground="White"
+                                   FontSize="9"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Grid.Column="4"
+                           VerticalAlignment="Center"
+                           Foreground="#C6D8E2"
+                           FontSize="9"
+                           TextTrimming="CharacterEllipsis"
+                           Text="{Binding StatusText}"/>
+
+                <StackPanel Grid.Column="6" VerticalAlignment="Center">
+                    <TextBlock Text="CID"
+                               Foreground="#7CB0C6"
                                FontSize="9"/>
-                    <TextBlock Text="{Binding NodeName}"
-                               Foreground="White"
+                    <TextBlock Text="{Binding PublishedCid}"
+                               Width="78"
+                               Foreground="#66FCF1"
                                FontSize="9"
                                TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
-            </StackPanel>
 
-            <StackPanel Grid.Column="4" VerticalAlignment="Center">
-                <TextBlock Text="{Binding StatusText}"
-                           Foreground="#C6D8E2"
-                           FontSize="9"
-                           TextTrimming="CharacterEllipsis"/>
-                <Grid Margin="0,1,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="70"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <Button Grid.Column="8"
+                        Width="54"
+                        Height="20"
+                        Padding="4,1"
+                        VerticalAlignment="Center"
+                        FontSize="9"
+                        Content="IPFS"
+                        Command="{Binding PublishCommand}"/>
+            </Grid>
 
-                    <TextBlock Text="TOTAL "
-                               VerticalAlignment="Center"
-                               Foreground="#7CB0C6"
-                               FontSize="9"/>
-                    <TextBlock Grid.Column="1"
-                               VerticalAlignment="Center"
-                               Foreground="#19C37D"
-                               FontSize="9"
-                               FontWeight="Bold"
-                               Text="{Binding TotalBudgetText}"/>
-                    <Slider Grid.Column="2"
-                            Width="84"
-                            Margin="6,0,4,0"
-                            Minimum="100"
-                            Maximum="180"
-                            SmallChange="5"
-                            LargeChange="10"
-                            TickFrequency="10"
-                            IsSnapToTickEnabled="True"
-                            Value="{Binding BoostPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Grid.Column="3"
-                               VerticalAlignment="Center"
-                               Foreground="White"
-                               FontSize="9"
-                               Text="{Binding BoostLabel}"/>
-                </Grid>
-            </StackPanel>
+            <Grid Grid.Row="1" Margin="0,5,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="6" VerticalAlignment="Center">
-                <TextBlock Text="CID"
+                <Border Grid.Column="0" Margin="0,0,4,0" Padding="4,1" Background="#173246" CornerRadius="3">
+                    <TextBlock Foreground="White" FontSize="8.5" Text="{Binding CpuBudget, StringFormat=CPU {0}M}"/>
+                </Border>
+
+                <Border Grid.Column="1" Margin="0,0,4,0" Padding="4,1" Background="#173246" CornerRadius="3">
+                    <TextBlock Foreground="White" FontSize="8.5" Text="{Binding RamBudget, StringFormat=RAM {0}M}"/>
+                </Border>
+
+                <Border Grid.Column="2" Margin="0,0,4,0" Padding="4,1" Background="#173246" CornerRadius="3">
+                    <TextBlock Foreground="White" FontSize="8.5" Text="{Binding VramBudget, StringFormat=VRAM {0}M}"/>
+                </Border>
+
+                <Border Grid.Column="3" Margin="0,0,4,0" Padding="4,1" Background="#173246" CornerRadius="3">
+                    <TextBlock Foreground="White" FontSize="8.5" Text="{Binding StorageBudget, StringFormat=DISCO {0}M}"/>
+                </Border>
+
+                <Border Grid.Column="4" Margin="0,0,4,0" Padding="4,1" Background="#173246" CornerRadius="3">
+                    <TextBlock Foreground="White" FontSize="8.5" Text="{Binding BandwidthBudget, StringFormat=RED {0}M}"/>
+                </Border>
+
+                <TextBlock Grid.Column="6"
+                           VerticalAlignment="Center"
                            Foreground="#7CB0C6"
-                           FontSize="9"/>
-                <TextBlock Text="{Binding PublishedCid}"
-                           Width="88"
-                           Foreground="#66FCF1"
-                           FontSize="9"
-                           TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
+                           FontSize="8.5"
+                           Text="{Binding TotalBudgetText, StringFormat=TOTAL {0}}"/>
 
-            <Button Grid.Column="8"
-                    Width="62"
-                    Height="22"
-                    Padding="4,1"
-                    VerticalAlignment="Center"
-                    FontSize="9"
-                    Content="IPFS"
-                    Command="{Binding PublishCommand}"/>
+                <Slider Grid.Column="7"
+                        Margin="8,0,8,0"
+                        Minimum="100"
+                        Maximum="180"
+                        SmallChange="5"
+                        LargeChange="10"
+                        TickFrequency="10"
+                        IsSnapToTickEnabled="True"
+                        Value="{Binding BoostPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Column="8"
+                           VerticalAlignment="Center"
+                           Foreground="#19C37D"
+                           FontSize="8.5"
+                           FontWeight="Bold"
+                           Text="{Binding BoostLabel}"/>
+            </Grid>
         </Grid>
     </Border>
 </UserControl>
