@@ -39,6 +39,7 @@ namespace VisorSingularity
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
         private bool _metaverseUiActivated = false;
+        private ServidorDescentralizado.ResourceMonitor? _resourceMonitor; // Declaración del ResourceMonitor
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -466,6 +467,13 @@ namespace VisorSingularity
 
                             _currentUsername = user;
                             TxtChatActiveUser.Text = $"Usuario: {user}";
+
+                            // Asegurarse de que P2PNodeBar sea visible
+                            P2PNodeBar.Visibility = Visibility.Visible;
+                            Debug.WriteLine($"P2PNodeBar hecho visible: {P2PNodeBar.Visibility}");
+
+                            // Iniciar el servidor descentralizado
+                            StartDecentralizedServer();
 
                             LaunchAndEmbedGodot(wallet, user, island);
                         });
@@ -993,6 +1001,59 @@ namespace VisorSingularity
             }
 
             // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
+        }
+
+        private void StartDecentralizedServer()
+        {
+            try
+            {
+                Debug.WriteLine("Iniciando servidor descentralizado...");
+                
+                // Verificar que el control esté disponible en el árbol visual
+                if (DecentralizedServerBar == null)
+                {
+                    Debug.WriteLine("ERROR: DecentralizedServerBar es null");
+                    return;
+                }
+                
+                if (DecentralizedServerControl == null)
+                {
+                    Debug.WriteLine("ERROR: DecentralizedServerControl es null");
+                    return;
+                }
+                
+                Debug.WriteLine($"DecentralizedServerBar encontrado, IsLoaded: {DecentralizedServerBar.IsLoaded}");
+                Debug.WriteLine($"DecentralizedServerControl encontrado, IsLoaded: {DecentralizedServerControl.IsLoaded}");
+                
+                // Crear e iniciar el monitor de recursos
+                _resourceMonitor = new ServidorDescentralizado.ResourceMonitor();
+                Debug.WriteLine("ResourceMonitor creado");
+                
+                // Configurar límites iniciales (total máximo 1GB)
+                // CPU: 10%, RAM: 256MB, Disco: 500MB, VRAM: 128MB, Ancho de banda: 10Mbps
+                _resourceMonitor.SetResourceLimits(10.0, 256, 500, 128, 10);
+                Debug.WriteLine("Límites de recursos configurados");
+                
+                // Conectar el monitor con el control de interfaz
+                Debug.WriteLine("DecentralizedServerControl encontrado, inicializando...");
+                DecentralizedServerControl.Initialize(_resourceMonitor);
+                Debug.WriteLine("DecentralizedServerControl inicializado");
+                
+                // Iniciar monitoreo
+                _resourceMonitor.StartMonitoring(1000);
+                Debug.WriteLine("Monitoreo de recursos iniciado");
+                
+                // Mostrar el control del servidor descentralizado
+                DecentralizedServerBar.Visibility = Visibility.Visible;
+                Debug.WriteLine($"DecentralizedServerBar hecho visible: {DecentralizedServerBar.Visibility}");
+                
+                Debug.WriteLine("Servidor descentralizado iniciado exitosamente");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error al iniciar servidor descentralizado: {ex.Message}");
+                Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            }
         }
 
         private void ActivateMetaverseUi(string username, string repoPath)

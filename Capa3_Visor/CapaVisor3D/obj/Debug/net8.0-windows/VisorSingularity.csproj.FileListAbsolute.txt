@@ -56,3 +56,7 @@ D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\VisorSingularity
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\VisorSingularity.pdb
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\System.Management.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\runtimes\win\lib\net8.0\System.Management.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\ServidorDescentralizadoCS\DecentralizedServerControl.g.cs
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\VisorSingularity_MarkupCompile.lref
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\p2pipfsCS\P2PNodeControl.g.cs

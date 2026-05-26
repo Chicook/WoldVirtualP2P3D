@@ -1,0 +1,72 @@
+<UserControl x:Class="VisorSingularity.p2pipfsCS.P2PNodeControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:VisorSingularity.p2pipfsCS"
+             mc:Ignorable="d" 
+             d:DesignHeight="100" d:DesignWidth="300">
+    <UserControl.Resources>
+        <!-- Estilos Cyberpunk -->
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#66FCF1"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style TargetType="Button" x:Key="CyberpunkButton">
+            <Setter Property="Background" Value="#45A29E"/>
+            <Setter Property="Foreground" Value="#0F172A"/>
+            <Setter Property="BorderBrush" Value="#66FCF1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5,2"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#66FCF1"/>
+                    <Setter Property="BorderBrush" Value="#45A29E"/>
+                    <Setter Property="Foreground" Value="#0F172A"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#0F172A"/>
+                    <Setter Property="BorderBrush" Value="#66FCF1"/>
+                    <Setter Property="Foreground" Value="#66FCF1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Título -->
+        <TextBlock Text="NODO P2P:" Grid.Row="0" Grid.Column="0" FontWeight="Bold" VerticalAlignment="Center"/>
+        <TextBlock x:Name="NodeUrl" Text="www.ND43434.woldvirtual" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+
+        <!-- Estado -->
+        <TextBlock x:Name="NodeStatus" Text="Estado: Inactivo" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,0"/>
+
+        <!-- Botones -->
+        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="COPIAR" Style="{StaticResource CyberpunkButton}" Click="CopyButton_Click"/>
+            <Button Content="ABRIR" Style="{StaticResource CyberpunkButton}" Margin="10,0,0,0" Click="OpenButton_Click"/>
+        </StackPanel>
+    </Grid>
+</UserControl>
