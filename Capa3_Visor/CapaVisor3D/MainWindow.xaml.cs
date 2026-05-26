@@ -1084,6 +1084,12 @@ namespace VisorSingularity
                     return;
                 }
                 
+                // Mostrar el control del servidor descentralizado INMEDIATAMENTE
+                // para asegurar que sea visible incluso si falla la inicialización del monitor
+                DecentralizedServerBar.Visibility = Visibility.Visible;
+                DecentralizedServerBar.UpdateLayout();
+                Debug.WriteLine("DecentralizedServerBar hecho visible explícitamente");
+                
                 if (DecentralizedServerControl == null)
                 {
                     Debug.WriteLine("ERROR: DecentralizedServerControl es null");
@@ -1110,15 +1116,6 @@ namespace VisorSingularity
                 // Iniciar monitoreo
                 _resourceMonitor.StartMonitoring(1000);
                 Debug.WriteLine("Monitoreo de recursos iniciado");
-                
-                // Mostrar el control del servidor descentralizado
-                Debug.WriteLine($"Antes de mostrar: DecentralizedServerBar.Visibility = {DecentralizedServerBar.Visibility}");
-                DecentralizedServerBar.Visibility = Visibility.Visible;
-                Debug.WriteLine($"DespuÃ©s de mostrar: DecentralizedServerBar.Visibility = {DecentralizedServerBar.Visibility}");
-                
-                // Forzar actualizaciÃ³n del layout
-                DecentralizedServerBar.UpdateLayout();
-                Debug.WriteLine("Layout actualizado");
                 
                 Debug.WriteLine("Servidor descentralizado iniciado exitosamente");
             }
