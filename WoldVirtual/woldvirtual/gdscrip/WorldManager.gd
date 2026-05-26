@@ -177,5 +177,58 @@ func find_slot(occ: Array) -> Vector2:
 
 func _expand_ocean_to_block(_block_idx: int):
 	# El océano se queda fijo en su posición inicial, no se mueve.
-	# Ya es suficientemente grande (5000x5000) para cubrir todos los bloques visibles.
 	pass
+
+# Asigna una ubicación cercana a la isla anfitriona (RF-05 / DevTraeIA)
+func assign_nearby_location(host_island_id: String, new_user_id: String) -> Vector2:
+	# Obtener posición de la isla anfitriona
+	var host_position = Vector2.ZERO
+	
+	# Buscar en active_islands
+	for key in active_islands.keys():
+		if key.contains(host_island_id) or key == host_island_id:
+			var island_node = active_islands[key]
+			if is_instance_valid(island_node):
+				host_position = Vector2(island_node.global_position.x / spacing, island_node.global_position.z / spacing)
+				break
+	
+	# Si no encontramos la isla, usar posición 0,0
+	if host_position == Vector2.ZERO:
+		host_position = Vector2.ZERO
+	
+	# Posiciones predefinidas alrededor de la isla (radio de 1 unidad de grid)
+	var nearby_positions = [
+		Vector2(host_position.x + 1, host_position.z),     # Derecha
+		Vector2(host_position.x - 1, host_position.z),     # Izquierda
+		Vector2(host_position.x, host_position.z + 1),     # Arriba
+		Vector2(host_position.x, host_position.z - 1),     # Abajo
+		Vector2(host_position.x + 1, host_position.z + 1), # Diagonal superior derecha
+		Vector2(host_position.x - 1, host_position.z + 1), # Diagonal superior izquierda
+		Vector2(host_position.x + 1, host_position.z - 1), # Diagonal inferior derecha
+		Vector2(host_position.x - 1, host_position.z - 1)  # Diagonal inferior izquierda
+	]
+	
+	# Obtener posiciones ocupadas actualmente
+	var occupied_positions = []
+	for user_id in active_users:
+		if user_id != new_user_id:
+			var user_node = active_users[user_id]
+			if is_instance_valid(user_node):
+				var grid_pos = Vector2(user_node.global_position.x / spacing, user_node.global_position.z / spacing)
+				occupied_positions.append(grid_pos)
+	
+	# Encontrar primera posición disponible
+	for pos in nearby_positions:
+		var available = true
+		for occupied in occupied_positions:
+			if pos.distance_to(occupied) < 0.5:  # Margen de 0.5 unidades
+				available = false
+				break
+		
+		if available:
+			print("Asignada ubicación cercana para ", new_user_id, ": ", pos, " (cerca de isla ", host_island_id, ")")
+			return pos
+	
+	# Si todas las posiciones cercanas están ocupadas, usar el algoritmo find_slot
+	print("Todas las posiciones cercanas ocupadas, usando algoritmo find_slot para ", new_user_id)
+	return find_slot(occupied_positions)

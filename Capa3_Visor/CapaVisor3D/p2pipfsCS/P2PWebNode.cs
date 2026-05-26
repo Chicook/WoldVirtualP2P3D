@@ -904,6 +904,10 @@ namespace VisorSingularity
                 using var zip     = new FileStream(ZipPath, FileMode.Create);
                 using var archive = new ZipArchive(zip, ZipArchiveMode.Create);
                 AddDirectoryToZip(archive, _repoPath, _repoPath);
+                
+                // Verificar archivos esenciales incluidos
+                VerifyEssentialFilesIncluded(archive);
+                
                 ZipReady = true;
             }
             catch (Exception ex)
@@ -912,6 +916,84 @@ namespace VisorSingularity
                 Debug.WriteLine($"[ZIP] {ex}");
             }
             finally { IsZipping = false; }
+        }
+        
+        private void VerifyEssentialFilesIncluded(ZipArchive archive)
+        {
+            // Lista de archivos esenciales que DEBEN estar en el ZIP
+            var essentialFiles = new List<string>
+            {
+                // Proyecto Godot
+                "WoldVirtual/project.godot",
+                "WoldVirtual/EscenaPrincipal.tscn",
+                "WoldVirtual/woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn",
+                
+                // Scripts Godot críticos
+                "WoldVirtual/woldvirtual/gdscrip/WorldManager.gd",
+                "WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd",
+                "WoldVirtual/woldvirtual/gdscrip/ChunkManager.gd",
+                "WoldVirtual/woldvirtual/scene/MTC/RegistroAV.gd",
+                
+                // Ejecutable Godot
+                "WoldVirtual/servidorinterno/Godot_v4.6.2-stable_mono_win64.exe",
+                
+                // Proyecto WPF
+                "Capa3_Visor/CapaVisor3D/VisorSingularity.csproj",
+                "Capa3_Visor/CapaVisor3D/MainWindow.xaml",
+                "Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs",
+                "Capa3_Visor/CapaVisor3D/GodotHwndHost.cs",
+                
+                // Estado Global C#
+                "WoldVirtual/Estado_Global/IslandStateManager.cs",
+                "WoldVirtual/Estado_Global/SessionManager.cs",
+                "WoldVirtual/Estado_Global/GlobalConfig.cs",
+                
+                // Web interface
+                "Capa3_Visor/CapaVisor3D/www/metamask.html",
+                
+                // Scripts de automatización
+                "build-all.ps1",
+                "check-dependencies.ps1",
+                "check-dependencies-simple.ps1"
+            };
+            
+            var missingFiles = new List<string>();
+            foreach (var file in essentialFiles)
+            {
+                var fullPath = Path.Combine(_repoPath, file);
+                if (File.Exists(fullPath))
+                {
+                    // Verificar si el archivo está en el ZIP
+                    var entry = archive.GetEntry(file);
+                    if (entry == null)
+                    {
+                        missingFiles.Add(file);
+                        Debug.WriteLine($"[ZIP-WARNING] Archivo esencial no incluido: {file}");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[ZIP-OK] Archivo esencial incluido: {file}");
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"[ZIP-INFO] Archivo no encontrado (puede ser opcional): {file}");
+                }
+            }
+            
+            if (missingFiles.Count > 0)
+            {
+                Debug.WriteLine($"[ZIP-ERROR] {missingFiles.Count} archivos esenciales faltan en el ZIP:");
+                foreach (var file in missingFiles)
+                {
+                    Debug.WriteLine($"[ZIP-ERROR]   - {file}");
+                }
+                LogStatus($"ADVERTENCIA: {missingFiles.Count} archivos esenciales no se incluyeron en el ZIP");
+            }
+            else
+            {
+                Debug.WriteLine($"[ZIP-SUCCESS] Todos los archivos esenciales incluidos en el ZIP");
+            }
         }
 
         private void AddDirectoryToZip(ZipArchive archive, string sourceDir, string rootDir)
@@ -923,14 +1005,19 @@ namespace VisorSingularity
                 if (Path.GetFileName(file).ToLower() is "vram_status.json") continue;
 
                 string rel = Path.GetRelativePath(rootDir, file);
-                try { archive.CreateEntryFromFile(file, rel); }
+                try 
+                { 
+                    archive.CreateEntryFromFile(file, rel);
+                    Debug.WriteLine($"[ZIP-add] {rel}");
+                }
                 catch (Exception ex) { Debug.WriteLine($"[ZIP-skip] {rel}: {ex.Message}"); }
             }
             foreach (string dir in Directory.GetDirectories(sourceDir))
             {
                 string d = Path.GetFileName(dir).ToLower();
                 // Excluir solo lo estrictamente necesario para reducir tamaño
-                if (d is ".git" or ".gemini" or ".ipfs-woldvirtual" or ".godot"
+                // IMPORTANTE: NO excluir ".godot" - es necesario para que el proyecto funcione
+                if (d is ".git" or ".gemini" or ".ipfs-woldvirtual"
                        or "peers" or "logs" or "temp" or "tmp" or "wcvcoinmtb") continue;
                 AddDirectoryToZip(archive, dir, rootDir);
             }
