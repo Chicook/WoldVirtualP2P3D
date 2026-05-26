@@ -999,25 +999,39 @@ namespace VisorSingularity
 
         private void ActivateMetaverseUi(string username, string repoPath)
         {
+            Debug.WriteLine($"ActivateMetaverseUi llamado con username: {username}");
+            
             if (_metaverseUiActivated)
             {
+                Debug.WriteLine("Metaverse UI ya estaba activado, retornando...");
                 return;
             }
 
             _metaverseUiActivated = true;
+            Debug.WriteLine("Metaverse UI activado");
+            
             BorderBottomLoginBar.Visibility = Visibility.Visible;
+            Debug.WriteLine("BorderBottomLoginBar hecho visible");
 
             if (_p2pNode == null)
             {
+                Debug.WriteLine("Iniciando P2PWebNode...");
                 StartP2PWebNode(username, repoPath);
+            }
+            else
+            {
+                Debug.WriteLine("P2PWebNode ya estaba iniciado");
             }
         }
 
         private void StartP2PWebNode(string username, string repoPath)
         {
+            Debug.WriteLine($"StartP2PWebNode llamado con username: {username}, repoPath: {repoPath}");
+            
             try
             {
                 _p2pNode = new P2PWebNode(username, repoPath);
+                Debug.WriteLine("P2PWebNode creado exitosamente");
 
                 // Suscribirse a cambios de estado del zipping/upload
                 _p2pNode.OnStatusChanged += (status) =>
@@ -1057,28 +1071,44 @@ namespace VisorSingularity
         {
             try
             {
+                Debug.WriteLine("Iniciando servidor descentralizado...");
+                
                 // Crear e iniciar el monitor de recursos
                 _resourceMonitor = new ResourceMonitor();
+                Debug.WriteLine("ResourceMonitor creado");
                 
                 // Configurar lÃ­mites iniciales (total mÃ¡ximo 1GB)
                 // CPU: 10%, RAM: 256MB, Disco: 500MB, VRAM: 128MB, Ancho de banda: 10Mbps
                 _resourceMonitor.SetResourceLimits(10.0, 256, 500, 128, 10);
+                Debug.WriteLine("LÃ­mites de recursos configurados");
                 
                 // Conectar el monitor con el control de interfaz
                 if (DecentralizedServerControl != null)
                 {
+                    Debug.WriteLine("DecentralizedServerControl encontrado, inicializando...");
                     DecentralizedServerControl.Initialize(_resourceMonitor);
+                    Debug.WriteLine("DecentralizedServerControl inicializado");
+                }
+                else
+                {
+                    Debug.WriteLine("ERROR: DecentralizedServerControl es null");
                 }
                 
                 // Iniciar monitoreo
                 _resourceMonitor.StartMonitoring(1000);
+                Debug.WriteLine("Monitoreo de recursos iniciado");
                 
                 // Mostrar el control del servidor descentralizado
+                Debug.WriteLine($"Antes de mostrar: DecentralizedServerBar.Visibility = {DecentralizedServerBar.Visibility}");
                 DecentralizedServerBar.Visibility = Visibility.Visible;
+                Debug.WriteLine($"DespuÃ©s de mostrar: DecentralizedServerBar.Visibility = {DecentralizedServerBar.Visibility}");
+                
+                Debug.WriteLine("Servidor descentralizado iniciado exitosamente");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error al iniciar servidor descentralizado: {ex.Message}");
+                Debug.WriteLine($"StackTrace: {ex.StackTrace}");
             }
         }
 
