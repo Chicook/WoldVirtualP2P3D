@@ -14,6 +14,8 @@
         <Grid VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="12"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="12"/>
@@ -22,18 +24,32 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <Ellipse Grid.Column="0"
+                     Width="10"
+                     Height="10"
+                     VerticalAlignment="Center"
+                     Fill="{Binding ActivityBrush}"/>
+
+            <StackPanel Grid.Column="2" VerticalAlignment="Center">
                 <TextBlock Text="SERVIDOR DESCENTRALIZADO"
                            Foreground="#66FCF1"
                            FontSize="10"
                            FontWeight="Bold"/>
-                <TextBlock Text="{Binding NodeName}"
-                           Foreground="White"
-                           FontSize="10"
-                           TextTrimming="CharacterEllipsis"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding ActivityText}"
+                               Foreground="{Binding ActivityBrush}"
+                               FontSize="10"
+                               FontWeight="Bold"/>
+                    <TextBlock Text="  "
+                               FontSize="10"/>
+                    <TextBlock Text="{Binding NodeName}"
+                               Foreground="White"
+                               FontSize="10"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
             </StackPanel>
 
-            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+            <StackPanel Grid.Column="4" VerticalAlignment="Center">
                 <TextBlock Text="{Binding StatusText}"
                            Foreground="#C6D8E2"
                            FontSize="10"
@@ -61,7 +77,7 @@
                 </StackPanel>
             </StackPanel>
 
-            <StackPanel Grid.Column="4" VerticalAlignment="Center">
+            <StackPanel Grid.Column="6" VerticalAlignment="Center">
                 <TextBlock Text="IPFS"
                            Foreground="#7CB0C6"
                            FontSize="10"/>
@@ -72,7 +88,7 @@
                            TextTrimming="CharacterEllipsis"/>
             </StackPanel>
 
-            <Button Grid.Column="6"
+            <Button Grid.Column="8"
                     Width="96"
                     Height="24"
                     Padding="6,2"

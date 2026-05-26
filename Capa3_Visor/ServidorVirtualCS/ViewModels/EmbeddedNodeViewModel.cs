@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace ServidorVirtualCS.ViewModels;
 
@@ -28,6 +29,8 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
         StatusText = "Nodo listo para perfilar recursos.";
         IpfsStatusText = "IPFS pendiente";
         TotalBudgetText = "0 / 1024 MB";
+        ActivityText = "INICIANDO";
+        ActivityBrush = Brushes.Orange;
         PublishCommand = _publishCommand;
     }
 
@@ -71,6 +74,10 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
 
     public bool MeetsMinimum { get; private set; }
 
+    public string ActivityText { get; private set; }
+
+    public Brush ActivityBrush { get; private set; }
+
     public async Task RefreshAsync()
     {
         await _refreshLock.WaitAsync();
@@ -100,9 +107,19 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
             StatusText = plan.MeetsMinimum
                 ? "Nodo equilibrado. El reparto mantiene margen local para una experiencia fluida."
                 : "Nodo conservador. Se comparte menos de 1 GB para evitar cortes en el equipo local.";
+            ActivityText = "ACTIVO";
+            ActivityBrush = plan.MeetsMinimum ? Brushes.LimeGreen : Brushes.Gold;
 
             OnPropertyChanged(string.Empty);
             _publishCommand.RaiseCanExecuteChanged();
+        }
+        catch
+        {
+            ActivityText = "ERROR";
+            ActivityBrush = Brushes.OrangeRed;
+            StatusText = "No se pudo perfilar el nodo local.";
+            IpfsStatusText = "IPFS pendiente";
+            OnPropertyChanged(string.Empty);
         }
         finally
         {
@@ -130,6 +147,8 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
                 IpfsStatusText = "IPFS local no disponible en http://127.0.0.1:5001";
                 PublishedCid = "-";
                 GatewayUrl = "-";
+                ActivityText = "LOCAL";
+                ActivityBrush = Brushes.Gold;
                 return;
             }
 
@@ -139,12 +158,16 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
                 IpfsStatusText = "No se pudo publicar el manifiesto del nodo.";
                 PublishedCid = "-";
                 GatewayUrl = "-";
+                ActivityText = "LOCAL";
+                ActivityBrush = Brushes.Gold;
                 return;
             }
 
             PublishedCid = cid;
             GatewayUrl = $"http://127.0.0.1:8080/ipfs/{cid}";
             IpfsStatusText = "Nodo anunciado en IPFS. El manifiesto ya puede ser descubierto por la red.";
+            ActivityText = "IPFS";
+            ActivityBrush = Brushes.LimeGreen;
         }
         finally
         {
