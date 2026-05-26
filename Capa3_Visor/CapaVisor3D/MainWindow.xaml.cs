@@ -469,6 +469,10 @@ namespace VisorSingularity
                             _currentUsername = user;
                             TxtChatActiveUser.Text = $"Usuario: {user}";
 
+                            // Hacer visible el servidor descentralizado inmediatamente
+                            DecentralizedServerBar.Visibility = Visibility.Visible;
+                            Debug.WriteLine("DecentralizedServerBar hecho visible desde el registro de usuario");
+
                             LaunchAndEmbedGodot(wallet, user, island);
                         });
                     }
@@ -1073,6 +1077,22 @@ namespace VisorSingularity
             {
                 Debug.WriteLine("Iniciando servidor descentralizado...");
                 
+                // Verificar que el control estÃ© disponible en el Ã¡rbol visual
+                if (DecentralizedServerBar == null)
+                {
+                    Debug.WriteLine("ERROR: DecentralizedServerBar es null");
+                    return;
+                }
+                
+                if (DecentralizedServerControl == null)
+                {
+                    Debug.WriteLine("ERROR: DecentralizedServerControl es null");
+                    return;
+                }
+                
+                Debug.WriteLine($"DecentralizedServerBar encontrado, IsLoaded: {DecentralizedServerBar.IsLoaded}");
+                Debug.WriteLine($"DecentralizedServerControl encontrado, IsLoaded: {DecentralizedServerControl.IsLoaded}");
+                
                 // Crear e iniciar el monitor de recursos
                 _resourceMonitor = new ResourceMonitor();
                 Debug.WriteLine("ResourceMonitor creado");
@@ -1083,16 +1103,9 @@ namespace VisorSingularity
                 Debug.WriteLine("LÃ­mites de recursos configurados");
                 
                 // Conectar el monitor con el control de interfaz
-                if (DecentralizedServerControl != null)
-                {
-                    Debug.WriteLine("DecentralizedServerControl encontrado, inicializando...");
-                    DecentralizedServerControl.Initialize(_resourceMonitor);
-                    Debug.WriteLine("DecentralizedServerControl inicializado");
-                }
-                else
-                {
-                    Debug.WriteLine("ERROR: DecentralizedServerControl es null");
-                }
+                Debug.WriteLine("DecentralizedServerControl encontrado, inicializando...");
+                DecentralizedServerControl.Initialize(_resourceMonitor);
+                Debug.WriteLine("DecentralizedServerControl inicializado");
                 
                 // Iniciar monitoreo
                 _resourceMonitor.StartMonitoring(1000);
@@ -1102,6 +1115,10 @@ namespace VisorSingularity
                 Debug.WriteLine($"Antes de mostrar: DecentralizedServerBar.Visibility = {DecentralizedServerBar.Visibility}");
                 DecentralizedServerBar.Visibility = Visibility.Visible;
                 Debug.WriteLine($"DespuÃ©s de mostrar: DecentralizedServerBar.Visibility = {DecentralizedServerBar.Visibility}");
+                
+                // Forzar actualizaciÃ³n del layout
+                DecentralizedServerBar.UpdateLayout();
+                Debug.WriteLine("Layout actualizado");
                 
                 Debug.WriteLine("Servidor descentralizado iniciado exitosamente");
             }
