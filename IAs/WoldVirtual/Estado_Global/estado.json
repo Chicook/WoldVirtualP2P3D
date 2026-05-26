@@ -1,0 +1,19 @@
+{
+	"a": {
+		"i": "id_avatar",
+		"n": "Avatar_1",
+		"o": true
+	},
+	"i": {
+		"island_0": {
+			"i": "island_0",
+			"n": "Isla Inicial",
+			"o": true
+		}
+	},
+	"ts": "2026-05-19T03:40:37",
+	"u": {
+
+	},
+	"v": "1.0"
+}
