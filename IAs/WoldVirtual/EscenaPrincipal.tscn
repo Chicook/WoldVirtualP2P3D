@@ -1,9 +1,0 @@
-[gd_scene format=3 uid="uid://cps1xbk4p6u4f"]
-
-[ext_resource type="PackedScene" uid="uid://dgscv1234567" path="res://woldvirtual/scene/MTC/RegistroAV.tscn" id="1_8ijfc"]
-
-[node name="EscenaPrincipal" type="Node3D" unique_id=535167391]
-
-[node name="Metaverso3D" type="Node3D" parent="." unique_id=425463308]
-
-[node name="RegistroAV" parent="Metaverso3D" unique_id=1446806612 instance=ExtResource("1_8ijfc")]
