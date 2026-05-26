@@ -11,23 +11,30 @@ namespace VisorSingularity.p2pipfsCS
         public P2PNodeControl()
         {
             InitializeComponent();
-            UpdateStatus("Inactivo", Brushes.Gray);
+            UpdateGeneralStatus("Inactivo", Brushes.Gray);
         }
 
         public void UpdateNodeInfo(string nodeId, string simulatedUrl, bool isTunnelActive)
         {
             NodeUrl.Text = simulatedUrl;
+            NodeIdText.Text = nodeId; // Asumiendo que tienes un TextBlock llamado NodeIdText en tu XAML
             if (isTunnelActive)
             {
-                UpdateStatus("Activo", Brushes.LimeGreen);
+                UpdateGeneralStatus("Activo", Brushes.LimeGreen);
             }
             else
             {
-                UpdateStatus("Inactivo", Brushes.Gray);
+                UpdateGeneralStatus("Inactivo", Brushes.Gray);
             }
         }
 
-        private void UpdateStatus(string status, Brush color)
+        public void UpdateNodeIdAndLink(string nodeId, string link)
+        {
+            NodeIdText.Text = nodeId; // Asumiendo que tienes un TextBlock llamado NodeIdText en tu XAML
+            NodeUrl.Text = link;
+        }
+
+        public void UpdateGeneralStatus(string status, Brush color)
         {
             NodeStatus.Text = $"Estado: {status}";
             NodeStatus.Foreground = color;

@@ -18,6 +18,8 @@ using System.Windows.Media.Animation;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Threading;
+using VisorSingularity.ServidorDescentralizado; // Añadido para el servidor descentralizado
+using VisorSingularity.p2pipfsCS; // Añadido para P2PNodeControl
 
 namespace VisorSingularity
 {
@@ -750,6 +752,11 @@ namespace VisorSingularity
             if (P2PNodeBar != null)
             {
                 P2PNodeBar.Visibility = Visibility.Collapsed;
+            }
+            // Ocultar DecentralizedServerBar también
+            if (DecentralizedServerBar != null)
+            {
+                DecentralizedServerBar.Visibility = Visibility.Collapsed;
             }
 
             if (_httpListener != null)
