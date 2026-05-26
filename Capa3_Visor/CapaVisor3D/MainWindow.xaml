@@ -268,7 +268,7 @@
             <!-- Servidor Descentralizado - Monitoreo de Recursos -->
             <Border x:Name="DecentralizedServerBar" Grid.Row="0" CornerRadius="8" BorderThickness="1.5" Width="500" Padding="8"
                     VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,6,0,4"
-                    Visibility="Collapsed" Panel.ZIndex="10">
+                    Visibility="Collapsed" Panel.ZIndex="9">
                 <Border.BorderBrush>
                     <SolidColorBrush Color="#45A29E"/>
                 </Border.BorderBrush>
@@ -285,7 +285,7 @@
             <!-- Panel P2P WebNode fijo en esquina superior derecha -->
             <Border x:Name="P2PNodeBar" Grid.Row="0" CornerRadius="8" BorderThickness="1.5" Width="360" Padding="12"
                     VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,8,4"
-                    Visibility="Collapsed" Panel.ZIndex="1">
+                    Visibility="Collapsed" Panel.ZIndex="10">
                 <Border.BorderBrush>
                     <SolidColorBrush Color="#45A29E"/>
                 </Border.BorderBrush>
