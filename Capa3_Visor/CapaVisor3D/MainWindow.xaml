@@ -250,7 +250,7 @@
         </Grid>
 
         <!-- PANTALLA 2: VISOR PRINCIPAL Y MOTOR 3D -->
-        <Grid x:Name="GridMainViewer" Visibility="Collapsed">
+        <Grid x:Name="GridMainViewer" Visibility="Visible">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Top Menu -->
                 <RowDefinition Height="*"/>    <!-- 3D Area (Black/Godot) -->
@@ -267,8 +267,8 @@
 
             <!-- Servidor Descentralizado - Monitoreo de Recursos -->
             <Border x:Name="DecentralizedServerBar" Grid.Row="0" CornerRadius="8" BorderThickness="1.5" Width="500" Padding="8"
-                    VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,10,0,0"
-                    Visibility="Collapsed" Panel.ZIndex="10">
+                    VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,6,0,4"
+                    Visibility="Visible" Panel.ZIndex="10">
                 <Border.BorderBrush>
                     <SolidColorBrush Color="#45A29E"/>
                 </Border.BorderBrush>

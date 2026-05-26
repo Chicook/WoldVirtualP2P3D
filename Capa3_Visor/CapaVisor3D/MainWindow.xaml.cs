@@ -465,6 +465,7 @@ namespace VisorSingularity
                             GridMetaMaskOverlay.Visibility = Visibility.Collapsed;
                             GridUserRegistration.Visibility = Visibility.Collapsed;
                             GridMainViewer.Visibility = Visibility.Visible;
+                            Debug.WriteLine($"GridMainViewer Visibility: {GridMainViewer.Visibility}");
 
                             _currentUsername = user;
                             TxtChatActiveUser.Text = $"Usuario: {user}";
@@ -997,7 +998,7 @@ namespace VisorSingularity
                 ChatOverlayPopup.HorizontalOffset = targetLeft;
                 ChatOverlayPopup.VerticalOffset = targetTop;
             }
-
+            
             // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
         }
 
@@ -1087,7 +1088,7 @@ namespace VisorSingularity
                 // Mostrar el control del servidor descentralizado INMEDIATAMENTE
                 // para asegurar que sea visible incluso si falla la inicialización del monitor
                 DecentralizedServerBar.Visibility = Visibility.Visible;
-                DecentralizedServerBar.UpdateLayout();
+                
                 Debug.WriteLine("DecentralizedServerBar hecho visible explícitamente");
                 
                 if (DecentralizedServerControl == null)
