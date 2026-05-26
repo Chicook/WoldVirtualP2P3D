@@ -18,8 +18,6 @@ using System.Windows.Media.Animation;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Threading;
-using VisorSingularity.ServidorDescentralizado; // Añadido para el servidor descentralizado
-using VisorSingularity.p2pipfsCS; // Añadido para P2PNodeControl
 
 namespace VisorSingularity
 {
@@ -41,7 +39,6 @@ namespace VisorSingularity
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
         private bool _metaverseUiActivated = false;
-        private ServidorDescentralizado.ResourceMonitor? _resourceMonitor; // Declaración del ResourceMonitor
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -86,7 +83,7 @@ namespace VisorSingularity
             // Vincular eventos del Chat P2P
             BtnSendChat.Click += BtnSendChat_Click;
             TxtChatMessage.KeyDown += TxtChatMessage_KeyDown;
-            // Este botón ya no es necesario aquí, se maneja en P2PNodeControl
+            BtnCopyP2PLink.Click += BtnCopyP2PLink_Click;
 
             // Vincular eventos de redimensionado/movimiento de ventana para el Popup del Chat
             this.LocationChanged += (s, ev) => UpdatePopupPosition();
@@ -96,17 +93,6 @@ namespace VisorSingularity
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             await RunHardwareScanAsync();
-        }
-
-        // ── INICIALIZACIÓN DEL SERVIDOR DESCENTRALIZADO ──
-        private void StartDecentralizedServer()
-        {
-            if (_resourceMonitor == null)
-            {
-                _resourceMonitor = new ResourceMonitor();
-                DecentralizedServerControl.Initialize(_resourceMonitor);
-            }
-            DecentralizedServerBar.Visibility = Visibility.Visible;
         }
 
         private async Task RunHardwareScanAsync()
@@ -481,13 +467,6 @@ namespace VisorSingularity
                             _currentUsername = user;
                             TxtChatActiveUser.Text = $"Usuario: {user}";
 
-                            // Asegurarse de que P2PNodeBar sea visible
-                            P2PNodeBar.Visibility = Visibility.Visible;
-                            Debug.WriteLine($"P2PNodeBar hecho visible: {P2PNodeBar.Visibility}");
-
-                            // Iniciar el servidor descentralizado
-                            StartDecentralizedServer();
-
                             LaunchAndEmbedGodot(wallet, user, island);
                         });
                     }
@@ -764,11 +743,6 @@ namespace VisorSingularity
             {
                 P2PNodeBar.Visibility = Visibility.Collapsed;
             }
-            // Ocultar DecentralizedServerBar también
-            if (DecentralizedServerBar != null)
-            {
-                DecentralizedServerBar.Visibility = Visibility.Collapsed;
-            }
 
             if (_httpListener != null)
             {
@@ -1017,74 +991,61 @@ namespace VisorSingularity
                 ChatOverlayPopup.HorizontalOffset = targetLeft;
                 ChatOverlayPopup.VerticalOffset = targetTop;
             }
+
+            // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
         }
 
-        // ── INICIALIZACIÓN DEL SERVIDOR DESCENTRALIZADO ──
-        private void StartDecentralizedServer()
-        {   
-            // The original StartDecentralizedServer had more logic for resource monitoring setup.
-            // This replacement block simplifies it, assuming the setup is handled elsewhere or is no longer needed in this form.
-            // If the full resource monitoring setup is still required, it should be re-added here.
-            if (_resourceMonitor == null)
-            {
-                _resourceMonitor = new VisorSingularity.ServidorDescentralizado.ResourceMonitor();
-                DecentralizedServerControl.Initialize(_resourceMonitor);
-                // Re-adding the resource limits and monitoring start from the original method for completeness
-                _resourceMonitor.SetResourceLimits(10.0, 256, 500, 128, 10);
-                _resourceMonitor.StartMonitoring(1000);
-            }
-            DecentralizedServerBar.Visibility = Visibility.Visible;
-        }
-
-        // ── ACTIVACIÓN DE LA INTERFAZ DEL METAVERSO (P2P, Chat, etc.) ──
         private void ActivateMetaverseUi(string username, string repoPath)
         {
-            if (_metaverseUiActivated) return;
-            _metaverseUiActivated = true;
+            if (_metaverseUiActivated)
+            {
+                return;
+            }
 
+            _metaverseUiActivated = true;
             BorderBottomLoginBar.Visibility = Visibility.Visible;
 
-            // Iniciar el nodo P2P
+            if (_p2pNode == null)
+            {
+                StartP2PWebNode(username, repoPath);
+            }
+        }
+
+        private void StartP2PWebNode(string username, string repoPath)
+        {
             try
             {
                 _p2pNode = new P2PWebNode(username, repoPath);
-                _p2pNode.OnStatusUpdate += (status) =>
+
+                // Suscribirse a cambios de estado del zipping/upload
+                _p2pNode.OnStatusChanged += (status) =>
                 {
                     Dispatcher.Invoke(() =>
                     {
-                        P2PNodeControl.UpdateGeneralStatus(status, Brushes.White); // Usar el método público
+                        TxtP2PStatus.Text = status;
                         // Actualizar el enlace en la barra cuando el link público esté listo (IPFS o Túnel SSH)
                         if ((_p2pNode.IsOnIpfs || _p2pNode.IsTunnelActive) && !string.IsNullOrEmpty(_p2pNode.GatewayUrl))
                         {
-                            P2PNodeControl.UpdateNodeIdAndLink(_p2pNode.NodeId, _p2pNode.GatewayUrl);
-                            P2PNodeControl.UpdateGeneralStatus("Activo", Brushes.LimeGreen);
-                        }
-                        else
-                        {
-                            P2PNodeControl.UpdateNodeIdAndLink(_p2pNode.NodeId, _p2pNode.LocalUrl);
-                            P2PNodeControl.UpdateGeneralStatus("Local", Brushes.Orange);
+                            TxtP2PLink.Text = $"Enlace: {_p2pNode.GatewayUrl}";
+                            TxtP2PNodeId.Text = $"NODO: {_p2pNode.NodeId}";
                         }
                     });
                 };
 
                 _p2pNode.Start();
 
-                // Actualizar interfaz inicial del P2PNodeControl
-                P2PNodeControl.UpdateNodeIdAndLink(_p2pNode.SimulatedUrl, _p2pNode.LocalUrl);
-                P2PNodeControl.UpdateGeneralStatus("Generando ZIP...", Brushes.Yellow);
+                // Actualizar interfaz inicial
+                TxtP2PNodeId.Text = $"NODO P2P: {_p2pNode.SimulatedUrl}";
+                TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
+                TxtP2PStatus.Text = "Generando ZIP...";
 
-                // Mostrar el widget P2P solo cuando el usuario ya está dentro del metaverso
+                // Mostrar el widget P2P solo cuando el usuario ya estÃ¡ dentro del metaverso
                 P2PNodeBar.Visibility = Visibility.Visible;
-                Debug.WriteLine($"P2PNodeBar hecho visible: {P2PNodeBar.Visibility}");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error al iniciar P2PWebNode: {ex.Message}");
-                P2PNodeControl.UpdateGeneralStatus("Error", Brushes.Red);
             }
-
-            // Iniciar el servidor descentralizado
-            StartDecentralizedServer();
         }
 
         private void BtnCopyP2PLink_Click(object sender, RoutedEventArgs e)
