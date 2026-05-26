@@ -385,6 +385,41 @@ namespace VisorSingularity
             try
             {
                 string defaultIsland = "137 : 190.1.0";
+                try
+                {
+                    var godotPaths = FindLocalGodotPaths();
+                    if (!string.IsNullOrEmpty(godotPaths.projectDir))
+                    {
+                        string peersDir = Path.Combine(godotPaths.projectDir, "Estado_Global", "peers");
+                        if (Directory.Exists(peersDir))
+                        {
+                            bool hasActivePeers = false;
+                            var files = Directory.GetFiles(peersDir, "peer_*.json");
+                            foreach (var file in files)
+                            {
+                                var lastWriteTime = File.GetLastWriteTime(file);
+                                if ((DateTime.Now - lastWriteTime).TotalSeconds < 25)
+                                {
+                                    hasActivePeers = true;
+                                    break;
+                                }
+                            }
+                            if (!hasActivePeers)
+                            {
+                                defaultIsland = "1 : 0.0.0";
+                            }
+                        }
+                        else
+                        {
+                            defaultIsland = "1 : 0.0.0";
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("Error al determinar isla por defecto: " + ex.Message);
+                }
+
                 string url = $"http://localhost:8080/?user={Uri.EscapeDataString(username)}&islandId={Uri.EscapeDataString(defaultIsland)}";
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             }
