@@ -4,121 +4,81 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="150"
+             d:DesignHeight="38"
              d:DesignWidth="420">
-    <UserControl.Resources>
-        <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#7CB0C6"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Margin" Value="0,0,0,2"/>
-        </Style>
-
-        <Style x:Key="ValueTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-        </Style>
-
-        <Style x:Key="MetricBarStyle" TargetType="ProgressBar">
-            <Setter Property="Height" Value="6"/>
-            <Setter Property="Foreground" Value="#19C37D"/>
-            <Setter Property="Background" Value="#132738"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-    </UserControl.Resources>
-
-    <Border CornerRadius="10"
-            Padding="12"
-            Background="#D90D1C29"
+    <Border CornerRadius="4"
+            Padding="6,4"
+            Background="#CC0D1C29"
             BorderBrush="#1F8BD1"
             BorderThickness="1">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
+        <Grid VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="12"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="10"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Row="0" Grid.Column="0">
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
                 <TextBlock Text="SERVIDOR DESCENTRALIZADO"
                            Foreground="#66FCF1"
-                           FontWeight="Bold"
-                           FontSize="14"/>
+                           FontSize="10"
+                           FontWeight="Bold"/>
                 <TextBlock Text="{Binding NodeName}"
-                           Style="{StaticResource ValueTextStyle}"/>
+                           Foreground="White"
+                           FontSize="10"
+                           TextTrimming="CharacterEllipsis"/>
             </StackPanel>
 
-            <StackPanel Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right">
-                <TextBlock Text="PRESUPUESTO AGREGADO"
-                           Style="{StaticResource CaptionTextStyle}"
-                           TextAlignment="Right"/>
-                <TextBlock Text="{Binding TotalBudgetText}"
-                           Foreground="#19C37D"
-                           FontSize="18"
-                           FontWeight="Bold"
-                           TextAlignment="Right"/>
+            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding StatusText}"
+                           Foreground="#C6D8E2"
+                           FontSize="10"
+                           TextTrimming="CharacterEllipsis"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="CPU "
+                               Foreground="#7CB0C6"
+                               FontSize="10"/>
+                    <TextBlock Text="{Binding CpuBudget}"
+                               Foreground="White"
+                               FontSize="10"/>
+                    <TextBlock Text=" MB  RAM "
+                               Foreground="#7CB0C6"
+                               FontSize="10"/>
+                    <TextBlock Text="{Binding RamBudget}"
+                               Foreground="White"
+                               FontSize="10"/>
+                    <TextBlock Text=" MB  TOTAL "
+                               Foreground="#7CB0C6"
+                               FontSize="10"/>
+                    <TextBlock Text="{Binding TotalBudgetText}"
+                               Foreground="#19C37D"
+                               FontSize="10"
+                               FontWeight="Bold"/>
+                </StackPanel>
             </StackPanel>
 
-            <TextBlock Grid.Row="1"
-                       Grid.ColumnSpan="2"
-                       Margin="0,10,0,10"
-                       Foreground="#C6D8E2"
-                       TextWrapping="Wrap"
-                       Text="{Binding StatusText}"/>
-
-            <Grid Grid.Row="2" Grid.ColumnSpan="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                    <TextBlock Text="CPU" Style="{StaticResource CaptionTextStyle}"/>
-                    <TextBlock Text="{Binding CpuText}" Style="{StaticResource ValueTextStyle}"/>
-                    <ProgressBar Style="{StaticResource MetricBarStyle}" Maximum="256" Value="{Binding CpuBudget}"/>
-
-                    <TextBlock Text="RAM" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,2"/>
-                    <TextBlock Text="{Binding RamText}" Style="{StaticResource ValueTextStyle}"/>
-                    <ProgressBar Style="{StaticResource MetricBarStyle}" Maximum="512" Value="{Binding RamBudget}"/>
-
-                    <TextBlock Text="VRAM" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,2"/>
-                    <TextBlock Text="{Binding VramText}" Style="{StaticResource ValueTextStyle}"/>
-                    <ProgressBar Style="{StaticResource MetricBarStyle}" Maximum="256" Value="{Binding VramBudget}"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                    <TextBlock Text="ALMACENAMIENTO" Style="{StaticResource CaptionTextStyle}"/>
-                    <TextBlock Text="{Binding StorageText}" Style="{StaticResource ValueTextStyle}"/>
-                    <ProgressBar Style="{StaticResource MetricBarStyle}" Maximum="768" Value="{Binding StorageBudget}"/>
-
-                    <TextBlock Text="ANCHO DE BANDA" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,2"/>
-                    <TextBlock Text="{Binding BandwidthText}" Style="{StaticResource ValueTextStyle}"/>
-                    <ProgressBar Style="{StaticResource MetricBarStyle}" Maximum="192" Value="{Binding BandwidthBudget}"/>
-
-                    <TextBlock Text="IPFS" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,2"/>
-                    <TextBlock Text="{Binding IpfsStatusText}" Style="{StaticResource ValueTextStyle}" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding PublishedCid}" Style="{StaticResource ValueTextStyle}" Foreground="#66FCF1" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Grid>
-
-            <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,12,0,0">
-                <TextBlock DockPanel.Dock="Left"
-                           VerticalAlignment="Center"
+            <StackPanel Grid.Column="4" VerticalAlignment="Center">
+                <TextBlock Text="IPFS"
                            Foreground="#7CB0C6"
-                           Text="{Binding GatewayUrl}"/>
-                <Button DockPanel.Dock="Right"
-                        Width="120"
-                        Margin="12,0,0,0"
-                        Padding="8,4"
-                        Content="PUBLICAR EN IPFS"
-                        Command="{Binding PublishCommand}"/>
-            </DockPanel>
+                           FontSize="10"/>
+                <TextBlock Text="{Binding PublishedCid}"
+                           Width="120"
+                           Foreground="#66FCF1"
+                           FontSize="10"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+
+            <Button Grid.Column="6"
+                    Width="96"
+                    Height="24"
+                    Padding="6,2"
+                    VerticalAlignment="Center"
+                    Content="PUBLICAR"
+                    Command="{Binding PublishCommand}"/>
         </Grid>
     </Border>
 </UserControl>
