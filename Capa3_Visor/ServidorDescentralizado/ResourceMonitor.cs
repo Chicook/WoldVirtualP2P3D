@@ -13,14 +13,14 @@ namespace VisorSingularity.ServidorDescentralizado
     /// </summary>
     public class ResourceMonitor : IDisposable
     {
-        private readonly PerformanceCounter _cpuCounter;
-        private readonly PerformanceCounter _ramCounter;
-        private readonly PerformanceCounter _diskCounter;
-        private readonly PerformanceCounter _networkCounter;
-        private readonly ManagementObjectSearcher _gpuSearcher;
+        private readonly PerformanceCounter? _cpuCounter;
+        private readonly PerformanceCounter? _ramCounter;
+        private readonly PerformanceCounter? _diskCounter;
+        private readonly PerformanceCounter? _networkCounter;
+        private readonly ManagementObjectSearcher? _gpuSearcher;
         
-        private CancellationTokenSource _monitoringCts;
-        private Task _monitoringTask;
+        private CancellationTokenSource? _monitoringCts;
+        private Task? _monitoringTask;
         private bool _isDisposed;
         
         // Límites de recursos (en porcentaje o bytes)
@@ -38,32 +38,23 @@ namespace VisorSingularity.ServidorDescentralizado
         public long CurrentBandwidthBps { get; private set; }
         
         // Eventos
-        public event Action<ResourceMetrics> OnMetricsUpdated;
-        public event Action<string, double> OnResourceLimitExceeded;
+        public event Action<ResourceMetrics>? OnMetricsUpdated;
+        public event Action<string, double>? OnResourceLimitExceeded;
         
         public ResourceMonitor()
         {
+            _monitoringCts = new CancellationTokenSource(); // Inicializar aquí para evitar null
             try
             {
-                // Inicializar CancellationTokenSource aquí para que no sea null
-                _monitoringCts = new CancellationTokenSource();
-
-                // Intentar inicializar contadores en inglés o español, pero si fallan no detener el programa
-                try { _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total"); } catch { }
-                try { _ramCounter = new PerformanceCounter("Memory", "Available MBytes"); } catch { }
-                try { _diskCounter = new PerformanceCounter("PhysicalDisk", "% Disk Time", "_Total"); } catch { }
+                _cpuCounter = TryInitializePerformanceCounter("Processor", "% Processor Time", "_Total");
+                _ramCounter = TryInitializePerformanceCounter("Memory", "Available MBytes");
+                _diskCounter = TryInitializePerformanceCounter("PhysicalDisk", "% Disk Time", "_Total");
                 
-                try 
+                string netInterface = GetPrimaryNetworkInterface();
+                if (!string.IsNullOrEmpty(netInterface))
                 {
-                    string netInterface = GetPrimaryNetworkInterface();
-                    if (!string.IsNullOrEmpty(netInterface))
-                    {
-                        // Limpiar el nombre de la interfaz para PerformanceCounter
-                        netInterface = netInterface.Replace("(", "[").Replace(")", "]");
-                        _networkCounter = new PerformanceCounter("Network Interface", "Bytes Total/sec", netInterface);
-                    }
-                } 
-                catch { }
+                    _networkCounter = TryInitializePerformanceCounter("Network Interface", "Bytes Total/sec", netInterface);
+                }
                 
                 try { _gpuSearcher = new ManagementObjectSearcher("SELECT * FROM Win32_VideoController"); } catch { }
             }
@@ -71,6 +62,55 @@ namespace VisorSingularity.ServidorDescentralizado
             {
                 Debug.WriteLine($"[ResourceMonitor] Error inicializando contadores: {ex.Message}");
             }
+        }
+        
+        private PerformanceCounter? TryInitializePerformanceCounter(string categoryName, string counterName, string instanceName = "")
+        {
+            try
+            {
+                // Intentar con nombres en inglés
+                if (string.IsNullOrEmpty(instanceName))
+                {
+                    return new PerformanceCounter(categoryName, counterName);
+                }
+                else
+                {
+                    return new PerformanceCounter(categoryName, counterName, instanceName);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ResourceMonitor] Falló la inicialización del contador '{counterName}' con nombres en inglés: {ex.Message}");
+                // Intentar encontrar nombres localizados
+                try
+                {
+                    var localizedCategory = PerformanceCounterCategory.GetCategories()
+                                            .FirstOrDefault(c => c.CategoryName.Equals(categoryName, StringComparison.OrdinalIgnoreCase) ||
+                                                                 c.CategoryName.Equals(categoryName, StringComparison.CurrentCultureIgnoreCase));
+                    
+                    if (localizedCategory != null)
+                    {
+                        // No hay una forma directa de obtener el nombre localizado de un contador específico sin iterar
+                        // Por simplicidad, si la categoría se encuentra, asumimos que el contador también podría existir
+                        // y lo intentamos de nuevo con el nombre original, esperando que el sistema lo resuelva.
+                        // Una solución más robusta implicaría iterar sobre los contadores de la categoría.
+                        
+                        if (string.IsNullOrEmpty(instanceName))
+                        {
+                            return new PerformanceCounter(localizedCategory.CategoryName, counterName);
+                        }
+                        else
+                        {
+                            return new PerformanceCounter(localizedCategory.CategoryName, counterName, instanceName);
+                        }
+                    }
+                }
+                catch (Exception innerEx)
+                {
+                    Debug.WriteLine($"[ResourceMonitor] Falló la búsqueda de nombres localizados para '{counterName}': {innerEx.Message}");
+                }
+            }
+            return null; // No se pudo inicializar el contador
         }
         
         private string GetPrimaryNetworkInterface()
@@ -231,6 +271,8 @@ namespace VisorSingularity.ServidorDescentralizado
         {
             try
             {
+                if (_gpuSearcher == null) return 0; // Añadir verificación de nulidad
+                
                 foreach (ManagementObject obj in _gpuSearcher.Get())
                 {
                     if (obj["AdapterRAM"] != null)

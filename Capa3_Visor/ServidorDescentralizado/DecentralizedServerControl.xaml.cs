@@ -173,6 +173,13 @@ namespace VisorSingularity.ServidorDescentralizado
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
             // Abrir ventana de configuración de límites
+            if (_resourceMonitor == null)
+            {
+                Debug.WriteLine("[DecentralizedServerControl] ResourceMonitor no inicializado. No se puede abrir el diálogo de configuración.");
+                MessageBox.Show("El monitor de recursos no está activo. Por favor, inicie el servidor descentralizado primero.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            
             var settingsDialog = new ResourceSettingsDialog(_resourceMonitor);
             settingsDialog.Owner = Window.GetWindow(this);
             
