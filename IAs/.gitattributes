@@ -1,0 +1,119 @@
+# ==============================================================
+# .gitattributes — WCVcoinMTB / WoldVirtual3D p2p
+# Normalización de finales de línea y manejo de binarios
+# ==============================================================
+
+# ── Regla global: normalizar a LF en el repo ──────────────────
+* text=auto eol=lf
+
+# ── Código fuente ─────────────────────────────────────────────
+*.cs        text eol=lf
+*.gd        text eol=lf
+*.gdscript  text eol=lf
+*.shader    text eol=lf
+*.glsl      text eol=lf
+*.hlsl      text eol=lf
+*.gdshader  text eol=lf
+
+# ── Escenas y recursos Godot ──────────────────────────────────
+*.tscn      text eol=lf
+*.tres      text eol=lf
+*.godot     text eol=lf
+*.import    text eol=lf
+*.cfg       text eol=lf
+*.remap     text eol=lf
+
+# ── Configuración y documentación ─────────────────────────────
+*.md        text eol=lf
+*.txt       text eol=lf
+*.json      text eol=lf
+*.xml       text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.toml      text eol=lf
+*.ini       text eol=lf
+*.env       text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+*.js        text eol=lf
+*.gitignore text eol=lf
+*.editorconfig text eol=lf
+
+# ── C# / .NET ─────────────────────────────────────────────────
+*.csproj    text eol=lf
+*.sln       text eol=lf
+*.xaml      text eol=lf
+*.props     text eol=lf
+*.targets   text eol=lf
+
+# ── Scripts de shell / PowerShell ─────────────────────────────
+*.sh        text eol=lf
+*.bash      text eol=lf
+*.ps1       text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# ── Imágenes (binario) ────────────────────────────────────────
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.bmp       binary
+*.tga       binary
+*.webp      binary
+*.ico       binary
+*.svg       text eol=lf
+
+# ── Audio (binario) ───────────────────────────────────────────
+*.mp3       binary
+*.ogg       binary
+*.wav       binary
+*.flac      binary
+*.aac       binary
+
+# ── Vídeo (binario) ───────────────────────────────────────────
+*.mp4       binary
+*.avi       binary
+*.webm      binary
+*.mov       binary
+
+# ── Modelos 3D (binario) ──────────────────────────────────────
+*.glb       binary
+*.gltf      text eol=lf
+*.fbx       binary
+*.obj       text eol=lf
+*.mtl       text eol=lf
+*.blend     binary
+*.dae       text eol=lf
+
+# ── Fuentes (binario) ─────────────────────────────────────────
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
+
+# ── Archivos comprimidos (binario) ────────────────────────────
+*.zip       binary
+*.tar       binary
+*.gz        binary
+*.7z        binary
+*.rar       binary
+
+# ── Archivos compilados / DLL (binario) ───────────────────────
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.so        binary
+*.dylib     binary
+
+# ── Git LFS — archivos grandes ────────────────────────────────
+*.exe       filter=lfs diff=lfs merge=lfs -text
+*.dll       filter=lfs diff=lfs merge=lfs -text
+*.glb       filter=lfs diff=lfs merge=lfs -text
+*.fbx       filter=lfs diff=lfs merge=lfs -text
+*.blend     filter=lfs diff=lfs merge=lfs -text
+*.zip       filter=lfs diff=lfs merge=lfs -text
+*.7z        filter=lfs diff=lfs merge=lfs -text
+*.rar       filter=lfs diff=lfs merge=lfs -text
+*.tar       filter=lfs diff=lfs merge=lfs -text
+*.gz        filter=lfs diff=lfs merge=lfs -text

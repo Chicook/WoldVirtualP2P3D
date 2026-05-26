@@ -1,0 +1,182 @@
+[gd_scene format=3 uid="uid://dtertvx225v7s"]
+
+[ext_resource type="Script" uid="uid://dhdfxcp41d760" path="res://woldvirtual/gdscrip/PerformanceManager.gd" id="1_gji8q"]
+[ext_resource type="Script" uid="uid://rwt235x5a563" path="res://woldvirtual/gdscrip/IslandStateSync.gd" id="2_n5mwy"]
+[ext_resource type="Script" uid="uid://c6tis784j3jvp" path="res://woldvirtual/gdscrip/EnvironmentManager.gd" id="3_vqtay"]
+[ext_resource type="Script" uid="uid://bkf56gkqihh28" path="res://woldvirtual/gdscrip/ChunkManager.gd" id="4_iyycb"]
+[ext_resource type="PackedScene" uid="uid://cke6ysj8j866s" path="res://woldvirtual/scene/islachunk3D.tscn" id="5_ll5l3"]
+[ext_resource type="PackedScene" uid="uid://c6m64eqc13dtx" path="res://woldvirtual/users/userbase/UserBase3D.tscn" id="6_sao71"]
+[ext_resource type="Shader" uid="uid://kns5lhdepluh" path="res://woldvirtual/shaders/Oceano.gdshader" id="7_q0pyr"]
+[ext_resource type="Script" uid="uid://clfw74w2lcump" path="res://woldvirtual/gdscrip/TeleportUI.gd" id="8_2mwb8"]
+[ext_resource type="Script" path="res://woldvirtual/gdscrip/WalletUI.gd" id="9_wallet"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_7vo48"]
+sky_top_color = Color(0.035796765, 0.7139833, 0.8548004, 1)
+sky_horizon_color = Color(0.7478429, 0.9314554, 1.011025, 1)
+ground_bottom_color = Color(0.19205627, 0.2483195, 0.42578053, 1)
+ground_horizon_color = Color(0.7478429, 0.9314554, 1.011025, 1)
+
+[sub_resource type="Sky" id="Sky_avj3a"]
+sky_material = SubResource("ProceduralSkyMaterial_7vo48")
+
+[sub_resource type="Environment" id="Environment_my6ai"]
+background_mode = 2
+sky = SubResource("Sky_avj3a")
+glow_enabled = true
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_ripple1"]
+noise_type = 3
+frequency = 0.02
+fractal_type = 2
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_bc3aw"]
+noise = SubResource("FastNoiseLite_ripple1")
+seamless = true
+as_normal_map = true
+bump_strength = 1.5
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_ripple2"]
+noise_type = 0
+seed = 42
+frequency = 0.05
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_r4hkp"]
+noise = SubResource("FastNoiseLite_ripple2")
+seamless = true
+as_normal_map = true
+bump_strength = 1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ocean_high_res"]
+render_priority = 0
+shader = ExtResource("7_q0pyr")
+shader_parameter/color_shallow = Color(0.1, 0.5, 0.6, 1)
+shader_parameter/color_deep = Color(0.01, 0.05, 0.15, 1)
+shader_parameter/absorption_coeff = 1.2
+shader_parameter/roughness = 0.08
+shader_parameter/specular = 0.6
+shader_parameter/metallic = 0.15
+shader_parameter/texture_normal_1 = SubResource("NoiseTexture2D_bc3aw")
+shader_parameter/texture_normal_2 = SubResource("NoiseTexture2D_r4hkp")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_7d81o"]
+material = SubResource("ShaderMaterial_ocean_high_res")
+size = Vector2(5000, 5000)
+subdivide_width = 64
+subdivide_depth = 64
+
+[node name="N3DWoldVirtualMT" type="Node3D" unique_id=1419047389]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1242388288]
+environment = SubResource("Environment_my6ai")
+
+[node name="Sol" type="DirectionalLight3D" parent="." unique_id=994020554]
+transform = Transform3D(-0.8307732, -0.5565909, -0.00474931, -0.0052591427, -0.00068288576, 0.99998605, -0.55658644, 0.83078647, -0.002359868, 0, 55.99594, 0)
+shadow_enabled = true
+
+[node name="PerformanceManager" type="Node" parent="." unique_id=893491695]
+script = ExtResource("1_gji8q")
+
+[node name="IslandStateSync" type="Node" parent="." unique_id=1980898897]
+script = ExtResource("2_n5mwy")
+
+[node name="EnvironmentManager" type="Node" parent="." unique_id=313361532]
+script = ExtResource("3_vqtay")
+
+[node name="ChunkManager" type="Node3D" parent="." unique_id=1458904836]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 34, 0)
+script = ExtResource("4_iyycb")
+chunk_scene = ExtResource("5_ll5l3")
+user_scene = ExtResource("6_sao71")
+
+[node name="Oceano" type="MeshInstance3D" parent="ChunkManager" unique_id=1302300306]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -30.28532, 0)
+cast_shadow = 0
+mesh = SubResource("PlaneMesh_7d81o")
+
+[node name="UI_Layer" type="CanvasLayer" parent="." unique_id=1198620573]
+
+[node name="TeleportUI" type="Control" parent="UI_Layer" unique_id=140743768]
+layout_mode = 3
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 200.0
+grow_vertical = 2
+script = ExtResource("8_2mwb8")
+
+[node name="Panel" type="Panel" parent="UI_Layer/TeleportUI" unique_id=2125741948]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="UI_Layer/TeleportUI/Panel" unique_id=253545431]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 40.0
+grow_horizontal = 2
+text = "🌐  RED P2P"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI_Layer/TeleportUI/Panel" unique_id=556649448]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 60.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI_Layer/TeleportUI/Panel/ScrollContainer" unique_id=1181875398]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="WalletDeFiUI" type="Control" parent="UI_Layer"]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -260.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = 50.0
+grow_horizontal = 0
+script = ExtResource("9_wallet")
+
+[node name="BgPanel" type="Panel" parent="UI_Layer/WalletDeFiUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBox" type="HBoxContainer" parent="UI_Layer/WalletDeFiUI/BgPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_right = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="BalanceLabel" type="Label" parent="UI_Layer/WalletDeFiUI/BgPanel/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "0.000 WCV"
+
+[node name="WalletLabel" type="Label" parent="UI_Layer/WalletDeFiUI/BgPanel/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.82, 1, 0.9)
+theme_override_font_sizes/font_size = 12
+text = "0x00...0000"

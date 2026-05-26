@@ -1,0 +1,4 @@
+RESERVA DE RECURSOS: 48 MB
+TIPO: Avatares Dinámicos
+FORMATO: Assets procedurales (userbase3d.gd)
+ESTADO: SLOT RESERVADO (FASE 1)
