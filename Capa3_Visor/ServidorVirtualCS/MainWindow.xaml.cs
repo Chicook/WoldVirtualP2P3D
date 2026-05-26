@@ -1,23 +1,33 @@
-﻿using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using ServidorVirtualCS.ViewModels;
 
 namespace ServidorVirtualCS;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
+    private readonly EmbeddedNodeViewModel _viewModel = new();
+
     public MainWindow()
     {
         InitializeComponent();
+        DataContext = _viewModel;
+        Loaded += MainWindow_Loaded;
+        Closed += MainWindow_Closed;
+    }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.RefreshAsync();
+        await _viewModel.PublishAsync();
+    }
+
+    private void MainWindow_Closed(object? sender, EventArgs e)
+    {
+        _viewModel.Dispose();
+    }
+
+    private async void RefreshButton_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.RefreshAsync();
     }
 }
