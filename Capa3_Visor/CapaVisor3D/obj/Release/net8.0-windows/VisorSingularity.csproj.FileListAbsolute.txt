@@ -24,3 +24,11 @@ d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\refint\VisorSin
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\VisorSingularity.pdb
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\VisorSingularity.genruntimeconfig.cache
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\ref\VisorSingularity.dll
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\DecentralizedServerControl.g.cs
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\MiningRigDialog.g.cs
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\ResourceSettingsDialog.g.cs
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\GeneratedInternalTypeHelper.g.cs
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\VisorSingularity_MarkupCompile.lref
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\DecentralizedServerControl.baml
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\MiningRigDialog.baml
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Release\net8.0-windows\ResourceSettingsDialog.baml
