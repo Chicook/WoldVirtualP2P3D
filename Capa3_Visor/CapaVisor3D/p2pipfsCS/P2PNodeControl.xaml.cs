@@ -11,51 +11,76 @@ namespace VisorSingularity.p2pipfsCS
         public P2PNodeControl()
         {
             InitializeComponent();
-            UpdateGeneralStatus("Inactivo", Brushes.Gray);
+            UpdateNodeStatus("Desconectado", 0);
+        }
+
+        public void UpdateNodeStatus(string status, int peerCount)
+        {
+            NodeStatus.Text = status;
+            PeerCount.Text = peerCount.ToString();
+            
+            // Actualizar color según el estado
+            switch (status.ToLower())
+            {
+                case "conectado":
+                case "activo":
+                    NodeStatus.Foreground = Brushes.LimeGreen;
+                    break;
+                case "conectando":
+                case "inicializando":
+                    NodeStatus.Foreground = Brushes.Yellow;
+                    break;
+                case "desconectado":
+                case "inactivo":
+                case "error":
+                    NodeStatus.Foreground = Brushes.Red;
+                    break;
+                default:
+                    NodeStatus.Foreground = Brushes.Gray;
+                    break;
+            }
         }
 
         public void UpdateNodeInfo(string nodeId, string simulatedUrl, bool isTunnelActive)
         {
+            NodeIdText.Text = nodeId;
             NodeUrl.Text = simulatedUrl;
-            NodeIdText.Text = nodeId; // Asumiendo que tienes un TextBlock llamado NodeIdText en tu XAML
+            
             if (isTunnelActive)
             {
-                UpdateGeneralStatus("Activo", Brushes.LimeGreen);
+                UpdateNodeStatus("Activo", 1);
             }
             else
             {
-                UpdateGeneralStatus("Inactivo", Brushes.Gray);
+                UpdateNodeStatus("Inactivo", 0);
             }
         }
 
         public void UpdateNodeIdAndLink(string nodeId, string link)
         {
-            NodeIdText.Text = nodeId; // Asumiendo que tienes un TextBlock llamado NodeIdText en tu XAML
+            NodeIdText.Text = nodeId;
             NodeUrl.Text = link;
         }
 
         public void UpdateGeneralStatus(string status, Brush color)
         {
-            NodeStatus.Text = $"Estado: {status}";
+            NodeStatus.Text = status;
             NodeStatus.Foreground = color;
         }
 
-        private void CopyButton_Click(object sender, RoutedEventArgs e)
+        public void UpdatePeerCount(int count)
         {
-            Clipboard.SetText(NodeUrl.Text);
-            MessageBox.Show("URL copiada al portapapeles.", "Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+            PeerCount.Text = count.ToString();
         }
 
-        private void OpenButton_Click(object sender, RoutedEventArgs e)
+        public void UpdateNodeUrl(string url)
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo(NodeUrl.Text) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"No se pudo abrir la URL: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            NodeUrl.Text = url;
+        }
+
+        public void UpdateNodeId(string nodeId)
+        {
+            NodeIdText.Text = nodeId;
         }
     }
 }

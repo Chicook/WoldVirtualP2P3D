@@ -60,3 +60,4 @@ D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\ServidorDescentra
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\VisorSingularity_MarkupCompile.lref
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\p2pipfsCS\P2PNodeControl.g.cs
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\obj\Debug\net8.0-windows\ServidorDescentralizadoCS\MiningRigDialog.g.cs

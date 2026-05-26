@@ -5,13 +5,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:VisorSingularity.p2pipfsCS"
              mc:Ignorable="d" 
-             d:DesignHeight="100" d:DesignWidth="300">
+             d:DesignHeight="120" d:DesignWidth="360">
     <UserControl.Resources>
         <!-- Estilos Cyberpunk -->
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="#66FCF1"/>
             <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="11"/>
         </Style>
         <Style TargetType="Button" x:Key="CyberpunkButton">
             <Setter Property="Background" Value="#45A29E"/>
@@ -20,7 +20,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="5,2"/>
             <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -45,33 +45,47 @@
             </Style.Triggers>
         </Style>
     </UserControl.Resources>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    
+    <Border CornerRadius="8" BorderThickness="1.5" Background="#CC222222" BorderBrush="#45A29E">
+        <Border.Effect>
+            <DropShadowEffect Color="#66FCF1" BlurRadius="10" ShadowDepth="0" Opacity="0.4"/>
+        </Border.Effect>
+        
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- Node ID -->
-        <TextBlock Text="NODO P2P:" Grid.Row="0" Grid.Column="0" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,5,0"/>
-        <TextBlock x:Name="NodeIdText" Text="NDXXXXX" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <!-- Título del Panel -->
+            <TextBlock Text="NODO P2P/IPFS" Grid.Row="0" Grid.ColumnSpan="2" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,8">
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="#66FCF1" BlurRadius="5" ShadowDepth="0" Opacity="0.6"/>
+                </TextBlock.Effect>
+            </TextBlock>
 
-        <!-- Node URL -->
-        <TextBlock Text="URL:" Grid.Row="1" Grid.Column="0" FontWeight="Bold" VerticalAlignment="Center" Margin="0,5,5,0"/>
-        <TextBlock x:Name="NodeUrl" Text="www.ND43434.woldvirtual" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,5,0,0"/>
+            <!-- Estado del Nodo -->
+            <TextBlock Text="Estado:" Grid.Row="1" Grid.Column="0" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBlock x:Name="NodeStatus" Text="Desconectado" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Foreground="#FF5555"/>
 
-        <!-- Estado -->
-        <TextBlock x:Name="NodeStatus" Text="Estado: Inactivo" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5,0,0"/>
+            <!-- Identificador del Nodo -->
+            <TextBlock Text="ID:" Grid.Row="2" Grid.Column="0" FontWeight="Bold" VerticalAlignment="Center" Margin="0,5,5,0"/>
+            <TextBlock x:Name="NodeIdText" Text="NDXXXXX" Grid.Row="2" Grid.Column="1" VerticalAlignment="Center" Margin="0,5,0,0" Foreground="#C5C6C7"/>
 
-        <!-- Botones -->
-        <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Content="COPIAR" Style="{StaticResource CyberpunkButton}" Click="CopyButton_Click"/>
-            <Button Content="ABRIR" Style="{StaticResource CyberpunkButton}" Margin="10,0,0,0" Click="OpenButton_Click"/>
-        </StackPanel>
-    </Grid>
+            <!-- Paquetes/Peers -->
+            <TextBlock Text="Peers:" Grid.Row="3" Grid.Column="0" FontWeight="Bold" VerticalAlignment="Center" Margin="0,5,5,0"/>
+            <TextBlock x:Name="PeerCount" Text="0" Grid.Row="3" Grid.Column="1" VerticalAlignment="Center" Margin="0,5,0,0" Foreground="#C5C6C7"/>
+
+            <!-- URL/IPFS Hash -->
+            <TextBlock Text="URL:" Grid.Row="4" Grid.Column="0" FontWeight="Bold" VerticalAlignment="Center" Margin="0,5,5,0"/>
+            <TextBlock x:Name="NodeUrl" Text="www.NDXXXXX.woldvirtual" Grid.Row="4" Grid.Column="1" VerticalAlignment="Center" Margin="0,5,0,0" Foreground="#C5C6C7" TextTrimming="CharacterEllipsis"/>
+        </Grid>
+    </Border>
 </UserControl>
