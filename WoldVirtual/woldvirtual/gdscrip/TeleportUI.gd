@@ -4,11 +4,11 @@ extends Control
 @onready var manager: Node3D = get_node("../../ChunkManager")
 
 func _ready() -> void:
-	# ── Si estamos embebidos en el Visor WPF, ocultar UI redundante ──
-	var args = OS.get_cmdline_args()
-	if args.has("--wid") or args.has("--wallet"):
-		visible = false
-		return
+	# ── Si estamos embebidos en el Visor WPF, no ocultar la UI para permitir teleportación ──
+	# var args = OS.get_cmdline_args()
+	# if args.has("--wid") or args.has("--wallet"):
+	# 	visible = false
+	# 	return
 	# ── Panel lateral: Glassmorphism con borde izquierdo brillante ──
 	var panel = $Panel
 	var sb_panel = StyleBoxFlat.new()
