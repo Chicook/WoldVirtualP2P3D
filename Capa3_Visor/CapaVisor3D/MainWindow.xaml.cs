@@ -1,23 +1,23 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Management;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using Microsoft.Win32;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Windows.Interop;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using System.Threading;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using Microsoft.Win32;
 
 namespace VisorSingularity
 {
@@ -70,7 +70,7 @@ namespace VisorSingularity
 
             InitializeComponent();
             this.Loaded += MainWindow_Loaded;
-            
+
             // Vincular eventos de botones (Paso 1)
             BtnGenerateZip.Click += BtnGenerateZip_Click;
             BtnEnterMetaverse.Click += BtnEnterMetaverse_Click;
@@ -134,13 +134,13 @@ namespace VisorSingularity
                 TxtScanStatus.Text = "Generando firma criptográfica SHA-256...";
                 ProgScan.Value = 95;
                 await Task.Delay(400);
-                
+
                 _hardwareFingerprint = GenerateSHA256Signature(_osName, _cpuName, _motherboard);
                 TxtHardwareHash.Text = _hardwareFingerprint;
-                
+
                 ProgScan.Value = 100;
                 TxtScanStatus.Text = "Escaneo completado. Firma de hardware generada.";
-                
+
                 // Habilitar botón para guardar el ZIP de respaldo
                 BtnGenerateZip.IsEnabled = true;
             }
@@ -152,8 +152,8 @@ namespace VisorSingularity
                 if (string.IsNullOrEmpty(_hardwareFingerprint))
                 {
                     _hardwareFingerprint = GenerateSHA256Signature(
-                        Environment.OSVersion.ToString(), 
-                        Environment.ProcessorCount.ToString() + " Cores", 
+                        Environment.OSVersion.ToString(),
+                        Environment.ProcessorCount.ToString() + " Cores",
                         Environment.MachineName
                     );
                     TxtHardwareHash.Text = _hardwareFingerprint;
@@ -181,7 +181,7 @@ namespace VisorSingularity
             catch
             {
                 // Fallback a API de sistema
-                return $"{Environment.OSVersion} ({ (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit") })";
+                return $"{Environment.OSVersion} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})";
             }
             return "Windows OS";
         }
@@ -317,9 +317,9 @@ namespace VisorSingularity
                     BtnEnterMetaverse.IsEnabled = true;
 
                     MessageBox.Show(
-                        $"¡Registro completado!\n\nSe ha generado y guardado el archivo de respaldo seguro en:\n{targetZipPath}\n\nGuarde este archivo ZIP en un lugar seguro para su autenticación de hardware.", 
-                        "Respaldo Exitoso", 
-                        MessageBoxButton.OK, 
+                        $"¡Registro completado!\n\nSe ha generado y guardado el archivo de respaldo seguro en:\n{targetZipPath}\n\nGuarde este archivo ZIP en un lugar seguro para su autenticación de hardware.",
+                        "Respaldo Exitoso",
+                        MessageBoxButton.OK,
                         MessageBoxImage.Information
                     );
                 }
@@ -384,7 +384,42 @@ namespace VisorSingularity
             // Abrir automáticamente el navegador predeterminado para iniciar MetaMask
             try
             {
-                string defaultIsland = "137 : 190.1.0";
+                string defaultIsland = "1 : 0.0.0";
+                try
+                {
+                    var godotPaths = FindLocalGodotPaths();
+                    if (!string.IsNullOrEmpty(godotPaths.projectDir))
+                    {
+                        string peersDir = Path.Combine(godotPaths.projectDir, "Estado_Global", "peers");
+                        if (Directory.Exists(peersDir))
+                        {
+                            bool hasActivePeers = false;
+                            var files = Directory.GetFiles(peersDir, "peer_*.json");
+                            foreach (var file in files)
+                            {
+                                var lastWriteTime = File.GetLastWriteTime(file);
+                                if ((DateTime.Now - lastWriteTime).TotalSeconds < 25)
+                                {
+                                    hasActivePeers = true;
+                                    break;
+                                }
+                            }
+                            if (!hasActivePeers)
+                            {
+                                defaultIsland = "1 : 0.0.0";
+                            }
+                        }
+                        else
+                        {
+                            defaultIsland = "1 : 0.0.0";
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("Error al determinar isla por defecto: " + ex.Message);
+                }
+
                 string url = $"http://localhost:8080/?user={Uri.EscapeDataString(username)}&islandId={Uri.EscapeDataString(defaultIsland)}";
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             }
@@ -668,7 +703,7 @@ namespace VisorSingularity
                         return (checkProject, checkExe);
                     }
                 }
-                
+
                 if (dir.Name == "WoldVirtual" && File.Exists(Path.Combine(dir.FullName, "project.godot")))
                 {
                     string checkExe = Path.Combine(dir.FullName, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");

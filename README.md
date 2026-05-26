@@ -6,6 +6,40 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 
 ---
 
+## Actualizacion de hoy
+
+**Fecha:** `2026-05-26`  
+**Rama de trabajo:** `DevTraeIA`
+
+### Hecho hoy en `DevTraeIA`
+
+- Se creo e integro un modulo nuevo en `Capa3_Visor/ServidorVirtualCS/` para representar el servidor descentralizado del nodo del usuario.
+- Se implemento un HUD WPF embebible (`EmbeddedNodeControl`) para mostrar el estado del servidor descentralizado dentro del visor principal.
+- Se conecto el HUD al `MainWindow.xaml` real del visor en la franja superior central.
+- Se anadio logica de perfilado local de recursos: CPU, RAM, VRAM, almacenamiento y ancho de banda.
+- Se implemento un planificador de reparto de recursos con objetivo agregado minimo de `1024 MB`.
+- Se anadio un control deslizante para subir o bajar con el raton el nivel de recursos compartidos.
+- Se dejo el control preparado para republicar el manifiesto del nodo en IPFS cuando cambia el nivel de recursos compartidos.
+- Se ajusto el HUD para aprovechar mejor el hueco superior con una fila de estado y otra fila de recursos compartidos.
+- Se verificaron compilaciones correctas de `ServidorVirtualCS.csproj` y `VisorSingularity.csproj`.
+
+### Pendiente de hoy
+
+- El servidor descentralizado debe mostrarse solo tras iniciar sesion; ese comportamiento aun queda pendiente de cerrarse del todo.
+- Queda pendiente colocar correctamente lo de la foto/recurso visual en el hueco reservado, porque todavia no aparece como se espera.
+
+### Checklist tecnica pendiente en `DevTraeIA`
+
+| Estado | Tarea | Ruta principal | Nota |
+|---|---|---|---|
+| Pendiente | Activar el HUD del servidor solo despues del login | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs` | La visibilidad debe depender del momento exacto posterior a `INICIAR SESION` |
+| Pendiente | Desacoplar la aparicion del HUD de cualquier activacion temprana residual | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs` | Evitar que el servidor descentralizado aparezca antes de tiempo |
+| Pendiente | Resolver la carga o render del recurso visual/foto en el hueco superior | `Capa3_Visor/CapaVisor3D/MainWindow.xaml` | El hueco existe, pero el contenido visual esperado no se muestra aun |
+| Pendiente | Verificar en ejecucion real que el binario abierto coincide con el ultimo compilado | `Capa3_Visor/CapaVisor3D/bin/Debug/net8.0-windows/` | Confirmar que no se esta probando una build vieja |
+| Pendiente | Evaluar si la republicacion en IPFS debe hacerse siempre o solo tras confirmacion del usuario | `Capa3_Visor/ServidorVirtualCS/Controls/EmbeddedNodeControl.xaml.cs` | Ahora se republica tras mover el deslizador |
+
+---
+
 ## Resumen ejecutivo
 
 Hoy el repositorio implementa estas piezas reales:
@@ -157,6 +191,7 @@ Responsabilidades actuales:
 | `IpfsManager.cs` | Activo con dependencia externa | Descarga/arranca Kubo si hace falta |
 | `IpfsPublisher.cs` | Activo | Publica archivos o directorios por CLI de Kubo |
 | `P2PNodeBar` | Activo | Widget WPF fijado arriba a la derecha |
+| `ServidorVirtualCS` | Activo en integracion | HUD superior central para servidor descentralizado, recursos compartidos y control manual de aportacion |
 
 ---
 
@@ -270,75 +305,249 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 
 ---
 
-## Verano de IAs
+## Plan de Desarrollo de Verano: WoldVirtual P2P Core
 
-Esta hoja de ruta se conserva porque sigue representando la vision estrategica del proyecto, aunque el repositorio actual aun esta en fase de prototipo funcional.
-
-**Periodo objetivo:** verano de desarrollo intensivo.  
-**Idea central:** repartir trabajo entre varios entornos/agentes para acelerar el core P2P del metaverso.
-
-### Fase 1: identidad, firma de hardware y sockets base
-
-- Diseñar una identidad fuerte basada en fingerprint de hardware.
-- Consolidar la firma SHA-256 y el empaquetado seguro de credenciales.
-- Levantar transporte P2P base y handshakes entre nodos.
-- Validar persistencia local y limpieza de sockets.
-
-Entornos previstos:
-
-- `Antigravity`: arquitectura y modelo de seguridad.
-- `Cursor`: logica core C# de identidad y firma.
-- `Trae`: listeners, transporte y heartbeat de red.
-- `VS Code`: QA, smoke tests y consolidacion.
-
-### Fase 2: motor de trafico, throttling y distribucion
-
-- Compartir visor y assets sin saturar el ancho de banda del nodo anfitrion.
-- Trocear transferencias por chunks.
-- Repartir carga entre conexiones simultaneas.
-- Medir uso de red real y aplicar cuotas.
-
-Entregable esperado:
-
-- Un motor de transferencia modular capaz de distribuir el cliente y assets de forma sostenible.
-
-### Fase 3: estado global, sincronizacion JSON y cero absoluto
-
-- Sincronizar el estado del metaverso entre nodos sin servidor central.
-- Resolver conflictos de estado de islas y usuarios.
-- Mantener una coordenada genesis cuando un nodo arranca en solitario.
-- Evolucionar hacia deltas ligeros en lugar de snapshots pesados.
-
-Entregable esperado:
-
-- Un estado global distribuido que sobreviva mientras exista al menos un nodo encendido.
-
-### Fase 4: integracion 3D final, desacoplamiento y version alpha
-
-- Acoplar de forma robusta el puente C# P2P con Godot.
-- Resolver rendimiento, precision espacial y preload de assets.
-- Documentar el proyecto y cerrar incidencias residuales.
-- Preparar una alpha abierta del core distribuido.
-
-Entregable esperado:
-
-- Una `v1.0.0 Alpha` del nucleo distribuido de WoldVirtual, documentada y abierta.
+**Periodo:** Junio - Agosto 2026  
+**Meta:** Evolucionar de prototipo local funcional a un nucleo P2P distribuido multi-nodo con estado global sincronizado, identidad hardware, distribucion del visor entre pares y experiencia 3D embebida pulida.  
+**Estrategia:** 6 agentes IA especializados trabajando en paralelo sobre ramas independientes, con integraciones parciales frecuentes a `main`.
 
 ---
 
-## Roadmap tecnico inmediato
+### Fase 0: Cimentacion y liquidacion de deuda tecnica (Semana 1-2)
 
-Los siguientes pasos tienen mas valor practico sobre el estado actual del repo:
+#### `DevCodex` — Auditoria y consolidacion del codebase
 
-1. Separar claramente lo legacy y lo vigente en sincronizacion (`IslandStateSync.gd` vs `NetworkLayer.gd`).
-2. Añadir tests de smoke para el launcher WPF y para la serializacion de `Estado_Global`.
-3. Formalizar el contrato de datos entre WPF, Godot y peers JSON.
-4. Endurecer el flujo P2P del visor y documentar mejor el comportamiento offline/publico.
-5. Corregir la codificacion de textos del proyecto para evitar mojibake en UI y documentacion.
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Separar sync legacy de sync vigente | `WoldVirtual/woldvirtual/gdscrip/IslandStateSync.gd`, `NetworkLayer.gd` | Marcar `IslandStateSync.gd` como obsoleto, migrar toda funcionalidad viva a `NetworkLayer.gd`. Eliminar codigo muerto. |
+| Unificar contrato de datos WPF↔Godot↔JSON | `WoldVirtual/Estado_Global/SharedModels.cs`, `WoldVirtual/Estado_Global/estado.json`, `WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd` | Crear un schema unico (`estado.schema.json`) y clases C#/GDScript que reflejen exactamente la misma estructura. |
+| Corregir codificacion de textos | Todos los `.gd`, `.cs`, `.xaml`, `.md` | Pasar todo el proyecto a UTF-8 sin BOM. Detectar y reemplazar caracteres rotos (mojibake) en cadenas de UI y documentacion. |
+| Compilar lista completa de incidencias tecnicas | `README.md` (actualizar) | Inventariar todo el codigo legacy, carpetas huérfanas, binarios no usados y dependencias muertas. |
+| Crear `.sln` y estandarizar build | `VisorSingularity.sln` (nuevo) | Agrupar `VisorSingularity.csproj` en una solucion .NET standard. Anadir configuraciones Debug/Release consistentes. |
+
+#### `DevOpencode` — CI, tests y tooling
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Suite de tests de serializacion | `tests/EstadoGlobalTests.cs` (nuevo) | Tests unitarios para `SharedModels`, `IslandStateManager`, `SessionManager`. Probar serializacion JSON ida y vuelta. |
+| Smoke tests del launcher WPF | `tests/VisorSmokeTests.cs` (nuevo) | Probar que `MainWindow.xaml.cs` arranca sin excepcion, que el fingerprint no es vacio, que el bridge HTTP :8080 responde. |
+| Smoke tests de red P2P | `tests/P2PNodeTests.cs` (nuevo) | Probar que `P2PWebNode.cs` sirve landing, genera ZIP, responde en :8082. |
+| Integracion CI basic (GitHub Actions) | `.github/workflows/dotnet.yml` (nuevo) | Build + tests en cada PR a `main`. Matrix: Debug y Release. |
+| Linter / analisis estatico | `.editorconfig` (actualizar) | Reglas de estilo C# y GDScript. Asegurar que el proyecto compila sin warnings. |
 
 ---
+
+### Fase 1: Identidad fuerte, firma hardware y transporte base (Semanas 3-5)
+
+#### `DevAntigravity` — Arquitectura y modelo de seguridad
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Disenar identidad descentralizada (DID) | `docs/arquitectura/DID-model.md` (nuevo) | Documento de diseno: identidad = `SHA256(fingerprint HW + seed local)`. Formato DID, rotacion de claves, recuperacion. |
+| Modelo de confianza entre pares | `docs/arquitectura/trust-model.md` (nuevo) | Esquema de reputacion, handshake firmado, blacklist temporal, puntuacion de nodo basada en uptime/contribucion. |
+| Protocolo de handshake P2P | `docs/arquitectura/handshake-protocol.md` (nuevo) | Especificacion del intercambio inicial entre nodos: version, capabilities, estado, firma. |
+| Esquema de cifrado de peers | `docs/arquitectura/crypto-spec.md` (nuevo) | Cifrado asimetrico para handshake, simetrico (AES-GCM) para datos de estado. Gestion efimera de claves de sesion. |
+| Revisar y endurecer `P2PWebNode.cs` | `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs` | Anadir validacion de firmas entrantes, limite de conexiones por IP, rate limiting. |
+
+#### `DevCursorIA` — Logica core de identidad y firma en C#
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Refactorizar `MainWindow.xaml.cs` para separar identidad | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`, `Capa3_Visor/CapaVisor3D/IdentityManager.cs` (nuevo) | Extraer toda la logica de fingerprint y firma a una clase `IdentityManager.cs`. `MainWindow.xaml.cs` solo orquesta UI. |
+| Sistema de claves local | `WoldVirtual/Estado_Global/KeyStore.cs` (nuevo) | Generacion y almacenamiento seguro de par RSA (o Ed25519) vinculado al fingerprint HW. Protegido con DPAPI. |
+| Firma de mensajes y handshake | `WoldVirtual/Estado_Global/CryptoService.cs` (nuevo) | Firmar payloads con clave privada, verificar con clave publica del peer. Integrar con `NetworkLayer.gd`. |
+| Empaquetado seguro de credenciales | `Capa3_Visor/CapaVisor3D/CredentialPack.cs` (nuevo) | ZIP cifrado con `signature.key` + `registro_hardware.txt`. Mejorar el backup actual. |
+| Integrar DID en el flujo de registro | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`, `WoldVirtual/woldvirtual/gdscrip/RegistroAV.gd` | Que el wizard genere el DID, lo persista localmente y lo envie a Godot como argumento `--did`. |
+
+#### `DevTraeIA` — Listeners, transporte y heartbeat de red
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Refactorizar transporte UDP a clase dedicada | `Capa3_Visor/CapaVisor3D/UdpTransport.cs` (nuevo) | Extraer logica de los puertos 50007/50008 de `MainWindow.xaml.cs` a una clase reutilizable con buffer, reintentos y heartbeat. |
+| Heartbeat entre nodos | `Capa3_Visor/CapaVisor3D/p2pipfsCS/HeartbeatService.cs` (nuevo) | Enviar latido cada 10s con estado basico (carga, peers conectados). Detectar nodos caidos tras 3 misses. |
+| Handshake P2P desde el visor | `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PHandshake.cs` (nuevo) | Implementar el protocolo definido por Antigravity. Intercambiar DID, clave publica, capabilities y estado inicial. |
+| Discovery local (LAN) | `Capa3_Visor/CapaVisor3D/p2pipfsCS/LanDiscovery.cs` (nuevo) | Broadcast UDP en puerto 42069 para descubrir otros nodos WoldVirtual en la misma red local. |
+| Gestion de conexiones | `Capa3_Visor/CapaVisor3D/p2pipfsCS/ConnectionPool.cs` (nuevo) | Pool de conexiones activas, timeout configurable, reconexion automatica, limpieza de zombies. |
+
+#### `DevVScodeCopilot` — QA, smoke tests y consolidacion de Fase 1
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Tests de identidad y firma | `tests/IdentityTests.cs` (nuevo) | Probar generacion de DID, firma/verificacion, cifrado/descifrado. |
+| Tests de transporte UDP | `tests/UdpTransportTests.cs` (nuevo) | Probar envio/recepcion, heartbeat, reconexion. |
+| Tests de handshake P2P | `tests/P2PHandshakeTests.cs` (nuevo) | Simular handshake completo entre dos nodos locales. |
+| Integracion de ramas Fase 1 | Varios | Fusionar `DevAntigravity`, `DevCursorIA`, `DevTraeIA` en una rama de integracion, resolver conflictos, verificar builds. |
+| Documentacion de Fase 1 | `docs/fase1.md` (nuevo) | Resumen tecnico de lo implementado, diagrama de flujo de identidad y handshake. |
+
+---
+
+### Fase 2: Motor de trafico, throttling y distribucion (Semanas 6-8)
+
+#### `DevAntigravity` — Arquitectura de transferencia
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Diseno de chunked transfer | `docs/arquitectura/chunked-transfer.md` (nuevo) | Especificacion de troceo de archivos, checksum por chunk, reanudacion de descarga. |
+| Modelo de cuotas y prioridad | `docs/arquitectura/bandwidth-quota.md` (nuevo) | Algoritmo de cuota por peer, prioridad de transferencia, fairness. |
+| Estrategia de cache distribuida | `docs/arquitectura/distributed-cache.md` (nuevo) | Los nodos cachean chunks y los sirven a otros peers. Diseno de indice de cache compartido. |
+
+#### `DevCursorIA` — Implementacion de chunked transfer en C#
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| ChunkManager | `Capa3_Visor/CapaVisor3D/p2pipfsCS/ChunkManager.cs` (nuevo) | Trocear el ZIP del visor en chunks de 1MB. Calcular SHA-256 por chunk. Reconstruir ZIP a partir de chunks. |
+| TransferService | `Capa3_Visor/CapaVisor3D/p2pipfsCS/TransferService.cs` (nuevo) | Servir chunks por HTTP Range Requests. Gestionar descargas concurrentes. Reanudar desde offset. |
+| BandwidthController | `Capa3_Visor/CapaVisor3D/p2pipfsCS/BandwidthController.cs` (nuevo) | Limitar ancho de banda por peer. Priorizar peers con mejor reputacion. Medir uso real. |
+
+#### `DevTraeIA` — Cache distribuida y optimizacion de red
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| CacheManager | `Capa3_Visor/CapaVisor3D/p2pipfsCS/CacheManager.cs` (nuevo) | Almacen local de chunks cacheados. Indice LRU. Limpieza cuando se supera cuota de disco. |
+| CacheDiscovery | `Capa3_Visor/CapaVisor3D/p2pipfsCS/CacheDiscovery.cs` (nuevo) | Preguntar a peers vecinos si tienen un chunk. Elegir la fuente mas rapida. |
+| Integrar con IpfsManager | `Capa3_Visor/CapaVisor3D/p2pipfsCS/IpfsManager.cs` | Que IpfsManager pueda publicar y recuperar chunks via IPFS como respaldo cuando no hay peers directos. |
+
+#### `DevVScodeCopilot` — QA, tests y consolidacion de Fase 2
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Tests de chunking | `tests/ChunkManagerTests.cs` (nuevo) | Trocear, reconstruir, verificar checksums. |
+| Tests de bandwidth | `tests/BandwidthControllerTests.cs` (nuevo) | Simular multiples peers, verificar cuotas. |
+| Tests de cache | `tests/CacheManagerTests.cs` (nuevo) | Almacen, recuperacion, LRU, limpieza. |
+| Benchmark de transferencia | `tests/TransferBenchmark.cs` (nuevo) | Medir velocidad de transferencia local entre dos procesos. Comparar con/sin chunking. |
+
+---
+
+### Fase 3: Estado global distribuido y sincronizacion (Semanas 9-11)
+
+#### `DevAntigravity` — Arquitectura de estado distribuido
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Protocolo de sincronizacion CRDT | `docs/arquitectura/crdt-sync.md` (nuevo) | Diseno: cada peer mantiene un log de operaciones (delta) en lugar de snapshots completos. Resolucion de conflictos por last-writer-wins + merging de islas. |
+| Coordenada genesis y bootstrap | `docs/arquitectura/genesis-bootstrap.md` (nuevo) | Que ocurre cuando el primer nodo arranca solo: generar estado base firmado. Como se unen nodos nuevos a la red. |
+| Esquema de consistencia | `docs/arquitectura/consistency-model.md` (nuevo) | Consistencia eventual con ventana de conflicto de 30s. Prioridad de peers con mayor uptime. |
+
+#### `DevOpencode` — Implementacion de sync en C# y Godot
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| StateSyncService | `WoldVirtual/Estado_Global/StateSyncService.cs` (nuevo) | Logica central de sincronizacion: enviar deltas, recibir deltas, aplicar merging, persistir estado local. |
+| DeltaGenerator | `WoldVirtual/Estado_Global/DeltaGenerator.cs` (nuevo) | Comparar estado actual vs ultimo estado enviado. Generar delta = solo los campos que cambiaron. |
+| ConflictResolver | `WoldVirtual/Estado_Global/ConflictResolver.cs` (nuevo) | Cuando dos peers modifican la misma isla: resolver por timestamp + prioridad de nodo. Notificar conflicto si hay empate. |
+| Genesis Bootstrapper | `WoldVirtual/Estado_Global/GenesisBootstrapper.cs` (nuevo) | Si no hay peers conocidos, crear estado genesis con la isla del nodo. Firmarlo con la DID local. |
+| Integrar con Godot (nuevo NetworkLayer) | `WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd` | Refactorizar `NetworkLayer.gd` para que consuma `StateSyncService` via IPC en lugar de leer archivos JSON directamente. |
+
+#### `DevCodex` — Migracion final y limpieza de sync legacy
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Eliminar `IslandStateSync.gd` | `WoldVirtual/woldvirtual/gdscrip/IslandStateSync.gd` | Tras verificar que `NetworkLayer.gd` cubre toda la funcionalidad, eliminar el archivo legacy. |
+| Migrar peers JSON a nuevo formato | `WoldVirtual/Estado_Global/peers/` | Convertir `peer_chicook.json` y futuros peers al schema unificado con DID, clave publica, firma. |
+| Deprecar `IslandStateManager.cs` parcialmente | `WoldVirtual/Estado_Global/IslandStateManager.cs` | Mantener solo metodos de consulta. Toda escritura pasa por `StateSyncService`. |
+
+#### `DevVScodeCopilot` — QA, tests y consolidacion de Fase 3
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Tests de sync | `tests/StateSyncTests.cs` (nuevo) | Simular 3 nodos con estado divergente, verificar convergencia. |
+| Tests de conflictos | `tests/ConflictResolverTests.cs` (nuevo) | Escenarios: mismo timestamp, prioridad desigual, empate. |
+| Tests de genesis | `tests/GenesisTests.cs` (nuevo) | Primer nodo, nodo nuevo uniendo, nodo reconectando tras caida. |
+| Tests de integracion Godot↔C# sync | `tests/GodotSyncIntegration.cs` (nuevo) | Lanzar Godot headless, enviar estado, verificar que `NetworkLayer.gd` recibe los datos. |
+
+---
+
+### Fase 4: Integracion 3D final, desacoplamiento y Alpha (Semanas 12-14)
+
+#### `DevCursorIA` — Puente C#↔Godot robusto
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Desacoplar puente de estado | `Capa3_Visor/CapaVisor3D/GodotBridge.cs` (nuevo) | IPC bidireccional dedicado entre `StateSyncService` (C#) y `NetworkLayer.gd` (Godot). Reemplazar el actual esquema de archivos JSON. |
+| Protocolo de mensajes Godot | `docs/protocols/godot-bridge.md` (nuevo) | Formato de mensajes, canales (estado, chat, teleport, avatar), prioridad. |
+| Preload de assets sincronizado | `WoldVirtual/woldvirtual/gdscrip/ChunkManager.gd` + `AssetPreloader.cs` (nuevo en C#) | Cargar assets 3D (texturas, modelos) desde la cache de chunks en lugar del disco local. |
+
+#### `DevTraeIA` — Rendimiento 3D y precision espacial
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Optimizacion de ECS existente | `WoldVirtual/woldvirtual/ecs/` | Revisar `InterpolationSystem.gd`, `NetworkOutputSystem.gd`, `ProxySystem.gd`. Anadir dead reckoning para movimiento suave. |
+| Lod y carga progresiva | `WoldVirtual/woldvirtual/gdscrip/WorldManager.gd` | Cargar islas en LOD segun distancia. Descargar islas lejanas para liberar VRAM. |
+| Benchmark de rendimiento | `tests/PerformanceBenchmark.cs` (nuevo) | Medir FPS, VRAM, tiempo de carga de isla con distintos numeros de peers. |
+
+#### `DevOpencode` — Bugfixes finales y cierre de incidencias
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Corregir bug P2PNodeBar anticipado | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`, `P2PNodeBar` | Instrumentar con trazas unicas, encontrar camino residual de activacion temprana. Handshake WPF↔Godot determinista. |
+| Cerrar incidencias menores | Varios | Revisar la lista compilada por `DevCodex` en Fase 0 y resolver las que queden. |
+| Pulir UX de wallet | `www/metamask.html`, `MainWindow.xaml.cs` | Mejorar feedback visual durante la firma, manejo de errores si MetaMask no esta instalado. |
+
+#### `DevAntigravity` — Documentacion final
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Documento de arquitectura completa | `docs/ARQUITECTURA.md` (nuevo) | Diagrama completo de capas, flujo de datos, protocolos. |
+| Guia de despliegue | `docs/DEPLOY.md` (nuevo) | Como compilar, ejecutar, unirse a la red. Requisitos de sistema. |
+| Documentacion de API P2P | `docs/api/p2p-api.md` (nuevo) | Endpoints HTTP del nodo del visor, formato de mensajes UDP, estructura de deltas. |
+
+#### `DevVScodeCopilot` — Alpha release y validacion final
+
+| Tarea | Archivos implicados | Detalle |
+|---|---|---|
+| Prueba de red multi-nodo | Varios | Desplegar 3-5 nodos en distintas maquinas (o VMs locales). Verificar sync, chat, teleport. |
+| Empaquetado Alpha | Scripts de release | Generar ZIP distribuible del visor. Incluir instrucciones. |
+| Tag v1.0.0-alpha | Git | Crear tag firmado. Nota de release con changelog. |
+| Test de humo final | `tests/SmokeTestAll.cs` (nuevo) | Build + fingerprint + bridge + Godot + sync + P2P en un solo script. |
+
+---
+
+### Resumen de responsabilidades por agente
+
+| Agente | Rol principal | Fases | Archivos nuevos estimados |
+|---|---|---|---|
+| `DevAntigravity` | Arquitectura, seguridad, documentacion | 1, 2, 3, 4 | ~10 docs |
+| `DevCodex` | Consolidacion, migracion, limpieza | 0, 3 | ~5 archivos |
+| `DevCursorIA` | Core C# (identidad, firma, chunking, puente Godot) | 1, 2, 4 | ~10 clases C# |
+| `DevOpencode` | CI, tests, tooling, bugfixes | 0, 3, 4 | ~15 archivos (tests + CI) |
+| `DevTraeIA` | Transporte, red, cache, rendimiento 3D | 1, 2, 4 | ~8 clases C# + modificaciones GDScript |
+| `DevVScodeCopilot` | QA, tests de integracion, consolidacion de fases, alpha | 1, 2, 3, 4 | ~15 archivos de test |
+
+### Dependencias entre agentes
+
+```
+DevCodex (F0 limpieza) → todos (base consolidada)
+DevAntigravity (docs) → DevCursorIA + DevTraeIA (implementan lo disenado)
+DevCursorIA + DevTraeIA → DevVScodeCopilot (prueba e integra)
+DevOpencode (CI/tests) → todos (scaffolding de tests disponible desde F0)
+Todos → DevVScodeCopilot (release alpha en F4)
+```
 
 ## Errores pendientes
+
+### Servidor descentralizado y hueco visual superior
+
+Estado observado a fecha `2026-05-26`:
+
+- El HUD del servidor descentralizado ya fue integrado en el visor principal y puede mostrarse en la franja superior central.
+- Sin embargo, sigue pendiente ajustar la activacion exacta para que aparezca solo despues de `INICIAR SESION`.
+- Tambien sigue pendiente resolver el contenido visual de la foto/recurso que debe ocupar el hueco reservado, porque todavia no aparece donde se espera.
+
+Resumen de lo hecho hoy:
+
+- Se creo el proyecto `ServidorVirtualCS` con captura de recursos del nodo.
+- Se integro el control `EmbeddedNodeControl` dentro del `MainWindow.xaml` del visor real.
+- Se anadio un control deslizante para subir o bajar recursos compartidos con el raton.
+- Se preparo la republicacion del manifiesto de recursos en IPFS cuando cambia la aportacion del nodo.
+- Se redujo y redistribuyo el HUD para aprovechar mejor el hueco superior.
+
+Pendiente al retomar:
+
+1. Mover la activacion visual del servidor descentralizado al punto exacto posterior al login.
+2. Resolver la carga o renderizado del recurso visual/foto en el hueco superior reservado.
+3. Verificar en ejecucion real que el contenido mostrado coincide con el ultimo binario compilado.
+
+---
 
 ### Panel IPFS/P2P aparece antes de tiempo en el registro de avatar
 
