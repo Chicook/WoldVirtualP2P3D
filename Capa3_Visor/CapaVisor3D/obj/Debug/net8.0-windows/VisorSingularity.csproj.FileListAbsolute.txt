@@ -56,3 +56,8 @@ D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\VisorSingularity
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\VisorSingularity.pdb
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\System.Management.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\verify-avatar-click-2\runtimes\win\lib\net8.0\System.Management.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS.deps.json
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS.runtimeconfig.json
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS.exe
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS.pdb

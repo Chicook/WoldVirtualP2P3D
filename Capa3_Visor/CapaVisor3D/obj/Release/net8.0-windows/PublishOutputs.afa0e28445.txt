@@ -1,4 +1,7 @@
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\ServidorVirtualCS.exe
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.exe
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\ServidorVirtualCS.deps.json
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\ServidorVirtualCS.runtimeconfig.json
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\www\metamask.html
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.dll
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.deps.json
@@ -6,3 +9,5 @@ d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSi
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.pdb
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\System.Management.dll
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\runtimes\win\lib\net8.0\System.Management.dll
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\ServidorVirtualCS.dll
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\ServidorVirtualCS.pdb
