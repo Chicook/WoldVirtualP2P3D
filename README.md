@@ -6,6 +6,40 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 
 ---
 
+## Actualizacion de hoy
+
+**Fecha:** `2026-05-26`  
+**Rama de trabajo:** `DevTraeIA`
+
+### Hecho hoy en `DevTraeIA`
+
+- Se creo e integro un modulo nuevo en `Capa3_Visor/ServidorVirtualCS/` para representar el servidor descentralizado del nodo del usuario.
+- Se implemento un HUD WPF embebible (`EmbeddedNodeControl`) para mostrar el estado del servidor descentralizado dentro del visor principal.
+- Se conecto el HUD al `MainWindow.xaml` real del visor en la franja superior central.
+- Se anadio logica de perfilado local de recursos: CPU, RAM, VRAM, almacenamiento y ancho de banda.
+- Se implemento un planificador de reparto de recursos con objetivo agregado minimo de `1024 MB`.
+- Se anadio un control deslizante para subir o bajar con el raton el nivel de recursos compartidos.
+- Se dejo el control preparado para republicar el manifiesto del nodo en IPFS cuando cambia el nivel de recursos compartidos.
+- Se ajusto el HUD para aprovechar mejor el hueco superior con una fila de estado y otra fila de recursos compartidos.
+- Se verificaron compilaciones correctas de `ServidorVirtualCS.csproj` y `VisorSingularity.csproj`.
+
+### Pendiente de hoy
+
+- El servidor descentralizado debe mostrarse solo tras iniciar sesion; ese comportamiento aun queda pendiente de cerrarse del todo.
+- Queda pendiente colocar correctamente lo de la foto/recurso visual en el hueco reservado, porque todavia no aparece como se espera.
+
+### Checklist tecnica pendiente en `DevTraeIA`
+
+| Estado | Tarea | Ruta principal | Nota |
+|---|---|---|---|
+| Pendiente | Activar el HUD del servidor solo despues del login | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs` | La visibilidad debe depender del momento exacto posterior a `INICIAR SESION` |
+| Pendiente | Desacoplar la aparicion del HUD de cualquier activacion temprana residual | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs` | Evitar que el servidor descentralizado aparezca antes de tiempo |
+| Pendiente | Resolver la carga o render del recurso visual/foto en el hueco superior | `Capa3_Visor/CapaVisor3D/MainWindow.xaml` | El hueco existe, pero el contenido visual esperado no se muestra aun |
+| Pendiente | Verificar en ejecucion real que el binario abierto coincide con el ultimo compilado | `Capa3_Visor/CapaVisor3D/bin/Debug/net8.0-windows/` | Confirmar que no se esta probando una build vieja |
+| Pendiente | Evaluar si la republicacion en IPFS debe hacerse siempre o solo tras confirmacion del usuario | `Capa3_Visor/ServidorVirtualCS/Controls/EmbeddedNodeControl.xaml.cs` | Ahora se republica tras mover el deslizador |
+
+---
+
 ## Resumen ejecutivo
 
 Hoy el repositorio implementa estas piezas reales:
@@ -157,6 +191,7 @@ Responsabilidades actuales:
 | `IpfsManager.cs` | Activo con dependencia externa | Descarga/arranca Kubo si hace falta |
 | `IpfsPublisher.cs` | Activo | Publica archivos o directorios por CLI de Kubo |
 | `P2PNodeBar` | Activo | Widget WPF fijado arriba a la derecha |
+| `ServidorVirtualCS` | Activo en integracion | HUD superior central para servidor descentralizado, recursos compartidos y control manual de aportacion |
 
 ---
 
@@ -489,6 +524,30 @@ Todos → DevVScodeCopilot (release alpha en F4)
 ```
 
 ## Errores pendientes
+
+### Servidor descentralizado y hueco visual superior
+
+Estado observado a fecha `2026-05-26`:
+
+- El HUD del servidor descentralizado ya fue integrado en el visor principal y puede mostrarse en la franja superior central.
+- Sin embargo, sigue pendiente ajustar la activacion exacta para que aparezca solo despues de `INICIAR SESION`.
+- Tambien sigue pendiente resolver el contenido visual de la foto/recurso que debe ocupar el hueco reservado, porque todavia no aparece donde se espera.
+
+Resumen de lo hecho hoy:
+
+- Se creo el proyecto `ServidorVirtualCS` con captura de recursos del nodo.
+- Se integro el control `EmbeddedNodeControl` dentro del `MainWindow.xaml` del visor real.
+- Se anadio un control deslizante para subir o bajar recursos compartidos con el raton.
+- Se preparo la republicacion del manifiesto de recursos en IPFS cuando cambia la aportacion del nodo.
+- Se redujo y redistribuyo el HUD para aprovechar mejor el hueco superior.
+
+Pendiente al retomar:
+
+1. Mover la activacion visual del servidor descentralizado al punto exacto posterior al login.
+2. Resolver la carga o renderizado del recurso visual/foto en el hueco superior reservado.
+3. Verificar en ejecucion real que el contenido mostrado coincide con el ultimo binario compilado.
+
+---
 
 ### Panel IPFS/P2P aparece antes de tiempo en el registro de avatar
 
