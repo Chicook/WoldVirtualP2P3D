@@ -6,6 +6,63 @@
              mc:Ignorable="d"
              d:DesignHeight="58"
              d:DesignWidth="404">
+    <UserControl.Resources>
+        <Style x:Key="HudSliderThumbStyle" TargetType="Thumb">
+            <Setter Property="Width" Value="14"/>
+            <Setter Property="Height" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Ellipse Fill="#1E88E5" Stroke="#BFE4FF" StrokeThickness="2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HudSliderStyle" TargetType="Slider">
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Background" Value="#7F8C8D"/>
+            <Setter Property="Foreground" Value="#1E88E5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Margin="0,2">
+                            <Track x:Name="PART_Track"
+                                   IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge"
+                                                  Focusable="False"
+                                                  Background="{TemplateBinding Foreground}"
+                                                  BorderThickness="0">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" CornerRadius="2" Background="{TemplateBinding Background}"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource HudSliderThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge"
+                                                  Focusable="False"
+                                                  Background="{TemplateBinding Background}"
+                                                  BorderThickness="0">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" CornerRadius="2" Background="{TemplateBinding Background}"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
     <Border CornerRadius="4"
             Padding="5,4"
             Background="#CC0D1C29"
@@ -122,15 +179,35 @@
                            FontSize="8.5"
                            Text="{Binding TotalBudgetText, StringFormat=TOTAL {0}}"/>
 
-                <Slider Grid.Column="7"
-                        Margin="8,0,8,0"
+                <TextBlock Grid.Column="7"
+                           Margin="8,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="#7CB0C6"
+                           FontSize="8"
+                           Text="MENOS"/>
+
+                <Slider x:Name="BoostSlider"
+                        Grid.Column="7"
+                        Margin="42,0,30,0"
+                        Style="{StaticResource HudSliderStyle}"
                         Minimum="100"
                         Maximum="180"
                         SmallChange="5"
                         LargeChange="10"
                         TickFrequency="10"
                         IsSnapToTickEnabled="True"
+                        IsMoveToPointEnabled="True"
+                        PreviewMouseLeftButtonDown="BoostSlider_PreviewMouseLeftButtonDown"
+                        ValueChanged="BoostSlider_ValueChanged"
                         Value="{Binding BoostPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Grid.Column="7"
+                           HorizontalAlignment="Right"
+                           Margin="0,0,4,0"
+                           VerticalAlignment="Center"
+                           Foreground="#7CB0C6"
+                           FontSize="8"
+                           Text="MAS"/>
 
                 <TextBlock Grid.Column="8"
                            VerticalAlignment="Center"
