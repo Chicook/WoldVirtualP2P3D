@@ -1,10 +1,10 @@
-using Microsoft.VisualBasic.Devices;
 using ServidorVirtualCS.Models;
 using System;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 
 namespace ServidorVirtualCS.Services;
 
@@ -12,11 +12,11 @@ public sealed class HardwareProfileService
 {
     public NodeResourceSnapshot Capture()
     {
-        ComputerInfo computerInfo = new();
         (string cpuName, double cpuLoadPercent) = ReadCpuData();
         (string gpuName, ulong vramMb) = ReadGpuData();
         (ulong totalDiskMb, ulong freeDiskMb) = ReadDiskData();
         double bandwidthMbPerSecond = ReadNetworkBandwidth();
+        (ulong totalRamMb, ulong availableRamMb) = ReadMemoryData();
 
         return new NodeResourceSnapshot
         {
@@ -25,8 +25,8 @@ public sealed class HardwareProfileService
             CpuName = cpuName,
             LogicalCores = Environment.ProcessorCount,
             CpuLoadPercent = cpuLoadPercent,
-            TotalRamMb = ToMb(computerInfo.TotalPhysicalMemory),
-            AvailableRamMb = ToMb(computerInfo.AvailablePhysicalMemory),
+            TotalRamMb = totalRamMb,
+            AvailableRamMb = availableRamMb,
             GpuName = gpuName,
             DedicatedVramMb = vramMb,
             TotalDiskMb = totalDiskMb,
@@ -49,6 +49,19 @@ public sealed class HardwareProfileService
         {
             return ("CPU desconocida", 0d);
         }
+    }
+
+    private static (ulong TotalRamMb, ulong AvailableRamMb) ReadMemoryData()
+    {
+        MEMORYSTATUSEX status = new();
+        status.dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>();
+
+        if (GlobalMemoryStatusEx(ref status))
+        {
+            return (ToMb(status.ullTotalPhys), ToMb(status.ullAvailPhys));
+        }
+
+        return (0, 0);
     }
 
     private static (string GpuName, ulong DedicatedVramMb) ReadGpuData()
@@ -126,5 +139,23 @@ public sealed class HardwareProfileService
     private static ulong ToMb(ulong valueInBytes)
     {
         return valueInBytes / 1024UL / 1024UL;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
     }
 }
