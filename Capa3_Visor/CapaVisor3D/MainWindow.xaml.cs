@@ -44,6 +44,7 @@ namespace VisorSingularity
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
         private bool _metaverseUiActivated = false;
+        private PeerSyncService? _peerSync;  // Sincronización P2P LAN de peers
 
         // === Voice Chat (NAudio VAD) ===
         private WaveInEvent? _waveIn;
@@ -807,6 +808,8 @@ namespace VisorSingularity
             _metaverseUiActivated = false;
             StopVoiceCapture(); // Liberar micrófono al cerrar
             StopWebcam();       // Liberar webcam al cerrar
+            _peerSync?.Stop();  // Detener sincronización P2P LAN
+            _peerSync = null;
             if (_p2pNode != null)
             {
                 try { _p2pNode.Stop(); } catch { }
@@ -1093,6 +1096,26 @@ namespace VisorSingularity
             _metaverseUiActivated = true;
             BorderBottomLoginBar.Visibility = Visibility.Visible;
             EmbeddedServerNodeBar.Visibility = Visibility.Visible;
+
+            // Iniciar sincronización P2P LAN de peers
+            if (_peerSync == null)
+            {
+                try
+                {
+                    var (projectDir, _) = FindLocalGodotPaths();
+                    string peersDir = Path.GetFullPath(Path.Combine(projectDir, "..", "Estado_Global", "peers"));
+                    if (!Directory.Exists(peersDir))
+                        Directory.CreateDirectory(peersDir);
+
+                    _peerSync = new PeerSyncService(peersDir, username);
+                    _peerSync.Start();
+                    Debug.WriteLine($"[PeerSync] Servicio LAN iniciado para usuario '{username}' en '{peersDir}'");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[PeerSync] Error al iniciar servicio LAN: {ex.Message}");
+                }
+            }
 
             if (_p2pNode == null)
             {
