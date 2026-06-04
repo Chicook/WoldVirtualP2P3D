@@ -59,7 +59,7 @@ namespace ServidorVirtualCS.Controls {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/ServidorVirtualCS;V1.0.0.0;component/controls/embeddednodecontrol.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/ServidorVirtualCS;component/controls/embeddednodecontrol.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Controls\EmbeddedNodeControl.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
