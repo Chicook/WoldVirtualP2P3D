@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "2ensgMJFX4w=",
+  "dgSpecHash": "+XCn+Ckhdlk=",
   "success": true,
-  "projectFilePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+  "projectFilePath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Usuario\\.nuget\\packages\\aforge\\2.2.5\\aforge.2.2.5.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\aforge.video\\2.2.5\\aforge.video.2.2.5.nupkg.sha512",
