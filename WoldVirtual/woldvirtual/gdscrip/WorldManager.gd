@@ -77,12 +77,17 @@ func _update_users(users: Dictionary, local_id: String, now: float):
 
 		if active_users.has(uid):
 			var av = active_users[uid]
+			var ud = users[uid]
 			var entity = av.get_node_or_null("ECSEntity")
 			if is_instance_valid(entity):
 				var net = entity.get_component(load("res://woldvirtual/ecs/components/NetworkStateComponent.gd"))
 				if net:
-					net.raw_data = users[uid]
-					net.last_timestamp = users[uid].get("t", 0)
+					net.raw_data = ud
+					net.last_timestamp = ud.get("t", 0)
+
+			# Propagar estado de voz al avatar remoto (campo "vc" escrito por el WPF)
+			if av.has_method("mostrar_indicador_voz"):
+				av.mostrar_indicador_voz(ud.get("vc", false))
 
 func _spawn_remote_user(id: String, d: Dictionary):
 	var av = user_scene.instantiate()
