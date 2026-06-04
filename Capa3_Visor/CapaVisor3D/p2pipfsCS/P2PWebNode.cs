@@ -65,12 +65,11 @@ namespace VisorSingularity
         {
             _repoPath = repoPath;
 
-            int seed    = Math.Abs((username + DateTime.Now.Ticks).GetHashCode()) % 90000 + 10000;
-            NodeId       = $"ND{seed}";
+            NodeId       = P2PNodeIdFactory.Create(username);
             SimulatedUrl = $"www.{NodeId}.woldvirtual";
 
-            Port          = FindAvailablePort(8082);
-            _internalPort = FindAvailablePort(Port + 1);
+            Port          = TcpPortFinder.FindAvailablePort(8082);
+            _internalPort = TcpPortFinder.FindAvailablePort(Port + 1);
             LocalUrl      = $"http://127.0.0.1:{Port}/";
 
             string tempDir = Path.Combine(Path.GetTempPath(), "WoldVirtualP2P");
@@ -331,70 +330,11 @@ namespace VisorSingularity
         private async Task<string?> TryRunProcessTunnelAsync(
             string exe, string args, string urlPattern, int timeoutMs, CancellationToken token)
         {
-            Process? proc  = null;
-            string?  found = null;
+            var result = await EphemeralTunnelRunner.StartAsync(exe, args, urlPattern, timeoutMs, token);
+            if (result == null) return null;
 
-            try
-            {
-                proc = Process.Start(new ProcessStartInfo
-                {
-                    FileName               = exe,
-                    Arguments              = args,
-                    UseShellExecute        = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError  = true,
-                    CreateNoWindow         = true
-                });
-                if (proc == null) return null;
-
-                using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-                scanCts.CancelAfter(timeoutMs);
-
-                async Task Scan(StreamReader sr, string label)
-                {
-                    try
-                    {
-                        while (!scanCts.IsCancellationRequested && !proc.HasExited)
-                        {
-                            string? ln = await sr.ReadLineAsync();
-                            if (ln == null) break;
-                            Debug.WriteLine($"[{label}] {ln}");
-                            var m = System.Text.RegularExpressions.Regex.Match(ln, urlPattern);
-                            if (m.Success)
-                            {
-                                string matched = m.Value;
-                                if (!matched.StartsWith("http://") && !matched.StartsWith("https://"))
-                                    matched = "http://" + matched;
-                                found = matched;
-                                scanCts.Cancel();
-                                return;
-                            }
-                        }
-                    }
-                    catch { }
-                }
-
-                await Task.WhenAny(
-                    Scan(proc.StandardOutput, exe),
-                    Scan(proc.StandardError,  exe),
-                    Task.Delay(timeoutMs + 1000, scanCts.Token).ContinueWith(_ => { })
-                );
-
-                if (!string.IsNullOrEmpty(found) && !proc.HasExited)
-                {
-                    _tunnelProcess = proc;
-                    return found;
-                }
-
-                try { proc.Kill(entireProcessTree: true); } catch { }
-                proc.Dispose();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[TryRunProcessTunnel] {exe}: {ex.Message}");
-                try { proc?.Kill(entireProcessTree: true); proc?.Dispose(); } catch { }
-            }
-            return null;
+            _tunnelProcess = result.Process;
+            return result.Url;
         }
 
 
@@ -1034,18 +974,7 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
 
         private int FindAvailablePort(int start)
         {
-            for (int port = start; port < start + 100; port++)
-            {
-                try
-                {
-                    using var c = new System.Net.Sockets.TcpClient();
-                    var r = c.BeginConnect("127.0.0.1", port, null, null);
-                    if (!r.AsyncWaitHandle.WaitOne(100)) return port;
-                    c.EndConnect(r);
-                }
-                catch { return port; }
-            }
-            return start;
+            return TcpPortFinder.FindAvailablePort(start);
         }
 
         // ── Proxy TCP Local (Reescritura de Cabecera Host) ───────────────────
