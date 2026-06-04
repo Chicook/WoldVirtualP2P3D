@@ -68,3 +68,15 @@ D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.Midi.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.Wasapi.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.WinForms.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.WinMM.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\AForge.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\AForge.Video.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\AForge.Video.DirectShow.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\Microsoft.Win32.SystemEvents.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\System.Drawing.Common.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\System.Private.Windows.Core.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\System.Private.Windows.GdiPlus.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\runtimes\win\lib\net8.0\Microsoft.Win32.SystemEvents.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\OpenCvSharp.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\OpenCvSharp.WpfExtensions.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\runtimes\win-x64\native\OpenCvSharpExtern.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\runtimes\win-x64\native\opencv_videoio_ffmpeg4130_64.dll

@@ -17,12 +17,16 @@ using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using NAudio.Wave;
+using OpenCvSharp;
+using OpenCvSharp.WpfExtensions;
+using System.Drawing.Imaging;
 
 namespace VisorSingularity
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : System.Windows.Window
     {
         private string _osName = "Desconocido";
         private string _cpuName = "Desconocido";
@@ -48,6 +52,12 @@ namespace VisorSingularity
         private DateTime _lastSpeechTime = DateTime.MinValue;
         private const double VoiceSilenceMs = 500.0;  // ms de silencio antes de "stopped"
         private const float VoiceThreshold = 0.015f;  // umbral RMS normalizado (0.0–1.0)
+
+        // === Webcam (OpenCvSharp PIP) ===
+        private VideoCapture? _capture;
+        private Task? _captureTask;
+        private CancellationTokenSource? _cancellationTokenSource;
+        private bool _webcamEnabled = false;
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -94,8 +104,9 @@ namespace VisorSingularity
             TxtChatMessage.KeyDown += TxtChatMessage_KeyDown;
             BtnCopyP2PLink.Click += BtnCopyP2PLink_Click;
 
-            // Vincular botón de voz
+            // Vincular botón de voz y webcam
             BtnVoiceChat.Click += BtnVoiceChat_Click;
+            BtnWebcam.Click += BtnWebcam_Click;
 
             // Vincular eventos de redimensionado/movimiento de ventana para el Popup del Chat
             this.LocationChanged += (s, ev) => UpdatePopupPosition();
@@ -778,6 +789,7 @@ namespace VisorSingularity
         {
             _metaverseUiActivated = false;
             StopVoiceCapture(); // Liberar micrófono al cerrar
+            StopWebcam();       // Liberar webcam al cerrar
             if (_p2pNode != null)
             {
                 try { _p2pNode.Stop(); } catch { }
@@ -1036,7 +1048,7 @@ namespace VisorSingularity
                 var child = ChatOverlayPopup.Child as UIElement;
                 if (child != null)
                 {
-                    child.Measure(new Size(450, double.PositiveInfinity));
+                    child.Measure(new System.Windows.Size(450, double.PositiveInfinity));
                     panelHeight = child.DesiredSize.Height;
                 }
 
@@ -1047,6 +1059,16 @@ namespace VisorSingularity
                 ChatOverlayPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
                 ChatOverlayPopup.HorizontalOffset = targetLeft;
                 ChatOverlayPopup.VerticalOffset = targetTop;
+            }
+
+            if (WebcamPopup != null && WebcamPopup.IsOpen)
+            {
+                double targetLeft = GodotPlaceholder.ActualWidth - 340; // 320 width + 20 margin
+                double targetTop = GodotPlaceholder.ActualHeight - 260; // 240 height + 20 margin
+
+                WebcamPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
+                WebcamPopup.HorizontalOffset = targetLeft;
+                WebcamPopup.VerticalOffset = targetTop;
             }
 
             // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
@@ -1323,9 +1345,9 @@ namespace VisorSingularity
                 // Hablando — verde cyberpunk brillante
                 BtnVoiceChat.Content = "🔴 VOZ ON";
                 BtnVoiceChat.Background = new SolidColorBrush(
-                    (System.Windows.Media.Color)ColorConverter.ConvertFromString("#00FF8C"));
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#00FF8C"));
                 BtnVoiceChat.Foreground = new SolidColorBrush(
-                    (System.Windows.Media.Color)ColorConverter.ConvertFromString("#0B0C10"));
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#0B0C10"));
                 BtnVoiceChat.ToolTip = "Hablando... (clic para desactivar)";
             }
             else
@@ -1333,10 +1355,177 @@ namespace VisorSingularity
                 // Activo pero en silencio — teal suave
                 BtnVoiceChat.Content = "🎤 ...";
                 BtnVoiceChat.Background = new SolidColorBrush(
-                    (System.Windows.Media.Color)ColorConverter.ConvertFromString("#1A3040"));
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#1A3040"));
                 BtnVoiceChat.Foreground = new SolidColorBrush(
-                    (System.Windows.Media.Color)ColorConverter.ConvertFromString("#66FCF1"));
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#66FCF1"));
                 BtnVoiceChat.ToolTip = "Escuchando... (clic para desactivar)";
+            }
+        }
+
+        // ===================================================================
+        // ── WEBCAM (OpenCvSharp PIP) ──
+        // ===================================================================
+
+        private void BtnWebcam_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_webcamEnabled)
+            {
+                var result = MessageBox.Show(this,
+                    "¿Deseas encender y compartir tu cámara web?",
+                    "Compartir Webcam",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    StartWebcam();
+                }
+            }
+            else
+            {
+                StopWebcam();
+            }
+        }
+
+        private void StartWebcam()
+        {
+            try
+            {
+                // Intentar buscar la cámara en múltiples índices y con distintos backends de Windows
+                for (int i = 0; i < 4; i++)
+                {
+                    _capture = new VideoCapture(i, VideoCaptureAPIs.MSMF); // Media Foundation (moderno)
+                    if (_capture.IsOpened()) break;
+                    _capture.Dispose();
+
+                    _capture = new VideoCapture(i, VideoCaptureAPIs.DSHOW); // DirectShow (clásico)
+                    if (_capture.IsOpened()) break;
+                    _capture.Dispose();
+                    
+                    _capture = null;
+                }
+
+                if (_capture == null || !_capture.IsOpened())
+                {
+                    MessageBox.Show(this, 
+                        "No se pudo acceder a la cámara.\n\n" +
+                        "Posibles causas:\n" +
+                        "1. Otra aplicación (como Zoom, OBS o el navegador) la está usando.\n" +
+                        "2. Windows está bloqueando el acceso. Ve a Configuración de Windows -> Privacidad -> Cámara, y activa 'Permitir que las aplicaciones de escritorio accedan a la cámara'.\n" +
+                        "3. La cámara está desconectada.", 
+                        "Webcam no disponible", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    
+                    if (_capture != null) { _capture.Dispose(); _capture = null; }
+                    return;
+                }
+
+                _webcamEnabled = true;
+                WebcamPopup.IsOpen = true;
+                UpdatePopupPosition();
+                
+                TxtWebcamStatus.Visibility = Visibility.Visible;
+                TxtWebcamStatus.Text = "Iniciando cámara...";
+
+                _cancellationTokenSource = new CancellationTokenSource();
+                _captureTask = Task.Run(() => CaptureLoop(_cancellationTokenSource.Token));
+
+                UpdateWebcamButtonStyle();
+                Debug.WriteLine("[Webcam] Cámara iniciada con OpenCV.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"Error al acceder a la cámara:\n{ex.Message}", "Error de Webcam", MessageBoxButton.OK, MessageBoxImage.Error);
+                StopWebcam();
+            }
+        }
+
+        private void CaptureLoop(CancellationToken token)
+        {
+            try
+            {
+                using (var frame = new Mat())
+                {
+                    while (!token.IsCancellationRequested && _capture != null && _capture.IsOpened())
+                    {
+                        if (_capture.Read(frame) && !frame.Empty())
+                        {
+                            // Actualizar UI
+                            Dispatcher.InvokeAsync(() =>
+                            {
+                                if (!_webcamEnabled) return;
+                                WebcamImage.Source = frame.ToWriteableBitmap();
+                                if (TxtWebcamStatus.Visibility == Visibility.Visible)
+                                {
+                                    TxtWebcamStatus.Visibility = Visibility.Collapsed;
+                                }
+                            }, System.Windows.Threading.DispatcherPriority.Render);
+                        }
+                        
+                        // Pequeña pausa para no saturar CPU (aprox 30 FPS)
+                        Thread.Sleep(33);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Webcam] Error en loop: {ex.Message}");
+            }
+        }
+
+        private void StopWebcam()
+        {
+            _webcamEnabled = false;
+
+            if (_cancellationTokenSource != null)
+            {
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource = null;
+            }
+
+            if (_captureTask != null)
+            {
+                try { _captureTask.Wait(500); } catch { }
+                _captureTask = null;
+            }
+
+            if (_capture != null)
+            {
+                try
+                {
+                    _capture.Release();
+                    _capture.Dispose();
+                }
+                catch { }
+                _capture = null;
+            }
+
+            if (WebcamPopup != null)
+            {
+                WebcamPopup.IsOpen = false;
+                WebcamImage.Source = null;
+            }
+            
+            UpdateWebcamButtonStyle();
+            Debug.WriteLine("[Webcam] Cámara detenida.");
+        }
+
+        private void UpdateWebcamButtonStyle()
+        {
+            if (BtnWebcam == null) return;
+
+            if (!_webcamEnabled)
+            {
+                BtnWebcam.Content = "📷 CAM";
+                BtnWebcam.ClearValue(BackgroundProperty);
+                BtnWebcam.ClearValue(ForegroundProperty);
+            }
+            else
+            {
+                BtnWebcam.Content = "🔴 CAM ON";
+                BtnWebcam.Background = new SolidColorBrush(
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#00FF8C"));
+                BtnWebcam.Foreground = new SolidColorBrush(
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#0B0C10"));
             }
         }
     }

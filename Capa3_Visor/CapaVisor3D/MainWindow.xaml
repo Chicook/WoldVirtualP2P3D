@@ -346,12 +346,26 @@
                 </Border>
             </Popup>
 
+            <!-- Recuadro Webcam (PIP) en un Popup para sortear el WPF Airspace Issue con HwndHost -->
+            <Popup x:Name="WebcamPopup" IsOpen="False" Placement="Relative" PlacementTarget="{Binding ElementName=GodotHwndHost}" AllowsTransparency="True" StaysOpen="True">
+                <Border x:Name="WebcamBorder" Width="320" Height="240" 
+                        BorderBrush="#00FFFF" BorderThickness="2" 
+                        Background="#111625" CornerRadius="4">
+                    <Grid>
+                        <Image x:Name="WebcamImage" Stretch="UniformToFill"/>
+                        <TextBlock x:Name="TxtWebcamStatus" Text="Cargando..." Foreground="#00FFFF" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    </Grid>
+                </Border>
+            </Popup>
+
             <!-- Bottom Chat Bar (Cyberpunk Chat Look) -->
             <Border x:Name="BorderBottomLoginBar" Grid.Row="2" Height="80" Background="#111625" BorderBrush="#45A29E" BorderThickness="0,1,0,0">
                 <Grid Margin="20,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/> <!-- Status/User -->
                         <ColumnDefinition Width="*"/>    <!-- Text input -->
+                        <ColumnDefinition Width="Auto"/> <!-- Webcam Button -->
                         <ColumnDefinition Width="Auto"/> <!-- Voice Button -->
                         <ColumnDefinition Width="Auto"/> <!-- Send Button -->
                     </Grid.ColumnDefinitions>
@@ -365,8 +379,18 @@
                     <!-- Center: Input Box -->
                     <TextBox Grid.Column="1" x:Name="TxtChatMessage" Style="{StaticResource SingularityTextBox}" Height="38" FontSize="13" VerticalAlignment="Center" Margin="10,0"/>
 
+                    <!-- Webcam Button -->
+                    <Button Grid.Column="2" x:Name="BtnWebcam"
+                            Content="📷 CAM"
+                            Height="38" Width="90"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0"
+                            Style="{StaticResource SingularityButton}"
+                            ToolTip="Activar / Desactivar Webcam"
+                            Cursor="Hand"/>
+
                     <!-- Voice Chat Button (toggle micrófono) -->
-                    <Button Grid.Column="2" x:Name="BtnVoiceChat"
+                    <Button Grid.Column="3" x:Name="BtnVoiceChat"
                             Content="🎤 VOZ"
                             Height="38" Width="90"
                             VerticalAlignment="Center"
@@ -376,7 +400,7 @@
                             Cursor="Hand"/>
 
                     <!-- Right Side: Send button -->
-                    <Button Grid.Column="3" x:Name="BtnSendChat" Content="ENVIAR" Style="{StaticResource SingularityButton}" Height="38" Width="100" VerticalAlignment="Center"/>
+                    <Button Grid.Column="4" x:Name="BtnSendChat" Content="ENVIAR" Style="{StaticResource SingularityButton}" Height="38" Width="100" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
         </Grid>
