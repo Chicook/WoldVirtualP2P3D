@@ -1076,7 +1076,7 @@ namespace VisorSingularity
                 TxtP2PLink.Text = $"Enlace: {_p2pNode.LocalUrl}";
                 TxtP2PStatus.Text = "Generando ZIP...";
 
-                // Mostrar el widget P2P solo cuando el usuario ya estÃ¡ dentro del metaverso
+                // Mostrar el widget P2P solo cuando el usuario ya está dentro del metaverso
                 P2PNodeBar.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
