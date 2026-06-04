@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "WO4zsQQ4Vdg=",
+  "dgSpecHash": "+XCn+Ckhdlk=",
   "success": true,
-  "projectFilePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+  "projectFilePath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Usuario\\.nuget\\packages\\aforge\\2.2.5\\aforge.2.2.5.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\aforge.video\\2.2.5\\aforge.video.2.2.5.nupkg.sha512",
@@ -28,42 +28,5 @@
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.27\\microsoft.aspnetcore.app.ref.8.0.27.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.27\\microsoft.netcore.app.host.win-x64.8.0.27.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1701",
-      "level": "Warning",
-      "message": "El paquete \"AForge 2.2.5\" se restauró con \".NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1\" en lugar de la plataforma de destino del proyecto \"net8.0-windows7.0\". Puede que el paquete no sea totalmente compatible con el proyecto.",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "AForge",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1701",
-      "level": "Warning",
-      "message": "El paquete \"AForge.Video 2.2.5\" se restauró con \".NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1\" en lugar de la plataforma de destino del proyecto \"net8.0-windows7.0\". Puede que el paquete no sea totalmente compatible con el proyecto.",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "AForge.Video",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1701",
-      "level": "Warning",
-      "message": "El paquete \"AForge.Video.DirectShow 2.2.5\" se restauró con \".NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1\" en lugar de la plataforma de destino del proyecto \"net8.0-windows7.0\". Puede que el paquete no sea totalmente compatible con el proyecto.",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "AForge.Video.DirectShow",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    }
-  ]
+  "logs": []
 }

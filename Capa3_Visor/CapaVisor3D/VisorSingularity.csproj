@@ -8,6 +8,7 @@
         <UseWPF>true</UseWPF>
         <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
         <DefaultItemExcludes>$(DefaultItemExcludes);jsonDeEstado\**;servidor_interno\**;DTBSINT\**</DefaultItemExcludes>
+        <NoWarn>$(NoWarn);NU1701</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

@@ -110,10 +110,10 @@
                               Fill="#00E5FF" 
                               Width="14" 
                               Height="14" 
-                              Stretch="Uniform" 
-                              Visibility="Collapsed">
+                              Stretch="Uniform">
                             <Path.Style>
                                 <Style TargetType="Path">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding UserGender}" Value="male">
                                             <Setter Property="Visibility" Value="Visible"/>
@@ -129,10 +129,10 @@
                               Fill="#FF007F" 
                               Width="14" 
                               Height="14" 
-                              Stretch="Uniform" 
-                              Visibility="Collapsed">
+                              Stretch="Uniform">
                             <Path.Style>
                                 <Style TargetType="Path">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding UserGender}" Value="female">
                                             <Setter Property="Visibility" Value="Visible"/>
@@ -148,8 +148,7 @@
                               Fill="#FF8C3A" 
                               Width="14" 
                               Height="14" 
-                              Stretch="Uniform" 
-                              Visibility="Collapsed">
+                              Stretch="Uniform">
                             <Path.Style>
                                 <Style TargetType="Path">
                                     <Setter Property="Visibility" Value="Visible"/>
