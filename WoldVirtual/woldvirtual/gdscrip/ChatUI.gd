@@ -52,6 +52,11 @@ func _process_chat_packet(json_str: String):
 			
 			# Disparar la burbuja 3D flotante sobre el avatar correspondiente
 			_trigger_bubble_on_avatar(user, text)
+		elif data.get("type") == "voice":
+			# Paquete de actividad de voz desde WPF (NAudio VAD)
+			var user = data.get("user", "")
+			var speaking = data.get("speaking", false)
+			_trigger_voice_on_avatar(user, speaking)
 
 func _send_chat_message_to_wpf(user: String, text: String):
 	if udp_client:
@@ -110,3 +115,43 @@ func _trigger_bubble_on_avatar(username: String, message: String):
 				if avatar.has_method("mostrar_mensaje_3d"):
 					avatar.mostrar_mensaje_3d(message)
 					break
+
+func _trigger_voice_on_avatar(username: String, speaking: bool):
+	# Misma lógica de búsqueda de avatar que _trigger_bubble_on_avatar
+	if !is_instance_valid(chunk_manager):
+		return
+		
+	var world = chunk_manager.world
+	if !is_instance_valid(world):
+		return
+		
+	for user_id in world.active_users:
+		var avatar = world.active_users[user_id]
+		if is_instance_valid(avatar):
+			var is_match = false
+			
+			# Comprobar nombre local
+			var local_name = ""
+			var f = FileAccess.open("res://woldvirtual/scene/MTC/users3D/current_user.json", FileAccess.READ)
+			if f:
+				var content = f.get_as_text()
+				f.close()
+				var p_json = JSON.new()
+				if p_json.parse(content) == OK:
+					var p_data = p_json.get_data()
+					if typeof(p_data) == TYPE_DICTIONARY:
+						local_name = p_data.get("username", "")
+			
+			if avatar.es_local and username == local_name:
+				is_match = true
+			elif user_id.to_lower() == username.to_lower() or user_id.to_lower().contains(username.to_lower()):
+				is_match = true
+			
+			# Fallback si sólo hay una persona en escena
+			if !is_match and world.active_users.size() == 1:
+				is_match = true
+			
+			if is_match:
+				if avatar.has_method("mostrar_indicador_voz"):
+					avatar.mostrar_indicador_voz(speaking)
+				break

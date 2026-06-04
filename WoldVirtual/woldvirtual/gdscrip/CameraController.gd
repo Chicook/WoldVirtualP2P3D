@@ -4,8 +4,10 @@ class_name CameraController
 enum Profile { FIRST_PERSON, THIRD_PERSON, CINEMATIC }
 
 @export var current_profile: Profile = Profile.THIRD_PERSON
-@export var lerp_speed_base: float = 0.15
+@export var lerp_speed_base: float = 0.8
 @export var mouse_sensitivity: float = 0.002
+@export var tpv_distance: float = 1.8
+@export var tpv_height: float = 1.6
 
 var target_node: Node3D
 var cam: Camera3D
@@ -61,12 +63,9 @@ func _update_tpv(delta):
 		_rot_y = lerp_angle(_rot_y, target_node.global_rotation.y, delta * 4.0)
 		_rot_x = lerp(_rot_x, -0.2, delta * 4.0) # Inclinar un poco hacia abajo por defecto
 	
-	var distance = 2.5
-	var height = 1.8
-	
-	# Usar Basis con el offset exacto de la rama main (Z = -2.5)
+	# Usar Basis con el offset configurable
 	var basis = Basis(Vector3.UP, _rot_y) * Basis(Vector3.RIGHT, _rot_x)
-	var target_pos = target_node.global_position + (basis * Vector3(0, 1.8, -2.5))
+	var target_pos = target_node.global_position + (basis * Vector3(0, tpv_height, -tpv_distance))
 	
 	# Suavizado de posición con delta (independiente de FPS)
 	cam.global_position = cam.global_position.lerp(target_pos, delta * lerp_speed_base * 10.0)

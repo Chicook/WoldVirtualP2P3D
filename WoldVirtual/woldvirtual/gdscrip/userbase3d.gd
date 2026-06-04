@@ -6,6 +6,10 @@ const JUMP = 5.0
 var sensitivity: float = 0.008
 var es_local: bool = false
 
+# === Indicador de voz estilo OpenSimulator ===
+var _voice_label: Label3D = null
+var _voice_tween: Tween = null
+
 # Estados de teclas manuales para evitar problemas de foco de OS en ventanas embebidas
 var _key_up: bool = false
 var _key_down: bool = false
@@ -139,3 +143,51 @@ func mostrar_mensaje_3d(texto: String):
 	tween.parallel().tween_property(label, "outline_modulate:a", 0.0, 1.5)
 	# Eliminar el nodo al terminar
 	tween.tween_callback(label.queue_free)
+
+# ────────────────────────────────────────────────
+# VOICE CHAT — Indicador de voz flotante (estilo OpenSimulator)
+# ────────────────────────────────────────────────
+func mostrar_indicador_voz(speaking: bool) -> void:
+	if speaking:
+		_crear_indicador_voz()
+	else:
+		_ocultar_indicador_voz()
+
+func _crear_indicador_voz() -> void:
+	# Si ya existe no lo recreamos
+	if is_instance_valid(_voice_label):
+		return
+	
+	_voice_label = Label3D.new()
+	_voice_label.name = "VoiceIndicator"
+	# Icono de onda de radio — idéntico al de OpenSimulator
+	_voice_label.text = "((·))"
+	_voice_label.position = Vector3(0, 2.65, 0)  # Justo sobre la cabeza
+	_voice_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_voice_label.font_size = 30
+	_voice_label.outline_size = 8
+	_voice_label.modulate = Color(0.2, 1.0, 0.45, 1.0)   # Verde vibrante
+	_voice_label.outline_modulate = Color(0.0, 0.0, 0.0, 1.0)
+	add_child(_voice_label)
+	
+	# Animación de pulso de escala (anillos de radio expandándose)
+	_voice_tween = create_tween().set_loops()
+	_voice_tween.tween_property(_voice_label, "scale",
+								Vector3(1.2, 1.2, 1.2), 0.35)\
+					.set_ease(Tween.EASE_OUT)\
+					.set_trans(Tween.TRANS_SINE)
+	_voice_tween.tween_property(_voice_label, "scale",
+								Vector3(1.0, 1.0, 1.0), 0.35)\
+					.set_ease(Tween.EASE_IN)\
+					.set_trans(Tween.TRANS_SINE)
+
+func _ocultar_indicador_voz() -> void:
+	if _voice_tween:
+		_voice_tween.kill()
+		_voice_tween = null
+	if is_instance_valid(_voice_label):
+		# Pequeño desvanecimiento antes de eliminar
+		var fade = create_tween()
+		fade.tween_property(_voice_label, "modulate:a", 0.0, 0.3)
+		fade.tween_callback(_voice_label.queue_free)
+		_voice_label = null

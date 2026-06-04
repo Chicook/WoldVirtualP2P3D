@@ -1,6 +1,7 @@
 using ServidorVirtualCS.Infrastructure;
 using ServidorVirtualCS.Models;
 using ServidorVirtualCS.Services;
+using System.IO;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -38,6 +39,37 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ICommand PublishCommand { get; }
+
+    private string _userGender = "unknown";
+    public string UserGender
+    {
+        get => _userGender;
+        private set
+        {
+            if (_userGender != value)
+            {
+                _userGender = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private ImageSource? _avatarImageSource;
+    public ImageSource? AvatarImageSource
+    {
+        get => _avatarImageSource;
+        private set
+        {
+            if (_avatarImageSource != value)
+            {
+                _avatarImageSource = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasAvatarImage));
+            }
+        }
+    }
+
+    public bool HasAvatarImage => _avatarImageSource != null;
 
     public string NodeName { get; private set; } = "Nodo local";
 
@@ -112,6 +144,7 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
             _lastSnapshot = snapshot;
             ApplySnapshot(snapshot);
             _publishCommand.RaiseCanExecuteChanged();
+            LoadUserGender();
         }
         catch
         {
@@ -125,6 +158,52 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
         {
             _refreshLock.Release();
         }
+    }
+
+    private void LoadUserGender()
+    {
+        try
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            DirectoryInfo? dir = new DirectoryInfo(baseDir);
+            string? filePath = null;
+
+            while (dir != null)
+            {
+                string candidate = Path.Combine(dir.FullName, "WoldVirtual", "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                if (File.Exists(candidate))
+                {
+                    filePath = candidate;
+                    break;
+                }
+                candidate = Path.Combine(dir.FullName, "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                if (File.Exists(candidate))
+                {
+                    filePath = candidate;
+                    break;
+                }
+                dir = dir.Parent;
+            }
+
+            if (filePath != null && File.Exists(filePath))
+            {
+                string json = File.ReadAllText(filePath);
+                using (var doc = System.Text.Json.JsonDocument.Parse(json))
+                {
+                    if (doc.RootElement.TryGetProperty("gender", out var genderProp))
+                    {
+                        string val = genderProp.GetString()?.ToLower().Trim() ?? "unknown";
+                        UserGender = val == "male" || val == "female" ? val : "unknown";
+                        return;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fallback en caso de error
+        }
+        UserGender = "unknown";
     }
 
     private void ApplySnapshot(NodeResourceSnapshot snapshot)
