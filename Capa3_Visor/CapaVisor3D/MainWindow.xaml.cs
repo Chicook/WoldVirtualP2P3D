@@ -2,11 +2,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -23,6 +21,7 @@ using NAudio.Wave;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 using System.Drawing.Imaging;
+using VisorSingularity.Services;
 
 namespace VisorSingularity
 {
@@ -205,89 +204,22 @@ namespace VisorSingularity
 
         private string GetOSName()
         {
-            try
-            {
-                using (var searcher = new ManagementObjectSearcher("SELECT Caption FROM Win32_OperatingSystem"))
-                {
-                    foreach (var obj in searcher.Get())
-                    {
-                        var caption = obj["Caption"]?.ToString();
-                        if (!string.IsNullOrEmpty(caption))
-                        {
-                            return caption.Trim();
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Fallback a API de sistema
-                return $"{Environment.OSVersion} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})";
-            }
-            return "Windows OS";
+            return HardwareFingerprintService.GetOSName();
         }
 
         private string GetCpuName()
         {
-            try
-            {
-                using (var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor"))
-                {
-                    foreach (var obj in searcher.Get())
-                    {
-                        var name = obj["Name"]?.ToString();
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            return name.Trim();
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                return Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Desconocido";
-            }
-            return "Generic CPU";
+            return HardwareFingerprintService.GetCpuName();
         }
 
         private string GetMotherboardName()
         {
-            try
-            {
-                using (var searcher = new ManagementObjectSearcher("SELECT Manufacturer, Product FROM Win32_BaseBoard"))
-                {
-                    foreach (var obj in searcher.Get())
-                    {
-                        string manufacturer = obj["Manufacturer"]?.ToString() ?? "";
-                        string product = obj["Product"]?.ToString() ?? "";
-                        string res = $"{manufacturer} {product}".Trim();
-                        if (!string.IsNullOrEmpty(res))
-                        {
-                            return res;
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                return "Placa Base Genérica (WMI no disponible)";
-            }
-            return "Baseboard";
+            return HardwareFingerprintService.GetMotherboardName();
         }
 
         private string GenerateSHA256Signature(string os, string cpu, string motherboard)
         {
-            string rawData = $"{os.ToLower().Trim()}|{cpu.ToLower().Trim()}|{motherboard.ToLower().Trim()}";
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
+            return HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
         }
 
         private void BtnCopyHash_Click(object sender, RoutedEventArgs e)
@@ -731,37 +663,8 @@ namespace VisorSingularity
 
         private (string projectDir, string exePath) FindLocalGodotPaths()
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            DirectoryInfo? dir = new DirectoryInfo(baseDir);
-
-            while (dir != null)
-            {
-                string checkProject = Path.Combine(dir.FullName, "WoldVirtual");
-                if (Directory.Exists(checkProject) && File.Exists(Path.Combine(checkProject, "project.godot")))
-                {
-                    string checkExe = Path.Combine(checkProject, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
-                    if (File.Exists(checkExe))
-                    {
-                        return (checkProject, checkExe);
-                    }
-                }
-
-                if (dir.Name == "WoldVirtual" && File.Exists(Path.Combine(dir.FullName, "project.godot")))
-                {
-                    string checkExe = Path.Combine(dir.FullName, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
-                    if (File.Exists(checkExe))
-                    {
-                        return (dir.FullName, checkExe);
-                    }
-                }
-
-                dir = dir.Parent;
-            }
-
-            // Fallback por defecto relativo
-            string defaultProject = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "WoldVirtual"));
-            string defaultExe = Path.Combine(defaultProject, "servidorinterno", "Godot_v4.6.2-stable_mono_win64.exe");
-            return (defaultProject, defaultExe);
+            var paths = GodotProjectLocator.Resolve();
+            return (paths.ProjectDir, paths.ExePath);
         }
 
         // ── HOOK DE TECLADO PARA AVATAR GODOT ──
