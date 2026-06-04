@@ -9,7 +9,7 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 ## Actualizacion de hoy
 
 **Fecha:** `2026-06-04`  
-**Rama de trabajo:** `DevAntigravityIA` (o `DevAntigravity`)
+**Rama de trabajo:** `DevAntigravity`
 
 ### Hecho en `DevAntigravityIA`
 
@@ -30,7 +30,7 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
   - Rediseño Glassmorphism del panel en `RegistroAV.gd` e incorporación de microanimaciones suaves por Tweens en botones (escala `1.05` en hover, y `0.95` al pulsar).
 - **Mejoras en la Cámara (CameraController.gd):**
   - Altura (`tpv_height`) y distancia (`tpv_distance`) configurables para el perfil de tercera persona, con factor de interpolación base acelerado a `0.8` para mayor fluidez.
-
+- **Sincronización P2P LAN (UDP Broadcast):** Implementado `PeerSyncService` que sincroniza archivos `peer_*.json` entre PCs en la misma red, integrado en `MainWindow.xaml.cs`.
 ### Pendiente en `DevAntigravity` (Fase 1 - Core de Seguridad y Protocolo)
 
 | Estado | Tarea | Ruta principal | Nota |

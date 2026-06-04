@@ -44,6 +44,7 @@ namespace VisorSingularity
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
         private bool _metaverseUiActivated = false;
+        private PeerSyncService? _peerSync;  // Sincronización P2P LAN de peers
 
         // === Voice Chat (NAudio VAD) ===
         private WaveInEvent? _waveIn;
@@ -53,11 +54,14 @@ namespace VisorSingularity
         private const double VoiceSilenceMs = 500.0;  // ms de silencio antes de "stopped"
         private const float VoiceThreshold = 0.015f;  // umbral RMS normalizado (0.0–1.0)
 
-        // === Webcam (OpenCvSharp PIP) ===
+        // === Webcam (OpenCvSharp embedded child window) ===
         private VideoCapture? _capture;
         private Task? _captureTask;
         private CancellationTokenSource? _cancellationTokenSource;
         private bool _webcamEnabled = false;
+        private HwndSource? _webcamHwndSource;
+        private Image? _webcamImageControl;
+        private TextBlock? _webcamStatusControl;
 
         // Win32 API Imports
         [DllImport("user32.dll")]
@@ -83,6 +87,20 @@ namespace VisorSingularity
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+
+        private static readonly IntPtr HWND_TOP = new IntPtr(0);
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const int WS_CHILD = 0x40000000;
+        private const int WS_VISIBLE = 0x10000000;
+        private const int WS_CLIPSIBLINGS = 0x04000000;
 
         public MainWindow()
         {
@@ -110,7 +128,7 @@ namespace VisorSingularity
 
             // Vincular eventos de redimensionado/movimiento de ventana para el Popup del Chat
             this.LocationChanged += (s, ev) => UpdatePopupPosition();
-            this.SizeChanged += (s, ev) => UpdatePopupPosition();
+            this.SizeChanged += (s, ev) => { UpdatePopupPosition(); UpdateWebcamPosition(); };
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -790,6 +808,8 @@ namespace VisorSingularity
             _metaverseUiActivated = false;
             StopVoiceCapture(); // Liberar micrófono al cerrar
             StopWebcam();       // Liberar webcam al cerrar
+            _peerSync?.Stop();  // Detener sincronización P2P LAN
+            _peerSync = null;
             if (_p2pNode != null)
             {
                 try { _p2pNode.Stop(); } catch { }
@@ -1061,15 +1081,7 @@ namespace VisorSingularity
                 ChatOverlayPopup.VerticalOffset = targetTop;
             }
 
-            if (WebcamPopup != null && WebcamPopup.IsOpen)
-            {
-                double targetLeft = GodotPlaceholder.ActualWidth - 340; // 320 width + 20 margin
-                double targetTop = GodotPlaceholder.ActualHeight - 260; // 240 height + 20 margin
-
-                WebcamPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
-                WebcamPopup.HorizontalOffset = targetLeft;
-                WebcamPopup.VerticalOffset = targetTop;
-            }
+            UpdateWebcamPosition();
 
             // P2PNodeBar está fijo en la esquina superior derecha del visor — no requiere posicionamiento dinámico
         }
@@ -1084,6 +1096,26 @@ namespace VisorSingularity
             _metaverseUiActivated = true;
             BorderBottomLoginBar.Visibility = Visibility.Visible;
             EmbeddedServerNodeBar.Visibility = Visibility.Visible;
+
+            // Iniciar sincronización P2P LAN de peers
+            if (_peerSync == null)
+            {
+                try
+                {
+                    var (projectDir, _) = FindLocalGodotPaths();
+                    string peersDir = Path.GetFullPath(Path.Combine(projectDir, "..", "Estado_Global", "peers"));
+                    if (!Directory.Exists(peersDir))
+                        Directory.CreateDirectory(peersDir);
+
+                    _peerSync = new PeerSyncService(peersDir, username);
+                    _peerSync.Start();
+                    Debug.WriteLine($"[PeerSync] Servicio LAN iniciado para usuario '{username}' en '{peersDir}'");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[PeerSync] Error al iniciar servicio LAN: {ex.Message}");
+                }
+            }
 
             if (_p2pNode == null)
             {
@@ -1420,11 +1452,15 @@ namespace VisorSingularity
                 }
 
                 _webcamEnabled = true;
-                WebcamPopup.IsOpen = true;
-                UpdatePopupPosition();
+
+                // Crear e incrustar la ventana de webcam
+                CreateWebcamWindow();
                 
-                TxtWebcamStatus.Visibility = Visibility.Visible;
-                TxtWebcamStatus.Text = "Iniciando cámara...";
+                if (_webcamStatusControl != null)
+                {
+                    _webcamStatusControl.Visibility = Visibility.Visible;
+                    _webcamStatusControl.Text = "Iniciando cámara...";
+                }
 
                 _cancellationTokenSource = new CancellationTokenSource();
                 _captureTask = Task.Run(() => CaptureLoop(_cancellationTokenSource.Token));
@@ -1453,10 +1489,13 @@ namespace VisorSingularity
                             Dispatcher.InvokeAsync(() =>
                             {
                                 if (!_webcamEnabled) return;
-                                WebcamImage.Source = frame.ToWriteableBitmap();
-                                if (TxtWebcamStatus.Visibility == Visibility.Visible)
+                                if (_webcamImageControl != null)
                                 {
-                                    TxtWebcamStatus.Visibility = Visibility.Collapsed;
+                                    _webcamImageControl.Source = frame.ToWriteableBitmap();
+                                }
+                                if (_webcamStatusControl != null && _webcamStatusControl.Visibility == Visibility.Visible)
+                                {
+                                    _webcamStatusControl.Visibility = Visibility.Collapsed;
                                 }
                             }, System.Windows.Threading.DispatcherPriority.Render);
                         }
@@ -1499,14 +1538,129 @@ namespace VisorSingularity
                 _capture = null;
             }
 
-            if (WebcamPopup != null)
-            {
-                WebcamPopup.IsOpen = false;
-                WebcamImage.Source = null;
-            }
-            
+            DestroyWebcamWindow();
             UpdateWebcamButtonStyle();
             Debug.WriteLine("[Webcam] Cámara detenida.");
+        }
+
+        private void CreateWebcamWindow()
+        {
+            if (_webcamHwndSource != null) return;
+
+            IntPtr parentHwnd = IntPtr.Zero;
+            if (_godotHost != null && _godotHost.Handle != IntPtr.Zero)
+            {
+                parentHwnd = _godotHost.Handle;
+            }
+            else
+            {
+                parentHwnd = new WindowInteropHelper(this).Handle;
+            }
+
+            // Calculamos la escala DPI
+            double dpiX = 1.0;
+            double dpiY = 1.0;
+            var source = PresentationSource.FromVisual(this);
+            if (source?.CompositionTarget != null)
+            {
+                var matrix = source.CompositionTarget.TransformToDevice;
+                dpiX = matrix.M11;
+                dpiY = matrix.M22;
+            }
+
+            int width = (int)(320 * dpiX);
+            int height = (int)(240 * dpiY);
+            int targetLeft = (int)((GodotPlaceholder.ActualWidth - 340) * dpiX);
+            int targetTop = (int)((GodotPlaceholder.ActualHeight - 260) * dpiY);
+
+            HwndSourceParameters parameters = new HwndSourceParameters("WebcamOverlay")
+            {
+                WindowStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
+                ParentWindow = parentHwnd,
+                Width = width,
+                Height = height,
+                PositionX = targetLeft,
+                PositionY = targetTop,
+                UsesPerPixelOpacity = false // Renderizado seguro y opaco como hijo de HWND
+            };
+
+            _webcamHwndSource = new HwndSource(parameters);
+
+            _webcamImageControl = new Image
+            {
+                Stretch = Stretch.UniformToFill
+            };
+
+            _webcamStatusControl = new TextBlock
+            {
+                Text = "Cargando...",
+                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#00FFFF")),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Visibility = Visibility.Collapsed
+            };
+
+            var grid = new Grid();
+            grid.Children.Add(_webcamImageControl);
+            grid.Children.Add(_webcamStatusControl);
+
+            var border = new Border
+            {
+                Width = 320,
+                Height = 240,
+                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#00FFFF")),
+                BorderThickness = new Thickness(2),
+                Background = new SolidColorBrush(Color.FromRgb(17, 22, 37)), // Fondo oscuro opaco seguro para evitar pantallas negras en HWNDs hijos
+                CornerRadius = new CornerRadius(4),
+                Child = grid
+            };
+
+            _webcamHwndSource.RootVisual = border;
+
+            // Poner encima de los hermanos (el visor 3D de Godot)
+            SetWindowPos(_webcamHwndSource.Handle, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+
+        private void DestroyWebcamWindow()
+        {
+            if (_webcamHwndSource != null)
+            {
+                _webcamHwndSource.Dispose();
+                _webcamHwndSource = null;
+            }
+            _webcamImageControl = null;
+            _webcamStatusControl = null;
+        }
+
+        private void UpdateWebcamPosition()
+        {
+            if (_webcamHwndSource != null && _webcamHwndSource.Handle != IntPtr.Zero)
+            {
+                try
+                {
+                    // Calculamos la escala DPI
+                    double dpiX = 1.0;
+                    double dpiY = 1.0;
+                    var source = PresentationSource.FromVisual(this);
+                    if (source?.CompositionTarget != null)
+                    {
+                        var matrix = source.CompositionTarget.TransformToDevice;
+                        dpiX = matrix.M11;
+                        dpiY = matrix.M22;
+                    }
+
+                    int targetLeft = (int)((GodotPlaceholder.ActualWidth - 340) * dpiX);
+                    int targetTop = (int)((GodotPlaceholder.ActualHeight - 260) * dpiY);
+                    int width = (int)(320 * dpiX);
+                    int height = (int)(240 * dpiY);
+
+                    MoveWindow(_webcamHwndSource.Handle, targetLeft, targetTop, width, height, true);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Webcam] Error al actualizar posición: {ex.Message}");
+                }
+            }
         }
 
         private void UpdateWebcamButtonStyle()
