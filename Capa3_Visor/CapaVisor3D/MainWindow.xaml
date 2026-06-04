@@ -352,6 +352,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/> <!-- Status/User -->
                         <ColumnDefinition Width="*"/>    <!-- Text input -->
+                        <ColumnDefinition Width="Auto"/> <!-- Voice Button -->
                         <ColumnDefinition Width="Auto"/> <!-- Send Button -->
                     </Grid.ColumnDefinitions>
 
@@ -364,8 +365,18 @@
                     <!-- Center: Input Box -->
                     <TextBox Grid.Column="1" x:Name="TxtChatMessage" Style="{StaticResource SingularityTextBox}" Height="38" FontSize="13" VerticalAlignment="Center" Margin="10,0"/>
 
+                    <!-- Voice Chat Button (toggle micrófono) -->
+                    <Button Grid.Column="2" x:Name="BtnVoiceChat"
+                            Content="🎤 VOZ"
+                            Height="38" Width="90"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0"
+                            Style="{StaticResource SingularityButton}"
+                            ToolTip="Activar / Desactivar chat de voz"
+                            Cursor="Hand"/>
+
                     <!-- Right Side: Send button -->
-                    <Button Grid.Column="2" x:Name="BtnSendChat" Content="ENVIAR" Style="{StaticResource SingularityButton}" Height="38" Width="100" VerticalAlignment="Center"/>
+                    <Button Grid.Column="3" x:Name="BtnSendChat" Content="ENVIAR" Style="{StaticResource SingularityButton}" Height="38" Width="100" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
         </Grid>

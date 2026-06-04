@@ -61,3 +61,10 @@ D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS.exe
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\ServidorVirtualCS.pdb
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.Asio.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.Core.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.Midi.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.Wasapi.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.WinForms.dll
+D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.WinMM.dll
