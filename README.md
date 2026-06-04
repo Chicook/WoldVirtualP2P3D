@@ -8,35 +8,38 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 
 ## Actualizacion de hoy
 
-**Fecha:** `2026-05-26`  
-**Rama de trabajo:** `DevTraeIA`
+**Fecha:** `2026-06-04`  
+**Rama de trabajo:** `DevAntigravityIA` (o `DevAntigravity`)
 
-### Hecho hoy en `DevTraeIA`
+### Hecho en `DevAntigravityIA`
 
-- Se creo e integro un modulo nuevo en `Capa3_Visor/ServidorVirtualCS/` para representar el servidor descentralizado del nodo del usuario.
-- Se implemento un HUD WPF embebible (`EmbeddedNodeControl`) para mostrar el estado del servidor descentralizado dentro del visor principal.
-- Se conecto el HUD al `MainWindow.xaml` real del visor en la franja superior central.
-- Se anadio logica de perfilado local de recursos: CPU, RAM, VRAM, almacenamiento y ancho de banda.
-- Se implemento un planificador de reparto de recursos con objetivo agregado minimo de `1024 MB`.
-- Se anadio un control deslizante para subir o bajar con el raton el nivel de recursos compartidos.
-- Se dejo el control preparado para republicar el manifiesto del nodo en IPFS cuando cambia el nivel de recursos compartidos.
-- Se ajusto el HUD para aprovechar mejor el hueco superior con una fila de estado y otra fila de recursos compartidos.
-- Se verificaron compilaciones correctas de `ServidorVirtualCS.csproj` y `VisorSingularity.csproj`.
+- **Chat de Voz por Proximidad (NAudio + VAD + UDP + JSON):**
+  - Captura de audio del micrófono en WPF usando la biblioteca [NAudio](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs#L1160-L1190) y cálculo RMS en tiempo real para detección de actividad de voz (VAD).
+  - Transmisión en tiempo real de eventos de habla a través de UDP en puerto `50007` a Godot.
+  - Sincronización del estado de voz en disco modificando el campo `"vc"` del peer JSON (`peer_*.json`) en tiempo real.
+  - Botón interactivo `BtnVoiceChat` (`🎤 VOZ`) con estados visuales cyberpunk diferenciados (Inactivo, Escuchando, Hablando).
+  - En Godot (`ChatUI.gd` y `userbase3d.gd`), se implementó la visualización de un indicador de voz flotante (`((·))`) animado con pulsos de escala y fade-out sobre la cabeza de los avatares correspondientes.
+  - Sincronización del indicador de voz para avatares remotos en `WorldManager.gd` a partir del estado `"vc"` del JSON.
+- **Compartición de Webcam (OpenCvSharp PIP):**
+  - Captura y conversión de video local utilizando [OpenCvSharp](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs#L1365-L1440).
+  - Solución al problema de superposición nativa (WPF Airspace Issue) mediante un `Popup` posicionado dinámicamente (`WebcamPopup`) sobre el control embebido de Godot.
+  - Botón de chat `BtnWebcam` (`📷 CAM`) con feedback visual (verde/apagado) para alternar encendido.
+- **HUD del Servidor Descentralizado (WPF):**
+  - Corrección de visibilidad del HUD: el control [EmbeddedServerNodeBar](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml#L268-L282) ahora está oculto inicialmente (`Visibility="Collapsed"` en XAML) y su aparición tardía se activa limpiamente en `ActivateMetaverseUi()` tras hacer login.
+- **Mejoras en UX de Registro de Avatar (Godot):**
+  - Rediseño Glassmorphism del panel en `RegistroAV.gd` e incorporación de microanimaciones suaves por Tweens en botones (escala `1.05` en hover, y `0.95` al pulsar).
+- **Mejoras en la Cámara (CameraController.gd):**
+  - Altura (`tpv_height`) y distancia (`tpv_distance`) configurables para el perfil de tercera persona, con factor de interpolación base acelerado a `0.8` para mayor fluidez.
 
-### Pendiente de hoy
-
-- El servidor descentralizado debe mostrarse solo tras iniciar sesion; ese comportamiento aun queda pendiente de cerrarse del todo.
-- Queda pendiente colocar correctamente lo de la foto/recurso visual en el hueco reservado, porque todavia no aparece como se espera.
-
-### Checklist tecnica pendiente en `DevTraeIA`
+### Pendiente en `DevAntigravity` (Fase 1 - Core de Seguridad y Protocolo)
 
 | Estado | Tarea | Ruta principal | Nota |
 |---|---|---|---|
-| Pendiente | Activar el HUD del servidor solo despues del login | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs` | La visibilidad debe depender del momento exacto posterior a `INICIAR SESION` |
-| Pendiente | Desacoplar la aparicion del HUD de cualquier activacion temprana residual | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs` | Evitar que el servidor descentralizado aparezca antes de tiempo |
-| Pendiente | Resolver la carga o render del recurso visual/foto en el hueco superior | `Capa3_Visor/CapaVisor3D/MainWindow.xaml` | El hueco existe, pero el contenido visual esperado no se muestra aun |
-| Pendiente | Verificar en ejecucion real que el binario abierto coincide con el ultimo compilado | `Capa3_Visor/CapaVisor3D/bin/Debug/net8.0-windows/` | Confirmar que no se esta probando una build vieja |
-| Pendiente | Evaluar si la republicacion en IPFS debe hacerse siempre o solo tras confirmacion del usuario | `Capa3_Visor/ServidorVirtualCS/Controls/EmbeddedNodeControl.xaml.cs` | Ahora se republica tras mover el deslizador |
+| Pendiente | Diseñar Identidad Descentralizada (DID) | `docs/arquitectura/DID-model.md` | Documento de diseño: identidad = `SHA256(fingerprint HW + seed local)`. Formato DID, rotación de claves, recuperación. |
+| Pendiente | Modelo de confianza entre pares | `docs/arquitectura/trust-model.md` | Esquema de reputación, handshake firmado, blacklist temporal, puntuación de nodo basada en uptime/contribución. |
+| Pendiente | Protocolo de handshake P2P | `docs/arquitectura/handshake-protocol.md` | Especificación del intercambio inicial entre nodos: versión, capabilities, estado, firma. |
+| Pendiente | Esquema de cifrado de peers | `docs/arquitectura/crypto-spec.md` | Cifrado asimétrico para handshake, simétrico (AES-GCM) para datos de estado. Gestión efímera de claves de sesión. |
+| Pendiente | Revisar y endurecer `P2PWebNode.cs` | `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs` | Añadir validación de firmas entrantes, límite de conexiones por IP, rate limiting. |
 
 ---
 
