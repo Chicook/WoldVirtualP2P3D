@@ -1,6 +1,10 @@
 {
 	"gender": "male",
+<<<<<<< Updated upstream
 	"timestamp": 1780577184.373,
+=======
+	"timestamp": 1780590696.852,
+>>>>>>> Stashed changes
 	"username": "chicook",
 	"wallet": "0xa8e670588bbb447c1e98557c64f740016d908085"
 }
