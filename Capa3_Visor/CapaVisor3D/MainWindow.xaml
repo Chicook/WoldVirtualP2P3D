@@ -276,7 +276,8 @@
                     Panel.ZIndex="2"
                     BorderBrush="#FF8C3A"
                     BorderThickness="2"
-                    Background="#152230">
+                    Background="#152230"
+                    Visibility="Collapsed">
                 <sv:EmbeddedNodeControl />
             </Border>
 
