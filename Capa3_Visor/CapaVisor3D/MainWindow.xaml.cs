@@ -950,7 +950,7 @@ namespace VisorSingularity
                 // Crear el TextBlock para el mensaje
                 var tb = new TextBlock
                 {
-                    TextAlignment = TextAlignment.Center,
+                    TextAlignment = TextAlignment.Left,
                     TextWrapping = TextWrapping.Wrap,
                     FontSize = 13,
                     FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
@@ -1019,9 +1019,17 @@ namespace VisorSingularity
         {
             if (ChatOverlayPopup != null && ChatOverlayPopup.IsOpen)
             {
-                // Calcular posición horizontal centrada y vertical en la parte inferior
-                double targetLeft = (GodotPlaceholder.ActualWidth - 450) / 2;
-                double targetTop = GodotPlaceholder.ActualHeight - 180;
+                double panelHeight = 180; // Fallback por defecto
+                var child = ChatOverlayPopup.Child as UIElement;
+                if (child != null)
+                {
+                    child.Measure(new Size(450, double.PositiveInfinity));
+                    panelHeight = child.DesiredSize.Height;
+                }
+
+                // Posición en la esquina inferior izquierda (a la derecha de la barra lateral de 200px)
+                double targetLeft = 215;
+                double targetTop = GodotPlaceholder.ActualHeight - panelHeight - 15;
 
                 ChatOverlayPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.Relative;
                 ChatOverlayPopup.HorizontalOffset = targetLeft;
