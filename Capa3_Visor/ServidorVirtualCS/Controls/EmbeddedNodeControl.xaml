@@ -164,6 +164,23 @@
                                 </Style>
                             </Path.Style>
                         </Path>
+                        
+                        <!-- AVATAR PHOTO -->
+                        <Ellipse Width="24" Height="24">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasAvatarImage}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                            <Ellipse.Fill>
+                                <ImageBrush ImageSource="{Binding AvatarImageSource}" Stretch="UniformToFill"/>
+                            </Ellipse.Fill>
+                        </Ellipse>
                     </Grid>
                     <Border.Style>
                         <Style TargetType="Border">

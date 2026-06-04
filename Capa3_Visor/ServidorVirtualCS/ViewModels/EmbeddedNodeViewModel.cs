@@ -54,6 +54,23 @@ public sealed class EmbeddedNodeViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private ImageSource? _avatarImageSource;
+    public ImageSource? AvatarImageSource
+    {
+        get => _avatarImageSource;
+        private set
+        {
+            if (_avatarImageSource != value)
+            {
+                _avatarImageSource = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasAvatarImage));
+            }
+        }
+    }
+
+    public bool HasAvatarImage => _avatarImageSource != null;
+
     public string NodeName { get; private set; } = "Nodo local";
 
     public string StatusText { get; private set; }
