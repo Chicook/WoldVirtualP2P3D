@@ -346,18 +346,7 @@
                 </Border>
             </Popup>
 
-            <!-- Recuadro Webcam (PIP) en un Popup para sortear el WPF Airspace Issue con HwndHost -->
-            <Popup x:Name="WebcamPopup" IsOpen="False" Placement="Relative" PlacementTarget="{Binding ElementName=GodotHwndHost}" AllowsTransparency="True" StaysOpen="True">
-                <Border x:Name="WebcamBorder" Width="320" Height="240" 
-                        BorderBrush="#00FFFF" BorderThickness="2" 
-                        Background="#111625" CornerRadius="4">
-                    <Grid>
-                        <Image x:Name="WebcamImage" Stretch="UniformToFill"/>
-                        <TextBlock x:Name="TxtWebcamStatus" Text="Cargando..." Foreground="#00FFFF" 
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
-                    </Grid>
-                </Border>
-            </Popup>
+
 
             <!-- Bottom Chat Bar (Cyberpunk Chat Look) -->
             <Border x:Name="BorderBottomLoginBar" Grid.Row="2" Height="80" Background="#111625" BorderBrush="#45A29E" BorderThickness="0,1,0,0">
