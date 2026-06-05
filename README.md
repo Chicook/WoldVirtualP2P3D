@@ -40,7 +40,6 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 | Pendiente | Protocolo de handshake P2P | `docs/arquitectura/handshake-protocol.md` | Especificación del intercambio inicial entre nodos: versión, capabilities, estado, firma. |
 | Pendiente | Esquema de cifrado de peers | `docs/arquitectura/crypto-spec.md` | Cifrado asimétrico para handshake, simétrico (AES-GCM) para datos de estado. Gestión efímera de claves de sesión. |
 | Pendiente | Revisar y endurecer `P2PWebNode.cs` | `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs` | Añadir validación de firmas entrantes, límite de conexiones por IP, rate limiting. |
-| Pendiente | Desacoplamiento e integración IPFS | `Capa3_Visor/CapaVisor3D/www/ipfs-manifest.json` | Reducir el distribuidor ZIP a ~20MB y descargar dinámicamente todo el proyecto (Wallet + Assets Godot) desde IPFS. |
 
 ---
 
@@ -589,62 +588,6 @@ Proximo paso recomendado cuando se retome:
 
 ---
 
-## Hoja de Ruta: Desacoplamiento y Distribución Descentralizada vía IPFS
-
-### ¿Es esto posible?
-**Sí, es totalmente posible y es un patrón de diseño recomendado para DApps (Aplicaciones Descentralizadas) y clientes descentralizados.** 
-En lugar de distribuir un instalador pesado (de casi 3 GB) que contiene todo el código fuente, dependencias, assets 3D de Godot y entornos de compilación, podemos construir un **instalador ultra-ligero ZIP (~20-50 MB)**. Este ZIP solo contendrá el Visor3D compilado (`VisorSingularity.exe` + DLLs básicas) y una lógica de arranque (bootstrap). Al iniciarse por primera vez, el cargador descargará todo el contenido pesado (el mundo 3D de Godot, modelos, texturas, y la lógica Web de la wallet) de forma descentralizada directamente desde IPFS utilizando sus CIDs.
-
----
-
-### Arquitectura de la Solución (Roadmap)
-
-```mermaid
-graph TD
-    A["ZIP ultra-ligero del Visor (20MB)"] -->|1. Descomprimir y Ejecutar| B["Launcher/Visor WPF (.NET 8)"]
-    B -->|2. Iniciar / Detectar Kubo| C["IPFS Local Daemon"]
-    B -->|3. ¿Existen Assets locales? No| D["Descargar assets por CID desde IPFS"]
-    D -->|4. Guardar en caché local| E["Directorio www/ y assets Godot"]
-    B -->|5. Cargar UI y Wallet| F["Servir WalletWoldVirtual localmente"]
-    B -->|6. Lanzar Motor| G["Embeber Visor3D (Godot)"]
-```
-
-#### Paso 1: Reducción del ZIP de Distribución (Launcher Mínimo)
-- **Objetivo**: Generar un paquete distribuible que contenga únicamente:
-  - El ejecutable WPF (`VisorSingularity.exe`) compilado.
-  - La configuración mínima de arranque (`.json`).
-  - La carpeta `scripts/ipfs/kubo` para arranque automático del nodo local.
-- **Acción**: Configurar scripts de publicación (`dotnet publish` automatizado) para excluir:
-  - Carpetas `node_modules` y dependencias de desarrollo.
-  - Modelos 3D crudos, texturas sin compilar, y escenas de desarrollo de Godot.
-  - Archivos temporales (`obj/`, `bin/` de depuración).
-
-#### Paso 2: Orquestación del bootstrap IPFS en el Launcher C#
-- **Objetivo**: Implementar en C# (`IpfsManager.cs`) la lógica para descargar los assets ausentes en el primer arranque.
-- **Flujo**:
-  1. El launcher WPF comprueba si existe la carpeta `Capa3_Visor/CapaVisor3D/www/WalletWoldVirtual` y los binarios/recursos del mundo 3D.
-  2. Si no existen, utiliza el CID del manifiesto (`ipfs-manifest.json` que viaja en el repositorio Git mínimo) para descargar recursivamente la carpeta completa usando:
-     ```powershell
-     ipfs get <CID_WalletWoldVirtual> -o Capa3_Visor/CapaVisor3D/www/WalletWoldVirtual
-     ```
-  3. Una vez completado, el launcher levanta el puente HTTP local, sirve la interfaz y arranca el visor embebido de Godot.
-
-#### Paso 3: Carga dinámica del Metaverso e Interfaz
-- **Objetivo**: Desacoplar completamente la lógica del frontend y assets 3D del motor nativo.
-- **Acción**:
-  - **Capa Web (Wallet)**: La wallet React se compila a estático (`npm run build`) y se sube como directorio a IPFS. La URL del puente local del visor redirecciona a la ruta local IPFS correspondiente (`http://localhost:8080/ipfs/<CID_Wallet_Build>`).
-  - **Capa 3D (Godot)**: Los assets 3D se empaquetan en archivos `.pck` de Godot separados por islas y recursos. Godot se inicia en modo minimalista y carga dinámicamente los paquetes `.pck` descargados por IPFS a través de la API `ProjectSettings.load_resource_pack()`.
-
-#### Paso 4: Publicación e indexación automática en cada Release
-- **Objetivo**: Automatizar la actualización de CIDs.
-- **Acción**: Añadir un script de Integración Continua (CI) que en cada push a la rama `main`:
-  1. Construya la wallet y empaquete los assets de Godot.
-  2. Suba los resultados a IPFS/Pinata/local node.
-  3. Genere y commitee un nuevo `ipfs-manifest.json` con los CIDs actualizados.
-
----
-
 ## Nota final
 
 Este README describe el estado real del codigo del repositorio a fecha 23 de mayo de 2026: un prototipo funcional, embebido y distribuible, con una base tecnica interesante pero todavia en transicion entre demo local, sincronizacion por archivos y una vision P2P mas ambiciosa.
-
