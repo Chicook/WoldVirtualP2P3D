@@ -1187,8 +1187,11 @@ namespace VisorSingularity
             int width = (int)Math.Max(800, GodotPlaceholder.ActualWidth);
             int height = (int)Math.Max(600, GodotPlaceholder.ActualHeight);
 
+            // Detectar país e idioma del sistema para pasarlo a Godot
+            var (detectedLang, detectedCountry) = GetSystemLocaleInfo();
+
             // Argumentos de línea de comandos de Godot
-            string arguments = $"--path \"{projectDir}\" {scenePath} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+            string arguments = $"--path \"{projectDir}\" {scenePath} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\" --lang \"{detectedLang}\" --country \"{detectedCountry}\"";
 
 
             var startInfo = new ProcessStartInfo
@@ -1311,6 +1314,46 @@ namespace VisorSingularity
         {
             var paths = GodotProjectLocator.Resolve();
             return (paths.ProjectDir, paths.ExePath);
+        }
+
+        /// <summary>
+        /// Detecta el idioma y país del sistema operativo usando CultureInfo.
+        /// Devuelve (langCode, countryCode) p.ej: ("es", "ES"), ("en", "US"), ("fr", "FR").
+        /// </summary>
+        private (string lang, string country) GetSystemLocaleInfo()
+        {
+            try
+            {
+                var culture = System.Globalization.CultureInfo.CurrentCulture;
+
+                // Código ISO 639-1 del idioma: "es", "en", "fr", "de", "pt", "zh", etc.
+                string lang = culture.TwoLetterISOLanguageName.ToLowerInvariant();
+
+                // Código ISO 3166-1 alpha-2 del país: "ES", "US", "FR", "DE", "BR", "CN", etc.
+                // Se extrae de la región del sistema (RegionInfo)
+                string country = "??";
+                try
+                {
+                    var region = new System.Globalization.RegionInfo(culture.Name);
+                    country = region.TwoLetterISORegionName.ToUpperInvariant();
+                }
+                catch
+                {
+                    // Si la cultura es neutral (sin región), extraerla del nombre: "es-ES" → "ES"
+                    if (culture.Name.Contains('-'))
+                    {
+                        country = culture.Name.Split('-')[1].ToUpperInvariant();
+                    }
+                }
+
+                Debug.WriteLine($"[Locale] Sistema detectado: idioma='{lang}', país='{country}', cultura='{culture.Name}'");
+                return (lang, country);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Locale] Error detectando locale: {ex.Message}");
+                return ("en", "??");
+            }
         }
 
         // ── HOOK DE TECLADO PARA AVATAR GODOT ──
