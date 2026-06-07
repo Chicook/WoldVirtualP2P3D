@@ -2,6 +2,7 @@ d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\Servido
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.exe
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\ServidorVirtualCS.deps.json
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\ServidorVirtualCS.runtimeconfig.json
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\www\logo_bienvenida.png
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\www\metamask.html
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.dll
 d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Release\net8.0-windows\publish\VisorSingularity.deps.json

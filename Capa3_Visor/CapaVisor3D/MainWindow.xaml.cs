@@ -45,6 +45,16 @@ namespace VisorSingularity
         private bool _metaverseUiActivated = false;
         private PeerSyncService? _peerSync;  // Sincronización P2P LAN de peers
 
+        // ── Login de usuario existente (ZIP detectado) ───────────────────────────
+        // Ruta fija donde se guarda una copia del ZIP de registro para detección automática
+        private static readonly string APP_DATA_DIR    = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WoldVirtual");
+        private static readonly string APP_DATA_ZIP    = Path.Combine(APP_DATA_DIR, "firma_hardware.zip");
+        private static readonly string APP_DATA_SIG    = Path.Combine(APP_DATA_DIR, "hardware_sig.txt");
+        private string _loginFingerprint = "";
+#pragma warning disable CS0414
+        private bool   _isLoginMode      = false;   // true = usuario ya registrado (reservado para lógica futura)
+#pragma warning restore CS0414
+
         // === Voice Chat (NAudio VAD) ===
         private WaveInEvent? _waveIn;
         private bool _voiceEnabled = false;
@@ -125,6 +135,12 @@ namespace VisorSingularity
             BtnVoiceChat.Click += BtnVoiceChat_Click;
             BtnWebcam.Click += BtnWebcam_Click;
 
+            // Vincular botón de Login (usuario existente)
+            BtnLoginMetaMask.Click += BtnLoginMetaMask_Click;
+            BtnLoginPhase1.Click += BtnLoginPhase1_Click;
+            BtnLoginPhase2.Click += BtnLoginPhase2_Click;
+
+
             // Vincular eventos de redimensionado/movimiento de ventana para el Popup del Chat
             this.LocationChanged += (s, ev) => UpdatePopupPosition();
             this.SizeChanged += (s, ev) => { UpdatePopupPosition(); UpdateWebcamPosition(); };
@@ -132,7 +148,614 @@ namespace VisorSingularity
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            await RunHardwareScanAsync();
+            // Detectar si el usuario ya tiene registro previo
+            bool hasAccount = await CheckExistingRegistrationAsync();
+            if (!hasAccount)
+            {
+                // Primer uso: mostrar flujo de registro de hardware
+                await RunHardwareScanAsync();
+            }
+        }
+
+        // ─── DETECCIÓN DE CUENTA EXISTENTE ────────────────────────────────────────────────
+        /// <summary>
+        /// Comprueba si existe el registro de PC (ZIP y firma) y el usuario (credentials y current_user.json).
+        /// Si existe todo: muestra la pantalla de Login y devuelve true.
+        /// Si falta algo: asegura la visibilidad de GridPcRegistration y devuelve false.
+        /// </summary>
+        private async Task<bool> CheckExistingRegistrationAsync()
+        {
+            return await Task.Run(() =>
+            {
+                bool hasZip = File.Exists(APP_DATA_ZIP);
+                bool hasCreds = File.Exists(Path.Combine(APP_DATA_DIR, "credentials.json"));
+                bool hasUserJson = DoesCurrentUserJsonExist();
+
+                if (!hasZip || !hasCreds || !hasUserJson)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        GridPcRegistration.Visibility = Visibility.Visible;
+                        GridUserRegistration.Visibility = Visibility.Collapsed;
+                        GridLoginScreen.Visibility = Visibility.Collapsed;
+                    });
+                    return false;
+                }
+
+                // Leer la firma almacenada
+                string sig = File.Exists(APP_DATA_SIG)
+                    ? File.ReadAllText(APP_DATA_SIG, System.Text.Encoding.UTF8).Trim()
+                    : "SHA-256 disponible en ZIP";
+
+                Dispatcher.Invoke(() =>
+                {
+                    _loginFingerprint = sig;
+                    _isLoginMode      = true;
+
+                    // Ocultar pantalla de registro, mostrar pantalla de Login
+                    GridPcRegistration.Visibility = Visibility.Collapsed;
+                    GridLoginScreen.Visibility    = Visibility.Visible;
+
+                    // Mostrar primeras 48 chars de la firma en la UI
+                    string display = sig.Length > 48 ? sig.Substring(0, 48) + "..." : sig;
+                    TxtLoginFingerprint.Text = $"SHA-256: {display}";
+
+                    // Cargar configuraciones guardadas de recordar usuario/contraseña
+                    LoadLoginSettings();
+                });
+                return true;
+            });
+        }
+
+        private bool DoesCurrentUserJsonExist()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                DirectoryInfo? dir = new DirectoryInfo(baseDir);
+                while (dir != null)
+                {
+                    string candidate = Path.Combine(dir.FullName, "WoldVirtual", "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                    if (File.Exists(candidate)) return true;
+                    candidate = Path.Combine(dir.FullName, "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                    if (File.Exists(candidate)) return true;
+                    dir = dir.Parent;
+                }
+            }
+            catch
+            {
+                // Ignorar
+            }
+            return false;
+        }
+
+        private (string username, string wallet, string islandId) GetSavedUserInfo()
+        {
+            string username = "Usuario";
+            string wallet = "0x0000";
+            string islandId = "1 : 0.0.0";
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                DirectoryInfo? dir = new DirectoryInfo(baseDir);
+                string? filePath = null;
+
+                while (dir != null)
+                {
+                    string candidate = Path.Combine(dir.FullName, "WoldVirtual", "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                    if (File.Exists(candidate))
+                    {
+                        filePath = candidate;
+                        break;
+                    }
+                    candidate = Path.Combine(dir.FullName, "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                    if (File.Exists(candidate))
+                    {
+                        filePath = candidate;
+                        break;
+                    }
+                    dir = dir.Parent;
+                }
+
+                if (filePath != null && File.Exists(filePath))
+                {
+                    string json = File.ReadAllText(filePath);
+                    using (var doc = JsonDocument.Parse(json))
+                    {
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("username", out var userProp))
+                        {
+                            username = userProp.GetString() ?? "Usuario";
+                        }
+                        if (root.TryGetProperty("wallet", out var walletProp))
+                        {
+                            wallet = walletProp.GetString() ?? "0x0000";
+                        }
+                    }
+                }
+
+                // Intentar cargar la isla por defecto desde los peers locales para que coincida con lo registrado
+                var (projectDir, _) = FindLocalGodotPaths();
+                if (!string.IsNullOrEmpty(projectDir))
+                {
+                    string peersDir = Path.Combine(projectDir, "Estado_Global", "peers");
+                    if (Directory.Exists(peersDir))
+                    {
+                        var files = Directory.GetFiles(peersDir, "peer_*.json");
+                        foreach (var file in files)
+                        {
+                            var lastWriteTime = File.GetLastWriteTime(file);
+                            if ((DateTime.Now - lastWriteTime).TotalSeconds < 25)
+                            {
+                                islandId = "1 : 0.0.0";
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[Login] Error al cargar información de usuario guardado: " + ex.Message);
+            }
+            return (username, wallet, islandId);
+        }
+
+        private void SaveUserCredentials(string username, string password)
+        {
+            try
+            {
+                Directory.CreateDirectory(APP_DATA_DIR);
+                string credPath = Path.Combine(APP_DATA_DIR, "credentials.json");
+                string passwordHash = ComputeSHA256(password);
+                var credData = new
+                {
+                    username = username,
+                    passwordHash = passwordHash
+                };
+                string json = JsonSerializer.Serialize(credData);
+                File.WriteAllText(credPath, json, Encoding.UTF8);
+                System.Diagnostics.Debug.WriteLine("[Registro] Credenciales locales guardadas.");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[Registro] Error al guardar credenciales locales: " + ex.Message);
+            }
+        }
+
+        private string ComputeSHA256(string input)
+        {
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+                var sb = new StringBuilder();
+                foreach (byte b in bytes)
+                {
+                    sb.Append(b.ToString("x2"));
+                }
+                return sb.ToString();
+            }
+        }
+
+        private void LoadLoginSettings()
+        {
+            try
+            {
+                string settingsPath = Path.Combine(APP_DATA_DIR, "login_settings.json");
+                if (File.Exists(settingsPath))
+                {
+                    string json = File.ReadAllText(settingsPath);
+                    using (var doc = JsonDocument.Parse(json))
+                    {
+                        var root = doc.RootElement;
+                        bool rememberUser = root.TryGetProperty("rememberUser", out var remUser) && remUser.GetBoolean();
+                        bool rememberPass = root.TryGetProperty("rememberPass", out var remPass) && remPass.GetBoolean();
+
+                        ChkRememberUser.IsChecked = rememberUser;
+                        ChkRememberPass.IsChecked = rememberPass;
+
+                        if (rememberUser && root.TryGetProperty("savedUser", out var userProp))
+                        {
+                            TxtLoginUser.Text = userProp.GetString() ?? "";
+                        }
+                        if (rememberPass && root.TryGetProperty("savedPass", out var passProp))
+                        {
+                            string base64Pass = passProp.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(base64Pass))
+                            {
+                                byte[] data = Convert.FromBase64String(base64Pass);
+                                TxtLoginPass.Password = Encoding.UTF8.GetString(data);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[Login] Error al cargar configuración de login: " + ex.Message);
+            }
+        }
+
+        private void SaveLoginSettings()
+        {
+            try
+            {
+                Directory.CreateDirectory(APP_DATA_DIR);
+                string settingsPath = Path.Combine(APP_DATA_DIR, "login_settings.json");
+
+                bool rememberUser = ChkRememberUser.IsChecked == true;
+                bool rememberPass = ChkRememberPass.IsChecked == true;
+
+                string savedUser = rememberUser ? TxtLoginUser.Text : "";
+                string savedPass = "";
+                if (rememberPass)
+                {
+                    byte[] data = Encoding.UTF8.GetBytes(TxtLoginPass.Password);
+                    savedPass = Convert.ToBase64String(data);
+                }
+
+                var settingsData = new
+                {
+                    rememberUser = rememberUser,
+                    rememberPass = rememberPass,
+                    savedUser = savedUser,
+                    savedPass = savedPass
+                };
+
+                string json = JsonSerializer.Serialize(settingsData);
+                File.WriteAllText(settingsPath, json, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[Login] Error al guardar configuración de login: " + ex.Message);
+            }
+        }
+
+        private void BtnLoginPhase1_Click(object sender, RoutedEventArgs e)
+        {
+            string enteredUser = TxtLoginUser.Text.Trim();
+            string enteredPass = TxtLoginPass.Password;
+
+            if (string.IsNullOrEmpty(enteredUser) || string.IsNullOrEmpty(enteredPass))
+            {
+                MessageBox.Show("Por favor, ingrese usuario y contraseña.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Validar contra credentials.json
+            string credPath = Path.Combine(APP_DATA_DIR, "credentials.json");
+            bool isValid = false;
+
+            if (!File.Exists(credPath))
+            {
+                // Fallback de migración de cuenta existente: registrar credenciales al primer ingreso
+                SaveUserCredentials(enteredUser, enteredPass);
+                isValid = true;
+            }
+            else
+            {
+                try
+                {
+                    string json = File.ReadAllText(credPath);
+                    using (var doc = JsonDocument.Parse(json))
+                    {
+                        var root = doc.RootElement;
+                        string savedUser = root.TryGetProperty("username", out var userProp) ? userProp.GetString() ?? "" : "";
+                        string savedHash = root.TryGetProperty("passwordHash", out var hashProp) ? hashProp.GetString() ?? "" : "";
+
+                        string enteredHash = ComputeSHA256(enteredPass);
+                        if (savedUser.Equals(enteredUser, StringComparison.OrdinalIgnoreCase) && savedHash.Equals(enteredHash, StringComparison.Ordinal))
+                        {
+                            isValid = true;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error al leer credenciales locales: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+
+            if (!isValid)
+            {
+                MessageBox.Show("Usuario o contraseña incorrectos.", "Ingreso Fallido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Guardar configuración de recordar
+            SaveLoginSettings();
+
+            // Bloquear Fase 1
+            TxtLoginUser.IsEnabled = false;
+            TxtLoginPass.IsEnabled = false;
+            ChkRememberUser.IsEnabled = false;
+            ChkRememberPass.IsEnabled = false;
+            BtnLoginPhase1.IsEnabled = false;
+
+            // Mostrar Fase 2
+            PanelPhase2.Visibility = Visibility.Visible;
+            TxtLoginPhaseStatus.Text = "Fase 1 completada con éxito. Fase 2 desbloqueada: Firme y actualice el registro ZIP de su PC.";
+        }
+
+        private async void BtnLoginPhase2_Click(object sender, RoutedEventArgs e)
+        {
+            BtnLoginPhase2.IsEnabled = false;
+            ScanProgressPanel.Visibility = Visibility.Visible;
+            await RunLoginHardwareScanAsync();
+        }
+
+        private async Task RunLoginHardwareScanAsync()
+        {
+            try
+            {
+                ProgLoginScan.Value = 0;
+                TxtLoginScanStatus.Text = "Escaneando...";
+                await Task.Delay(300);
+
+                TxtLoginScanStatus.Text = "Identificando CPU...";
+                ProgLoginScan.Value = 30;
+                await Task.Delay(400);
+
+                TxtLoginScanStatus.Text = "Placa base...";
+                ProgLoginScan.Value = 60;
+                await Task.Delay(400);
+
+                TxtLoginScanStatus.Text = "Firmando...";
+                ProgLoginScan.Value = 90;
+                await Task.Delay(300);
+
+                // Obtener huella de hardware actual
+                string os = GetOSName();
+                string cpu = GetCpuName();
+                string motherboard = GetMotherboardName();
+                _hardwareFingerprint = GenerateSHA256Signature(os, cpu, motherboard);
+                _loginFingerprint = _hardwareFingerprint;
+
+                // Actualizar firma mostrada en la pantalla
+                string display = _loginFingerprint.Length > 48 ? _loginFingerprint.Substring(0, 48) + "..." : _loginFingerprint;
+                TxtLoginFingerprint.Text = $"SHA-256: {display}";
+
+                // ── Crear ZIP de actualización de firma temporal ──
+                string tempDir = Path.Combine(Path.GetTempPath(), "WoldVirtualLoginUpdate_" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(tempDir);
+
+                // Escribir reporte
+                string reportPath = Path.Combine(tempDir, "registro_hardware.txt");
+                StringBuilder reportBuilder = new StringBuilder();
+                reportBuilder.AppendLine("==================================================");
+                reportBuilder.AppendLine("  WOLD VIRTUAL P2P 3D - REGISTRO DE HARDWARE");
+                reportBuilder.AppendLine("==================================================");
+                reportBuilder.AppendLine($"Fecha de Actualización : {DateTime.Now}");
+                reportBuilder.AppendLine($"Sistema Operativo      : {os}");
+                reportBuilder.AppendLine($"Procesador             : {cpu}");
+                reportBuilder.AppendLine($"Placa Base             : {motherboard}");
+                reportBuilder.AppendLine("-------------------------------------------------- ");
+                reportBuilder.AppendLine("FIRMADO CRYPTO DE HARDWARE (SHA-256):");
+                reportBuilder.AppendLine(_hardwareFingerprint);
+                reportBuilder.AppendLine("==================================================");
+                File.WriteAllText(reportPath, reportBuilder.ToString(), Encoding.UTF8);
+
+                // Clave de firma
+                string signaturePath = Path.Combine(tempDir, "signature.key");
+                File.WriteAllText(signaturePath, _hardwareFingerprint, Encoding.UTF8);
+
+                // ── Pedir al usuario donde guardar el ZIP de firma actualizado ──
+                string? userZipPath = null;
+                var saveDialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Guardar ZIP de Firma de Hardware Actualizado",
+                    Filter = "Archivo ZIP (*.zip)|*.zip",
+                    FileName = "WoldVirtual_HardwareSignature_Update.zip",
+                    InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+                };
+
+                bool? dialogResult = saveDialog.ShowDialog(this);
+                if (dialogResult != true)
+                {
+                    // El usuario canceló — limpiar y abortar sin error
+                    Directory.Delete(tempDir, true);
+                    TxtLoginScanStatus.Text = "Cancelado";
+                    BtnLoginPhase2.IsEnabled = true;
+                    return;
+                }
+                userZipPath = saveDialog.FileName;
+
+                // Comprimir y copiar ZIP a la ruta elegida por el usuario
+                string tempZip = Path.Combine(Path.GetTempPath(), "WoldVirtualSignatureTemp_" + Guid.NewGuid().ToString("N") + ".zip");
+                ZipFile.CreateFromDirectory(tempDir, tempZip);
+
+                // Copiar el ZIP a la ruta del usuario
+                File.Copy(tempZip, userZipPath, overwrite: true);
+
+                // También actualizar AppData interno para que la app pueda verificar la firma
+                Directory.CreateDirectory(APP_DATA_DIR);
+                if (File.Exists(APP_DATA_ZIP)) File.Delete(APP_DATA_ZIP);
+                File.Copy(tempZip, APP_DATA_ZIP);
+                File.WriteAllText(APP_DATA_SIG, _hardwareFingerprint, Encoding.UTF8);
+
+                File.Delete(tempZip);
+                Directory.Delete(tempDir, true);
+
+                ProgLoginScan.Value = 100;
+                TxtLoginScanStatus.Text = "Firma OK";
+                await Task.Delay(400);
+
+                // Finalizar Fase 2
+                BtnLoginPhase2.Content = "✓ FIRMA ACTUALIZADA";
+                BtnLoginPhase2.IsEnabled = false;
+                ScanProgressPanel.Visibility = Visibility.Collapsed;
+
+                // Desbloquear Fase 3 (MetaMask)
+                BtnLoginMetaMask.Visibility = Visibility.Visible;
+                TxtLoginPhaseStatus.Text = $"Fase 2 completada con éxito. ZIP guardado en: {userZipPath}\nFase 3 desbloqueada: Inicie sesión con MetaMask para entrar.";
+            }
+            catch (Exception ex)
+            {
+                TxtLoginScanStatus.Text = "Error";
+                MessageBox.Show("Error al actualizar la firma de hardware: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                BtnLoginPhase2.IsEnabled = true;
+            }
+        }
+
+
+        // ─── BOTON LOGIN METAMASK ────────────────────────────────────────────────────────────
+        private void BtnLoginMetaMask_Click(object sender, RoutedEventArgs e)
+        {
+            BtnLoginMetaMask.IsEnabled     = false;
+            BorderLoginStatus.Visibility   = Visibility.Visible;
+            TxtLoginStatus.Text            = "INICIANDO SESIÓN CON METAMASK...";
+
+            var userInfo = GetSavedUserInfo();
+
+            // Arrancar el servidor HTTP puente en modo login (puerto 8080)
+            StartHttpBridgeLogin();
+
+            // Abrir navegador con metamask.html en modo login pasando el usuario e isla correctos
+            try
+            {
+                string url = $"http://localhost:8080/?mode=login&user={Uri.EscapeDataString(userInfo.username)}&islandId={Uri.EscapeDataString(userInfo.islandId)}";
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo abrir el navegador: {ex.Message}\nNavega a http://localhost:8080/ manualmente.",
+                    "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+
+        private void StartHttpBridgeLogin()
+        {
+            try
+            {
+                if (_httpListener != null) { _httpListener.Stop(); _httpListener.Close(); }
+                _httpListener = new HttpListener();
+                _httpListener.Prefixes.Add("http://localhost:8080/");
+                _httpListener.Start();
+                Task.Run(() => ListenLoopLogin());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ERROR al iniciar HTTP Bridge: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                BorderLoginStatus.Visibility = Visibility.Collapsed;
+                BtnLoginMetaMask.IsEnabled   = true;
+            }
+        }
+
+        private async Task ListenLoopLogin()
+        {
+            while (_httpListener != null && _httpListener.IsListening && !_isClosing)
+            {
+                try
+                {
+                    var context  = await _httpListener.GetContextAsync();
+                    var request  = context.Request;
+                    var response = context.Response;
+                    string path  = request.Url?.AbsolutePath ?? "/";
+
+                    if (path == "/confirm")
+                    {
+                        string user      = request.QueryString["user"]      ?? "Usuario";
+                        string wallet    = request.QueryString["wallet"]    ?? "0x0000";
+                        string island    = request.QueryString["islandId"]  ?? "1 : 0.0.0";
+                        string signature = request.QueryString["signature"] ?? "";
+
+                        // Responder OK al navegador
+                        string html = "<html><head><meta charset='UTF-8'><style>body{background:#0a0f1a;color:#00d9ff;font-family:sans-serif;text-align:center;padding-top:100px;}h1{color:#00ff8c;}</style></head><body><h1>✅ Sesión Iniciada</h1><p>Puedes regresar al Visor.</p></body></html>";
+                        byte[] buf = System.Text.Encoding.UTF8.GetBytes(html);
+                        response.ContentLength64 = buf.Length;
+                        response.ContentType = "text/html; charset=UTF-8";
+                        await response.OutputStream.WriteAsync(buf, 0, buf.Length);
+                        response.OutputStream.Close();
+
+                        if (_httpListener != null) { try { _httpListener.Stop(); _httpListener.Close(); } catch { } _httpListener = null; }
+
+                        Dispatcher.Invoke(() => _OnLoginConfirmed(user, wallet, island, signature));
+                    }
+                    else
+                    {
+                        // Servir metamask.html con ?mode=login
+                        string wwwPath  = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "www");
+                        string filePath = Path.Combine(wwwPath, "metamask.html");
+                        byte[] buf;
+                        if (File.Exists(filePath))
+                        {
+                            buf = File.ReadAllBytes(filePath);
+                            response.ContentType = "text/html; charset=UTF-8";
+                        }
+                        else
+                        {
+                            string fallback = $"<html><body style='background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:50px'><h1>WoldVirtual — Inicio de Sesión</h1><a style='background:#00d9ff;color:#000;padding:12px 24px;text-decoration:none;font-weight:bold;border-radius:6px' href='/confirm?user=Usuario&wallet=0x{Guid.NewGuid().ToString().Replace("-","").Substring(0,40)}&islandId=1+%3A+0.0.0&mode=login'>SIMULAR LOGIN METAMASK</a></body></html>";
+                            buf = System.Text.Encoding.UTF8.GetBytes(fallback);
+                            response.ContentType = "text/html; charset=UTF-8";
+                        }
+                        response.ContentLength64 = buf.Length;
+                        await response.OutputStream.WriteAsync(buf, 0, buf.Length);
+                        response.OutputStream.Close();
+                    }
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>Llamado tras confirmar la firma MetaMask en modo login.</summary>
+        private void _OnLoginConfirmed(string user, string wallet, string island, string signature)
+        {
+            TxtLoginStatus.Text = "✅ FIRMA CONFIRMADA — ENTRANDO AL METAVERSO...";
+
+            // 1) Actualizar el ZIP de registro con la firma de esta sesión
+            UpdateLoginZip(wallet, signature);
+
+            // 2) Transicionar al visor
+            GridLoginScreen.Visibility = Visibility.Collapsed;
+            GridMainViewer.Visibility  = Visibility.Visible;
+            _currentUsername = user;
+            TxtChatActiveUser.Text = $"Usuario: {user}";
+
+            // 3) Lanzar Godot apuntando DIRECTAMENTE a N3DWoldVirtualMT.tscn
+            LaunchAndEmbedGodot(wallet, user, island,
+                scenePath: "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn");
+        }
+
+        /// <summary>Actualiza el ZIP de registro añadiendo la firma de sesión MetaMask.</summary>
+        private void UpdateLoginZip(string wallet, string signature)
+        {
+            try
+            {
+                if (!File.Exists(APP_DATA_ZIP)) return;
+
+                string tempDir = Path.Combine(Path.GetTempPath(), "WoldVirtualLogin_" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(tempDir);
+
+                // Extraer ZIP existente
+                ZipFile.ExtractToDirectory(APP_DATA_ZIP, tempDir, overwriteFiles: true);
+
+                // Añadir/actualizar archivo de sesión
+                string sessionPath = Path.Combine(tempDir, "ultima_sesion.txt");
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("=== Última Sesión de Login ===");
+                sb.AppendLine($"Fecha       : {DateTime.Now}");
+                sb.AppendLine($"Usuario     : {_currentUsername}");
+                sb.AppendLine($"Wallet      : {wallet}");
+                if (!string.IsNullOrEmpty(signature))
+                    sb.AppendLine($"Firma MM    : {signature}");
+                File.WriteAllText(sessionPath, sb.ToString(), System.Text.Encoding.UTF8);
+
+                // Recomprimir
+                string tmpZip = APP_DATA_ZIP + ".tmp";
+                if (File.Exists(tmpZip)) File.Delete(tmpZip);
+                ZipFile.CreateFromDirectory(tempDir, tmpZip);
+                File.Delete(APP_DATA_ZIP);
+                File.Move(tmpZip, APP_DATA_ZIP);
+
+                Directory.Delete(tempDir, true);
+                System.Diagnostics.Debug.WriteLine("[Login] ZIP actualizado con firma de sesión.");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Login] Error al actualizar ZIP: {ex.Message}");
+            }
         }
 
         private async Task RunHardwareScanAsync()
@@ -283,8 +906,21 @@ namespace VisorSingularity
                     Directory.Delete(tempDir, true);
 
                     // Cambiar apariencia del botón
-                    BtnGenerateZip.Content = "✓ RESPALDO GUARDADO";
-                    BtnGenerateZip.IsEnabled = false;
+                    BtnGenerateZip.Content    = "✓ RESPALDO GUARDADO";
+                    BtnGenerateZip.IsEnabled  = false;
+
+                    // ── Guardar TAMBIÉN copia automática en AppData para detección de login ──
+                    try
+                    {
+                        Directory.CreateDirectory(APP_DATA_DIR);
+                        File.Copy(targetZipPath, APP_DATA_ZIP, overwrite: true);
+                        File.WriteAllText(APP_DATA_SIG, _hardwareFingerprint, System.Text.Encoding.UTF8);
+                        System.Diagnostics.Debug.WriteLine($"[Registro] Copia de seguridad en AppData guardada: {APP_DATA_ZIP}");
+                    }
+                    catch (Exception exAppData)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Registro] Aviso: no se pudo copiar a AppData: {exAppData.Message}");
+                    }
 
                     // Desbloquear botón de ingreso al metaverso
                     BtnEnterMetaverse.IsEnabled = true;
@@ -347,6 +983,9 @@ namespace VisorSingularity
                 MessageBox.Show("Por favor, genere un UUID único pulsando el botón 'GENERAR UUID'.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            // Guardar credenciales locales para validación de login posterior
+            SaveUserCredentials(username, password);
 
             // Activar visualización de carga MetaMask en el Paso 2
             GridMetaMaskOverlay.Visibility = Visibility.Visible;
@@ -459,23 +1098,20 @@ namespace VisorSingularity
                             // Cerrar Listener
                             if (_httpListener != null)
                             {
-                                try
-                                {
-                                    _httpListener.Stop();
-                                    _httpListener.Close();
-                                }
-                                catch { }
+                                try { _httpListener.Stop(); _httpListener.Close(); } catch { }
                                 _httpListener = null;
                             }
 
-                            GridMetaMaskOverlay.Visibility = Visibility.Collapsed;
-                            GridUserRegistration.Visibility = Visibility.Collapsed;
-                            GridMainViewer.Visibility = Visibility.Visible;
+                            GridMetaMaskOverlay.Visibility    = Visibility.Collapsed;
+                            GridUserRegistration.Visibility   = Visibility.Collapsed;
+                            GridMainViewer.Visibility         = Visibility.Visible;
 
                             _currentUsername = user;
                             TxtChatActiveUser.Text = $"Usuario: {user}";
 
-                            LaunchAndEmbedGodot(wallet, user, island);
+                            // Registro nuevo: carga EscenaPrincipal (flujo normal)
+                            LaunchAndEmbedGodot(wallet, user, island,
+                                scenePath: "res://EscenaPrincipal.tscn");
                         });
                     }
                     else
@@ -511,7 +1147,8 @@ namespace VisorSingularity
         }
 
         // ── LANZAMIENTO E INCRUSTACIÓN DEL MOTOR GODOT ──
-        private async void LaunchAndEmbedGodot(string wallet, string user, string island)
+        /// <param name="scenePath">Ruta de escena Godot (res://...). Null = usa EscenaPrincipal.tscn</param>
+        private async void LaunchAndEmbedGodot(string wallet, string user, string island, string scenePath = "res://EscenaPrincipal.tscn")
         {
             if (_godotProcess != null && !_godotProcess.HasExited)
             {
@@ -522,6 +1159,7 @@ namespace VisorSingularity
 
             // Buscar rutas de Godot localmente
             var (projectDir, exePath) = FindLocalGodotPaths();
+            string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
 
             if (!File.Exists(exePath))
             {
@@ -532,18 +1170,26 @@ namespace VisorSingularity
             // Limpiar contenedor placeholder
             GodotPlaceholder.Children.Clear();
 
-            // Ocultar barra inferior de conexión inicialmente mientras se registra el avatar en Godot
-            BorderBottomLoginBar.Visibility = Visibility.Collapsed;
-            P2PNodeBar.Visibility = Visibility.Collapsed;
-            EmbeddedServerNodeBar.Visibility = Visibility.Collapsed;
+            if (scenePath == "res://EscenaPrincipal.tscn")
+            {
+                // Ocultar barra inferior de conexión inicialmente mientras se registra el avatar en Godot
+                BorderBottomLoginBar.Visibility = Visibility.Collapsed;
+                P2PNodeBar.Visibility = Visibility.Collapsed;
+                EmbeddedServerNodeBar.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                // Si entra directo (login), activar de una vez la UI del Metaverso y sus barras (Webnodo, Servidor virtual, Chat)
+                ActivateMetaverseUi(user, repoPath);
+            }
 
             // Configurar resolución de inicio
             int width = (int)Math.Max(800, GodotPlaceholder.ActualWidth);
             int height = (int)Math.Max(600, GodotPlaceholder.ActualHeight);
 
-            // Argumentos de línea de comandos de Godot (apuntando a EscenaPrincipal.tscn)
-            string arguments = $"--path \"{projectDir}\" res://EscenaPrincipal.tscn --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
-            string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
+            // Argumentos de línea de comandos de Godot
+            string arguments = $"--path \"{projectDir}\" {scenePath} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\"";
+
 
             var startInfo = new ProcessStartInfo
             {
