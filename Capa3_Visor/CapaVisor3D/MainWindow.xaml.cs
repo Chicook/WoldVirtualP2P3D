@@ -159,15 +159,28 @@ namespace VisorSingularity
 
         // ─── DETECCIÓN DE CUENTA EXISTENTE ────────────────────────────────────────────────
         /// <summary>
-        /// Comprueba si existe un ZIP de registro previo en AppData\WoldVirtual.
-        /// Si existe: muestra la pantalla de Login y devuelve true.
-        /// Si no existe: deja visible GridPcRegistration y devuelve false.
+        /// Comprueba si existe el registro de PC (ZIP y firma) y el usuario (credentials y current_user.json).
+        /// Si existe todo: muestra la pantalla de Login y devuelve true.
+        /// Si falta algo: asegura la visibilidad de GridPcRegistration y devuelve false.
         /// </summary>
         private async Task<bool> CheckExistingRegistrationAsync()
         {
             return await Task.Run(() =>
             {
-                if (!File.Exists(APP_DATA_ZIP)) return false;
+                bool hasZip = File.Exists(APP_DATA_ZIP);
+                bool hasCreds = File.Exists(Path.Combine(APP_DATA_DIR, "credentials.json"));
+                bool hasUserJson = DoesCurrentUserJsonExist();
+
+                if (!hasZip || !hasCreds || !hasUserJson)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        GridPcRegistration.Visibility = Visibility.Visible;
+                        GridUserRegistration.Visibility = Visibility.Collapsed;
+                        GridLoginScreen.Visibility = Visibility.Collapsed;
+                    });
+                    return false;
+                }
 
                 // Leer la firma almacenada
                 string sig = File.Exists(APP_DATA_SIG)
@@ -192,6 +205,28 @@ namespace VisorSingularity
                 });
                 return true;
             });
+        }
+
+        private bool DoesCurrentUserJsonExist()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                DirectoryInfo? dir = new DirectoryInfo(baseDir);
+                while (dir != null)
+                {
+                    string candidate = Path.Combine(dir.FullName, "WoldVirtual", "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                    if (File.Exists(candidate)) return true;
+                    candidate = Path.Combine(dir.FullName, "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                    if (File.Exists(candidate)) return true;
+                    dir = dir.Parent;
+                }
+            }
+            catch
+            {
+                // Ignorar
+            }
+            return false;
         }
 
         private (string username, string wallet, string islandId) GetSavedUserInfo()
