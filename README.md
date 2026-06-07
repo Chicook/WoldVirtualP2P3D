@@ -1,4 +1,4 @@
-# WoldVirtual P2P 3D
+﻿# WoldVirtual P2P 3D
 
 Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un proyecto Godot 4.6.2 embebido y un sistema de sincronizacion P2P basado en archivos JSON, UDP local y distribucion del visor por ZIP, tuneles publicos e IPFS.
 
@@ -13,47 +13,47 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 
 ### Hecho en `DevAntigravityIA`
 
-- **Inicio de Sesión en 3 Fases con Logotipo Central:**
-  - Diseñada la pantalla de inicio de sesión (`GridLoginScreen`) con un logotipo de bienvenida central y tres fases progresivas:
-    - **Fase 1:** Validación de usuario y contraseña local contra `credentials.json` con soporte para recordar credenciales.
-    - **Fase 2:** Firma digital criptográfica de hardware mediante generación de hash SHA-256. Se integra un diálogo interactivo del explorador (`SaveFileDialog`) para guardar o sustituir el archivo ZIP del registro de firma de hardware de manera explícita y segura.
-    - **Fase 3:** Vinculación de billetera mediante firma en la interfaz web de MetaMask en puerto `8080`.
-- **Detección Automática de Cuenta Inexistente / Reset de Registro:**
-  - Actualizado `CheckExistingRegistrationAsync` en [MainWindow.xaml.cs](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs) para validar simultáneamente la existencia de la firma del PC (`firma_hardware.zip`), las credenciales locales (`credentials.json`) y el perfil del metaverso (`current_user.json`).
-  - Si falta alguno de estos componentes, el visor fuerza automáticamente el desvío hacia la pantalla inicial de escaneo de hardware y registro de PC.
-- **Transición e Integración de UI al Metaverso en Login Directo:**
-  - Modificado `LaunchAndEmbedGodot` para que, al iniciar sesión directamente (cargando la escena `N3DWoldVirtualMT.tscn` en Godot sin pasar por el registro), se activen inmediatamente en el visor la barra del nodo P2P (`P2PNodeBar`), la barra del servidor virtual (`EmbeddedServerNodeBar`), y la barra inferior de chat, logrando una transición fluida equivalente al flujo de registro de avatar.
-  - Implementada la función `GetSavedUserInfo()` para resolver de forma dinámica la información del usuario (nombre, wallet e isla por defecto) desde `current_user.json` durante el login con MetaMask.
+- **Inicio de SesiÃ³n en 3 Fases con Logotipo Central:**
+  - DiseÃ±ada la pantalla de inicio de sesiÃ³n (`GridLoginScreen`) con un logotipo de bienvenida central y tres fases progresivas:
+    - **Fase 1:** ValidaciÃ³n de usuario y contraseÃ±a local contra `credentials.json` con soporte para recordar credenciales.
+    - **Fase 2:** Firma digital criptogrÃ¡fica de hardware mediante generaciÃ³n de hash SHA-256. Se integra un diÃ¡logo interactivo del explorador (`SaveFileDialog`) para guardar o sustituir el archivo ZIP del registro de firma de hardware de manera explÃ­cita y segura.
+    - **Fase 3:** VinculaciÃ³n de billetera mediante firma en la interfaz web de MetaMask en puerto `8080`.
+- **DetecciÃ³n AutomÃ¡tica de Cuenta Inexistente / Reset de Registro:**
+  - Actualizado `CheckExistingRegistrationAsync` en [MainWindow.xaml.cs](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs) para validar simultÃ¡neamente la existencia de la firma del PC (`firma_hardware.zip`), las credenciales locales (`credentials.json`) y el perfil del metaverso (`current_user.json`).
+  - Si falta alguno de estos componentes, el visor fuerza automÃ¡ticamente el desvÃ­o hacia la pantalla inicial de escaneo de hardware y registro de PC.
+- **TransiciÃ³n e IntegraciÃ³n de UI al Metaverso en Login Directo:**
+  - Modificado `LaunchAndEmbedGodot` para que, al iniciar sesiÃ³n directamente (cargando la escena `N3DWoldVirtualMT.tscn` en Godot sin pasar por el registro), se activen inmediatamente en el visor la barra del nodo P2P (`P2PNodeBar`), la barra del servidor virtual (`EmbeddedServerNodeBar`), y la barra inferior de chat, logrando una transiciÃ³n fluida equivalente al flujo de registro de avatar.
+  - Implementada la funciÃ³n `GetSavedUserInfo()` para resolver de forma dinÃ¡mica la informaciÃ³n del usuario (nombre, wallet e isla por defecto) desde `current_user.json` durante el login con MetaMask.
 - **Chat de Voz por Proximidad (NAudio + VAD + UDP + JSON):**
-  - Captura de audio del micrófono en WPF usando la biblioteca [NAudio](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs#L1160-L1190) y cálculo RMS en tiempo real para detección de actividad de voz (VAD).
-  - Transmisión en tiempo real de eventos de habla a través de UDP en puerto `50007` a Godot.
-  - Sincronización del estado de voz en disco modificando el campo `"vc"` del peer JSON (`peer_*.json`) en tiempo real.
-  - Botón interactivo `BtnVoiceChat` (`🎤 VOZ`) con estados visuales cyberpunk diferenciados (Inactivo, Escuchando, Hablando).
-  - En Godot (`ChatUI.gd` y `userbase3d.gd`), se implementó la visualización de un indicador de voz flotante (`((·))`) animado con pulsos de escala y fade-out sobre la cabeza de los avatares correspondientes.
-  - Sincronización del indicador de voz para avatares remotos en `WorldManager.gd` a partir del estado `"vc"` del JSON.
-- **Compartición de Webcam (OpenCvSharp PIP):**
-  - Captura y conversión de video local utilizando [OpenCvSharp](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs#L1365-L1440).
-  - Solución al problema de superposición nativa (WPF Airspace Issue) mediante un `Popup` posicionado dinámicamente (`WebcamPopup`) sobre el control embebido de Godot.
-  - Botón de chat `BtnWebcam` (`📷 CAM`) con feedback visual (verde/apagado) para alternar encendido.
+  - Captura de audio del micrÃ³fono en WPF usando la biblioteca [NAudio](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs#L1160-L1190) y cÃ¡lculo RMS en tiempo real para detecciÃ³n de actividad de voz (VAD).
+  - TransmisiÃ³n en tiempo real de eventos de habla a travÃ©s de UDP en puerto `50007` a Godot.
+  - SincronizaciÃ³n del estado de voz en disco modificando el campo `"vc"` del peer JSON (`peer_*.json`) en tiempo real.
+  - BotÃ³n interactivo `BtnVoiceChat` (`ðŸŽ¤ VOZ`) con estados visuales cyberpunk diferenciados (Inactivo, Escuchando, Hablando).
+  - En Godot (`ChatUI.gd` y `userbase3d.gd`), se implementÃ³ la visualizaciÃ³n de un indicador de voz flotante (`((Â·))`) animado con pulsos de escala y fade-out sobre la cabeza de los avatares correspondientes.
+  - SincronizaciÃ³n del indicador de voz para avatares remotos en `WorldManager.gd` a partir del estado `"vc"` del JSON.
+- **ComparticiÃ³n de Webcam (OpenCvSharp PIP):**
+  - Captura y conversiÃ³n de video local utilizando [OpenCvSharp](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs#L1365-L1440).
+  - SoluciÃ³n al problema de superposiciÃ³n nativa (WPF Airspace Issue) mediante un `Popup` posicionado dinÃ¡micamente (`WebcamPopup`) sobre el control embebido de Godot.
+  - BotÃ³n de chat `BtnWebcam` (`ðŸ“· CAM`) con feedback visual (verde/apagado) para alternar encendido.
 - **HUD del Servidor Descentralizado (WPF):**
-  - Corrección de visibilidad del HUD: el control [EmbeddedServerNodeBar](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml#L268-L282) ahora está oculto inicialmente (`Visibility="Collapsed"` en XAML) y su aparición tardía se activa limpiamente en `ActivateMetaverseUi()` tras hacer login.
+  - CorrecciÃ³n de visibilidad del HUD: el control [EmbeddedServerNodeBar](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml#L268-L282) ahora estÃ¡ oculto inicialmente (`Visibility="Collapsed"` en XAML) y su apariciÃ³n tardÃ­a se activa limpiamente en `ActivateMetaverseUi()` tras hacer login.
 - **Mejoras en UX de Registro de Avatar (Godot):**
-  - Rediseño Glassmorphism del panel en `RegistroAV.gd` e incorporación de microanimaciones suaves por Tweens en botones (escala `1.05` en hover, y `0.95` al pulsar).
-- **Mejoras en la Cámara (CameraController.gd):**
-  - Altura (`tpv_height`) y distancia (`tpv_distance`) configurables para el perfil de tercera persona, con factor de interpolación base acelerado a `0.8` para mayor fluidez.
-- **Sincronización P2P LAN (UDP Broadcast):** Implementado `PeerSyncService` que sincroniza archivos `peer_*.json` entre PCs en la misma red, integrado en `MainWindow.xaml.cs`.
+  - RediseÃ±o Glassmorphism del panel en `RegistroAV.gd` e incorporaciÃ³n de microanimaciones suaves por Tweens en botones (escala `1.05` en hover, y `0.95` al pulsar).
+- **Mejoras en la CÃ¡mara (CameraController.gd):**
+  - Altura (`tpv_height`) y distancia (`tpv_distance`) configurables para el perfil de tercera persona, con factor de interpolaciÃ³n base acelerado a `0.8` para mayor fluidez.
+- **SincronizaciÃ³n P2P LAN (UDP Broadcast):** Implementado `PeerSyncService` que sincroniza archivos `peer_*.json` entre PCs en la misma red, integrado en `MainWindow.xaml.cs`.
 
 ### Pendiente en `DevAntigravity` (Fase 1 - Core de Seguridad y Protocolo)
 
 | Estado | Tarea | Ruta principal | Nota |
 |---|---|---|---|
-| Pendiente | Diseñar Identidad Descentralizada (DID) | `docs/arquitectura/DID-model.md` | Documento de diseño: identidad = `SHA256(fingerprint HW + seed local)`. Formato DID, rotación de claves, recuperación. |
-| Pendiente | Modelo de confianza entre pares | `docs/arquitectura/trust-model.md` | Esquema de reputación, handshake firmado, blacklist temporal, puntuación de nodo basada en uptime/contribución. |
-| Pendiente | Protocolo de handshake P2P | `docs/arquitectura/handshake-protocol.md` | Especificación del intercambio inicial entre nodos: versión, capabilities, estado, firma. |
-| Pendiente | Esquema de cifrado de peers | `docs/arquitectura/crypto-spec.md` | Cifrado asimétrico para handshake, simétrico (AES-GCM) para datos de estado. Gestión efímera de claves de sesión. |
-| Pendiente | Revisar y endurecer `P2PWebNode.cs` | `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs` | Añadir validación de firmas entrantes, límite de conexiones por IP, rate limiting. |
+| Pendiente | DiseÃ±ar Identidad Descentralizada (DID) | `docs/arquitectura/DID-model.md` | Documento de diseÃ±o: identidad = `SHA256(fingerprint HW + seed local)`. Formato DID, rotaciÃ³n de claves, recuperaciÃ³n. |
+| Pendiente | Modelo de confianza entre pares | `docs/arquitectura/trust-model.md` | Esquema de reputaciÃ³n, handshake firmado, blacklist temporal, puntuaciÃ³n de nodo basada en uptime/contribuciÃ³n. |
+| Pendiente | Protocolo de handshake P2P | `docs/arquitectura/handshake-protocol.md` | EspecificaciÃ³n del intercambio inicial entre nodos: versiÃ³n, capabilities, estado, firma. |
+| Pendiente | Esquema de cifrado de peers | `docs/arquitectura/crypto-spec.md` | Cifrado asimÃ©trico para handshake, simÃ©trico (AES-GCM) para datos de estado. GestiÃ³n efÃ­mera de claves de sesiÃ³n. |
+| Pendiente | Revisar y endurecer `P2PWebNode.cs` | `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs` | AÃ±adir validaciÃ³n de firmas entrantes, lÃ­mite de conexiones por IP, rate limiting. |
 
----�mite de conexiones por IP, rate limiting. |
+---­mite de conexiones por IP, rate limiting. |
 
 ---
 
@@ -237,24 +237,24 @@ Lo que todavia no es un nodo P2P puro de metaverso:
 
 ```text
 D:\WCVcoinMTB
-├─ Capa3_Visor/
-│  └─ CapaVisor3D/
-│     ├─ MainWindow.xaml
-│     ├─ MainWindow.xaml.cs
-│     ├─ GodotHwndHost.cs
-│     ├─ VisorSingularity.csproj
-│     ├─ www/
-│     └─ p2pipfsCS/
-├─ WoldVirtual/
-│  ├─ project.godot
-│  ├─ EscenaPrincipal.tscn
-│  ├─ servidorinterno/
-│  ├─ Estado_Global/
-│  └─ woldvirtual/
-├─ IAs/
-│  ├─ DevCursorIA/
-│  └─ DevTraeIA/
-└─ README.md
+â”œâ”€ Capa3_Visor/
+â”‚  â””â”€ CapaVisor3D/
+â”‚     â”œâ”€ MainWindow.xaml
+â”‚     â”œâ”€ MainWindow.xaml.cs
+â”‚     â”œâ”€ GodotHwndHost.cs
+â”‚     â”œâ”€ VisorSingularity.csproj
+â”‚     â”œâ”€ www/
+â”‚     â””â”€ p2pipfsCS/
+â”œâ”€ WoldVirtual/
+â”‚  â”œâ”€ project.godot
+â”‚  â”œâ”€ EscenaPrincipal.tscn
+â”‚  â”œâ”€ servidorinterno/
+â”‚  â”œâ”€ Estado_Global/
+â”‚  â””â”€ woldvirtual/
+â”œâ”€ IAs/
+â”‚  â”œâ”€ DevCursorIA/
+â”‚  â””â”€ DevTraeIA/
+â””â”€ README.md
 ```
 
 ---
@@ -332,17 +332,17 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 
 ### Fase 0: Cimentacion y liquidacion de deuda tecnica (Semana 1-2)
 
-#### `DevCodex` — Auditoria y consolidacion del codebase
+#### `DevCodex` â€” Auditoria y consolidacion del codebase
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
 | Separar sync legacy de sync vigente | `WoldVirtual/woldvirtual/gdscrip/IslandStateSync.gd`, `NetworkLayer.gd` | Marcar `IslandStateSync.gd` como obsoleto, migrar toda funcionalidad viva a `NetworkLayer.gd`. Eliminar codigo muerto. |
-| Unificar contrato de datos WPF↔Godot↔JSON | `WoldVirtual/Estado_Global/SharedModels.cs`, `WoldVirtual/Estado_Global/estado.json`, `WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd` | Crear un schema unico (`estado.schema.json`) y clases C#/GDScript que reflejen exactamente la misma estructura. |
+| Unificar contrato de datos WPFâ†”Godotâ†”JSON | `WoldVirtual/Estado_Global/SharedModels.cs`, `WoldVirtual/Estado_Global/estado.json`, `WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd` | Crear un schema unico (`estado.schema.json`) y clases C#/GDScript que reflejen exactamente la misma estructura. |
 | Corregir codificacion de textos | Todos los `.gd`, `.cs`, `.xaml`, `.md` | Pasar todo el proyecto a UTF-8 sin BOM. Detectar y reemplazar caracteres rotos (mojibake) en cadenas de UI y documentacion. |
-| Compilar lista completa de incidencias tecnicas | `README.md` (actualizar) | Inventariar todo el codigo legacy, carpetas huérfanas, binarios no usados y dependencias muertas. |
+| Compilar lista completa de incidencias tecnicas | `README.md` (actualizar) | Inventariar todo el codigo legacy, carpetas huÃ©rfanas, binarios no usados y dependencias muertas. |
 | Crear `.sln` y estandarizar build | `VisorSingularity.sln` (nuevo) | Agrupar `VisorSingularity.csproj` en una solucion .NET standard. Anadir configuraciones Debug/Release consistentes. |
 
-#### `DevOpencode` — CI, tests y tooling
+#### `DevOpencode` â€” CI, tests y tooling
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -356,7 +356,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 
 ### Fase 1: Identidad fuerte, firma hardware y transporte base (Semanas 3-5)
 
-#### `DevAntigravity` — Arquitectura y modelo de seguridad
+#### `DevAntigravity` â€” Arquitectura y modelo de seguridad
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -366,7 +366,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Esquema de cifrado de peers | `docs/arquitectura/crypto-spec.md` (nuevo) | Cifrado asimetrico para handshake, simetrico (AES-GCM) para datos de estado. Gestion efimera de claves de sesion. |
 | Revisar y endurecer `P2PWebNode.cs` | `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs` | Anadir validacion de firmas entrantes, limite de conexiones por IP, rate limiting. |
 
-#### `DevCursorIA` — Logica core de identidad y firma en C#
+#### `DevCursorIA` â€” Logica core de identidad y firma en C#
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -376,7 +376,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Empaquetado seguro de credenciales | `Capa3_Visor/CapaVisor3D/CredentialPack.cs` (nuevo) | ZIP cifrado con `signature.key` + `registro_hardware.txt`. Mejorar el backup actual. |
 | Integrar DID en el flujo de registro | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`, `WoldVirtual/woldvirtual/gdscrip/RegistroAV.gd` | Que el wizard genere el DID, lo persista localmente y lo envie a Godot como argumento `--did`. |
 
-#### `DevTraeIA` — Listeners, transporte y heartbeat de red
+#### `DevTraeIA` â€” Listeners, transporte y heartbeat de red
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -386,7 +386,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Discovery local (LAN) | `Capa3_Visor/CapaVisor3D/p2pipfsCS/LanDiscovery.cs` (nuevo) | Broadcast UDP en puerto 42069 para descubrir otros nodos WoldVirtual en la misma red local. |
 | Gestion de conexiones | `Capa3_Visor/CapaVisor3D/p2pipfsCS/ConnectionPool.cs` (nuevo) | Pool de conexiones activas, timeout configurable, reconexion automatica, limpieza de zombies. |
 
-#### `DevVScodeCopilot` — QA, smoke tests y consolidacion de Fase 1
+#### `DevVScodeCopilot` â€” QA, smoke tests y consolidacion de Fase 1
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -400,7 +400,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 
 ### Fase 2: Motor de trafico, throttling y distribucion (Semanas 6-8)
 
-#### `DevAntigravity` — Arquitectura de transferencia
+#### `DevAntigravity` â€” Arquitectura de transferencia
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -408,7 +408,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Modelo de cuotas y prioridad | `docs/arquitectura/bandwidth-quota.md` (nuevo) | Algoritmo de cuota por peer, prioridad de transferencia, fairness. |
 | Estrategia de cache distribuida | `docs/arquitectura/distributed-cache.md` (nuevo) | Los nodos cachean chunks y los sirven a otros peers. Diseno de indice de cache compartido. |
 
-#### `DevCursorIA` — Implementacion de chunked transfer en C#
+#### `DevCursorIA` â€” Implementacion de chunked transfer en C#
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -416,7 +416,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | TransferService | `Capa3_Visor/CapaVisor3D/p2pipfsCS/TransferService.cs` (nuevo) | Servir chunks por HTTP Range Requests. Gestionar descargas concurrentes. Reanudar desde offset. |
 | BandwidthController | `Capa3_Visor/CapaVisor3D/p2pipfsCS/BandwidthController.cs` (nuevo) | Limitar ancho de banda por peer. Priorizar peers con mejor reputacion. Medir uso real. |
 
-#### `DevTraeIA` — Cache distribuida y optimizacion de red
+#### `DevTraeIA` â€” Cache distribuida y optimizacion de red
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -424,7 +424,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | CacheDiscovery | `Capa3_Visor/CapaVisor3D/p2pipfsCS/CacheDiscovery.cs` (nuevo) | Preguntar a peers vecinos si tienen un chunk. Elegir la fuente mas rapida. |
 | Integrar con IpfsManager | `Capa3_Visor/CapaVisor3D/p2pipfsCS/IpfsManager.cs` | Que IpfsManager pueda publicar y recuperar chunks via IPFS como respaldo cuando no hay peers directos. |
 
-#### `DevVScodeCopilot` — QA, tests y consolidacion de Fase 2
+#### `DevVScodeCopilot` â€” QA, tests y consolidacion de Fase 2
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -437,7 +437,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 
 ### Fase 3: Estado global distribuido y sincronizacion (Semanas 9-11)
 
-#### `DevAntigravity` — Arquitectura de estado distribuido
+#### `DevAntigravity` â€” Arquitectura de estado distribuido
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -445,7 +445,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Coordenada genesis y bootstrap | `docs/arquitectura/genesis-bootstrap.md` (nuevo) | Que ocurre cuando el primer nodo arranca solo: generar estado base firmado. Como se unen nodos nuevos a la red. |
 | Esquema de consistencia | `docs/arquitectura/consistency-model.md` (nuevo) | Consistencia eventual con ventana de conflicto de 30s. Prioridad de peers con mayor uptime. |
 
-#### `DevOpencode` — Implementacion de sync en C# y Godot
+#### `DevOpencode` â€” Implementacion de sync en C# y Godot
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -455,7 +455,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Genesis Bootstrapper | `WoldVirtual/Estado_Global/GenesisBootstrapper.cs` (nuevo) | Si no hay peers conocidos, crear estado genesis con la isla del nodo. Firmarlo con la DID local. |
 | Integrar con Godot (nuevo NetworkLayer) | `WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd` | Refactorizar `NetworkLayer.gd` para que consuma `StateSyncService` via IPC en lugar de leer archivos JSON directamente. |
 
-#### `DevCodex` — Migracion final y limpieza de sync legacy
+#### `DevCodex` â€” Migracion final y limpieza de sync legacy
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -463,20 +463,20 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Migrar peers JSON a nuevo formato | `WoldVirtual/Estado_Global/peers/` | Convertir `peer_chicook.json` y futuros peers al schema unificado con DID, clave publica, firma. |
 | Deprecar `IslandStateManager.cs` parcialmente | `WoldVirtual/Estado_Global/IslandStateManager.cs` | Mantener solo metodos de consulta. Toda escritura pasa por `StateSyncService`. |
 
-#### `DevVScodeCopilot` — QA, tests y consolidacion de Fase 3
+#### `DevVScodeCopilot` â€” QA, tests y consolidacion de Fase 3
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
 | Tests de sync | `tests/StateSyncTests.cs` (nuevo) | Simular 3 nodos con estado divergente, verificar convergencia. |
 | Tests de conflictos | `tests/ConflictResolverTests.cs` (nuevo) | Escenarios: mismo timestamp, prioridad desigual, empate. |
 | Tests de genesis | `tests/GenesisTests.cs` (nuevo) | Primer nodo, nodo nuevo uniendo, nodo reconectando tras caida. |
-| Tests de integracion Godot↔C# sync | `tests/GodotSyncIntegration.cs` (nuevo) | Lanzar Godot headless, enviar estado, verificar que `NetworkLayer.gd` recibe los datos. |
+| Tests de integracion Godotâ†”C# sync | `tests/GodotSyncIntegration.cs` (nuevo) | Lanzar Godot headless, enviar estado, verificar que `NetworkLayer.gd` recibe los datos. |
 
 ---
 
 ### Fase 4: Integracion 3D final, desacoplamiento y Alpha (Semanas 12-14)
 
-#### `DevCursorIA` — Puente C#↔Godot robusto
+#### `DevCursorIA` â€” Puente C#â†”Godot robusto
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -484,7 +484,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Protocolo de mensajes Godot | `docs/protocols/godot-bridge.md` (nuevo) | Formato de mensajes, canales (estado, chat, teleport, avatar), prioridad. |
 | Preload de assets sincronizado | `WoldVirtual/woldvirtual/gdscrip/ChunkManager.gd` + `AssetPreloader.cs` (nuevo en C#) | Cargar assets 3D (texturas, modelos) desde la cache de chunks en lugar del disco local. |
 
-#### `DevTraeIA` — Rendimiento 3D y precision espacial
+#### `DevTraeIA` â€” Rendimiento 3D y precision espacial
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -492,15 +492,15 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Lod y carga progresiva | `WoldVirtual/woldvirtual/gdscrip/WorldManager.gd` | Cargar islas en LOD segun distancia. Descargar islas lejanas para liberar VRAM. |
 | Benchmark de rendimiento | `tests/PerformanceBenchmark.cs` (nuevo) | Medir FPS, VRAM, tiempo de carga de isla con distintos numeros de peers. |
 
-#### `DevOpencode` — Bugfixes finales y cierre de incidencias
+#### `DevOpencode` â€” Bugfixes finales y cierre de incidencias
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
-| Corregir bug P2PNodeBar anticipado | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`, `P2PNodeBar` | Instrumentar con trazas unicas, encontrar camino residual de activacion temprana. Handshake WPF↔Godot determinista. |
+| Corregir bug P2PNodeBar anticipado | `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`, `P2PNodeBar` | Instrumentar con trazas unicas, encontrar camino residual de activacion temprana. Handshake WPFâ†”Godot determinista. |
 | Cerrar incidencias menores | Varios | Revisar la lista compilada por `DevCodex` en Fase 0 y resolver las que queden. |
 | Pulir UX de wallet | `www/metamask.html`, `MainWindow.xaml.cs` | Mejorar feedback visual durante la firma, manejo de errores si MetaMask no esta instalado. |
 
-#### `DevAntigravity` — Documentacion final
+#### `DevAntigravity` â€” Documentacion final
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -508,7 +508,7 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 | Guia de despliegue | `docs/DEPLOY.md` (nuevo) | Como compilar, ejecutar, unirse a la red. Requisitos de sistema. |
 | Documentacion de API P2P | `docs/api/p2p-api.md` (nuevo) | Endpoints HTTP del nodo del visor, formato de mensajes UDP, estructura de deltas. |
 
-#### `DevVScodeCopilot` — Alpha release y validacion final
+#### `DevVScodeCopilot` â€” Alpha release y validacion final
 
 | Tarea | Archivos implicados | Detalle |
 |---|---|---|
@@ -533,11 +533,11 @@ Esto confirma que el proyecto ya esta usando persistencia local en disco durante
 ### Dependencias entre agentes
 
 ```
-DevCodex (F0 limpieza) → todos (base consolidada)
-DevAntigravity (docs) → DevCursorIA + DevTraeIA (implementan lo disenado)
-DevCursorIA + DevTraeIA → DevVScodeCopilot (prueba e integra)
-DevOpencode (CI/tests) → todos (scaffolding de tests disponible desde F0)
-Todos → DevVScodeCopilot (release alpha en F4)
+DevCodex (F0 limpieza) â†’ todos (base consolidada)
+DevAntigravity (docs) â†’ DevCursorIA + DevTraeIA (implementan lo disenado)
+DevCursorIA + DevTraeIA â†’ DevVScodeCopilot (prueba e integra)
+DevOpencode (CI/tests) â†’ todos (scaffolding de tests disponible desde F0)
+Todos â†’ DevVScodeCopilot (release alpha en F4)
 ```
 
 ## Errores pendientes
@@ -600,8 +600,63 @@ Proximo paso recomendado cuando se retome:
 2. Confirmar en ejecucion real si la instancia abierta corresponde al ultimo binario compilado.
 3. Si el problema persiste, desacoplar por completo la visibilidad del panel de cualquier logica de salida estandar de Godot y activarlo desde un handshake mas determinista.
 
+
+---
+
+## Sesion de desarrollo 2026-06-07 — Correccion de avatar y localizacion multi-PC
+
+Fecha: 2026-06-07  
+Rama de trabajo: DevAntigravityIA
+
+### Cambios realizados
+
+#### 1. Correccion del reset del avatar (RegistroAV.gd + MainWindow.xaml.cs)
+
+- Se corrigio el flujo de registro del avatar que no se guardaba correctamente.
+- Se anadio un boton de reset que elimina current_user.json y reinicia el flujo de registro de Godot desde cero.
+- El reset activa la escena de registro de avatar (EscenaPrincipal.tscn) de forma determinista al pulsar el boton desde WPF.
+
+#### 2. Localizacion automatica del idioma y pais del sistema
+
+##### WPF (MainWindow.xaml + MainWindow.xaml.cs)
+
+- Se implemento GetSystemLocaleInfo() usando CultureInfo del sistema operativo para detectar el codigo ISO 639-1 del idioma (por ejemplo: es, en, r) y el codigo ISO 3166-1 alpha-2 del pais (por ejemplo: ES, US, FR).
+- Se anadieron atributos x:Name a todos los controles traducibles de las tres pantallas principales: registro de hardware (GridPcRegistration), registro de usuario (GridUserRegistration) y login (GridLoginScreen).
+- Se creo el diccionario estatico WpfTranslations con traducciones completas para los idiomas: espanol (es), ingles (en), frances (r), aleman (de), portugues (pt), italiano (it), chino (zh) y japones (ja).
+- Se implemento ApplyWpfLocale(lang, country) que aplica las traducciones dinamicamente a todos los titulos, subtitulos, etiquetas, marcadores de posicion, botones y mensajes de progreso de la UI.
+- Se localizaron los mensajes dinamicos de progreso del escaneo de hardware en RunHardwareScanAsync y RunLoginHardwareScanAsync.
+- Los argumentos --lang y --country se pasan a Godot al lanzar el proceso para que el motor tambien se localice.
+
+##### Godot GDScript (RegistroAV.gd)
+
+- Se implemento la lectura de los argumentos --lang y --country desde la linea de comandos al iniciar la escena.
+- Se creo un diccionario de traducciones TRANSLATIONS que abarca los mismos ocho idiomas.
+- La funcion pply_locale() traduce los textos de la escena de registro: titulo, placeholder de nombre, etiquetas de genero, boton de inicio de sesion y mensajes de estado.
+- El idioma y pais detectados se guardan en current_user.json como campos lang y country.
+
+#### 3. Deteccion de PC diferente y reinicio automatico
+
+- Se implemento IsOnAnotherPc(): compara la huella SHA-256 del hardware actual (CPU + OS + Placa Base) contra la firma guardada en APP_DATA_SIG. Si no coincide, la aplicacion determina que se esta ejecutando en otro PC.
+- Se implemento ResetRegistrationForNewPc(): elimina los archivos de registro locales (irma_hardware.zip, hardware_sig.txt, credentials.json, login_settings.json y el perfil de avatar de Godot current_user.json), forzando que el nuevo PC pase por el flujo de registro completo desde cero.
+- Se implemento DeleteGodotCurrentUserJson() para localizar y eliminar el perfil de avatar en el arbol de directorios del proyecto Godot.
+- MainWindow_Loaded fue actualizado para ejecutar la deteccion de locale y la comprobacion de PC al inicio, antes de determinar si mostrar la pantalla de login o la de registro.
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| Capa3_Visor/CapaVisor3D/MainWindow.xaml | Atributos x:Name a controles traducibles; TemplateBinding en boton MetaMask |
+| Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs | GetSystemLocaleInfo, ApplyWpfLocale, WpfTranslations, IsOnAnotherPc, ResetRegistrationForNewPc, DeleteGodotCurrentUserJson, GetPhase3Message; MainWindow_Loaded actualizado |
+| WoldVirtual/woldvirtual/gdscrip/RegistroAV.gd | Lectura de --lang/--country; diccionario TRANSLATIONS; pply_locale(); guardado de locale en JSON |
+
+### Resultado de compilacion
+
+- dotnet build en VisorSingularity.csproj: **0 errores, 0 advertencias**.
+
+---
 ---
 
 ## Nota final
 
 Este README describe el estado real del codigo del repositorio a fecha 23 de mayo de 2026: un prototipo funcional, embebido y distribuible, con una base tecnica interesante pero todavia en transicion entre demo local, sincronizacion por archivos y una vision P2P mas ambiciosa.
+
