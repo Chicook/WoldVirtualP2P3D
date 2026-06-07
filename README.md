@@ -6,13 +6,24 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 
 ---
 
-## Actualizacion de hoy
+### Actualizacion de hoy
 
-**Fecha:** `2026-06-04`  
-**Rama de trabajo:** `DevAntigravity`
+**Fecha:** `2026-06-07`  
+**Rama de trabajo:** `DevAntigravityIA`
 
 ### Hecho en `DevAntigravityIA`
 
+- **Inicio de Sesión en 3 Fases con Logotipo Central:**
+  - Diseñada la pantalla de inicio de sesión (`GridLoginScreen`) con un logotipo de bienvenida central y tres fases progresivas:
+    - **Fase 1:** Validación de usuario y contraseña local contra `credentials.json` con soporte para recordar credenciales.
+    - **Fase 2:** Firma digital criptográfica de hardware mediante generación de hash SHA-256. Se integra un diálogo interactivo del explorador (`SaveFileDialog`) para guardar o sustituir el archivo ZIP del registro de firma de hardware de manera explícita y segura.
+    - **Fase 3:** Vinculación de billetera mediante firma en la interfaz web de MetaMask en puerto `8080`.
+- **Detección Automática de Cuenta Inexistente / Reset de Registro:**
+  - Actualizado `CheckExistingRegistrationAsync` en [MainWindow.xaml.cs](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs) para validar simultáneamente la existencia de la firma del PC (`firma_hardware.zip`), las credenciales locales (`credentials.json`) y el perfil del metaverso (`current_user.json`).
+  - Si falta alguno de estos componentes, el visor fuerza automáticamente el desvío hacia la pantalla inicial de escaneo de hardware y registro de PC.
+- **Transición e Integración de UI al Metaverso en Login Directo:**
+  - Modificado `LaunchAndEmbedGodot` para que, al iniciar sesión directamente (cargando la escena `N3DWoldVirtualMT.tscn` en Godot sin pasar por el registro), se activen inmediatamente en el visor la barra del nodo P2P (`P2PNodeBar`), la barra del servidor virtual (`EmbeddedServerNodeBar`), y la barra inferior de chat, logrando una transición fluida equivalente al flujo de registro de avatar.
+  - Implementada la función `GetSavedUserInfo()` para resolver de forma dinámica la información del usuario (nombre, wallet e isla por defecto) desde `current_user.json` durante el login con MetaMask.
 - **Chat de Voz por Proximidad (NAudio + VAD + UDP + JSON):**
   - Captura de audio del micrófono en WPF usando la biblioteca [NAudio](file:///Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs#L1160-L1190) y cálculo RMS en tiempo real para detección de actividad de voz (VAD).
   - Transmisión en tiempo real de eventos de habla a través de UDP en puerto `50007` a Godot.
@@ -31,6 +42,7 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 - **Mejoras en la Cámara (CameraController.gd):**
   - Altura (`tpv_height`) y distancia (`tpv_distance`) configurables para el perfil de tercera persona, con factor de interpolación base acelerado a `0.8` para mayor fluidez.
 - **Sincronización P2P LAN (UDP Broadcast):** Implementado `PeerSyncService` que sincroniza archivos `peer_*.json` entre PCs en la misma red, integrado en `MainWindow.xaml.cs`.
+
 ### Pendiente en `DevAntigravity` (Fase 1 - Core de Seguridad y Protocolo)
 
 | Estado | Tarea | Ruta principal | Nota |
@@ -40,6 +52,8 @@ Metaverso 3D experimental para Windows que combina un visor WPF en .NET 8, un pr
 | Pendiente | Protocolo de handshake P2P | `docs/arquitectura/handshake-protocol.md` | Especificación del intercambio inicial entre nodos: versión, capabilities, estado, firma. |
 | Pendiente | Esquema de cifrado de peers | `docs/arquitectura/crypto-spec.md` | Cifrado asimétrico para handshake, simétrico (AES-GCM) para datos de estado. Gestión efímera de claves de sesión. |
 | Pendiente | Revisar y endurecer `P2PWebNode.cs` | `Capa3_Visor/CapaVisor3D/p2pipfsCS/P2PWebNode.cs` | Añadir validación de firmas entrantes, límite de conexiones por IP, rate limiting. |
+
+---�mite de conexiones por IP, rate limiting. |
 
 ---
 
