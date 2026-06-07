@@ -21,6 +21,11 @@ const HEIGHT = 28.0
 var _local_island_data: Dictionary = {}
 var _persistent_island_id: String = ""
 
+# ── Cinemática de introducción (una sola vez por sesión) ─────────────────────
+var _cinematic_played    : bool  = false
+var _cinematic_ctrl      : Node  = null
+var _local_island_node   : Node3D = null
+
 func _parse_cmdline_args():
 	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
 	for i in args.size():
@@ -163,6 +168,14 @@ func _on_network_updated(state: Dictionary):
 		world.active_users[lid] = av
 		_setup_camera_controller(av)
 
+	# ── Detectar isla local recién creada y lanzar cinemática ────────────────────
+	var local_key = "%d_%d" % [int(_local_island_data.get("x", 0)), int(_local_island_data.get("z", 0))]
+	if !_cinematic_played and world.active_islands.has(local_key):
+		var island_node = world.active_islands[local_key]
+		if is_instance_valid(island_node) and island_node != _local_island_node:
+			_local_island_node = island_node
+			_launch_cinematic(island_node)
+
 	if is_instance_valid(avatar_ctrl.my_avatar):
 		var entity = avatar_ctrl.my_avatar.get_node_or_null("ECSEntity")
 		if is_instance_valid(entity):
@@ -179,6 +192,35 @@ func _setup_camera_controller(av: Node3D):
 		cam_ctrl.name = "CameraController"
 		add_child(cam_ctrl)
 	cam_ctrl.set_target(av)
+
+# ─── Cinemática de introducción ───────────────────────────────────────────────
+func _launch_cinematic(island_node: Node3D) -> void:
+	_cinematic_played = true  # Marcar como reproducida aunque algo falle
+
+	var av       = avatar_ctrl.my_avatar if avatar_ctrl else null
+	var cam_ctrl = get_node_or_null("CameraController")
+
+	if !is_instance_valid(av) or !is_instance_valid(cam_ctrl):
+		# Avatar o cámara aún no listos: aplicar solo el rise sin cinemática de cámara
+		_play_island_rise_only(island_node)
+		return
+
+	# 1) Crear el CinematicIntroController
+	_cinematic_ctrl = load("res://woldvirtual/gdscrip/CinematicIntroController.gd").new()
+	_cinematic_ctrl.name = "CinematicIntroController"
+	add_child(_cinematic_ctrl)
+
+	# 2) Iniciar secuencia completa
+	_cinematic_ctrl.begin(island_node, av, cam_ctrl)
+	print("[ChunkManager] Cinemática de introducción iniciada.")
+
+func _play_island_rise_only(island_node: Node3D) -> void:
+	# Fallback: solo anima el ascenso de la isla sin secuencia de cámara
+	var target_y  = island_node.global_position.y
+	var rise_anim = load("res://woldvirtual/gdscrip/IslandRiseAnimation.gd").new()
+	island_node.add_child(rise_anim)
+	rise_anim.play(target_y)
+	print("[ChunkManager] Rise-only iniciado (sin avatar/cámara listos).")
 
 func _setup_dynamic_chat_ui():
 	# Buscar el CanvasLayer UI_Layer (padre de ChunkManager es N3DWoldVirtualMT)
