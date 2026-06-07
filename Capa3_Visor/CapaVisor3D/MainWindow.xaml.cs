@@ -148,6 +148,16 @@ namespace VisorSingularity
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // Detectar idioma y país del sistema operativo en el inicio y aplicar al WPF UI
+            var (lang, country) = GetSystemLocaleInfo();
+            ApplyWpfLocale(lang, country);
+
+            // Comprobar si estamos en otro PC
+            if (IsOnAnotherPc())
+            {
+                ResetRegistrationForNewPc();
+            }
+
             // Detectar si el usuario ya tiene registro previo
             bool hasAccount = await CheckExistingRegistrationAsync();
             if (!hasAccount)
@@ -475,7 +485,7 @@ namespace VisorSingularity
 
             // Mostrar Fase 2
             PanelPhase2.Visibility = Visibility.Visible;
-            TxtLoginPhaseStatus.Text = "Fase 1 completada con éxito. Fase 2 desbloqueada: Firme y actualice el registro ZIP de su PC.";
+            TxtLoginPhaseStatus.Text = WpfTranslations[_currentLang]["LoginPhaseStatus_Phase2"];
         }
 
         private async void BtnLoginPhase2_Click(object sender, RoutedEventArgs e)
@@ -489,19 +499,21 @@ namespace VisorSingularity
         {
             try
             {
+                var t = WpfTranslations[_currentLang];
+
                 ProgLoginScan.Value = 0;
-                TxtLoginScanStatus.Text = "Escaneando...";
+                TxtLoginScanStatus.Text = t["ScanningShort"];
                 await Task.Delay(300);
 
-                TxtLoginScanStatus.Text = "Identificando CPU...";
+                TxtLoginScanStatus.Text = t["IdentifyingCpuShort"];
                 ProgLoginScan.Value = 30;
                 await Task.Delay(400);
 
-                TxtLoginScanStatus.Text = "Placa base...";
+                TxtLoginScanStatus.Text = t["MotherboardShort"];
                 ProgLoginScan.Value = 60;
                 await Task.Delay(400);
 
-                TxtLoginScanStatus.Text = "Firmando...";
+                TxtLoginScanStatus.Text = t["SigningShort"];
                 ProgLoginScan.Value = 90;
                 await Task.Delay(300);
 
@@ -555,7 +567,7 @@ namespace VisorSingularity
                 {
                     // El usuario canceló — limpiar y abortar sin error
                     Directory.Delete(tempDir, true);
-                    TxtLoginScanStatus.Text = "Cancelado";
+                    TxtLoginScanStatus.Text = t["CancelledShort"];
                     BtnLoginPhase2.IsEnabled = true;
                     return;
                 }
@@ -578,23 +590,47 @@ namespace VisorSingularity
                 Directory.Delete(tempDir, true);
 
                 ProgLoginScan.Value = 100;
-                TxtLoginScanStatus.Text = "Firma OK";
+                TxtLoginScanStatus.Text = t["SignatureOkShort"];
                 await Task.Delay(400);
 
                 // Finalizar Fase 2
-                BtnLoginPhase2.Content = "✓ FIRMA ACTUALIZADA";
+                BtnLoginPhase2.Content = t["SignatureUpdated"];
                 BtnLoginPhase2.IsEnabled = false;
                 ScanProgressPanel.Visibility = Visibility.Collapsed;
 
                 // Desbloquear Fase 3 (MetaMask)
                 BtnLoginMetaMask.Visibility = Visibility.Visible;
-                TxtLoginPhaseStatus.Text = $"Fase 2 completada con éxito. ZIP guardado en: {userZipPath}\nFase 3 desbloqueada: Inicie sesión con MetaMask para entrar.";
+                TxtLoginPhaseStatus.Text = GetPhase3Message(_currentLang, userZipPath ?? "");
             }
             catch (Exception ex)
             {
                 TxtLoginScanStatus.Text = "Error";
                 MessageBox.Show("Error al actualizar la firma de hardware: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 BtnLoginPhase2.IsEnabled = true;
+            }
+        }
+
+        private string GetPhase3Message(string lang, string path)
+        {
+            switch (lang)
+            {
+                case "en":
+                    return $"Phase 2 completed successfully. ZIP saved at: {path}\nPhase 3 unlocked: Login with MetaMask to enter.";
+                case "fr":
+                    return $"Phase 2 terminée avec succès. ZIP enregistré sous : {path}\nPhase 3 déverrouillée : Connectez-vous avec MetaMask pour entrer.";
+                case "de":
+                    return $"Phase 2 erfolgreich abgeschlossen. ZIP gespeichert unter: {path}\nPhase 3 freigeschaltet: Melden Sie sich mit MetaMask an, um fortzufahren.";
+                case "pt":
+                    return $"Fase 2 concluída com sucesso. ZIP salvo em: {path}\nFase 3 desbloqueada: Faça login com MetaMask para entrar.";
+                case "it":
+                    return $"Fase 2 completata con successo. ZIP salvato in: {path}\nFase 3 sbloccata: Accedi con MetaMask per entrare.";
+                case "zh":
+                    return $"第 2 阶段成功完成。ZIP 已保存至：{path}\n第 3 阶段已解锁：通过 MetaMask 登录以进入。";
+                case "ja":
+                    return $"フェーズ 2 が正常に完了しました。ZIP 保存先: {path}\nフェーズ 3 解除: MetaMaskでログインして入ってください。";
+                case "es":
+                default:
+                    return $"Fase 2 completada con éxito. ZIP guardado en: {path}\nFase 3 desbloqueada: Inicie sesión con MetaMask para entrar.";
             }
         }
 
@@ -762,12 +798,14 @@ namespace VisorSingularity
         {
             try
             {
+                var t = WpfTranslations[_currentLang];
+
                 ProgScan.Value = 0;
-                TxtScanStatus.Text = "Inicializando escaneo del sistema...";
+                TxtScanStatus.Text = t["ScanInit"];
                 await Task.Delay(400);
 
                 // Paso 1: Escanear Sistema Operativo (25%)
-                TxtScanStatus.Text = "Escaneando Sistema Operativo...";
+                TxtScanStatus.Text = t["ScanOS"];
                 ProgScan.Value = 15;
                 await Task.Delay(500);
                 _osName = GetOSName();
@@ -776,7 +814,7 @@ namespace VisorSingularity
                 await Task.Delay(300);
 
                 // Paso 2: Escanear Procesador (60%)
-                TxtScanStatus.Text = "Identificando Procesador (CPU)...";
+                TxtScanStatus.Text = t["ScanCPU"];
                 ProgScan.Value = 50;
                 await Task.Delay(600);
                 _cpuName = GetCpuName();
@@ -785,7 +823,7 @@ namespace VisorSingularity
                 await Task.Delay(300);
 
                 // Paso 3: Escanear Placa Base (85%)
-                TxtScanStatus.Text = "Detectando Placa Base y Chipset...";
+                TxtScanStatus.Text = t["ScanMB"];
                 ProgScan.Value = 80;
                 await Task.Delay(500);
                 _motherboard = GetMotherboardName();
@@ -794,7 +832,7 @@ namespace VisorSingularity
                 await Task.Delay(200);
 
                 // Paso 4: Generar Huella Digital (100%)
-                TxtScanStatus.Text = "Generando firma criptográfica SHA-256...";
+                TxtScanStatus.Text = t["ScanHash"];
                 ProgScan.Value = 95;
                 await Task.Delay(400);
 
@@ -802,14 +840,15 @@ namespace VisorSingularity
                 TxtHardwareHash.Text = _hardwareFingerprint;
 
                 ProgScan.Value = 100;
-                TxtScanStatus.Text = "Escaneo completado. Firma de hardware generada.";
+                TxtScanStatus.Text = t["ScanDone"];
 
                 // Habilitar botón para guardar el ZIP de respaldo
                 BtnGenerateZip.IsEnabled = true;
             }
             catch (Exception ex)
             {
-                TxtScanStatus.Text = "Error durante el escaneo: " + ex.Message;
+                var t = WpfTranslations[_currentLang];
+                TxtScanStatus.Text = t["ScanError"] + ex.Message;
                 ProgScan.Value = 100;
                 // Incluso si falla WMI, permitimos generar una firma alternativa basada en variables de entorno
                 if (string.IsNullOrEmpty(_hardwareFingerprint))
@@ -1314,6 +1353,570 @@ namespace VisorSingularity
         {
             var paths = GodotProjectLocator.Resolve();
             return (paths.ProjectDir, paths.ExePath);
+        }
+
+        private string _currentLang = "es";
+
+        private static readonly Dictionary<string, Dictionary<string, string>> WpfTranslations = new Dictionary<string, Dictionary<string, string>>
+        {
+            {
+                "es", new Dictionary<string, string>
+                {
+                    { "PcRegTitle", "WOLD VIRTUAL — SISTEMA DE INGRESO" },
+                    { "PcRegSubtitle", "REGISTRO AUTOMÁTICO DE FIRMA DE HARDWARE" },
+                    { "OsCardTitle", "SISTEMA OPERATIVO" },
+                    { "CpuCardTitle", "PROCESADOR" },
+                    { "MbCardTitle", "PLACA BASE (MOTHERBOARD)" },
+                    { "CryptoLabel", "FIRMADO EN HARDWARE / UNIQUE CRYPTO FINGERPRINT (SHA-256)" },
+                    { "Copy", "COPIAR" },
+                    { "RegisterPc", "REGISTRAR PC & GUARDAR ZIP" },
+                    { "EnterMetaverse", "INGRESAR AL METAVERSO" },
+                    { "UserRegTitle", "WOLD VIRTUAL — REGISTRO DE USUARIO" },
+                    { "UserRegSubtitle", "CREACIÓN DE IDENTIDAD Y ASIGNACIÓN DE CREDENCIALES" },
+                    { "UsernameLabel", "Nombre de Usuario:" },
+                    { "PasswordLabel", "Contraseña:" },
+                    { "ConfirmPasswordLabel", "Repetir Contraseña:" },
+                    { "UuidLabel", "Identificador Único Universal (UUID):" },
+                    { "GenerateUuid", "GENERAR UUID" },
+                    { "RegisterAndEnter", "REGISTRAR & INGRESAR" },
+                    { "WaitingMetaMaskTitle", "ESPERANDO FIRMA DE METAMASK" },
+                    { "WaitingMetaMaskDesc", "Por favor, abre tu navegador predeterminado y firma la solicitud de MetaMask para vincular tu billetera." },
+                    { "LoginInfoTitle", "FIRMA DE HARDWARE DETECTADA" },
+                    { "LoginPhaseStatus_Phase1", "Fase 1: Ingrese su usuario y contraseña para continuar." },
+                    { "LoginPhaseStatus_Phase2", "Fase 1 completada con éxito. Fase 2 desbloqueada: Firme y actualice el registro ZIP de su PC." },
+                    { "LoginMetaMaskDesc", "Abre tu navegador y autoriza la solicitud de MetaMask" },
+                    { "LoginUserLabel", "Usuario:" },
+                    { "LoginRememberUser", "Recordar Nombre" },
+                    { "LoginPassLabel", "Contraseña:" },
+                    { "LoginRememberPass", "Recordar Contraseña" },
+                    { "LoginMetaMaskBtn", "🦊 Entrar con MetaMask" },
+                    { "LoginBtn", "Iniciar Sesión" },
+                    { "UpdateSignatureBtn", "✍️ Actualizar Firma" },
+                    { "ScanInit", "Inicializando escaneo del sistema..." },
+                    { "ScanOS", "Escaneando OS..." },
+                    { "ScanCPU", "Identificando CPU..." },
+                    { "ScanMB", "Detectando Placa Base..." },
+                    { "ScanHash", "Generando firma criptográfica SHA-256..." },
+                    { "ScanDone", "Escaneo completado. Firma de hardware generada." },
+                    { "ScanError", "Error durante el escaneo: " },
+                    { "ScanOSLoading", "Obteniendo información del sistema..." },
+                    { "ScanCPULoading", "Obteniendo especificaciones de la CPU..." },
+                    { "ScanMBLoading", "Detectando placa base..." },
+                    { "GeneratingHashText", "GENERANDO FIRMA CRIPTOGRÁFICA..." },
+                    { "ScanningShort", "Escaneando..." },
+                    { "IdentifyingCpuShort", "Identificando CPU..." },
+                    { "MotherboardShort", "Placa base..." },
+                    { "SigningShort", "Firmando..." },
+                    { "SignatureOkShort", "Firma OK" },
+                    { "CancelledShort", "Cancelado" },
+                    { "SignatureUpdated", "✓ FIRMA ACTUALIZADA" }
+                }
+            },
+            {
+                "en", new Dictionary<string, string>
+                {
+                    { "PcRegTitle", "WOLD VIRTUAL — LOGIN SYSTEM" },
+                    { "PcRegSubtitle", "AUTOMATIC HARDWARE SIGNATURE REGISTRATION" },
+                    { "OsCardTitle", "OPERATING SYSTEM" },
+                    { "CpuCardTitle", "PROCESSOR" },
+                    { "MbCardTitle", "MOTHERBOARD" },
+                    { "CryptoLabel", "HARDWARE SIGNED / UNIQUE CRYPTO FINGERPRINT (SHA-256)" },
+                    { "Copy", "COPY" },
+                    { "RegisterPc", "REGISTER PC & SAVE ZIP" },
+                    { "EnterMetaverse", "ENTER METAVERSE" },
+                    { "UserRegTitle", "WOLD VIRTUAL — USER REGISTRATION" },
+                    { "UserRegSubtitle", "IDENTITY CREATION AND CREDENTIAL ASSIGNMENT" },
+                    { "UsernameLabel", "Username:" },
+                    { "PasswordLabel", "Password:" },
+                    { "ConfirmPasswordLabel", "Repeat Password:" },
+                    { "UuidLabel", "Universally Unique Identifier (UUID):" },
+                    { "GenerateUuid", "GENERATE UUID" },
+                    { "RegisterAndEnter", "REGISTER & ENTER" },
+                    { "WaitingMetaMaskTitle", "WAITING FOR METAMASK SIGNATURE" },
+                    { "WaitingMetaMaskDesc", "Please open your default browser and sign the MetaMask request to link your wallet." },
+                    { "LoginInfoTitle", "HARDWARE SIGNATURE DETECTED" },
+                    { "LoginPhaseStatus_Phase1", "Phase 1: Enter your username and password to continue." },
+                    { "LoginPhaseStatus_Phase2", "Phase 1 completed successfully. Phase 2 unlocked: Sign and update your PC's ZIP registration." },
+                    { "LoginMetaMaskDesc", "Open your browser and authorize the MetaMask request" },
+                    { "LoginUserLabel", "Username:" },
+                    { "LoginRememberUser", "Remember Username" },
+                    { "LoginPassLabel", "Password:" },
+                    { "LoginRememberPass", "Remember Password" },
+                    { "LoginMetaMaskBtn", "🦊 Login with MetaMask" },
+                    { "LoginBtn", "Login" },
+                    { "UpdateSignatureBtn", "✍️ Update Signature" },
+                    { "ScanInit", "Initializing system scan..." },
+                    { "ScanOS", "Scanning Operating System..." },
+                    { "ScanCPU", "Identifying Processor (CPU)..." },
+                    { "ScanMB", "Detecting Motherboard and Chipset..." },
+                    { "ScanHash", "Generating SHA-256 cryptographic signature..." },
+                    { "ScanDone", "Scan completed. Hardware signature generated." },
+                    { "ScanError", "Error during scan: " },
+                    { "ScanOSLoading", "Retrieving system information..." },
+                    { "ScanCPULoading", "Retrieving CPU specifications..." },
+                    { "ScanMBLoading", "Detecting motherboard..." },
+                    { "GeneratingHashText", "GENERATING CRYPTOGRAPHIC SIGNATURE..." },
+                    { "ScanningShort", "Scanning..." },
+                    { "IdentifyingCpuShort", "Identifying CPU..." },
+                    { "MotherboardShort", "Motherboard..." },
+                    { "SigningShort", "Signing..." },
+                    { "SignatureOkShort", "Signature OK" },
+                    { "CancelledShort", "Cancelled" },
+                    { "SignatureUpdated", "✓ SIGNATURE UPDATED" }
+                }
+            },
+            {
+                "fr", new Dictionary<string, string>
+                {
+                    { "PcRegTitle", "WOLD VIRTUAL — SYSTÈME DE CONNEXION" },
+                    { "PcRegSubtitle", "ENREGISTREMENT AUTOMATIQUE DE LA SIGNATURE MATÉRIELLE" },
+                    { "OsCardTitle", "SYSTÈME D'EXPLOITATION" },
+                    { "CpuCardTitle", "PROCESSEUR" },
+                    { "MbCardTitle", "CARTE MÈRE" },
+                    { "CryptoLabel", "SIGNÉ MATÉRIEL / SIGNATURE CRYPTO UNIQUE (SHA-256)" },
+                    { "Copy", "COPIER" },
+                    { "RegisterPc", "ENREGISTRER LE PC & SAUVEGARDER LE ZIP" },
+                    { "EnterMetaverse", "ENTRER DANS LE MÉTAVERS" },
+                    { "UserRegTitle", "WOLD VIRTUAL — INSCRIPTION DE L'UTILISATEUR" },
+                    { "UserRegSubtitle", "CRÉATION D'IDENTITÉ ET ATTRIBUTION DE CRÉDENTIELS" },
+                    { "UsernameLabel", "Nom d'utilisateur :" },
+                    { "PasswordLabel", "Mot de passe :" },
+                    { "ConfirmPasswordLabel", "Répéter le mot de passe :" },
+                    { "UuidLabel", "Identifiant unique universel (UUID) :" },
+                    { "GenerateUuid", "GÉNÉRER UN UUID" },
+                    { "RegisterAndEnter", "S'INSCRIRE & ENTRER" },
+                    { "WaitingMetaMaskTitle", "ATTENTE DE LA SIGNATURE METAMASK" },
+                    { "WaitingMetaMaskDesc", "Veuillez ouvrir votre navigateur par défaut et signer la demande MetaMask pour lier votre portefeuille." },
+                    { "LoginInfoTitle", "SIGNATURE MATÉRIELLE DÉTECTÉE" },
+                    { "LoginPhaseStatus_Phase1", "Phase 1 : Entrez votre nom d'utilisateur et votre mot de passe pour continuer." },
+                    { "LoginPhaseStatus_Phase2", "Phase 1 terminée avec succès. Phase 2 déverrouillée : Signez et mettez à jour l'enregistrement ZIP de votre PC." },
+                    { "LoginMetaMaskDesc", "Ouvrez votre navigateur et autorisez la demande MetaMask" },
+                    { "LoginUserLabel", "Nom d'utilisateur :" },
+                    { "LoginRememberUser", "Se souvenir du nom" },
+                    { "LoginPassLabel", "Mot de passe :" },
+                    { "LoginRememberPass", "Se souvenir du mot de passe" },
+                    { "LoginMetaMaskBtn", "🦊 Connexion avec MetaMask" },
+                    { "LoginBtn", "Connexion" },
+                    { "UpdateSignatureBtn", "✍️ Mettre à jour la signature" },
+                    { "ScanInit", "Initialisation de l'analyse du système..." },
+                    { "ScanOS", "Analyse du système d'exploitation..." },
+                    { "ScanCPU", "Identification du processeur (CPU)..." },
+                    { "ScanMB", "Détection de la carte mère et du chipset..." },
+                    { "ScanHash", "Génération de la signature cryptographique SHA-256..." },
+                    { "ScanDone", "Analyse terminée. Signature matérielle générée." },
+                    { "ScanError", "Erreur lors de l'analyse : " },
+                    { "ScanOSLoading", "Obtention des informations système..." },
+                    { "ScanCPULoading", "Obtention des spécifications du processeur..." },
+                    { "ScanMBLoading", "Détection de la carte mère..." },
+                    { "GeneratingHashText", "GÉNÉRATION DE LA SIGNATURE CRYPTOGRAPHIQUE..." },
+                    { "ScanningShort", "Analyse..." },
+                    { "IdentifyingCpuShort", "Identification du processeur..." },
+                    { "MotherboardShort", "Carte mère..." },
+                    { "SigningShort", "Signature..." },
+                    { "SignatureOkShort", "Signature OK" },
+                    { "CancelledShort", "Annulé" },
+                    { "SignatureUpdated", "✓ SIGNATURE MISE À GRANDE" }
+                }
+            },
+            {
+                "de", new Dictionary<string, string>
+                {
+                    { "PcRegTitle", "WOLD VIRTUAL — ANMELDUNGS-SYSTEM" },
+                    { "PcRegSubtitle", "AUTOMATISCHE REGISTRIERUNG DER HARDWARE-SIGNATUR" },
+                    { "OsCardTitle", "BETRIEBSSYSTEM" },
+                    { "CpuCardTitle", "PROZESSOR" },
+                    { "MbCardTitle", "MAINBOARD" },
+                    { "CryptoLabel", "HARDWARE SIGNIERT / EINZIGARTIGER KRYPTO-FINGERABDRUCK (SHA-256)" },
+                    { "Copy", "KOPIEREN" },
+                    { "RegisterPc", "PC REGISTRIEREN & ZIP SPEICHERN" },
+                    { "EnterMetaverse", "METAVERSE BETRETEN" },
+                    { "UserRegTitle", "WOLD VIRTUAL — BENUTZERREGISTRIERUNG" },
+                    { "UserRegSubtitle", "IDENTITÄTSERSTELLUNG UND ZUWEISUNG VON ANMELDEDATEN" },
+                    { "UsernameLabel", "Benutzername:" },
+                    { "PasswordLabel", "Kennwort:" },
+                    { "ConfirmPasswordLabel", "Kennwort wiederholen:" },
+                    { "UuidLabel", "Universell eindeutiger Identifikator (UUID):" },
+                    { "GenerateUuid", "UUID GENERIEREN" },
+                    { "RegisterAndEnter", "REGISTRIEREN & BETRETEN" },
+                    { "WaitingMetaMaskTitle", "WARTE AUF METAMASK-SIGNATUR" },
+                    { "WaitingMetaMaskDesc", "Bitte öffnen Sie Ihren Standardbrowser und signieren Sie die MetaMask-Anfrage, um Ihre Wallet zu verknüpfen." },
+                    { "LoginInfoTitle", "HARDWARE-SIGNATUR ERKANNT" },
+                    { "LoginPhaseStatus_Phase1", "Phase 1: Geben Sie Ihren Benutzernamen und Ihr Kennwort ein, um fortzufahren." },
+                    { "LoginPhaseStatus_Phase2", "Phase 1 erfolgreich abgeschlossen. Phase 2 freigeschaltet: Signieren und aktualisieren Sie die ZIP-Registrierung Ihres PCs." },
+                    { "LoginMetaMaskDesc", "Öffnen Sie Ihren Browser und autorisieren Sie die MetaMask-Anfrage" },
+                    { "LoginUserLabel", "Benutzername:" },
+                    { "LoginRememberUser", "Benutzername merken" },
+                    { "LoginPassLabel", "Kennwort:" },
+                    { "LoginRememberPass", "Kennwort merken" },
+                    { "LoginMetaMaskBtn", "🦊 Mit MetaMask anmelden" },
+                    { "LoginBtn", "Anmelden" },
+                    { "UpdateSignatureBtn", "✍️ Signatur aktualisieren" },
+                    { "ScanInit", "Systemscan wird initialisiert..." },
+                    { "ScanOS", "Betriebssystem wird gescannt..." },
+                    { "ScanCPU", "Prozessor (CPU) wird identifiziert..." },
+                    { "ScanMB", "Motherboard und Chipsatz werden erkannt..." },
+                    { "ScanHash", "SHA-256 kryptografische Signatur wird generiert..." },
+                    { "ScanDone", "Scan abgeschlossen. Hardware-Signatur generiert." },
+                    { "ScanError", "Fehler beim Scannen: " },
+                    { "ScanOSLoading", "Systeminformationen werden abgerufen..." },
+                    { "ScanCPULoading", "CPU-Spezifikationen werden abgerufen..." },
+                    { "ScanMBLoading", "Mainboard wird erkannt..." },
+                    { "GeneratingHashText", "KRYPTOGRAFISCHE SIGNATUR WIRD GENERIERT..." },
+                    { "ScanningShort", "Scannen..." },
+                    { "IdentifyingCpuShort", "CPU wird identifiziert..." },
+                    { "MotherboardShort", "Mainboard..." },
+                    { "SigningShort", "Signieren..." },
+                    { "SignatureOkShort", "Signatur OK" },
+                    { "CancelledShort", "Abgebrochen" },
+                    { "SignatureUpdated", "✓ SIGNATUR AKTUALISIERT" }
+                }
+            },
+            {
+                "pt", new Dictionary<string, string>
+                {
+                    { "PcRegTitle", "WOLD VIRTUAL — SISTEMA DE LOGIN" },
+                    { "PcRegSubtitle", "REGISTRO AUTOMÁTICO DA ASSINATURA DE HARDWARE" },
+                    { "OsCardTitle", "SISTEMA OPERACIONAL" },
+                    { "CpuCardTitle", "PROCESSADOR" },
+                    { "MbCardTitle", "PLACA-MÃE" },
+                    { "CryptoLabel", "ASSINADO EM HARDWARE / HUELLA CRYPTO ÚNICA (SHA-256)" },
+                    { "Copy", "COPIAR" },
+                    { "RegisterPc", "REGISTRAR PC & SALVAR ZIP" },
+                    { "EnterMetaverse", "ENTRAR NO METAVERSO" },
+                    { "UserRegTitle", "WOLD VIRTUAL — REGISTRO DE USUÁRIO" },
+                    { "UserRegSubtitle", "CRIAÇÃO DE IDENTIDADE E ATRIBUIÇÃO DE CREDENCIAIS" },
+                    { "UsernameLabel", "Nome de Usuário:" },
+                    { "PasswordLabel", "Senha:" },
+                    { "ConfirmPasswordLabel", "Repetir Senha:" },
+                    { "UuidLabel", "Identificador Único Universal (UUID):" },
+                    { "GenerateUuid", "GERAR UUID" },
+                    { "RegisterAndEnter", "REGISTRAR & ENTRAR" },
+                    { "WaitingMetaMaskTitle", "AGUARDANDO ASSINATURA METAMASK" },
+                    { "WaitingMetaMaskDesc", "Por favor, abra o navegador padrão e assine a solicitação do MetaMask para vincular a sua carteira." },
+                    { "LoginInfoTitle", "ASSINATURA DE HARDWARE DETECTADA" },
+                    { "LoginPhaseStatus_Phase1", "Fase 1: Insira seu usuário e senha para continuar." },
+                    { "LoginPhaseStatus_Phase2", "Fase 1 concluída com sucesso. Fase 2 desbloqueada: Assine e atualize o registro ZIP do seu PC." },
+                    { "LoginMetaMaskDesc", "Abra seu navegador e autorize a solicitação do MetaMask" },
+                    { "LoginUserLabel", "Usuário:" },
+                    { "LoginRememberUser", "Lembrar Nome" },
+                    { "LoginPassLabel", "Senha:" },
+                    { "LoginRememberPass", "Lembrar Senha" },
+                    { "LoginMetaMaskBtn", "🦊 Entrar com MetaMask" },
+                    { "LoginBtn", "Entrar" },
+                    { "UpdateSignatureBtn", "✍️ Atualizar Assinatura" },
+                    { "ScanInit", "Inicializando escaneamento do sistema..." },
+                    { "ScanOS", "Escaneando Sistema Operacional..." },
+                    { "ScanCPU", "Identificando Processador (CPU)..." },
+                    { "ScanMB", "Detectando Placa-Mãe e Chipset..." },
+                    { "ScanHash", "Gerando assinatura criptográfica SHA-256..." },
+                    { "ScanDone", "Escaneamento concluído. Assinatura de hardware gerada." },
+                    { "ScanError", "Erro durante o escaneamento: " },
+                    { "ScanOSLoading", "Obtendo informações do sistema..." },
+                    { "ScanCPULoading", "Obtendo especificações da CPU..." },
+                    { "ScanMBLoading", "Detectando placa-mãe..." },
+                    { "GeneratingHashText", "GERANDO ASSINATURA CRIPTOGRÁFICA..." },
+                    { "ScanningShort", "Escaneando..." },
+                    { "IdentifyingCpuShort", "Identificando CPU..." },
+                    { "MotherboardShort", "Placa-mãe..." },
+                    { "SigningShort", "Assinando..." },
+                    { "SignatureOkShort", "Assinatura OK" },
+                    { "CancelledShort", "Cancelado" },
+                    { "SignatureUpdated", "✓ ASSINATURA ATUALIZADA" }
+                }
+            },
+            {
+                "it", new Dictionary<string, string>
+                {
+                    { "PcRegTitle", "WOLD VIRTUAL — SISTEMA DI ACCESSO" },
+                    { "PcRegSubtitle", "REGISTRAZIONE AUTOMATICA DELLA FIRMA HARDWARE" },
+                    { "OsCardTitle", "SISTEMA OPERATIVO" },
+                    { "CpuCardTitle", "PROCESSORE" },
+                    { "MbCardTitle", "SCHEDA MADRE" },
+                    { "CryptoLabel", "FIRMATO IN HARDWARE / IMPRONTA CRITTOGRAFICA UNICA (SHA-256)" },
+                    { "Copy", "COPIA" },
+                    { "RegisterPc", "REGISTRA PC & SALVA ZIP" },
+                    { "EnterMetaverse", "ENTRA NEL METAVERSO" },
+                    { "UserRegTitle", "WOLD VIRTUAL — REGISTRAZIONE UTENTE" },
+                    { "UserRegSubtitle", "CREAZIONE IDENTITÀ E ASSEGNAZIONE CREDENZIALI" },
+                    { "UsernameLabel", "Nome utente:" },
+                    { "PasswordLabel", "Password:" },
+                    { "ConfirmPasswordLabel", "Ripeti Password:" },
+                    { "UuidLabel", "Identificatore univoco universale (UUID):" },
+                    { "GenerateUuid", "GENERA UUID" },
+                    { "RegisterAndEnter", "REGISTRA & ENTRA" },
+                    { "WaitingMetaMaskTitle", "ATTESA FIRMA METAMASK" },
+                    { "WaitingMetaMaskDesc", "Apri il browser predefinito e firma la richiesta di MetaMask per collegare il tuo portafoglio." },
+                    { "LoginInfoTitle", "FIRMA HARDWARE RILEVATA" },
+                    { "LoginPhaseStatus_Phase1", "Fase 1: Inserisci il tuo nome utente e password per continuare." },
+                    { "LoginPhaseStatus_Phase2", "Fase 1 completata con successo. Fase 2 sbloccata: Firma e aggiorna la registrazione ZIP del tuo PC." },
+                    { "LoginMetaMaskDesc", "Apri il browser e autorizza la richiesta di MetaMask" },
+                    { "LoginUserLabel", "Utente:" },
+                    { "LoginRememberUser", "Ricorda Nome" },
+                    { "LoginPassLabel", "Password:" },
+                    { "LoginRememberPass", "Ricorda Password" },
+                    { "LoginMetaMaskBtn", "🦊 Accedi con MetaMask" },
+                    { "LoginBtn", "Accedi" },
+                    { "UpdateSignatureBtn", "✍️ Aggiorna Firma" },
+                    { "ScanInit", "Inizializzazione della scansione del sistema..." },
+                    { "ScanOS", "Scansione del sistema operativo..." },
+                    { "ScanCPU", "Identificazione del processore (CPU)..." },
+                    { "ScanMB", "Rilevamento della scheda madre e del chipset..." },
+                    { "ScanHash", "Generazione della firma crittografica SHA-256..." },
+                    { "ScanDone", "Scansione completata. Firma hardware generata." },
+                    { "ScanError", "Errore durante la scansione: " },
+                    { "ScanOSLoading", "Recupero delle informazioni di sistema..." },
+                    { "ScanCPULoading", "Recupero delle specifiche della CPU..." },
+                    { "ScanMBLoading", "Rilevamento scheda madre..." },
+                    { "GeneratingHashText", "GENERAZIONE DELLA FIRMA CRITTOGRAFICA..." },
+                    { "ScanningShort", "Scansione..." },
+                    { "IdentifyingCpuShort", "Identificazione CPU..." },
+                    { "MotherboardShort", "Scheda madre..." },
+                    { "SigningShort", "Firma in corso..." },
+                    { "SignatureOkShort", "Firma OK" },
+                    { "CancelledShort", "Annullato" },
+                    { "SignatureUpdated", "✓ FIRMA AGGIORNATA" }
+                }
+            },
+            {
+                "zh", new Dictionary<string, string>
+                {
+                    { "PcRegTitle", "WOLD VIRTUAL — 登录系统" },
+                    { "PcRegSubtitle", "自动硬件签名注册" },
+                    { "OsCardTitle", "操作系统" },
+                    { "CpuCardTitle", "处理器" },
+                    { "MbCardTitle", "主板" },
+                    { "CryptoLabel", "硬件签名 / 唯一加密指纹 (SHA-256)" },
+                    { "Copy", "复制" },
+                    { "RegisterPc", "注册电脑并保存 ZIP" },
+                    { "EnterMetaverse", "进入元宇宙" },
+                    { "UserRegTitle", "WOLD VIRTUAL — 用户注册" },
+                    { "UserRegSubtitle", "身份创建与凭据分配" },
+                    { "UsernameLabel", "用户名:" },
+                    { "PasswordLabel", "密码:" },
+                    { "ConfirmPasswordLabel", "重复密码:" },
+                    { "UuidLabel", "通用唯一识别码 (UUID):" },
+                    { "GenerateUuid", "生成 UUID" },
+                    { "RegisterAndEnter", "注册并进入" },
+                    { "WaitingMetaMaskTitle", "正在等待 METAMASK 签名" },
+                    { "WaitingMetaMaskDesc", "请打开默认浏览器并签署 MetaMask 请求以链接您的钱包。" },
+                    { "LoginInfoTitle", "已检测到硬件签名" },
+                    { "LoginPhaseStatus_Phase1", "第 1 阶段：输入用户名和密码以继续。" },
+                    { "LoginPhaseStatus_Phase2", "第 1 阶段成功完成。第 2 阶段已解锁：签名并更新您电脑的 ZIP 注册。" },
+                    { "LoginMetaMaskDesc", "打开浏览器并授权 MetaMask 请求" },
+                    { "LoginUserLabel", "用户:" },
+                    { "LoginRememberUser", "记住用户名" },
+                    { "LoginPassLabel", "密码:" },
+                    { "LoginRememberPass", "记住密码" },
+                    { "LoginMetaMaskBtn", "🦊 通过 MetaMask 登录" },
+                    { "LoginBtn", "登录" },
+                    { "UpdateSignatureBtn", "✍️ 更新签名" },
+                    { "ScanInit", "正在初始化系统扫描..." },
+                    { "ScanOS", "正在扫描操作系统..." },
+                    { "ScanCPU", "正在识别处理器 (CPU)..." },
+                    { "ScanMB", "正在检测主板和芯片组..." },
+                    { "ScanHash", "正在生成 SHA-256 加密签名..." },
+                    { "ScanDone", "扫描完成。已生成硬件签名。" },
+                    { "ScanError", "扫描期间出错：" },
+                    { "ScanOSLoading", "正在获取系统信息..." },
+                    { "ScanCPULoading", "正在获取 CPU 规格..." },
+                    { "ScanMBLoading", "正在检测主板..." },
+                    { "GeneratingHashText", "正在生成加密签名..." },
+                    { "ScanningShort", "正在扫描..." },
+                    { "IdentifyingCpuShort", "正在识别 CPU..." },
+                    { "MotherboardShort", "主板..." },
+                    { "SigningShort", "正在签名..." },
+                    { "SignatureOkShort", "签名成功" },
+                    { "CancelledShort", "已取消" },
+                    { "SignatureUpdated", "✓ 签名已更新" }
+                }
+            },
+            {
+                "ja", new Dictionary<string, string>
+                {
+                    { "PcRegTitle", "WOLD VIRTUAL — ログインシステム" },
+                    { "PcRegSubtitle", "自動ハードウェア署名登録" },
+                    { "OsCardTitle", "オペレーティングシステム" },
+                    { "CpuCardTitle", "プロセッサ" },
+                    { "MbCardTitle", "マザーボード" },
+                    { "CryptoLabel", "ハードウェア署名 / 固有の暗号指紋 (SHA-256)" },
+                    { "Copy", "コピー" },
+                    { "RegisterPc", "PC登録＆ZIP保存" },
+                    { "EnterMetaverse", "メタバースに入る" },
+                    { "UserRegTitle", "WOLD VIRTUAL — ユーザー登録" },
+                    { "UserRegSubtitle", "ID作成と資格情報の割り当て" },
+                    { "UsernameLabel", "ユーザー名:" },
+                    { "PasswordLabel", "パスワード:" },
+                    { "ConfirmPasswordLabel", "パスワード再入力:" },
+                    { "UuidLabel", "宇宙共通一意識別子 (UUID):" },
+                    { "GenerateUuid", "UUID生成" },
+                    { "RegisterAndEnter", "登録して入る" },
+                    { "WaitingMetaMaskTitle", "METAMASK署名待ち" },
+                    { "WaitingMetaMaskDesc", "デフォルトのブラウザを開き、MetaMaskのリクエストに署名してウォレットをリンクしてください。" },
+                    { "LoginInfoTitle", "ハードウェア署名を検出しました" },
+                    { "LoginPhaseStatus_Phase1", "フェーズ 1: ユーザー名とパスワードを入力して続行してください。" },
+                    { "LoginPhaseStatus_Phase2", "フェーズ 1 が正常に完了しました。フェーズ 2 解除: PCのZIP登録に署名して更新してください。" },
+                    { "LoginMetaMaskDesc", "ブラウザを開き、MetaMaskのリクエストを承認してください" },
+                    { "LoginUserLabel", "ユーザー:" },
+                    { "LoginRememberUser", "ユーザー名を記憶する" },
+                    { "LoginPassLabel", "パスワード:" },
+                    { "LoginRememberPass", "パスワードを記憶する" },
+                    { "LoginMetaMaskBtn", "🦊 MetaMaskでログイン" },
+                    { "LoginBtn", "ログイン" },
+                    { "UpdateSignatureBtn", "✍️ 署名を更新" },
+                    { "ScanInit", "システムスキャンを初期化中..." },
+                    { "ScanOS", "OSをスキャン中..." },
+                    { "ScanCPU", "プロセッサ (CPU) を識別中..." },
+                    { "ScanMB", "マザーボードとチップセットを検出中..." },
+                    { "ScanHash", "SHA-256暗号署名を生成中..." },
+                    { "ScanDone", "スキャンが完了しました。ハードウェア署名が生成されました。" },
+                    { "ScanError", "スキャン中にエラーが発生しました：" },
+                    { "ScanOSLoading", "システム情報を取得中..." },
+                    { "ScanCPULoading", "CPU仕様を取得中..." },
+                    { "ScanMBLoading", "マザーボードを検出中..." },
+                    { "GeneratingHashText", "暗号署名を生成中..." },
+                    { "ScanningShort", "スキャン中..." },
+                    { "IdentifyingCpuShort", "CPU識別中..." },
+                    { "MotherboardShort", "マザーボード..." },
+                    { "SigningShort", "署名中..." },
+                    { "SignatureOkShort", "署名完了" },
+                    { "CancelledShort", "キャンセル" },
+                    { "SignatureUpdated", "✓ 署名が更新されました" }
+                }
+            }
+        };
+
+        private void ApplyWpfLocale(string lang, string country)
+        {
+            if (!WpfTranslations.ContainsKey(lang))
+            {
+                lang = "en"; // fallback
+            }
+            _currentLang = lang;
+
+            var t = WpfTranslations[lang];
+
+            // GridPcRegistration UI elements
+            if (TxtPcRegTitle != null) TxtPcRegTitle.Text = t["PcRegTitle"];
+            if (TxtPcRegSubtitle != null) TxtPcRegSubtitle.Text = t["PcRegSubtitle"];
+            if (TxtScanStatus != null) TxtScanStatus.Text = t["ScanInit"];
+            if (TxtOsCardTitle != null) TxtOsCardTitle.Text = t["OsCardTitle"];
+            if (TxtOsName != null) TxtOsName.Text = t["ScanOSLoading"];
+            if (TxtCpuCardTitle != null) TxtCpuCardTitle.Text = t["CpuCardTitle"];
+            if (TxtCpuName != null) TxtCpuName.Text = t["ScanCPULoading"];
+            if (TxtMbCardTitle != null) TxtMbCardTitle.Text = t["MbCardTitle"];
+            if (TxtMotherboardName != null) TxtMotherboardName.Text = t["ScanMBLoading"];
+            if (TxtCryptoLabel != null) TxtCryptoLabel.Text = t["CryptoLabel"];
+            if (TxtHardwareHash != null) TxtHardwareHash.Text = t["GeneratingHashText"];
+            if (BtnCopyHash != null) BtnCopyHash.Content = t["Copy"];
+            if (BtnGenerateZip != null) BtnGenerateZip.Content = t["RegisterPc"];
+            if (BtnEnterMetaverse != null) BtnEnterMetaverse.Content = t["EnterMetaverse"];
+
+            // GridUserRegistration UI elements
+            if (TxtUserRegTitle != null) TxtUserRegTitle.Text = t["UserRegTitle"];
+            if (TxtUserRegSubtitle != null) TxtUserRegSubtitle.Text = t["UserRegSubtitle"];
+            if (LblRegUser != null) LblRegUser.Content = t["UsernameLabel"];
+            if (LblRegPass != null) LblRegPass.Content = t["PasswordLabel"];
+            if (LblRegPassConfirm != null) LblRegPassConfirm.Content = t["ConfirmPasswordLabel"];
+            if (LblRegUuid != null) LblRegUuid.Content = t["UuidLabel"];
+            if (BtnGenerateUuid != null) BtnGenerateUuid.Content = t["GenerateUuid"];
+            if (BtnRegisterAndEnter != null) BtnRegisterAndEnter.Content = t["RegisterAndEnter"];
+            if (TxtMetaMaskOverlayTitle != null) TxtMetaMaskOverlayTitle.Text = t["WaitingMetaMaskTitle"];
+            if (TxtMetaMaskOverlayDesc != null) TxtMetaMaskOverlayDesc.Text = t["WaitingMetaMaskDesc"];
+
+            // GridLoginScreen UI elements
+            if (TxtLoginInfoTitle != null) TxtLoginInfoTitle.Text = t["LoginInfoTitle"];
+            if (TxtLoginPhaseStatus != null) TxtLoginPhaseStatus.Text = t["LoginPhaseStatus_Phase1"];
+            if (TxtLoginMetaMaskDesc != null) TxtLoginMetaMaskDesc.Text = t["LoginMetaMaskDesc"];
+            if (TxtLoginUserLabel != null) TxtLoginUserLabel.Text = t["LoginUserLabel"];
+            if (ChkRememberUser != null) ChkRememberUser.Content = t["LoginRememberUser"];
+            if (TxtLoginPassLabel != null) TxtLoginPassLabel.Text = t["LoginPassLabel"];
+            if (ChkRememberPass != null) ChkRememberPass.Content = t["LoginRememberPass"];
+            if (BtnLoginMetaMask != null) BtnLoginMetaMask.Content = t["LoginMetaMaskBtn"];
+            if (BtnLoginPhase1 != null) BtnLoginPhase1.Content = t["LoginBtn"];
+            if (BtnLoginPhase2 != null) BtnLoginPhase2.Content = t["UpdateSignatureBtn"];
+        }
+
+        private bool IsOnAnotherPc()
+        {
+            try
+            {
+                if (!File.Exists(APP_DATA_SIG))
+                {
+                    return false;
+                }
+
+                string os = GetOSName();
+                string cpu = GetCpuName();
+                string motherboard = GetMotherboardName();
+                string currentFingerprint = GenerateSHA256Signature(os, cpu, motherboard);
+
+                string savedFingerprint = File.ReadAllText(APP_DATA_SIG, Encoding.UTF8).Trim();
+
+                bool mismatch = !string.Equals(currentFingerprint, savedFingerprint, StringComparison.Ordinal);
+                if (mismatch)
+                {
+                    Debug.WriteLine($"[PC Match Check] Fingerprint mismatch! Current: {currentFingerprint} vs Saved: {savedFingerprint}");
+                }
+                return mismatch;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PC Match Check] Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        private void ResetRegistrationForNewPc()
+        {
+            try
+            {
+                Debug.WriteLine("[ResetRegistration] Clearing old registration files for a new PC.");
+                if (File.Exists(APP_DATA_ZIP)) File.Delete(APP_DATA_ZIP);
+                if (File.Exists(APP_DATA_SIG)) File.Delete(APP_DATA_SIG);
+                
+                string credPath = Path.Combine(APP_DATA_DIR, "credentials.json");
+                if (File.Exists(credPath)) File.Delete(credPath);
+                
+                string settingsPath = Path.Combine(APP_DATA_DIR, "login_settings.json");
+                if (File.Exists(settingsPath)) File.Delete(settingsPath);
+
+                DeleteGodotCurrentUserJson();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ResetRegistration] Error deleting registration files: {ex.Message}");
+            }
+        }
+
+        private void DeleteGodotCurrentUserJson()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                DirectoryInfo? dir = new DirectoryInfo(baseDir);
+                while (dir != null)
+                {
+                    string candidate = Path.Combine(dir.FullName, "WoldVirtual", "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                    if (File.Exists(candidate))
+                    {
+                        File.Delete(candidate);
+                        Debug.WriteLine($"[ResetRegistration] Deleted Godot current_user.json at: {candidate}");
+                        return;
+                    }
+                    candidate = Path.Combine(dir.FullName, "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                    if (File.Exists(candidate))
+                    {
+                        File.Delete(candidate);
+                        Debug.WriteLine($"[ResetRegistration] Deleted Godot current_user.json at: {candidate}");
+                        return;
+                    }
+                    dir = dir.Parent;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ResetRegistration] Error deleting Godot user JSON: {ex.Message}");
+            }
         }
 
         /// <summary>

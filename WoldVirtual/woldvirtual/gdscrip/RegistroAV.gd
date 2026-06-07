@@ -152,14 +152,16 @@ func _ready():
 func apply_locale():
 	var t = TRANSLATIONS[detected_lang]
 
-	# Título del panel  (nodo: Panel/VBox/Title)
-	$Panel/VBox/Title.text = t["title"]
+	# Título del panel
+	if $Panel/VBox/Title:
+		$Panel/VBox/Title.text = t["title"]
 
 	# Placeholder del campo de nombre
 	input_name.placeholder_text = t["name_hint"]
 
-	# Etiqueta "Selecciona Género:" (nodo: Panel/VBox/Label2)
-	$Panel/VBox/Label2.text = t["gender_label"]
+	# Etiqueta de género
+	if $Panel/VBox/GenderLabel:
+		$Panel/VBox/GenderLabel.text = t["gender_label"]
 
 	# Botones de género y login
 	btn_male.text   = t["male"]
