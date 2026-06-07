@@ -249,6 +249,194 @@
             </Border>
         </Grid>
 
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PANTALLA 1.8: LOGIN (usuario existente detectado por ZIP)      -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PANTALLA 1.8: LOGIN (usuario existente detectado por ZIP)      -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <Grid x:Name="GridLoginScreen" Visibility="Collapsed">
+            <Grid.Background>
+                <RadialGradientBrush Center="0.5,0.45" RadiusX="0.9" RadiusY="0.9">
+                    <GradientStop Color="#050B14" Offset="0"/>
+                    <GradientStop Color="#030609" Offset="1"/>
+                </RadialGradientBrush>
+            </Grid.Background>
+
+            <!-- Partículas decorativas de fondo (líneas de grid) -->
+            <Canvas IsHitTestVisible="False" Opacity="0.07">
+                <Line X1="0" Y1="180" X2="1280" Y2="180" Stroke="#66FCF1" StrokeThickness="1"/>
+                <Line X1="0" Y1="360" X2="1280" Y2="360" Stroke="#66FCF1" StrokeThickness="1"/>
+                <Line X1="0" Y1="540" X2="1280" Y2="540" Stroke="#66FCF1" StrokeThickness="1"/>
+                <Line X1="320" Y1="0" X2="320" Y2="720" Stroke="#66FCF1" StrokeThickness="1"/>
+                <Line X1="640" Y1="0" X2="640" Y2="720" Stroke="#66FCF1" StrokeThickness="1"/>
+                <Line X1="960" Y1="0" X2="960" Y2="720" Stroke="#66FCF1" StrokeThickness="1"/>
+            </Canvas>
+
+            <!-- Logotipo y título en el centro -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,80">
+                <Image x:Name="ImgLoginLogo"
+                       Source="www/logo_bienvenida.png"
+                       Height="200"
+                       HorizontalAlignment="Center"
+                       Stretch="Uniform"
+                       Margin="0,0,0,12">
+                    <Image.Effect>
+                        <DropShadowEffect Color="#66FCF1" BlurRadius="25" ShadowDepth="0" Opacity="0.6"/>
+                    </Image.Effect>
+                </Image>
+
+                <TextBlock Text="WOLD VIRTUAL" Foreground="#66FCF1"
+                           FontSize="32" FontWeight="Bold"
+                           HorizontalAlignment="Center" Margin="0,0,0,4">
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="#66FCF1" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+                <TextBlock Text="P2P 3D METAVERSE" Foreground="#45A29E"
+                           FontSize="13" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+                <Border x:Name="BorderLoginInfo" Background="#0A111C" BorderBrush="#1E3040" BorderThickness="1"
+                        CornerRadius="8" Padding="14,8" Margin="0,10,0,10" Width="420" HorizontalAlignment="Center">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="✅" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="FIRMA DE HARDWARE DETECTADA" Foreground="#45A29E" FontSize="8.5" FontWeight="Bold"/>
+                            <TextBlock x:Name="TxtLoginFingerprint" Text="SHA-256: cargando..." Foreground="#66FCF1" FontFamily="Consolas" FontSize="9.5" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <TextBlock x:Name="TxtLoginPhaseStatus" Text="Fase 1: Ingrese su usuario y contraseña para continuar." 
+                           Foreground="#8892A4" FontSize="11" FontStyle="Italic"
+                           HorizontalAlignment="Center" Margin="0,5,0,10"/>
+
+                <!-- ── ESTADO DE CONEXIÓN METAMASK (CENTRAL) ── -->
+                <Border x:Name="BorderLoginStatus"
+                        Background="#08101A" CornerRadius="8" Padding="15,10"
+                        BorderBrush="#1E3040" BorderThickness="1.5"
+                        Visibility="Collapsed" Width="360" Margin="0,10,0,0">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#66FCF1" BlurRadius="15" ShadowDepth="0" Opacity="0.3"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                            <TextBlock Text="🦊" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtLoginStatus"
+                                       Text="ESPERANDO FIRMA DE METAMASK..."
+                                       Foreground="#66FCF1" FontSize="13" FontWeight="Bold"
+                                       VerticalAlignment="Center">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="#66FCF1" BlurRadius="6" ShadowDepth="0" Opacity="0.7"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </StackPanel>
+                        <ProgressBar IsIndeterminate="True" Height="4"
+                                     Background="#1F2833" Foreground="#66FCF1"
+                                     BorderThickness="0">
+                            <ProgressBar.Effect>
+                                <DropShadowEffect Color="#66FCF1" BlurRadius="4" ShadowDepth="0" Opacity="0.6"/>
+                            </ProgressBar.Effect>
+                        </ProgressBar>
+                        <TextBlock Text="Abre tu navegador y autoriza la solicitud de MetaMask"
+                                   Foreground="#8892A4" FontSize="10"
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"
+                                   TextWrapping="Wrap" TextAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Barra inferior horizontal en 3 Fases (Estilo cyberpunk, se alinea al fondo) -->
+            <Border VerticalAlignment="Bottom" Height="85" Background="#0A111C" BorderBrush="#1F8BD1" BorderThickness="0,1.5,0,0" Padding="10,8">
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <!-- 0: Campo Usuario -->
+                        <ColumnDefinition Width="Auto"/>
+                        <!-- 1: Spacer -->
+                        <ColumnDefinition Width="20"/>
+                        <!-- 2: Campo Contraseña -->
+                        <ColumnDefinition Width="Auto"/>
+                        <!-- 3: Spacer -->
+                        <ColumnDefinition Width="20"/>
+                        <!-- 4: Botón Fase 1 -->
+                        <ColumnDefinition Width="Auto"/>
+                        <!-- 5: Spacer Fase 2 -->
+                        <ColumnDefinition Width="20" x:Name="ColSpacerPhase2"/>
+                        <!-- 6: Panel Fase 2 -->
+                        <ColumnDefinition Width="Auto" x:Name="ColPanelPhase2"/>
+                        <!-- 7: Spacer Fase 3 -->
+                        <ColumnDefinition Width="20" x:Name="ColSpacerPhase3"/>
+                        <!-- 8: Botón Fase 3 -->
+                        <ColumnDefinition Width="Auto" x:Name="ColBtnPhase3"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Columna 0: Usuario -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                            <TextBlock Text="Usuario:" Foreground="#C5C6C7" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0" Width="55" TextAlignment="Right"/>
+                            <TextBox x:Name="TxtLoginUser" Width="150" Height="24" FontSize="11.5" 
+                                     Style="{StaticResource SingularityTextBox}" VerticalContentAlignment="Center" Padding="4,0"/>
+                        </StackPanel>
+                        <CheckBox x:Name="ChkRememberUser" Content="Recordar Nombre" Foreground="#8892A4" FontSize="9.5" Margin="61,1,0,0" Cursor="Hand"/>
+                    </StackPanel>
+
+                    <!-- Columna 2: Contraseña -->
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                            <TextBlock Text="Contraseña:" Foreground="#C5C6C7" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0" Width="70" TextAlignment="Right"/>
+                            <PasswordBox x:Name="TxtLoginPass" Width="150" Height="24" FontSize="11.5" 
+                                         Style="{StaticResource SingularityPasswordBox}" VerticalContentAlignment="Center" Padding="4,0"/>
+                        </StackPanel>
+                        <CheckBox x:Name="ChkRememberPass" Content="Recordar Contraseña" Foreground="#8892A4" FontSize="9.5" Margin="76,1,0,0" Cursor="Hand"/>
+                    </StackPanel>
+
+                    <!-- Columna 4: Botón Iniciar Sesión (Fase 1) -->
+                    <Button Grid.Column="4" x:Name="BtnLoginPhase1" Content="Iniciar Sesión" Width="110" Height="34" 
+                            Style="{StaticResource SingularityButton}" Cursor="Hand" VerticalAlignment="Center" FontSize="11" FontWeight="Bold"/>
+
+                    <!-- Columna 6: Botón Firma (Fase 2) + Escaneo -->
+                    <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" x:Name="PanelPhase2" Visibility="Collapsed">
+                        <Button x:Name="BtnLoginPhase2" Content="✍️ Actualizar Firma" Width="145" Height="34" 
+                                Style="{StaticResource SingularityButton}" Cursor="Hand" FontSize="11" FontWeight="Bold"/>
+                        <StackPanel Margin="8,0,0,0" VerticalAlignment="Center" x:Name="ScanProgressPanel" Visibility="Collapsed">
+                            <ProgressBar x:Name="ProgLoginScan" Height="5" Width="70" Minimum="0" Maximum="100" Value="0" Background="#1F2833" Foreground="#66FCF1"/>
+                            <TextBlock x:Name="TxtLoginScanStatus" Text="Escaneando..." Foreground="#66FCF1" FontSize="7.5" Margin="0,1,0,0" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Columna 8: Botón MetaMask (Fase 3) -->
+                    <Button Grid.Column="8" x:Name="BtnLoginMetaMask" Content="🦊 Entrar con MetaMask" Width="165" Height="34" 
+                            Cursor="Hand" VerticalAlignment="Center" Visibility="Collapsed">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="LoginBtnBorder" CornerRadius="4" BorderThickness="1.5" BorderBrush="#66FCF1" Background="#0E3B3B">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#66FCF1" BlurRadius="6" ShadowDepth="0" Opacity="0.4"/>
+                                    </Border.Effect>
+                                    <Grid>
+                                        <TextBlock Text="🦊 Entrar con MetaMask" Foreground="#66FCF1" FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="LoginBtnBorder" Property="Opacity" Value="0.88"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="LoginBtnBorder" Property="Opacity" Value="0.7"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+
         <!-- PANTALLA 2: VISOR PRINCIPAL Y MOTOR 3D -->
         <Grid x:Name="GridMainViewer" Visibility="Collapsed">
             <Grid.RowDefinitions>
