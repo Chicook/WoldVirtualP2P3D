@@ -2,38 +2,79 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-
     <TargetFramework>net8.0-windows</TargetFramework>
-
     <UseWPF>true</UseWPF>
-
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-
     <Platforms>x64</Platforms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
 
+  <PropertyGroup>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
+    <PublishTrimmed>false</PublishTrimmed> <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfContained>true</IncludeNativeLibrariesForSelfContained>
+  </PropertyGroup>
 
-    <PublishTrimmed>false</PublishTrimmed>
+  <PropertyGroup>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <ReportAnalyzerDiagnostics>true</ReportAnalyzerDiagnostics>
+    <NoWarn>$(NoWarn);NU1701;CA1416</NoWarn> </PropertyGroup>
 
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <InformationalVersion>0.1.0-alpha+2026</InformationalVersion>
+  </PropertyGroup>
 
+  <PropertyGroup>
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
-
     <DefaultItemExcludes>
       $(DefaultItemExcludes);
       jsonDeEstado\**;
       servidor_interno\**;
       DTBSINT\**
     </DefaultItemExcludes>
+  </PropertyGroup>
 
-    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  <ItemGroup>
+    <PackageReference Include="HelixToolkit.Wpf.SharpDX" Version="2.28.0" />
+    <PackageReference Include="SharpGLTF.Runtime" Version="1.0.0-alpha0031" />
+  </ItemGroup>
 
-    <ApplicationManifest>app.manifest</ApplicationManifest>
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="OpenCvSharp4.Windows" Version="4.13.0.*" /> <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
+  </ItemGroup>
 
-    <Version>0.1.0</Version>
-    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+  <ItemGroup>
+    <PackageReference Include="Websocket.Client" Version="5.1.1" />
+    <PackageReference Include="MessagePack" Version="3.1.4" />
+    <PackageReference Include="LiteDB" Version="5.0.21" /> </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepuPhysics" Version="2.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" /> </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ServidorVirtualCS\ServidorVirtualCS.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="www\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Shaders\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Worlds\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
     <FileVersion>0.1.0.0</FileVersion>
 
   </PropertyGroup>
