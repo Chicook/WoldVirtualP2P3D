@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net.Http;
+using System.Diagnostics;
 
 namespace VisorSingularity
 {
@@ -155,6 +157,67 @@ namespace VisorSingularity
             if (cid != null)
                 await PinAsync(cid, token);
             return cid;
+        }
+
+        /// <summary>
+        /// Descarga un archivo desde IPFS a partir de su CID.
+        /// Intenta usar el gateway local primero, y si falla o no está disponible,
+        /// realiza fallback secuencial a los gateways públicos.
+        /// </summary>
+        public async Task<bool> DownloadFileAsync(
+            string cid, string destinationPath, CancellationToken token = default)
+        {
+            if (string.IsNullOrWhiteSpace(cid))
+                return false;
+
+            LogStatus($"📥 Iniciando descarga desde IPFS para CID: {cid}...");
+
+            // Intentar con gateway local primero si está activo
+            List<string> targets = new List<string>();
+            if (_manager.IsDaemonRunning)
+            {
+                targets.Add($"{IpfsManager.GatewayUrl}/ipfs/{cid}");
+            }
+
+            // Añadir gateways públicos como fallback
+            foreach (var gw in PublicGateways)
+            {
+                targets.Add($"{gw}{cid}");
+            }
+
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WoldVirtualP2P/1.0");
+
+            foreach (var url in targets)
+            {
+                if (token.IsCancellationRequested) return false;
+
+                try
+                {
+                    LogStatus($"🔍 Intentando descargar desde gateway: {url}");
+                    using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, token);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var dir = Path.GetDirectoryName(destinationPath);
+                        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                        {
+                            Directory.CreateDirectory(dir);
+                        }
+
+                        await using var fs = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                        await response.Content.CopyToAsync(fs, token);
+                        LogStatus($"✅ Descarga exitosa desde: {url}");
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[IpfsDownload-Error] Falló descarga desde {url}: {ex.Message}");
+                }
+            }
+
+            LogStatus($"❌ No se pudo descargar el CID {cid} desde ningún gateway.");
+            return false;
         }
 
         /// <summary>
