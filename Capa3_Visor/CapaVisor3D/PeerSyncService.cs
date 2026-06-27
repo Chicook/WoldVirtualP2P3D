@@ -92,8 +92,8 @@ namespace VisorSingularity
             _watcher.Changed += OnLocalPeerChanged;
             _watcher.Created += OnLocalPeerChanged;
 
-            _listenTask = Task.Run(() => ListenLoop(_cts.Token), _cts.Token);
-            _heartbeatTask = Task.Run(() => HeartbeatLoop(_cts.Token), _cts.Token);
+            _listenTask = ListenLoop(_cts.Token);
+            _heartbeatTask = HeartbeatLoop(_cts.Token);
 
             Debug.WriteLine($"[PeerSync] Servicio iniciado. ID local: {_localId}  Puerto UDP: {UDP_PORT}");
         }
@@ -139,10 +139,21 @@ namespace VisorSingularity
         }
 
         // ── Evento: el peer local cambió → difundir inmediatamente ─────────
-        private void OnLocalPeerChanged(object sender, FileSystemEventArgs e)
+        private async void OnLocalPeerChanged(object sender, FileSystemEventArgs e)
         {
-            // Pequeño delay para que Godot termine de escribir el .tmp → rename
-            Task.Delay(80).ContinueWith(_ => BroadcastLocalPeer());
+            try
+            {
+                // Pequeño delay para que Godot termine de escribir el .tmp → rename
+                await Task.Delay(80);
+                BroadcastLocalPeer();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PeerSync] Error en OnLocalPeerChanged: {ex.Message}");
+            }
         }
 
         // ── Difundir el peer local por broadcast ──────────────────────────
@@ -305,11 +316,11 @@ namespace VisorSingularity
                 _watcher = null;
             }
 
-            try { _listener?.Close(); } catch { }
-            try { _sender?.Close(); } catch { }
+            try { _listener?.Close(); } catch (Exception ex) { Debug.WriteLine($"[PeerSync] Error al cerrar listener: {ex.Message}"); }
+            try { _sender?.Close(); } catch (Exception ex) { Debug.WriteLine($"[PeerSync] Error al cerrar sender: {ex.Message}"); }
 
-            try { _listenTask?.Wait(1000); } catch { }
-            try { _heartbeatTask?.Wait(500); } catch { }
+            try { _listenTask?.Wait(1000); } catch (Exception ex) { Debug.WriteLine($"[PeerSync] Error al esperar ListenLoop: {ex.Message}"); }
+            try { _heartbeatTask?.Wait(500); } catch (Exception ex) { Debug.WriteLine($"[PeerSync] Error al esperar HeartbeatLoop: {ex.Message}"); }
 
             Debug.WriteLine("[PeerSync] Servicio detenido.");
         }

@@ -67,10 +67,11 @@ namespace VisorSingularity
                     }
                 }
 
+                var timeoutTask = Task.Delay(timeoutMs + 1000, scanCts.Token);
                 await Task.WhenAny(
                     Scan(process.StandardOutput, exe),
                     Scan(process.StandardError, exe),
-                    Task.Delay(timeoutMs + 1000, scanCts.Token).ContinueWith(_ => { })
+                    timeoutTask
                 );
 
                 if (!string.IsNullOrEmpty(found) && !process.HasExited)

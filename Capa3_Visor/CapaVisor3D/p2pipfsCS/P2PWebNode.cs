@@ -25,6 +25,41 @@ namespace VisorSingularity
     /// </summary>
     public class P2PWebNode
     {
+        private static readonly HttpClient _http = CreateHttpClient();
+        private static readonly string[] IpfsGatewayCandidates =
+        {
+            "https://4everland.io/ipfs/",
+            "https://w3s.link/ipfs/",
+            "https://ipfs.eth.aragon.network/ipfs/",
+            "https://cf-ipfs.com/ipfs/",
+            "https://storry.tv/ipfs/",
+            "https://ipfs.io/ipfs/",
+            "https://cloudflare-ipfs.com/ipfs/",
+            "https://dweb.link/ipfs/"
+        };
+
+        private static readonly string[] IpfsPreloadGateways =
+        {
+            "https://ipfs.io/ipfs/",
+            "https://dweb.link/ipfs/",
+            "https://gateway.pinata.cloud/ipfs/",
+            "https://w3s.link/ipfs/"
+        };
+
+        private static readonly string[] ZipExcludedExtensions = [".zip", ".tmp", ".log"];
+        private static readonly string[] ZipExcludedDirectories =
+        [
+            ".git",
+            ".gemini",
+            ".ipfs-woldvirtual",
+            ".godot",
+            "peers",
+            "logs",
+            "temp",
+            "tmp",
+            "wcvcoinmtb"
+        ];
+
         // ── Propiedades públicas ──────────────────────────────────────────────
         public string NodeId       { get; private set; }
         public string SimulatedUrl { get; private set; }
@@ -50,7 +85,6 @@ namespace VisorSingularity
         private HttpListener             _listener;
         private CancellationTokenSource? _cts;
         private readonly string          _repoPath;
-        private static readonly HttpClient _http = new HttpClient();
 
         private IpfsManager?             _ipfsManager;
         private IpfsPublisher?           _ipfsPublisher;
@@ -79,9 +113,6 @@ namespace VisorSingularity
             _listener = new HttpListener();
             _listener.Prefixes.Add($"http://127.0.0.1:{_internalPort}/");
             _listener.Prefixes.Add($"http://localhost:{_internalPort}/");
-
-            // TimeOut global generoso para archivos grandes
-            _http.Timeout = TimeSpan.FromMinutes(20);
         }
 
         // ── Inicio ────────────────────────────────────────────────────────────
@@ -89,14 +120,14 @@ namespace VisorSingularity
         {
             _cts = new CancellationTokenSource();
             _listener.Start();
-            Task.Run(() => ListenLoop(_cts.Token));
+            _ = ListenLoop(_cts.Token);
 
             // Iniciar proxy TCP para reescribir Host header (evita HTTP 400 por Host de Serveo)
             try
             {
                 _proxyListener = new TcpListener(IPAddress.Loopback, Port);
                 _proxyListener.Start();
-                Task.Run(() => ProxyLoop(_cts.Token));
+                _ = ProxyLoop(_cts.Token);
             }
             catch (Exception ex)
             {
@@ -104,7 +135,7 @@ namespace VisorSingularity
                 LogStatus($"⚠️ Error iniciando proxy local: {ex.Message}");
             }
 
-            Task.Run(() => RunMainFlowAsync());
+            _ = RunMainFlowAsync();
             LogStatus("📦 Comprimiendo visor...");
         }
 
@@ -170,7 +201,7 @@ namespace VisorSingularity
                 LogStatus("🌍 ¡Nodo visible! URL activa mientras estés conectado.");
 
                 // IPFS en paralelo para seeding DHT adicional (no bloquea)
-                _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
+                _ = RunIpfsBackgroundAsync(_cts?.Token ?? default);
                 return;
             }
 
@@ -238,10 +269,10 @@ namespace VisorSingularity
                 if (token.IsCancellationRequested) return null;
                 LogStatus($"   → {c.Name}...");
 
-                string? url = await TryRunProcessTunnelAsync(sshExe, c.Args, c.Pat, 23000, token);
-                if (!string.IsNullOrEmpty(url))
-                {
-                    LogStatus($"🌍 Túnel activo — {c.Name}: {url}");
+                    string? url = await TryRunProcessTunnelAsync(sshExe, c.Args, c.Pat, 23000, token);
+                    if (!string.IsNullOrEmpty(url))
+                    {
+                        LogStatus($"🌍 Túnel activo — {c.Name}: {url}");
                     return url;
                 }
             }
@@ -410,17 +441,6 @@ namespace VisorSingularity
         // ── Selección dinámica de la mejor pasarela pública (evita bloqueos DNS de ISPs) ──
         private async Task<string> SelectBestGatewayUrlAsync(string landingCid)
         {
-            string[] candidateGateways = {
-                "https://4everland.io/ipfs/",
-                "https://w3s.link/ipfs/",
-                "https://ipfs.eth.aragon.network/ipfs/",
-                "https://cf-ipfs.com/ipfs/",
-                "https://storry.tv/ipfs/",
-                "https://ipfs.io/ipfs/",
-                "https://cloudflare-ipfs.com/ipfs/",
-                "https://dweb.link/ipfs/"
-            };
-
             LogStatus("🔍 Verificando pasarelas IPFS libres de bloqueo ISP...");
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(6));
@@ -429,30 +449,9 @@ namespace VisorSingularity
 
             var testTasks = new List<Task<(string gw, bool reachable)>>();
 
-            foreach (var gw in candidateGateways)
+            foreach (var gw in IpfsGatewayCandidates)
             {
-                testTasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        // Extraer el dominio raíz para hacer la petición rápida y evitar DHT lookup
-                        string rootUrl = gw;
-                        int ipfsIdx = gw.IndexOf("/ipfs/");
-                        if (ipfsIdx > 0)
-                        {
-                            rootUrl = gw.Substring(0, ipfsIdx + 1);
-                        }
-
-                        using var req = new HttpRequestMessage(HttpMethod.Head, rootUrl);
-                        using var resp = await httpClient.SendAsync(req, cts.Token);
-                        return (gw, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[GatewayTest] {gw} bloqueado o inactivo: {ex.Message}");
-                        return (gw, false);
-                    }
-                }));
+                testTasks.Add(ProbeGatewayAsync(gw, httpClient, cts.Token));
             }
 
             var results = await Task.WhenAll(testTasks);
@@ -474,14 +473,12 @@ namespace VisorSingularity
         // ── Precarga Activa de Pasarelas IPFS ──────────────────────────────────
         private void PreloadCidsOnPublicGateways(string landingCid, string zipCid)
         {
-            string[] gateways = {
-                "https://ipfs.io/ipfs/",
-                "https://dweb.link/ipfs/",
-                "https://gateway.pinata.cloud/ipfs/",
-                "https://w3s.link/ipfs/"
-            };
+            _ = PreloadCidsOnPublicGatewaysAsync(landingCid, zipCid);
+        }
 
-            Task.Run(async () =>
+        private async Task PreloadCidsOnPublicGatewaysAsync(string landingCid, string zipCid)
+        {
+            try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(25) };
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
@@ -490,42 +487,19 @@ namespace VisorSingularity
                 
                 var tasks = new List<Task>();
 
-                foreach (var gw in gateways)
+                foreach (var gw in IpfsPreloadGateways)
                 {
-                    // 1. Forzar precarga de la Landing Page (descarga el pequeño archivo index.html)
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var resp = await client.GetAsync($"{gw}{landingCid}");
-                            Debug.WriteLine($"[Preload-Landing] {gw} → {(int)resp.StatusCode}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"[Preload-Landing-Error] {gw} → {ex.Message}");
-                        }
-                    }));
-
-                    // 2. Forzar búsqueda de proveedor del archivo ZIP (HEAD request)
-                    // Esto obliga a la pasarela a consultar el DHT e indexar el archivo grande sin descargar los 300MB completos
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        try
-                        {
-                            using var req = new HttpRequestMessage(HttpMethod.Head, $"{gw}{zipCid}");
-                            var resp = await client.SendAsync(req);
-                            Debug.WriteLine($"[Preload-Zip] {gw} → {(int)resp.StatusCode}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"[Preload-Zip-Error] {gw} → {ex.Message}");
-                        }
-                    }));
+                    tasks.Add(PreloadLandingAsync(client, gw, landingCid));
+                    tasks.Add(PreloadZipAsync(client, gw, zipCid));
                 }
 
                 await Task.WhenAll(tasks);
                 LogStatus("✅ Pasarelas IPFS enlazadas con éxito.");
-            });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Preload] Error: {ex.Message}");
+            }
         }
 
         // ── Cadena de servicios de upload (Fallback) ──────────────────────────
@@ -565,10 +539,7 @@ namespace VisorSingularity
                 using var form = new MultipartFormDataContent();
                 form.Add(new StringContent(fileName), "name");
 
-                using var fs      = File.OpenRead(filePath);
-                var       content = new StreamContent(fs);
-                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
-                form.Add(content, "file", fileName);
+                AddZipFileToForm(form, filePath, fileName);
                 req.Content = form;
 
                 var resp = await _http.SendAsync(req);
@@ -611,10 +582,7 @@ namespace VisorSingularity
                 Debug.WriteLine($"[GoFile] Usando servidor: {server}");
 
                 using var form = new MultipartFormDataContent();
-                using var fs   = File.OpenRead(filePath);
-                var content    = new StreamContent(fs);
-                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
-                form.Add(content, "file", fileName);
+                AddZipFileToForm(form, filePath, fileName);
 
                 var resp = await _http.PostAsync($"https://{server}.gofile.io/contents/uploadfile", form);
                 string body = await resp.Content.ReadAsStringAsync();
@@ -647,9 +615,7 @@ namespace VisorSingularity
                 req.Headers.Add("Max-Downloads", "500");
                 req.Headers.Add("Max-Days", "14");
 
-                using var fs = File.OpenRead(filePath);
-                req.Content  = new StreamContent(fs);
-                req.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+                req.Content = CreateZipStreamContent(filePath);
 
                 var resp = await _http.SendAsync(req);
                 string result = (await resp.Content.ReadAsStringAsync()).Trim();
@@ -668,10 +634,7 @@ namespace VisorSingularity
             try
             {
                 using var form = new MultipartFormDataContent();
-                using var fs   = File.OpenRead(filePath);
-                var content    = new StreamContent(fs);
-                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
-                form.Add(content, "file", fileName);
+                AddZipFileToForm(form, filePath, fileName);
 
                 using var req = new HttpRequestMessage(HttpMethod.Post, "https://0x0.st");
                 req.Headers.UserAgent.ParseAdd("WoldVirtualP2P/1.0");
@@ -858,9 +821,7 @@ namespace VisorSingularity
         {
             foreach (string file in Directory.GetFiles(sourceDir))
             {
-                string ext  = Path.GetExtension(file).ToLower();
-                if (ext is ".zip" or ".tmp" or ".log") continue;
-                if (Path.GetFileName(file).ToLower() is "vram_status.json") continue;
+                if (ShouldSkipFile(file)) continue;
 
                 string rel = Path.GetRelativePath(rootDir, file);
                 try { archive.CreateEntryFromFile(file, rel); }
@@ -868,10 +829,7 @@ namespace VisorSingularity
             }
             foreach (string dir in Directory.GetDirectories(sourceDir))
             {
-                string d = Path.GetFileName(dir).ToLower();
-                // Excluir solo lo estrictamente necesario para reducir tamaño
-                if (d is ".git" or ".gemini" or ".ipfs-woldvirtual" or ".godot"
-                       or "peers" or "logs" or "temp" or "tmp" or "wcvcoinmtb") continue;
+                if (ShouldSkipDirectory(dir)) continue;
                 AddDirectoryToZip(archive, dir, rootDir);
             }
         }
@@ -972,11 +930,6 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
             try { return new FileInfo(path).Length / 1_048_576.0; } catch { return 0; }
         }
 
-        private int FindAvailablePort(int start)
-        {
-            return TcpPortFinder.FindAvailablePort(start);
-        }
-
         // ── Proxy TCP Local (Reescritura de Cabecera Host) ───────────────────
         private async Task ProxyLoop(CancellationToken token)
         {
@@ -985,7 +938,7 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
                 try
                 {
                     TcpClient client = await _proxyListener!.AcceptTcpClientAsync(token);
-                    _ = Task.Run(() => HandleProxyClientAsync(client, token));
+                    _ = HandleProxyClientAsync(client, token);
                 }
                 catch (ObjectDisposedException) { break; }
                 catch (Exception ex)
@@ -1097,6 +1050,93 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
                 if (match) return i;
             }
             return -1;
+        }
+
+        private static HttpClient CreateHttpClient()
+        {
+            return new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
+        }
+
+        private static StreamContent CreateZipStreamContent(string filePath)
+        {
+            var fs = File.OpenRead(filePath);
+            var content = new StreamContent(fs);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+            return content;
+        }
+
+        private static void AddZipFileToForm(MultipartFormDataContent form, string filePath, string fileName)
+        {
+            form.Add(CreateZipStreamContent(filePath), "file", fileName);
+        }
+
+        private static bool ShouldSkipFile(string filePath)
+        {
+            string extension = Path.GetExtension(filePath);
+            if (Array.Exists(ZipExcludedExtensions, ext => string.Equals(ext, extension, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            return string.Equals(Path.GetFileName(filePath), "vram_status.json", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool ShouldSkipDirectory(string directoryPath)
+        {
+            string dirName = Path.GetFileName(directoryPath);
+            return Array.Exists(ZipExcludedDirectories, dir =>
+                string.Equals(dir, dirName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private async Task<(string gw, bool reachable)> ProbeGatewayAsync(
+            string gw, HttpClient httpClient, CancellationToken token)
+        {
+            try
+            {
+                // Extraer el dominio raíz para hacer la petición rápida y evitar DHT lookup
+                string rootUrl = gw;
+                int ipfsIdx = gw.IndexOf("/ipfs/");
+                if (ipfsIdx > 0)
+                {
+                    rootUrl = gw.Substring(0, ipfsIdx + 1);
+                }
+
+                using var req = new HttpRequestMessage(HttpMethod.Head, rootUrl);
+                using var resp = await httpClient.SendAsync(req, token);
+                return (gw, true);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[GatewayTest] {gw} bloqueado o inactivo: {ex.Message}");
+                return (gw, false);
+            }
+        }
+
+        private static async Task PreloadLandingAsync(HttpClient client, string gateway, string landingCid)
+        {
+            try
+            {
+                using var resp = await client.GetAsync($"{gateway}{landingCid}");
+                Debug.WriteLine($"[Preload-Landing] {gateway} → {(int)resp.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Preload-Landing-Error] {gateway} → {ex.Message}");
+            }
+        }
+
+        private static async Task PreloadZipAsync(HttpClient client, string gateway, string zipCid)
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Head, $"{gateway}{zipCid}");
+                using var resp = await client.SendAsync(req);
+                Debug.WriteLine($"[Preload-Zip] {gateway} → {(int)resp.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Preload-Zip-Error] {gateway} → {ex.Message}");
+            }
         }
 
         private void LogStatus(string msg) => OnStatusChanged?.Invoke(msg);

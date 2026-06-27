@@ -2,39 +2,6 @@
   "version": 4,
   "targets": {
     "net8.0-windows": {
-      "AForge/2.2.5": {
-        "type": "package",
-        "compile": {
-          "lib/AForge.dll": {}
-        },
-        "runtime": {
-          "lib/AForge.dll": {}
-        }
-      },
-      "AForge.Video/2.2.5": {
-        "type": "package",
-        "dependencies": {
-          "AForge": "2.2.5"
-        },
-        "compile": {
-          "lib/AForge.Video.dll": {}
-        },
-        "runtime": {
-          "lib/AForge.Video.dll": {}
-        }
-      },
-      "AForge.Video.DirectShow/2.2.5": {
-        "type": "package",
-        "dependencies": {
-          "AForge.Video": "2.2.5"
-        },
-        "compile": {
-          "lib/AForge.Video.DirectShow.dll": {}
-        },
-        "runtime": {
-          "lib/AForge.Video.DirectShow.dll": {}
-        }
-      },
       "Microsoft.Win32.SystemEvents/10.0.8": {
         "type": "package",
         "compile": {
@@ -334,45 +301,6 @@
     }
   },
   "libraries": {
-    "AForge/2.2.5": {
-      "sha512": "clkumhM9DggqIzEXAHgVLeWO4arG5YfoPr7J4jfjJx35AoeEIJSSm49J25bwp/9mXQYLwi7y1Wunc8qgYJsGxg==",
-      "type": "package",
-      "path": "aforge/2.2.5",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "aforge.2.2.5.nupkg.sha512",
-        "aforge.nuspec",
-        "lib/AForge.dll",
-        "lib/AForge.xml"
-      ]
-    },
-    "AForge.Video/2.2.5": {
-      "sha512": "XqzcOXtBUagEPRqg/00oayxlCPmxP4284SdM62mVotsNoD03fs19BrzdMBfhUOOYPyd0B/IXH7tEWnSDmc2gxA==",
-      "type": "package",
-      "path": "aforge.video/2.2.5",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "aforge.video.2.2.5.nupkg.sha512",
-        "aforge.video.nuspec",
-        "lib/AForge.Video.dll",
-        "lib/AForge.Video.xml"
-      ]
-    },
-    "AForge.Video.DirectShow/2.2.5": {
-      "sha512": "pEch6felU/RGAbl0A7yjaQjsGxwiRFU9R+qBqR92wQo++XhzPLeQaZHnAPIBYaG7MfoqtjgCDkK4z3Tra4VQ3w==",
-      "type": "package",
-      "path": "aforge.video.directshow/2.2.5",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "aforge.video.directshow.2.2.5.nupkg.sha512",
-        "aforge.video.directshow.nuspec",
-        "lib/AForge.Video.DirectShow.dll",
-        "lib/AForge.Video.DirectShow.xml"
-      ]
-    },
     "Microsoft.Win32.SystemEvents/10.0.8": {
       "sha512": "J9+VT0lkrA7wW38CGxO2sZd+iH9C0qzioMi/2ztpT32WOVr+04uNqFIrxisTRf+mvtXLtdqcio1AoS0vfAVLLQ==",
       "type": "package",
@@ -735,7 +663,6 @@
   },
   "projectFileDependencyGroups": {
     "net8.0-windows": [
-      "AForge.Video.DirectShow >= 2.2.5",
       "NAudio >= 2.3.0",
       "OpenCvSharp4.Windows >= 4.13.0.20260602",
       "ServidorVirtualCS >= 1.0.0",
@@ -750,11 +677,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+      "projectUniqueName": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
       "projectName": "VisorSingularity",
-      "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
       "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-      "outputPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
+      "outputPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -777,16 +704,13 @@
           "framework": "net8.0-windows7.0",
           "targetAlias": "net8.0-windows",
           "projectReferences": {
-            "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
-              "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj"
+            "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
+              "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj"
             }
           }
         }
       },
       "warningProperties": {
-        "noWarn": [
-          "NU1701"
-        ],
         "warnAsError": [
           "NU1605"
         ]
@@ -803,10 +727,6 @@
         "framework": "net8.0-windows7.0",
         "targetAlias": "net8.0-windows",
         "dependencies": {
-          "AForge.Video.DirectShow": {
-            "target": "Package",
-            "version": "[2.2.5, )"
-          },
           "NAudio": {
             "target": "Package",
             "version": "[2.3.0, )"
@@ -838,19 +758,19 @@
         "downloadDependencies": [
           {
             "name": "Microsoft.AspNetCore.App.Ref",
-            "version": "[8.0.27, 8.0.27]"
+            "version": "[8.0.28, 8.0.28]"
           },
           {
             "name": "Microsoft.NETCore.App.Host.win-x64",
-            "version": "[8.0.27, 8.0.27]"
+            "version": "[8.0.28, 8.0.28]"
           },
           {
             "name": "Microsoft.NETCore.App.Ref",
-            "version": "[8.0.27, 8.0.27]"
+            "version": "[8.0.28, 8.0.28]"
           },
           {
             "name": "Microsoft.WindowsDesktop.App.Ref",
-            "version": "[8.0.27, 8.0.27]"
+            "version": "[8.0.28, 8.0.28]"
           }
         ],
         "frameworkReferences": {
@@ -861,7 +781,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Diagnostics;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using WoldVirtual.EstadoGlobal.Helpers;
@@ -35,38 +34,8 @@ public sealed class QuotaManager
 
     public QuotaStatus GetCurrentStatus()
     {
-        long vram = 0, ram = 0;
-        try
-        {
-            var statusPath = Path.Combine(_rootDir, "Estado_Global", "vram_status.json");
-            if (File.Exists(statusPath))
-            {
-                using var fs = new FileStream(statusPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                using var doc = JsonDocument.Parse(fs);
-                if (doc.RootElement.TryGetProperty("vram", out var v)) vram = v.GetInt64();
-                if (doc.RootElement.TryGetProperty("ram", out var r)) ram = r.GetInt64();
-            }
-        }
-        catch { /* Ignorar errores de lectura de JSON temporal */ }
-
-        long luciaRam = 0;
-        try
-        {
-            var luciaProcs = Process.GetProcessesByName("python");
-            foreach (var p in luciaProcs)
-            {
-                try
-                {
-                    if (p.MainModule?.FileName.Contains("lucIA", StringComparison.OrdinalIgnoreCase) == true)
-                    {
-                        luciaRam = p.WorkingSet64;
-                        break;
-                    }
-                }
-                catch { /* Acceso denegado a algunos procesos */ }
-            }
-        }
-        catch { }
+        var usage = ReadRuntimeResourceUsage();
+        long luciaRam = GetLuciaRamUsage();
 
         var luciaDisk = GetDirSize(Path.Combine(_rootDir, "lucIA", "data"));
         var woldSize = GetDirSize(Path.Combine(_rootDir, "woldvirtual"));
@@ -77,11 +46,65 @@ public sealed class QuotaManager
             ExeSize: binSize,
             AIAssigned: (luciaRam > 0 ? luciaRam : 128 * 1024 * 1024) + luciaDisk,
             AvatarsAssigned: 48 * 1024 * 1024,
-            RAMUsed: ram > 0 ? ram : _currentProcess.WorkingSet64,
-            VRAMUsed: vram,
+            RAMUsed: usage.Ram > 0 ? usage.Ram : _currentProcess.WorkingSet64,
+            VRAMUsed: usage.Vram,
             NetworkBufferUsed: 64 * 1024 * 1024,
             SystemReserved: 40 * 1024 * 1024
         );
+    }
+
+    private (long Vram, long Ram) ReadRuntimeResourceUsage()
+    {
+        var statusPath = Path.Combine(_rootDir, "Estado_Global", "vram_status.json");
+        if (!File.Exists(statusPath))
+        {
+            return (0, 0);
+        }
+
+        try
+        {
+            using var fs = new FileStream(statusPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var doc = JsonDocument.Parse(fs);
+
+            long vram = doc.RootElement.TryGetProperty("vram", out var v) ? v.GetInt64() : 0;
+            long ram = doc.RootElement.TryGetProperty("ram", out var r) ? r.GetInt64() : 0;
+            return (vram, ram);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[QuotaManager] Error leyendo vram_status.json: {ex.Message}");
+            return (0, 0);
+        }
+    }
+
+    private static long GetLuciaRamUsage()
+    {
+        try
+        {
+            foreach (var process in Process.GetProcessesByName("python"))
+            {
+                using (process)
+                {
+                    try
+                    {
+                        if (process.MainModule?.FileName.Contains("lucIA", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            return process.WorkingSet64;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[QuotaManager] Sin acceso a proceso python: {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[QuotaManager] Error buscando proceso lucIA: {ex.Message}");
+        }
+
+        return 0;
     }
 
     private static long GetDirSize(string path)
@@ -92,7 +115,11 @@ public sealed class QuotaManager
             return Directory.GetFiles(path, "*", SearchOption.AllDirectories)
                 .Sum(f => new FileInfo(f).Length);
         }
-        catch { return 0; }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[QuotaManager] Error calculando tamaño de '{path}': {ex.Message}");
+            return 0;
+        }
     }
 
     public string GetFormattedSummary(QuotaStatus s)

@@ -39,9 +39,6 @@ D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\VisorSingularity.
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\VisorSingularity.runtimeconfig.json
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\VisorSingularity.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\VisorSingularity.pdb
-D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\AForge.dll
-D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\AForge.Video.dll
-D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\AForge.Video.DirectShow.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\Microsoft.Win32.SystemEvents.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.dll
 D:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\NAudio.Asio.dll

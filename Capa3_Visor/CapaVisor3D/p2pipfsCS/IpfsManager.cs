@@ -151,7 +151,7 @@ namespace VisorSingularity
             }
             catch (OperationCanceledException)
             {
-                try { proc.Kill(entireProcessTree: true); } catch { }
+                TryKillProcess(proc, $"timeout ipfs {args}");
                 throw new TimeoutException($"El comando 'ipfs {args}' superó el tiempo límite de {timeoutMs}ms.");
             }
         }
@@ -191,37 +191,27 @@ namespace VisorSingularity
             {
                 foreach (var p in Process.GetProcessesByName("ipfs"))
                 {
-                    try
+                    using (p)
                     {
-                        p.Kill(entireProcessTree: true);
-                        p.WaitForExit(2000);
+                        TryKillProcess(p, "proceso IPFS previo");
                     }
-                    catch { }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[IpfsManager] Error buscando procesos IPFS previos: {ex.Message}");
+            }
         }
 
         private void CleanStaleLocks()
         {
-            try
+            if (!Directory.Exists(RepoPath))
             {
-                if (Directory.Exists(RepoPath))
-                {
-                    string lockPath = Path.Combine(RepoPath, "repo.lock");
-                    if (File.Exists(lockPath))
-                    {
-                        File.Delete(lockPath);
-                    }
-
-                    string apiPath = Path.Combine(RepoPath, "api");
-                    if (File.Exists(apiPath))
-                    {
-                        File.Delete(apiPath);
-                    }
-                }
+                return;
             }
-            catch { }
+
+            TryDeleteFile(Path.Combine(RepoPath, "repo.lock"), "lock IPFS obsoleto");
+            TryDeleteFile(Path.Combine(RepoPath, "api"), "archivo API IPFS obsoleto");
         }
 
         private async Task DownloadKuboAsync(CancellationToken token)
@@ -244,7 +234,7 @@ namespace VisorSingularity
 
             LogStatus("📦 Extrayendo Kubo...");
             ZipFile.ExtractToDirectory(zipPath, extractRoot, overwriteFiles: true);
-            File.Delete(zipPath);
+            TryDeleteFile(zipPath, "ZIP temporal de Kubo");
         }
 
         private async Task ConfigureApiAsync(CancellationToken token)
@@ -307,11 +297,45 @@ namespace VisorSingularity
                     var resp = await http.PostAsync(ApiUrl + "/api/v0/id", null, token);
                     if (resp.IsSuccessStatusCode) return true;
                 }
-                catch { /* Esperando arranque... */ }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[IpfsManager] API IPFS aún no disponible: {ex.Message}");
+                }
 
                 await Task.Delay(1000, token);
             }
             return false;
+        }
+
+        private static void TryKillProcess(Process process, string context)
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(2000);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[IpfsManager] No se pudo cerrar {context}: {ex.Message}");
+            }
+        }
+
+        private static void TryDeleteFile(string path, string context)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[IpfsManager] No se pudo borrar {context} '{path}': {ex.Message}");
+            }
         }
 
         private void LogStatus(string msg) => OnStatusChanged?.Invoke(msg);

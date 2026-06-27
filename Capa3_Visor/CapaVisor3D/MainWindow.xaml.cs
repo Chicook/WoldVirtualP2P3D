@@ -51,9 +51,6 @@ namespace VisorSingularity
         private static readonly string APP_DATA_ZIP    = Path.Combine(APP_DATA_DIR, "firma_hardware.zip");
         private static readonly string APP_DATA_SIG    = Path.Combine(APP_DATA_DIR, "hardware_sig.txt");
         private string _loginFingerprint = "";
-#pragma warning disable CS0414
-        private bool   _isLoginMode      = false;   // true = usuario ya registrado (reservado para lógica futura)
-#pragma warning restore CS0414
 
         // === Voice Chat (NAudio VAD) ===
         private WaveInEvent? _waveIn;
@@ -115,6 +112,7 @@ namespace VisorSingularity
         {
 
             InitializeComponent();
+            RuntimeSelfHealer.OnHealAction += HandleRuntimeHealAction;
             this.Loaded += MainWindow_Loaded;
 
             // Vincular eventos de botones (Paso 1)
@@ -144,6 +142,34 @@ namespace VisorSingularity
             // Vincular eventos de redimensionado/movimiento de ventana para el Popup del Chat
             this.LocationChanged += (s, ev) => UpdatePopupPosition();
             this.SizeChanged += (s, ev) => { UpdatePopupPosition(); UpdateWebcamPosition(); };
+        }
+
+        private void HandleRuntimeHealAction(string message)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => HandleRuntimeHealAction(message)));
+                return;
+            }
+
+            Debug.WriteLine($"[SelfHeal] {message}");
+
+            if (GridMainViewer.Visibility == Visibility.Visible && TxtP2PStatus != null)
+            {
+                TxtP2PStatus.Text = message;
+                return;
+            }
+
+            if (GridLoginScreen.Visibility == Visibility.Visible && TxtLoginStatus != null)
+            {
+                TxtLoginStatus.Text = message;
+                return;
+            }
+
+            if (GridPcRegistration.Visibility == Visibility.Visible && TxtScanStatus != null)
+            {
+                TxtScanStatus.Text = message;
+            }
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -200,7 +226,6 @@ namespace VisorSingularity
                 Dispatcher.Invoke(() =>
                 {
                     _loginFingerprint = sig;
-                    _isLoginMode      = true;
 
                     // Ocultar pantalla de registro, mostrar pantalla de Login
                     GridPcRegistration.Visibility = Visibility.Collapsed;
@@ -518,10 +543,10 @@ namespace VisorSingularity
                 await Task.Delay(300);
 
                 // Obtener huella de hardware actual
-                string os = GetOSName();
-                string cpu = GetCpuName();
-                string motherboard = GetMotherboardName();
-                _hardwareFingerprint = GenerateSHA256Signature(os, cpu, motherboard);
+                string os = HardwareFingerprintService.GetOSName();
+                string cpu = HardwareFingerprintService.GetCpuName();
+                string motherboard = HardwareFingerprintService.GetMotherboardName();
+                _hardwareFingerprint = HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
                 _loginFingerprint = _hardwareFingerprint;
 
                 // Actualizar firma mostrada en la pantalla
@@ -665,11 +690,8 @@ namespace VisorSingularity
         {
             try
             {
-                if (_httpListener != null) { _httpListener.Stop(); _httpListener.Close(); }
-                _httpListener = new HttpListener();
-                _httpListener.Prefixes.Add("http://localhost:8080/");
-                _httpListener.Start();
-                Task.Run(() => ListenLoopLogin());
+                RestartHttpBridge();
+                _ = ListenLoopLogin();
             }
             catch (Exception ex)
             {
@@ -699,39 +721,26 @@ namespace VisorSingularity
 
                         // Responder OK al navegador
                         string html = "<html><head><meta charset='UTF-8'><style>body{background:#0a0f1a;color:#00d9ff;font-family:sans-serif;text-align:center;padding-top:100px;}h1{color:#00ff8c;}</style></head><body><h1>✅ Sesión Iniciada</h1><p>Puedes regresar al Visor.</p></body></html>";
-                        byte[] buf = System.Text.Encoding.UTF8.GetBytes(html);
-                        response.ContentLength64 = buf.Length;
-                        response.ContentType = "text/html; charset=UTF-8";
-                        await response.OutputStream.WriteAsync(buf, 0, buf.Length);
-                        response.OutputStream.Close();
+                        await WriteHtmlResponseAsync(response, html);
 
-                        if (_httpListener != null) { try { _httpListener.Stop(); _httpListener.Close(); } catch { } _httpListener = null; }
+                        CloseHttpBridge();
 
                         Dispatcher.Invoke(() => _OnLoginConfirmed(user, wallet, island, signature));
                     }
                     else
                     {
                         // Servir metamask.html con ?mode=login
-                        string wwwPath  = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "www");
-                        string filePath = Path.Combine(wwwPath, "metamask.html");
-                        byte[] buf;
-                        if (File.Exists(filePath))
-                        {
-                            buf = File.ReadAllBytes(filePath);
-                            response.ContentType = "text/html; charset=UTF-8";
-                        }
-                        else
-                        {
-                            string fallback = $"<html><body style='background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:50px'><h1>WoldVirtual — Inicio de Sesión</h1><a style='background:#00d9ff;color:#000;padding:12px 24px;text-decoration:none;font-weight:bold;border-radius:6px' href='/confirm?user=Usuario&wallet=0x{Guid.NewGuid().ToString().Replace("-","").Substring(0,40)}&islandId=1+%3A+0.0.0&mode=login'>SIMULAR LOGIN METAMASK</a></body></html>";
-                            buf = System.Text.Encoding.UTF8.GetBytes(fallback);
-                            response.ContentType = "text/html; charset=UTF-8";
-                        }
-                        response.ContentLength64 = buf.Length;
-                        await response.OutputStream.WriteAsync(buf, 0, buf.Length);
-                        response.OutputStream.Close();
+                        await ServeMetamaskPageAsync(response, () =>
+                            $"<html><body style='background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:50px'><h1>WoldVirtual — Inicio de Sesión</h1><a style='background:#00d9ff;color:#000;padding:12px 24px;text-decoration:none;font-weight:bold;border-radius:6px' href='/confirm?user=Usuario&wallet=0x{Guid.NewGuid().ToString().Replace("-","").Substring(0,40)}&islandId=1+%3A+0.0.0&mode=login'>SIMULAR LOGIN METAMASK</a></body></html>");
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    if (!_isClosing)
+                    {
+                        Debug.WriteLine($"[HTTP-Login] Error en listener: {ex.Message}");
+                    }
+                }
             }
         }
 
@@ -808,7 +817,7 @@ namespace VisorSingularity
                 TxtScanStatus.Text = t["ScanOS"];
                 ProgScan.Value = 15;
                 await Task.Delay(500);
-                _osName = GetOSName();
+                _osName = HardwareFingerprintService.GetOSName();
                 TxtOsName.Text = _osName;
                 ProgScan.Value = 35;
                 await Task.Delay(300);
@@ -817,7 +826,7 @@ namespace VisorSingularity
                 TxtScanStatus.Text = t["ScanCPU"];
                 ProgScan.Value = 50;
                 await Task.Delay(600);
-                _cpuName = GetCpuName();
+                _cpuName = HardwareFingerprintService.GetCpuName();
                 TxtCpuName.Text = _cpuName;
                 ProgScan.Value = 70;
                 await Task.Delay(300);
@@ -826,7 +835,7 @@ namespace VisorSingularity
                 TxtScanStatus.Text = t["ScanMB"];
                 ProgScan.Value = 80;
                 await Task.Delay(500);
-                _motherboard = GetMotherboardName();
+                _motherboard = HardwareFingerprintService.GetMotherboardName();
                 TxtMotherboardName.Text = _motherboard;
                 ProgScan.Value = 90;
                 await Task.Delay(200);
@@ -836,7 +845,7 @@ namespace VisorSingularity
                 ProgScan.Value = 95;
                 await Task.Delay(400);
 
-                _hardwareFingerprint = GenerateSHA256Signature(_osName, _cpuName, _motherboard);
+                _hardwareFingerprint = HardwareFingerprintService.GenerateSignature(_osName, _cpuName, _motherboard);
                 TxtHardwareHash.Text = _hardwareFingerprint;
 
                 ProgScan.Value = 100;
@@ -853,7 +862,7 @@ namespace VisorSingularity
                 // Incluso si falla WMI, permitimos generar una firma alternativa basada en variables de entorno
                 if (string.IsNullOrEmpty(_hardwareFingerprint))
                 {
-                    _hardwareFingerprint = GenerateSHA256Signature(
+                    _hardwareFingerprint = HardwareFingerprintService.GenerateSignature(
                         Environment.OSVersion.ToString(),
                         Environment.ProcessorCount.ToString() + " Cores",
                         Environment.MachineName
@@ -862,26 +871,6 @@ namespace VisorSingularity
                 }
                 BtnGenerateZip.IsEnabled = true;
             }
-        }
-
-        private string GetOSName()
-        {
-            return HardwareFingerprintService.GetOSName();
-        }
-
-        private string GetCpuName()
-        {
-            return HardwareFingerprintService.GetCpuName();
-        }
-
-        private string GetMotherboardName()
-        {
-            return HardwareFingerprintService.GetMotherboardName();
-        }
-
-        private string GenerateSHA256Signature(string os, string cpu, string motherboard)
-        {
-            return HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
         }
 
         private void BtnCopyHash_Click(object sender, RoutedEventArgs e)
@@ -1085,17 +1074,8 @@ namespace VisorSingularity
         {
             try
             {
-                if (_httpListener != null)
-                {
-                    _httpListener.Stop();
-                    _httpListener.Close();
-                }
-
-                _httpListener = new HttpListener();
-                _httpListener.Prefixes.Add("http://localhost:8080/");
-                _httpListener.Start();
-
-                Task.Run(() => ListenLoop(username));
+                RestartHttpBridge();
+                _ = ListenLoop(username);
             }
             catch (Exception ex)
             {
@@ -1125,21 +1105,13 @@ namespace VisorSingularity
 
                         // Responder HTML de éxito
                         string responseString = "<html><head><meta charset='UTF-8'><title>Confirmado</title><style>body{background:#0a0f1a;color:#00d9ff;font-family:sans-serif;text-align:center;padding-top:100px;}h1{color:#00ff8c;}</style></head><body><h1>Metaverse Link Confirmed!</h1><p>Puedes regresar al Visor de la aplicacion.</p></body></html>";
-                        byte[] buffer = Encoding.UTF8.GetBytes(responseString);
-                        response.ContentLength64 = buffer.Length;
-                        response.ContentType = "text/html; charset=UTF-8";
-                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                        response.OutputStream.Close();
+                        await WriteHtmlResponseAsync(response, responseString);
 
                         // Transicionar la interfaz e iniciar Godot en el hilo UI
                         Dispatcher.Invoke(() =>
                         {
                             // Cerrar Listener
-                            if (_httpListener != null)
-                            {
-                                try { _httpListener.Stop(); _httpListener.Close(); } catch { }
-                                _httpListener = null;
-                            }
+                            CloseHttpBridge();
 
                             GridMetaMaskOverlay.Visibility    = Visibility.Collapsed;
                             GridUserRegistration.Visibility   = Visibility.Collapsed;
@@ -1156,33 +1128,74 @@ namespace VisorSingularity
                     else
                     {
                         // Servir metamask.html local
-                        string wwwPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "www");
-                        string filePath = Path.Combine(wwwPath, "metamask.html");
-
-                        if (File.Exists(filePath))
-                        {
-                            byte[] buffer = File.ReadAllBytes(filePath);
-                            response.ContentLength64 = buffer.Length;
-                            response.ContentType = "text/html; charset=UTF-8";
-                            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                        }
-                        else
-                        {
-                            // Fallback inline si no encuentra metamask.html
-                            string responseString = $"<html><head><meta charset='UTF-8'><title>Conectar Wallet</title><style>body{{background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:50px;}}a{{background:#00d9ff;color:#000;padding:12px 24px;text-decoration:none;font-weight:bold;border-radius:6px;}}</style></head><body><h1>Link WoldVirtual MetaMask</h1><p>Usuario: {username}</p><br><br><a href='/confirm?user={username}&wallet=0x{Guid.NewGuid().ToString().Replace("-", "").Substring(0, 40)}&islandId=137_190_1_0'>SIMULAR CONEXION METAMASK</a></body></html>";
-                            byte[] buffer = Encoding.UTF8.GetBytes(responseString);
-                            response.ContentLength64 = buffer.Length;
-                            response.ContentType = "text/html; charset=UTF-8";
-                            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                        }
-                        response.OutputStream.Close();
+                        await ServeMetamaskPageAsync(response, () =>
+                            $"<html><head><meta charset='UTF-8'><title>Conectar Wallet</title><style>body{{background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:50px;}}a{{background:#00d9ff;color:#000;padding:12px 24px;text-decoration:none;font-weight:bold;border-radius:6px;}}</style></head><body><h1>Link WoldVirtual MetaMask</h1><p>Usuario: {username}</p><br><br><a href='/confirm?user={username}&wallet=0x{Guid.NewGuid().ToString().Replace("-", "").Substring(0, 40)}&islandId=137_190_1_0'>SIMULAR CONEXION METAMASK</a></body></html>");
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Evitar excepciones al abortar sockets o listener
+                    if (!_isClosing)
+                    {
+                        Debug.WriteLine($"[HTTP-Register] Error en listener: {ex.Message}");
+                    }
                 }
             }
+        }
+
+        private void RestartHttpBridge()
+        {
+            CloseHttpBridge();
+
+            _httpListener = new HttpListener();
+            _httpListener.Prefixes.Add("http://localhost:8080/");
+            _httpListener.Start();
+        }
+
+        private void CloseHttpBridge()
+        {
+            if (_httpListener == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _httpListener.Stop();
+                _httpListener.Close();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[HTTP-Bridge] Error al cerrar listener: {ex.Message}");
+            }
+            finally
+            {
+                _httpListener = null;
+            }
+        }
+
+        private static async Task ServeMetamaskPageAsync(HttpListenerResponse response, Func<string> fallbackFactory)
+        {
+            string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "www", "metamask.html");
+            if (File.Exists(filePath))
+            {
+                byte[] buffer = File.ReadAllBytes(filePath);
+                response.ContentLength64 = buffer.Length;
+                response.ContentType = "text/html; charset=UTF-8";
+                await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                response.OutputStream.Close();
+                return;
+            }
+
+            await WriteHtmlResponseAsync(response, fallbackFactory());
+        }
+
+        private static async Task WriteHtmlResponseAsync(HttpListenerResponse response, string html)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(html);
+            response.ContentLength64 = buffer.Length;
+            response.ContentType = "text/html; charset=UTF-8";
+            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+            response.OutputStream.Close();
         }
 
         // ── LANZAMIENTO E INCRUSTACIÓN DEL MOTOR GODOT ──
@@ -1271,7 +1284,7 @@ namespace VisorSingularity
                 _godotProcess.BeginErrorReadLine();
 
                 // Escanear ventana de Godot en segundo plano
-                _godotHwnd = await Task.Run(() => ScanForGodotWindow(_godotProcess.Id, 15000)); // 15 segundos máximo
+                _godotHwnd = await ScanForGodotWindowAsync(_godotProcess.Id, 15000); // 15 segundos máximo
 
                 if (_godotHwnd != IntPtr.Zero && !_isClosing)
                 {
@@ -1296,7 +1309,7 @@ namespace VisorSingularity
             }
         }
 
-        private IntPtr ScanForGodotWindow(int targetProcessId, int timeoutMs)
+        private async Task<IntPtr> ScanForGodotWindowAsync(int targetProcessId, int timeoutMs)
         {
             IntPtr result = IntPtr.Zero;
             DateTime start = DateTime.Now;
@@ -1343,7 +1356,7 @@ namespace VisorSingularity
                 }, IntPtr.Zero);
 
                 if (result != IntPtr.Zero) break;
-                System.Threading.Thread.Sleep(250);
+                await Task.Delay(250);
             }
 
             return result;
@@ -1845,10 +1858,10 @@ namespace VisorSingularity
                     return false;
                 }
 
-                string os = GetOSName();
-                string cpu = GetCpuName();
-                string motherboard = GetMotherboardName();
-                string currentFingerprint = GenerateSHA256Signature(os, cpu, motherboard);
+                string os = HardwareFingerprintService.GetOSName();
+                string cpu = HardwareFingerprintService.GetCpuName();
+                string motherboard = HardwareFingerprintService.GetMotherboardName();
+                string currentFingerprint = HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
 
                 string savedFingerprint = File.ReadAllText(APP_DATA_SIG, Encoding.UTF8).Trim();
 
@@ -2047,6 +2060,7 @@ namespace VisorSingularity
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             _isClosing = true;
+            RuntimeSelfHealer.OnHealAction -= HandleRuntimeHealAction;
             Cleanup();
             base.OnClosing(e);
         }
@@ -2107,32 +2121,39 @@ namespace VisorSingularity
             try
             {
                 _udpListener = new UdpClient(50008);
-                Task.Run(async () =>
-                {
-                    while (!token.IsCancellationRequested)
-                    {
-                        try
-                        {
-                            var result = await _udpListener.ReceiveAsync();
-                            string jsonStr = Encoding.UTF8.GetString(result.Buffer);
-
-                            // Procesar el mensaje JSON recibido de Godot
-                            ProcessUdpChatMessage(jsonStr);
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            break; // El socket fue cerrado
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Error en UDP Listener recibiendo paquete: {ex.Message}");
-                        }
-                    }
-                }, token);
+                _ = ListenUdpChatLoopAsync(token);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error al iniciar UDP Chat Listener en puerto 50008: {ex.Message}");
+            }
+        }
+
+        private async Task ListenUdpChatLoopAsync(CancellationToken token)
+        {
+            if (_udpListener == null)
+            {
+                return;
+            }
+
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    var result = await _udpListener.ReceiveAsync();
+                    string jsonStr = Encoding.UTF8.GetString(result.Buffer);
+
+                    // Procesar el mensaje JSON recibido de Godot
+                    ProcessUdpChatMessage(jsonStr);
+                }
+                catch (ObjectDisposedException)
+                {
+                    break; // El socket fue cerrado
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error en UDP Listener recibiendo paquete: {ex.Message}");
+                }
             }
         }
 
@@ -2658,7 +2679,7 @@ namespace VisorSingularity
                 }
 
                 _cancellationTokenSource = new CancellationTokenSource();
-                _captureTask = Task.Run(() => CaptureLoop(_cancellationTokenSource.Token));
+                _captureTask = CaptureLoop(_cancellationTokenSource.Token);
 
                 UpdateWebcamButtonStyle();
                 Debug.WriteLine("[Webcam] Cámara iniciada con OpenCV.");
@@ -2670,7 +2691,7 @@ namespace VisorSingularity
             }
         }
 
-        private void CaptureLoop(CancellationToken token)
+        private async Task CaptureLoop(CancellationToken token)
         {
             try
             {
@@ -2681,7 +2702,7 @@ namespace VisorSingularity
                         if (_capture.Read(frame) && !frame.Empty())
                         {
                             // Actualizar UI
-                            Dispatcher.InvokeAsync(() =>
+                            await Dispatcher.InvokeAsync(() =>
                             {
                                 if (!_webcamEnabled) return;
                                 if (_webcamImageControl != null)
@@ -2696,9 +2717,12 @@ namespace VisorSingularity
                         }
                         
                         // Pequeña pausa para no saturar CPU (aprox 30 FPS)
-                        Thread.Sleep(33);
+                        await Task.Delay(33, token);
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
             }
             catch (Exception ex)
             {
