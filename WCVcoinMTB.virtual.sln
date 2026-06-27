@@ -1,0 +1,28 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VisorSingularity", "Capa3_Visor\CapaVisor3D\VisorSingularity.csproj", "{4A505F61-73D7-429C-B24B-C2A3547E9EAA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServidorVirtualCS", "Capa3_Visor\ServidorVirtualCS\ServidorVirtualCS.csproj", "{6366DC35-0A37-4A83-8FF9-258357B13C75}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4A505F61-73D7-429C-B24B-C2A3547E9EAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A505F61-73D7-429C-B24B-C2A3547E9EAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A505F61-73D7-429C-B24B-C2A3547E9EAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A505F61-73D7-429C-B24B-C2A3547E9EAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6366DC35-0A37-4A83-8FF9-258357B13C75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6366DC35-0A37-4A83-8FF9-258357B13C75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6366DC35-0A37-4A83-8FF9-258357B13C75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6366DC35-0A37-4A83-8FF9-258357B13C75}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -2309,6 +2309,9 @@ namespace VisorSingularity
                 return;
             }
 
+            // Inicializar la identidad persistente del nodo
+            NodeIdentityManager.Initialize(username);
+
             _metaverseUiActivated = true;
             BorderBottomLoginBar.Visibility = Visibility.Visible;
             EmbeddedServerNodeBar.Visibility = Visibility.Visible;

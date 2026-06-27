@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using VisorSingularity.Services;
 
 namespace VisorSingularity
 {
@@ -174,6 +175,29 @@ namespace VisorSingularity
                 // Validación mínima: debe ser un objeto JSON
                 if (!json.TrimStart().StartsWith("{")) return;
 
+                // Actualizar a versión 1.1 firmada si la identidad está disponible
+                if (NodeIdentityManager.Current != null)
+                {
+                    try
+                    {
+                        var state = JsonSerializer.Deserialize<PeerStateContract>(json);
+                        if (state != null)
+                        {
+                            state.Version = "1.1";
+                            state.NodeId = NodeIdentityManager.Current.NodeId;
+                            state.Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                            state.PublicKeyBase64 = NodeIdentityManager.Current.PublicKeyBase64;
+                            state.Signature = NodeIdentityManager.SignData(state.GetSignablePayload());
+
+                            json = JsonSerializer.Serialize(state);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[PeerSync] Error al firmar peer local: {ex.Message}");
+                    }
+                }
+
                 var bytes = Encoding.UTF8.GetBytes(json);
                 if (bytes.Length > MAX_PACKET_BYTES)
                 {
@@ -191,6 +215,30 @@ namespace VisorSingularity
             }
         }
 
+        // ── Auxiliares de Validación y Seguridad ──────────────────────────
+        private static bool IsSafeId(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id) || id.Length < 3 || id.Length > 64)
+                return false;
+
+            foreach (char c in id)
+            {
+                if (!char.IsLetterOrDigit(c) && c != '_' && c != '-')
+                    return false;
+            }
+            return true;
+        }
+
+        private static DateTime? ParseTimestamp(JsonElement root)
+        {
+            if (root.TryGetProperty("ts", out var tsEl) && tsEl.ValueKind == JsonValueKind.String)
+            {
+                if (DateTime.TryParse(tsEl.GetString(), out var dt))
+                    return dt.ToUniversalTime();
+            }
+            return null;
+        }
+
         // ── Procesar peer recibido ─────────────────────────────────────────
         private void ProcessReceivedPeer(string json, string sourceIp)
         {
@@ -201,35 +249,100 @@ namespace VisorSingularity
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                // Extraer el ID del remoto del bloque "u" (primer key del dict de usuarios)
                 string remoteId = "";
-                if (root.TryGetProperty("u", out var usersEl) && usersEl.ValueKind == JsonValueKind.Object)
+                bool isSigned = false;
+
+                // 1. Intentar leer según contrato versión 1.1 (identidad y firma)
+                if (root.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String)
                 {
-                    foreach (var prop in usersEl.EnumerateObject())
+                    remoteId = idProp.GetString() ?? "";
+                    isSigned = root.TryGetProperty("sig", out _) && root.TryGetProperty("pk", out _);
+                }
+
+                // 2. Fallback a versión 1.0 (usar el primer nombre del diccionario "u" o "i")
+                if (string.IsNullOrEmpty(remoteId))
+                {
+                    if (root.TryGetProperty("u", out var usersEl) && usersEl.ValueKind == JsonValueKind.Object)
                     {
-                        remoteId = prop.Name;
-                        break;
+                        foreach (var prop in usersEl.EnumerateObject())
+                        {
+                            remoteId = prop.Name;
+                            break;
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(remoteId) && root.TryGetProperty("i", out var islandsEl)
+                        && islandsEl.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var prop in islandsEl.EnumerateObject())
+                        {
+                            remoteId = prop.Name;
+                            break;
+                        }
                     }
                 }
 
-                // Si no hay usuarios, intentar bloque "i" (islas)
-                if (string.IsNullOrEmpty(remoteId) && root.TryGetProperty("i", out var islandsEl)
-                    && islandsEl.ValueKind == JsonValueKind.Object)
+                // Saneamiento de seguridad de ID (previene Path Traversal)
+                if (!IsSafeId(remoteId))
                 {
-                    foreach (var prop in islandsEl.EnumerateObject())
+                    Debug.WriteLine($"[PeerSync] ID de peer malformado o potencialmente peligroso: '{remoteId}'");
+                    return;
+                }
+
+                // Ignorar paquetes propios (por ID LAN local o ID persistente del nodo)
+                if (remoteId == _localId || (NodeIdentityManager.Current != null && remoteId == NodeIdentityManager.Current.NodeId))
+                {
+                    return;
+                }
+
+                // 3. Validación de firma si está firmado (1.1+)
+                if (isSigned)
+                {
+                    try
                     {
-                        remoteId = prop.Name;
-                        break;
+                        var state = JsonSerializer.Deserialize<PeerStateContract>(json);
+                        if (state != null)
+                        {
+                            bool sigOk = NodeIdentityManager.VerifyData(state.GetSignablePayload(), state.Signature, state.PublicKeyBase64);
+                            if (!sigOk)
+                            {
+                                Debug.WriteLine($"[PeerSync] Firma inválida recibida de peer '{remoteId}', descartando.");
+                                return;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[PeerSync] Error al verificar firma de peer '{remoteId}': {ex.Message}");
+                        return;
                     }
                 }
 
-                // Ignorar paquetes propios
-                if (string.IsNullOrEmpty(remoteId) || remoteId == _localId) return;
-
-                // Escribir el peer en el directorio compartido
+                // 4. Verificación de Timestamp (Anti-Replay)
                 var targetPath = Path.Combine(_peersDir, $"peer_{remoteId}.json");
-                var tmpPath = targetPath + ".tmp";
+                if (File.Exists(targetPath))
+                {
+                    try
+                    {
+                        string existingJson = File.ReadAllText(targetPath, Encoding.UTF8);
+                        using var existingDoc = JsonDocument.Parse(existingJson);
+                        var existingTs = ParseTimestamp(existingDoc.RootElement);
+                        var incomingTs = ParseTimestamp(root);
 
+                        if (existingTs.HasValue && incomingTs.HasValue && incomingTs.Value <= existingTs.Value)
+                        {
+                            // Paquete más viejo o duplicado, ignorar silenciosamente
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        // Si falla lectura, sobrescribimos
+                    }
+                }
+
+                // Escribir el peer en el directorio compartido de forma atómica
+                var tmpPath = targetPath + ".tmp";
                 using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
                 using (var sw = new StreamWriter(fs, Encoding.UTF8))
                     sw.Write(json);
@@ -237,7 +350,7 @@ namespace VisorSingularity
                 if (File.Exists(targetPath)) File.Delete(targetPath);
                 File.Move(tmpPath, targetPath);
 
-                Debug.WriteLine($"[PeerSync] Peer remoto '{remoteId}' recibido desde {sourceIp} ({json.Length} chars)");
+                Debug.WriteLine($"[PeerSync] Peer remoto '{remoteId}' recibido y verificado desde {sourceIp} ({json.Length} chars)");
                 PeerReceived?.Invoke(remoteId, json);
             }
             catch (JsonException)
