@@ -16,7 +16,7 @@ namespace VisorSingularity
     {
         // ─── Gateways públicos (ordenados por fiabilidad y resiliencia ante bloqueos) ─────────────────────
         public static readonly string[] PublicGateways =
-        {
+        [
             "https://4everland.io/ipfs/",
             "https://w3s.link/ipfs/",
             "https://ipfs.eth.aragon.network/ipfs/",
@@ -26,7 +26,7 @@ namespace VisorSingularity
             "https://cloudflare-ipfs.com/ipfs/",
             "https://dweb.link/ipfs/",
             "https://gateway.pinata.cloud/ipfs/"
-        };
+        ];
 
         // ─── Estado ───────────────────────────────────────────────────────────
         private readonly IpfsManager _manager;
@@ -42,7 +42,7 @@ namespace VisorSingularity
             LastCid != null ? $"{IpfsManager.GatewayUrl}/ipfs/{LastCid}" : null;
 
         /// <summary>Lista completa de URLs (local primero, luego públicos).</summary>
-        public List<string> AllGatewayUrls { get; } = new();
+        public List<string> AllGatewayUrls { get; } = [];
 
         /// <summary>Evento de log de estado para la UI.</summary>
         public event Action<string>? OnStatusChanged;
@@ -173,7 +173,7 @@ namespace VisorSingularity
             LogStatus($"📥 Iniciando descarga desde IPFS para CID: {cid}...");
 
             // Intentar con gateway local primero si está activo
-            List<string> targets = new List<string>();
+            List<string> targets = [];
             if (_manager.IsDaemonRunning)
             {
                 targets.Add($"{IpfsManager.GatewayUrl}/ipfs/{cid}");
