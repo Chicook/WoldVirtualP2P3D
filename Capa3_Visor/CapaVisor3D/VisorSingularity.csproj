@@ -8,15 +8,12 @@
         <UseWPF>true</UseWPF>
         <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
         <DefaultItemExcludes>$(DefaultItemExcludes);jsonDeEstado\**;servidor_interno\**;DTBSINT\**</DefaultItemExcludes>
-        <NoWarn>$(NoWarn);NU1701</NoWarn>
+        <NoWarn>$(NoWarn);NU1701;IDE0130</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
-        <PackageReference Include="NAudio" Version="2.3.0" />
-        <PackageReference Include="OpenCvSharp4.Windows" Version="4.13.0.20260602" />
-        <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
-        <PackageReference Include="System.Management" Version="8.0.0" />
+        <Compile Include="Services\GlobalExceptionHandler.cs" />
+        <Compile Include="Services\RuntimeSelfHealer.cs" />
     </ItemGroup>
 
     <ItemGroup>

@@ -2,238 +2,6 @@
   "version": 4,
   "targets": {
     "net8.0-windows": {
-      "AForge/2.2.5": {
-        "type": "package",
-        "compile": {
-          "lib/AForge.dll": {}
-        },
-        "runtime": {
-          "lib/AForge.dll": {}
-        }
-      },
-      "AForge.Video/2.2.5": {
-        "type": "package",
-        "dependencies": {
-          "AForge": "2.2.5"
-        },
-        "compile": {
-          "lib/AForge.Video.dll": {}
-        },
-        "runtime": {
-          "lib/AForge.Video.dll": {}
-        }
-      },
-      "AForge.Video.DirectShow/2.2.5": {
-        "type": "package",
-        "dependencies": {
-          "AForge.Video": "2.2.5"
-        },
-        "compile": {
-          "lib/AForge.Video.DirectShow.dll": {}
-        },
-        "runtime": {
-          "lib/AForge.Video.DirectShow.dll": {}
-        }
-      },
-      "Microsoft.Win32.SystemEvents/10.0.8": {
-        "type": "package",
-        "compile": {
-          "lib/net8.0/Microsoft.Win32.SystemEvents.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/Microsoft.Win32.SystemEvents.dll": {
-            "related": ".xml"
-          }
-        },
-        "build": {
-          "buildTransitive/net8.0/_._": {}
-        },
-        "runtimeTargets": {
-          "runtimes/win/lib/net8.0/Microsoft.Win32.SystemEvents.dll": {
-            "assetType": "runtime",
-            "rid": "win"
-          }
-        }
-      },
-      "NAudio/2.3.0": {
-        "type": "package",
-        "dependencies": {
-          "NAudio.Asio": "2.3.0",
-          "NAudio.Core": "2.3.0",
-          "NAudio.Midi": "2.3.0",
-          "NAudio.Wasapi": "2.3.0",
-          "NAudio.WinForms": "2.3.0",
-          "NAudio.WinMM": "2.3.0"
-        },
-        "compile": {
-          "lib/net6.0-windows7.0/NAudio.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net6.0-windows7.0/NAudio.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "NAudio.Asio/2.3.0": {
-        "type": "package",
-        "dependencies": {
-          "NAudio.Core": "2.3.0"
-        },
-        "compile": {
-          "lib/net8.0-windows7.0/NAudio.Asio.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0-windows7.0/NAudio.Asio.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "NAudio.Core/2.3.0": {
-        "type": "package",
-        "compile": {
-          "lib/netstandard2.0/NAudio.Core.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/netstandard2.0/NAudio.Core.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "NAudio.Midi/2.3.0": {
-        "type": "package",
-        "dependencies": {
-          "NAudio.Core": "2.3.0"
-        },
-        "compile": {
-          "lib/netstandard2.0/NAudio.Midi.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/netstandard2.0/NAudio.Midi.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "NAudio.Wasapi/2.3.0": {
-        "type": "package",
-        "dependencies": {
-          "NAudio.Core": "2.3.0"
-        },
-        "compile": {
-          "lib/netstandard2.0/NAudio.Wasapi.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/netstandard2.0/NAudio.Wasapi.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "NAudio.WinForms/2.3.0": {
-        "type": "package",
-        "dependencies": {
-          "NAudio.WinMM": "2.3.0"
-        },
-        "compile": {
-          "lib/netcoreapp3.1/NAudio.WinForms.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/netcoreapp3.1/NAudio.WinForms.dll": {
-            "related": ".xml"
-          }
-        },
-        "frameworkReferences": [
-          "Microsoft.WindowsDesktop.App.WindowsForms"
-        ]
-      },
-      "NAudio.WinMM/2.3.0": {
-        "type": "package",
-        "dependencies": {
-          "NAudio.Core": "2.3.0"
-        },
-        "compile": {
-          "lib/net6.0/NAudio.WinMM.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net6.0/NAudio.WinMM.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "OpenCvSharp4/4.13.0.20260602": {
-        "type": "package",
-        "dependencies": {
-          "System.Memory": "4.6.3"
-        },
-        "compile": {
-          "lib/net8.0/OpenCvSharp.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/OpenCvSharp.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "OpenCvSharp4.runtime.win/4.13.0.20260602": {
-        "type": "package",
-        "build": {
-          "build/net8.0/_._": {}
-        },
-        "runtimeTargets": {
-          "runtimes/win-x64/native/OpenCvSharpExtern.dll": {
-            "assetType": "native",
-            "rid": "win-x64"
-          },
-          "runtimes/win-x64/native/opencv_videoio_ffmpeg4130_64.dll": {
-            "assetType": "native",
-            "rid": "win-x64"
-          }
-        }
-      },
-      "OpenCvSharp4.Windows/4.13.0.20260602": {
-        "type": "package",
-        "dependencies": {
-          "OpenCvSharp4": "4.13.0.20260602",
-          "OpenCvSharp4.WpfExtensions": "4.13.0.20260602",
-          "OpenCvSharp4.runtime.win": "4.13.0.20260602"
-        }
-      },
-      "OpenCvSharp4.WpfExtensions/4.13.0.20260602": {
-        "type": "package",
-        "dependencies": {
-          "OpenCvSharp4": "4.13.0.20260602",
-          "System.Drawing.Common": "10.0.5"
-        },
-        "compile": {
-          "lib/net8.0-windows7.0/OpenCvSharp.WpfExtensions.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0-windows7.0/OpenCvSharp.WpfExtensions.dll": {
-            "related": ".xml"
-          }
-        },
-        "frameworkReferences": [
-          "Microsoft.WindowsDesktop.App.WPF"
-        ]
-      },
       "System.CodeDom/8.0.0": {
         "type": "package",
         "compile": {
@@ -248,37 +16,6 @@
         },
         "build": {
           "buildTransitive/net6.0/_._": {}
-        }
-      },
-      "System.Drawing.Common/10.0.8": {
-        "type": "package",
-        "dependencies": {
-          "Microsoft.Win32.SystemEvents": "10.0.8"
-        },
-        "compile": {
-          "lib/net8.0/System.Drawing.Common.dll": {
-            "related": ".pdb;.xml"
-          },
-          "lib/net8.0/System.Private.Windows.Core.dll": {
-            "related": ".xml"
-          },
-          "lib/net8.0/System.Private.Windows.GdiPlus.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/System.Drawing.Common.dll": {
-            "related": ".pdb;.xml"
-          },
-          "lib/net8.0/System.Private.Windows.Core.dll": {
-            "related": ".xml"
-          },
-          "lib/net8.0/System.Private.Windows.GdiPlus.dll": {
-            "related": ".xml"
-          }
-        },
-        "build": {
-          "buildTransitive/net8.0/_._": {}
         }
       },
       "System.Management/8.0.0": {
@@ -306,15 +43,6 @@
           }
         }
       },
-      "System.Memory/4.6.3": {
-        "type": "package",
-        "compile": {
-          "lib/netcoreapp2.1/_._": {}
-        },
-        "runtime": {
-          "lib/netcoreapp2.1/_._": {}
-        }
-      },
       "ServidorVirtualCS/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
@@ -334,263 +62,6 @@
     }
   },
   "libraries": {
-    "AForge/2.2.5": {
-      "sha512": "clkumhM9DggqIzEXAHgVLeWO4arG5YfoPr7J4jfjJx35AoeEIJSSm49J25bwp/9mXQYLwi7y1Wunc8qgYJsGxg==",
-      "type": "package",
-      "path": "aforge/2.2.5",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "aforge.2.2.5.nupkg.sha512",
-        "aforge.nuspec",
-        "lib/AForge.dll",
-        "lib/AForge.xml"
-      ]
-    },
-    "AForge.Video/2.2.5": {
-      "sha512": "XqzcOXtBUagEPRqg/00oayxlCPmxP4284SdM62mVotsNoD03fs19BrzdMBfhUOOYPyd0B/IXH7tEWnSDmc2gxA==",
-      "type": "package",
-      "path": "aforge.video/2.2.5",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "aforge.video.2.2.5.nupkg.sha512",
-        "aforge.video.nuspec",
-        "lib/AForge.Video.dll",
-        "lib/AForge.Video.xml"
-      ]
-    },
-    "AForge.Video.DirectShow/2.2.5": {
-      "sha512": "pEch6felU/RGAbl0A7yjaQjsGxwiRFU9R+qBqR92wQo++XhzPLeQaZHnAPIBYaG7MfoqtjgCDkK4z3Tra4VQ3w==",
-      "type": "package",
-      "path": "aforge.video.directshow/2.2.5",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "aforge.video.directshow.2.2.5.nupkg.sha512",
-        "aforge.video.directshow.nuspec",
-        "lib/AForge.Video.DirectShow.dll",
-        "lib/AForge.Video.DirectShow.xml"
-      ]
-    },
-    "Microsoft.Win32.SystemEvents/10.0.8": {
-      "sha512": "J9+VT0lkrA7wW38CGxO2sZd+iH9C0qzioMi/2ztpT32WOVr+04uNqFIrxisTRf+mvtXLtdqcio1AoS0vfAVLLQ==",
-      "type": "package",
-      "path": "microsoft.win32.systemevents/10.0.8",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "Icon.png",
-        "PACKAGE.md",
-        "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net461/Microsoft.Win32.SystemEvents.targets",
-        "buildTransitive/net462/_._",
-        "buildTransitive/net8.0/_._",
-        "buildTransitive/netcoreapp2.0/Microsoft.Win32.SystemEvents.targets",
-        "lib/net10.0/Microsoft.Win32.SystemEvents.dll",
-        "lib/net10.0/Microsoft.Win32.SystemEvents.xml",
-        "lib/net462/Microsoft.Win32.SystemEvents.dll",
-        "lib/net462/Microsoft.Win32.SystemEvents.xml",
-        "lib/net8.0/Microsoft.Win32.SystemEvents.dll",
-        "lib/net8.0/Microsoft.Win32.SystemEvents.xml",
-        "lib/net9.0/Microsoft.Win32.SystemEvents.dll",
-        "lib/net9.0/Microsoft.Win32.SystemEvents.xml",
-        "lib/netstandard2.0/Microsoft.Win32.SystemEvents.dll",
-        "lib/netstandard2.0/Microsoft.Win32.SystemEvents.xml",
-        "microsoft.win32.systemevents.10.0.8.nupkg.sha512",
-        "microsoft.win32.systemevents.nuspec",
-        "runtimes/win/lib/net10.0/Microsoft.Win32.SystemEvents.dll",
-        "runtimes/win/lib/net10.0/Microsoft.Win32.SystemEvents.xml",
-        "runtimes/win/lib/net8.0/Microsoft.Win32.SystemEvents.dll",
-        "runtimes/win/lib/net8.0/Microsoft.Win32.SystemEvents.xml",
-        "runtimes/win/lib/net9.0/Microsoft.Win32.SystemEvents.dll",
-        "runtimes/win/lib/net9.0/Microsoft.Win32.SystemEvents.xml",
-        "useSharedDesignerContext.txt"
-      ]
-    },
-    "NAudio/2.3.0": {
-      "sha512": "xN+Lzlu9DmXqBiL6XkP0VZmgTxZPdSGjVSWtKG9HKuar3LhIYNOIYQETieigS+QDS+nrs1QmHbBWWOru0nWA5A==",
-      "type": "package",
-      "path": "naudio/2.3.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "lib/net472/NAudio.dll",
-        "lib/net472/NAudio.xml",
-        "lib/net6.0-windows7.0/NAudio.dll",
-        "lib/net6.0-windows7.0/NAudio.xml",
-        "lib/net6.0/NAudio.dll",
-        "lib/net6.0/NAudio.xml",
-        "lib/netcoreapp3.1/NAudio.dll",
-        "lib/netcoreapp3.1/NAudio.xml",
-        "naudio-icon.png",
-        "naudio.2.3.0.nupkg.sha512",
-        "naudio.nuspec"
-      ]
-    },
-    "NAudio.Asio/2.3.0": {
-      "sha512": "I+rAAPT8vmSEw4d4ie+AoSkrvNK6ylRrXznnjQKS+qZgTA9Jnt1Pxe0EaU8nXxOOq5h8ucBSWccBEw6I/J0nkQ==",
-      "type": "package",
-      "path": "naudio.asio/2.3.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "lib/net8.0-windows7.0/NAudio.Asio.dll",
-        "lib/net8.0-windows7.0/NAudio.Asio.xml",
-        "lib/netstandard2.0/NAudio.Asio.dll",
-        "lib/netstandard2.0/NAudio.Asio.xml",
-        "naudio-icon.png",
-        "naudio.asio.2.3.0.nupkg.sha512",
-        "naudio.asio.nuspec"
-      ]
-    },
-    "NAudio.Core/2.3.0": {
-      "sha512": "jMd7r6dB6tAtXhOYL58ntPqwERNm1/Rhw5MKOIYvsnXzuX+PTGsa2VMam6n0npZYSwlSidKa4GAm4bFcXFUlcg==",
-      "type": "package",
-      "path": "naudio.core/2.3.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "lib/netstandard2.0/NAudio.Core.dll",
-        "lib/netstandard2.0/NAudio.Core.xml",
-        "naudio-icon.png",
-        "naudio.core.2.3.0.nupkg.sha512",
-        "naudio.core.nuspec"
-      ]
-    },
-    "NAudio.Midi/2.3.0": {
-      "sha512": "t8wvPFPHHQOHhoNMCaDE8OiYZoJuxmY4H6UPBtmnf+xx7oQuajFCqlG4Q00ID+tiEyj471WeVb4Nkylr4tDoow==",
-      "type": "package",
-      "path": "naudio.midi/2.3.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "lib/netstandard2.0/NAudio.Midi.dll",
-        "lib/netstandard2.0/NAudio.Midi.xml",
-        "naudio-icon.png",
-        "naudio.midi.2.3.0.nupkg.sha512",
-        "naudio.midi.nuspec"
-      ]
-    },
-    "NAudio.Wasapi/2.3.0": {
-      "sha512": "y5K2BxrLnvohgu5znzg5wRsai3YcuNXfrpo68i7PmCQqpK5MC/R24e5aO3OyN/XhfRr12e0QYV0OnUWEHi5SzA==",
-      "type": "package",
-      "path": "naudio.wasapi/2.3.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "lib/net9.0-windows10.0.26100/NAudio.Wasapi.dll",
-        "lib/net9.0-windows10.0.26100/NAudio.Wasapi.xml",
-        "lib/netstandard2.0/NAudio.Wasapi.dll",
-        "lib/netstandard2.0/NAudio.Wasapi.xml",
-        "naudio-icon.png",
-        "naudio.wasapi.2.3.0.nupkg.sha512",
-        "naudio.wasapi.nuspec"
-      ]
-    },
-    "NAudio.WinForms/2.3.0": {
-      "sha512": "vyKqFUlAZrZ0QPcCM1T+zimjYgC1cNDloHaiOdtV4S1eK4AGu3Dz1EE4yy/WgcneJwQNjGFaELY7b2TsL+g56w==",
-      "type": "package",
-      "path": "naudio.winforms/2.3.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "lib/net472/NAudio.WinForms.dll",
-        "lib/net472/NAudio.WinForms.xml",
-        "lib/netcoreapp3.1/NAudio.WinForms.dll",
-        "lib/netcoreapp3.1/NAudio.WinForms.xml",
-        "naudio-icon.png",
-        "naudio.winforms.2.3.0.nupkg.sha512",
-        "naudio.winforms.nuspec"
-      ]
-    },
-    "NAudio.WinMM/2.3.0": {
-      "sha512": "5G1dRjsZm50T3luyuqcmI2BSvj3K4ZJaD/x776/0Epj88qOsOryDZG40+MufwIk1UFJSFWhRobBqtJYFc8Ss4g==",
-      "type": "package",
-      "path": "naudio.winmm/2.3.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "lib/net6.0/NAudio.WinMM.dll",
-        "lib/net6.0/NAudio.WinMM.xml",
-        "lib/netstandard2.0/NAudio.WinMM.dll",
-        "lib/netstandard2.0/NAudio.WinMM.xml",
-        "naudio-icon.png",
-        "naudio.winmm.2.3.0.nupkg.sha512",
-        "naudio.winmm.nuspec"
-      ]
-    },
-    "OpenCvSharp4/4.13.0.20260602": {
-      "sha512": "NXQBXXWgeVnmGhRWX5KvhGFIagI9ZGeZgip07GgSbRD5uDNembCyqW+9dPwO/ZOweVUkWihrwJYDo8GG413tEQ==",
-      "type": "package",
-      "path": "opencvsharp4/4.13.0.20260602",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.managed.md",
-        "analyzers/dotnet/cs/OpenCvSharp.Analyzers.dll",
-        "lib/net8.0/OpenCvSharp.dll",
-        "lib/net8.0/OpenCvSharp.xml",
-        "lib/netstandard2.0/OpenCvSharp.dll",
-        "lib/netstandard2.0/OpenCvSharp.xml",
-        "lib/netstandard2.1/OpenCvSharp.dll",
-        "lib/netstandard2.1/OpenCvSharp.xml",
-        "opencvsharp.png",
-        "opencvsharp4.4.13.0.20260602.nupkg.sha512",
-        "opencvsharp4.nuspec"
-      ]
-    },
-    "OpenCvSharp4.runtime.win/4.13.0.20260602": {
-      "sha512": "p0ndldIYwdBFPWYTHkzPGR8+/VIzx8ZKNPdPDBno1FbUaAiEjHAzgMU/G5vb5Nj2T6n3c3JOmAyj/YHNToq+6g==",
-      "type": "package",
-      "path": "opencvsharp4.runtime.win/4.13.0.20260602",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.runtime.md",
-        "build/net8.0/OpenCvSharp4.runtime.win.props",
-        "build/net8.0/OpenCvSharp4.runtime.win.targets",
-        "build/netcoreapp/OpenCvSharp4.runtime.win.props",
-        "build/netcoreapp/OpenCvSharp4.runtime.win.targets",
-        "build/netstandard/OpenCvSharp4.runtime.win.props",
-        "build/netstandard/OpenCvSharp4.runtime.win.targets",
-        "opencvsharp.png",
-        "opencvsharp4.runtime.win.4.13.0.20260602.nupkg.sha512",
-        "opencvsharp4.runtime.win.nuspec",
-        "runtimes/win-x64/native/OpenCvSharpExtern.dll",
-        "runtimes/win-x64/native/opencv_videoio_ffmpeg4130_64.dll"
-      ]
-    },
-    "OpenCvSharp4.Windows/4.13.0.20260602": {
-      "sha512": "/kpthZhLDJAU09ZXWvjsvSYUd3uKp8D4UiNksRgSgIbLHeVN9N20HFbXjYDYYSn2Mq4jBDCvuTYJjT/jnnmNRA==",
-      "type": "package",
-      "path": "opencvsharp4.windows/4.13.0.20260602",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.managed.md",
-        "opencvsharp.png",
-        "opencvsharp4.windows.4.13.0.20260602.nupkg.sha512",
-        "opencvsharp4.windows.nuspec"
-      ]
-    },
-    "OpenCvSharp4.WpfExtensions/4.13.0.20260602": {
-      "sha512": "Vax6IXBcel7fbB6R6VFhEFSDi3Py2W/k6ZI83Be1i8ZTqIlc3IUwQdIE5lT2QfZy6hIl6KdYsoHsbmWM2H0a8Q==",
-      "type": "package",
-      "path": "opencvsharp4.wpfextensions/4.13.0.20260602",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.managed.md",
-        "lib/net48/OpenCvSharp.WpfExtensions.dll",
-        "lib/net48/OpenCvSharp.WpfExtensions.xml",
-        "lib/net8.0-windows7.0/OpenCvSharp.WpfExtensions.dll",
-        "lib/net8.0-windows7.0/OpenCvSharp.WpfExtensions.xml",
-        "opencvsharp.png",
-        "opencvsharp4.wpfextensions.4.13.0.20260602.nupkg.sha512",
-        "opencvsharp4.wpfextensions.nuspec"
-      ]
-    },
     "System.CodeDom/8.0.0": {
       "sha512": "WTlRjL6KWIMr/pAaq3rYqh0TJlzpouaQ/W1eelssHgtlwHAH25jXTkUphTYx9HaIIf7XA6qs/0+YhtLEQRkJ+Q==",
       "type": "package",
@@ -617,59 +88,6 @@
         "lib/netstandard2.0/System.CodeDom.xml",
         "system.codedom.8.0.0.nupkg.sha512",
         "system.codedom.nuspec",
-        "useSharedDesignerContext.txt"
-      ]
-    },
-    "System.Drawing.Common/10.0.8": {
-      "sha512": "LCISd6JAF80vsy9L6wuetZeOMR3FH+SwKovw5Zl0Nov9pB9ZOiCSqvOfMzooypPItQLv0mGfEePjJ1nCCQztNw==",
-      "type": "package",
-      "path": "system.drawing.common/10.0.8",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "Icon.png",
-        "LICENSE.TXT",
-        "PACKAGE.md",
-        "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net461/System.Drawing.Common.targets",
-        "buildTransitive/net462/_._",
-        "buildTransitive/net8.0/_._",
-        "buildTransitive/netcoreapp2.0/System.Drawing.Common.targets",
-        "lib/MonoAndroid10/_._",
-        "lib/MonoTouch10/_._",
-        "lib/net10.0/System.Drawing.Common.dll",
-        "lib/net10.0/System.Drawing.Common.pdb",
-        "lib/net10.0/System.Drawing.Common.xml",
-        "lib/net10.0/System.Private.Windows.Core.dll",
-        "lib/net10.0/System.Private.Windows.Core.xml",
-        "lib/net10.0/System.Private.Windows.GdiPlus.dll",
-        "lib/net10.0/System.Private.Windows.GdiPlus.xml",
-        "lib/net462/System.Drawing.Common.dll",
-        "lib/net462/System.Drawing.Common.pdb",
-        "lib/net462/System.Drawing.Common.xml",
-        "lib/net8.0/System.Drawing.Common.dll",
-        "lib/net8.0/System.Drawing.Common.pdb",
-        "lib/net8.0/System.Drawing.Common.xml",
-        "lib/net8.0/System.Private.Windows.Core.dll",
-        "lib/net8.0/System.Private.Windows.Core.xml",
-        "lib/net8.0/System.Private.Windows.GdiPlus.dll",
-        "lib/net8.0/System.Private.Windows.GdiPlus.xml",
-        "lib/net9.0/System.Drawing.Common.dll",
-        "lib/net9.0/System.Drawing.Common.pdb",
-        "lib/net9.0/System.Drawing.Common.xml",
-        "lib/net9.0/System.Private.Windows.Core.dll",
-        "lib/net9.0/System.Private.Windows.Core.xml",
-        "lib/net9.0/System.Private.Windows.GdiPlus.dll",
-        "lib/net9.0/System.Private.Windows.GdiPlus.xml",
-        "lib/netstandard2.0/System.Drawing.Common.dll",
-        "lib/netstandard2.0/System.Drawing.Common.pdb",
-        "lib/netstandard2.0/System.Drawing.Common.xml",
-        "lib/xamarinios10/_._",
-        "lib/xamarinmac20/_._",
-        "lib/xamarintvos10/_._",
-        "lib/xamarinwatchos10/_._",
-        "system.drawing.common.10.0.8.nupkg.sha512",
-        "system.drawing.common.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
@@ -706,27 +124,6 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "System.Memory/4.6.3": {
-      "sha512": "qdcDOgnFZY40+Q9876JUHnlHu7bosOHX8XISRoH94fwk6hgaeQGSgfZd8srWRZNt5bV9ZW2TljcegDNxsf+96A==",
-      "type": "package",
-      "path": "system.memory/4.6.3",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "Icon.png",
-        "PACKAGE.md",
-        "buildTransitive/net461/System.Memory.targets",
-        "buildTransitive/net462/_._",
-        "lib/net462/System.Memory.dll",
-        "lib/net462/System.Memory.xml",
-        "lib/netcoreapp2.1/_._",
-        "lib/netstandard2.0/System.Memory.dll",
-        "lib/netstandard2.0/System.Memory.xml",
-        "lib/netstandard2.1/_._",
-        "system.memory.4.6.3.nupkg.sha512",
-        "system.memory.nuspec"
-      ]
-    },
     "ServidorVirtualCS/1.0.0": {
       "type": "project",
       "path": "../ServidorVirtualCS/ServidorVirtualCS.csproj",
@@ -735,12 +132,7 @@
   },
   "projectFileDependencyGroups": {
     "net8.0-windows": [
-      "AForge.Video.DirectShow >= 2.2.5",
-      "NAudio >= 2.3.0",
-      "OpenCvSharp4.Windows >= 4.13.0.20260602",
-      "ServidorVirtualCS >= 1.0.0",
-      "System.Drawing.Common >= 10.0.8",
-      "System.Management >= 8.0.0"
+      "ServidorVirtualCS >= 1.0.0"
     ]
   },
   "packageFolders": {
@@ -802,28 +194,6 @@
       "net8.0-windows": {
         "framework": "net8.0-windows7.0",
         "targetAlias": "net8.0-windows",
-        "dependencies": {
-          "AForge.Video.DirectShow": {
-            "target": "Package",
-            "version": "[2.2.5, )"
-          },
-          "NAudio": {
-            "target": "Package",
-            "version": "[2.3.0, )"
-          },
-          "OpenCvSharp4.Windows": {
-            "target": "Package",
-            "version": "[4.13.0.20260602, )"
-          },
-          "System.Drawing.Common": {
-            "target": "Package",
-            "version": "[10.0.8, )"
-          },
-          "System.Management": {
-            "target": "Package",
-            "version": "[8.0.0, )"
-          }
-        },
         "imports": [
           "net461",
           "net462",
@@ -838,19 +208,19 @@
         "downloadDependencies": [
           {
             "name": "Microsoft.AspNetCore.App.Ref",
-            "version": "[8.0.27, 8.0.27]"
+            "version": "[8.0.28, 8.0.28]"
           },
           {
             "name": "Microsoft.NETCore.App.Host.win-x64",
-            "version": "[8.0.27, 8.0.27]"
+            "version": "[8.0.28, 8.0.28]"
           },
           {
             "name": "Microsoft.NETCore.App.Ref",
-            "version": "[8.0.27, 8.0.27]"
+            "version": "[8.0.28, 8.0.28]"
           },
           {
             "name": "Microsoft.WindowsDesktop.App.Ref",
-            "version": "[8.0.27, 8.0.27]"
+            "version": "[8.0.28, 8.0.28]"
           }
         ],
         "frameworkReferences": {
@@ -861,7 +231,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
       }
     }
   }
