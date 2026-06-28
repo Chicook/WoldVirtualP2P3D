@@ -218,13 +218,11 @@ func _process(delta: float) -> void:
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 ## Coloca la cámara en posición orbital y la apunta al avatar
-func _place_cam(angle: float, origin: Vector3, look_at_pos: Vector3) -> void:
-	_cam.global_position = origin + Vector3(
-		sin(angle) * cinematic_distance,
-		cinematic_height,
-		cos(angle) * cinematic_distance
-	)
-	_cam.look_at(look_at_pos)
+func _place_cam(angle: float, avatar_pos: Vector3, look_target: Vector3) -> void:
+	var cam_x = avatar_pos.x + cinematic_distance * sin(angle)
+	var cam_z = avatar_pos.z + cinematic_distance * cos(angle)
+	_cam.global_position = Vector3(cam_x, avatar_pos.y + cinematic_height, cam_z)
+	_cam.look_at(look_target)
 
 ## Sincroniza los ángulos internos del CameraController para evitar salto
 func _sync_cam_ctrl() -> void:
@@ -243,6 +241,7 @@ func _find_camera(ctrl: Node) -> Camera3D:
 	return null
 
 func _finish() -> void:
+	if _phase == Phase.DONE: return
 	_phase = Phase.DONE
 	set_process(false)
 	if is_instance_valid(_cam):

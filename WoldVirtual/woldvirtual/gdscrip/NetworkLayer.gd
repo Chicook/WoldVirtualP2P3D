@@ -26,10 +26,17 @@ func _ready() -> void:
 	BASE_DIR = base_folder + "/Estado_Global"
 	PEER_DIR = BASE_DIR + "/peers/"
 	
-	if !DirAccess.dir_exists_absolute(PEER_DIR):
-		DirAccess.make_dir_recursive_absolute(PEER_DIR)
+	print("[NetworkLayer] PEER_DIR calculado: ", PEER_DIR)
+	
+	if not DirAccess.dir_exists_absolute(BASE_DIR):
+		var res_base = DirAccess.make_dir_recursive_absolute(BASE_DIR)
+		print("[NetworkLayer] Creación de BASE_DIR (Estado_Global): ", "Éxito" if res_base == OK else "Fallo")
+	if not DirAccess.dir_exists_absolute(PEER_DIR):
+		var res_peer = DirAccess.make_dir_recursive_absolute(PEER_DIR)
+		print("[NetworkLayer] Creación de PEER_DIR (peers): ", "Éxito" if res_peer == OK else "Fallo")
 		
 	_setup_identity()
+	print("[NetworkLayer] local_id después de setup_identity: ", local_id)
 	_initial_sync()
 
 func _setup_identity():
@@ -78,6 +85,8 @@ func push_event(type: String, data: Dictionary = {}):
 func _io(data: Dictionary = {}) -> Dictionary:
 	var final_path = PEER_DIR + "peer_" + local_id + ".json"
 	if !data.is_empty():
+		print("[NetworkLayer] Intentando escribir peer JSON para local_id: ", local_id)
+		print("[NetworkLayer] Datos a escribir (parcial): ", data.keys())
 		var current_peer_data = _peer_cache.get(local_id, {})
 		for key in current_peer_data:
 			if not data.has(key): data[key] = current_peer_data[key]
@@ -85,7 +94,7 @@ func _io(data: Dictionary = {}) -> Dictionary:
 		# Incluir campo "did" si local_id comienza con "did_wcv_0x"
 		if local_id.begins_with("did_wcv_0x"):
 			# Convertir did_wcv_0x... a did:wcv:0x...
-			var did = "did:wcv:0x" + local_id.substr("did_wcv_0x".length)
+			var did = "did:wcv:0x" + local_id.substr("did_wcv_0x".length())
 			data["did"] = did
 		
 		# Incluir eventos pendientes
@@ -100,10 +109,14 @@ func _io(data: Dictionary = {}) -> Dictionary:
 		var tmp = final_path + ".tmp"
 		var f = FileAccess.open(tmp, FileAccess.WRITE)
 		if f:
+			print("[NetworkLayer] Archivo temporal abierto con éxito: ", tmp)
 			f.store_string(JSON.stringify(data))
 			f.close()
 			if FileAccess.file_exists(final_path): DirAccess.remove_absolute(final_path)
 			DirAccess.rename_absolute(tmp, final_path)
+			print("[NetworkLayer] Peer JSON escrito con éxito: ", final_path)
+		else:
+			printerr("[NetworkLayer] ERROR: No se pudo abrir el archivo temporal para escribir: ", tmp)
 		return {}
 
 	if _peer_scan_timer >= 1.5 or _known_pids.is_empty():
