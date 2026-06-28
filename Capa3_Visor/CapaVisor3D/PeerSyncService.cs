@@ -11,10 +11,12 @@ using System.Diagnostics;
 namespace VisorSingularity
 {
     /// <summary>
-    /// Servicio de sincronización P2P LAN de peers del metaverso.
-    /// Difunde el peer JSON local por UDP broadcast y escribe los peers remotos recibidos
-    /// en la carpeta Estado_Global/peers/ para que Godot los lea automáticamente.
-    /// Puerto: 50099 (UDP broadcast LAN)
+    /// Servicio de sincronización P2P de peers del metaverso.
+    /// Utiliza dos transportes en paralelo:
+    ///   - LAN: UDP Broadcast en el puerto 50099 (compatibilidad inmediata en red local).
+    ///   - WAN: IPFS PubSub GossipSub en el topic /wcv/metaverse/state/v1 (sincronización global).
+    /// Ambos transportes escriben los peers recibidos en Estado_Global/peers/ para que
+    /// NetworkLayer.gd los integre automáticamente sin modificaciones en Godot.
     /// </summary>
     public sealed class PeerSyncService : IDisposable
     {
@@ -36,12 +38,16 @@ namespace VisorSingularity
         private Task? _listenTask;
         private Task? _heartbeatTask;
 
+        // ── Transporte WAN (IPFS PubSub) ────────────────────────────────────
+        private IpfsPubSubTransport? _pubSub;
+
         private bool _disposed = false;
 
         public event Action<string, string>? PeerReceived;  // (remoteId, json)
         public event Action<string>? PeerExpired;           // (expiredId)
 
-        // ── Constructor ───────────────────────────────────────────────────
+        // ── Constructores ─────────────────────────────────────────────────
+        /// <summary>Sólo transporte LAN (UDP Broadcast).</summary>
         public PeerSyncService(string peersDir, string localId)
         {
             _peersDir = peersDir;
@@ -50,6 +56,18 @@ namespace VisorSingularity
 
             if (!Directory.Exists(_peersDir))
                 Directory.CreateDirectory(_peersDir);
+        }
+
+        /// <summary>
+        /// Transporte dual: LAN (UDP Broadcast) + WAN (IPFS PubSub).
+        /// Llama a este constructor cuando IpfsManager ya está listo.
+        /// </summary>
+        public PeerSyncService(string peersDir, string localId, IpfsManager ipfs)
+            : this(peersDir, localId)
+        {
+            _pubSub = new IpfsPubSubTransport(peersDir, localId, ipfs);
+            _pubSub.PeerReceived  += (id, json) => PeerReceived?.Invoke(id, json);
+            _pubSub.OnStatusChanged += msg => Debug.WriteLine(msg);
         }
 
         // ── Arranque ──────────────────────────────────────────────────────
@@ -95,7 +113,11 @@ namespace VisorSingularity
             _listenTask = Task.Run(() => ListenLoop(_cts.Token), _cts.Token);
             _heartbeatTask = Task.Run(() => HeartbeatLoop(_cts.Token), _cts.Token);
 
-            Debug.WriteLine($"[PeerSync] Servicio iniciado. ID local: {_localId}  Puerto UDP: {UDP_PORT}");
+            // Arrancar el transporte WAN si está configurado
+            _pubSub?.Start();
+
+            string wanStatus = _pubSub != null ? "LAN + WAN (IPFS PubSub)" : "LAN (UDP Broadcast)";
+            Debug.WriteLine($"[PeerSync] Servicio iniciado. ID local: {_localId}  Transporte: {wanStatus}");
         }
 
         // ── Loop de escucha ───────────────────────────────────────────────
@@ -187,36 +209,18 @@ namespace VisorSingularity
 
             try
             {
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                // Extraer el ID del remoto del bloque "u" (primer key del dict de usuarios)
-                string remoteId = "";
-                if (root.TryGetProperty("u", out var usersEl) && usersEl.ValueKind == JsonValueKind.Object)
+                // Validación centralizada: esquema, tamaño, ID seguro
+                if (!PeerSchema.TryValidate(json, out string remoteId))
                 {
-                    foreach (var prop in usersEl.EnumerateObject())
-                    {
-                        remoteId = prop.Name;
-                        break;
-                    }
-                }
-
-                // Si no hay usuarios, intentar bloque "i" (islas)
-                if (string.IsNullOrEmpty(remoteId) && root.TryGetProperty("i", out var islandsEl)
-                    && islandsEl.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var prop in islandsEl.EnumerateObject())
-                    {
-                        remoteId = prop.Name;
-                        break;
-                    }
+                    Debug.WriteLine($"[PeerSync] JSON inválido o peer ID inseguro recibido desde {sourceIp}, ignorado.");
+                    return;
                 }
 
                 // Ignorar paquetes propios
-                if (string.IsNullOrEmpty(remoteId) || remoteId == _localId) return;
+                if (remoteId == _localId) return;
 
-                // Escribir el peer en el directorio compartido
-                var targetPath = Path.Combine(_peersDir, $"peer_{remoteId}.json");
+                // Escritura atómica en el directorio compartido con Godot
+                var targetPath = Path.Combine(_peersDir, PeerSchema.GetPeerFileName(remoteId));
                 var tmpPath = targetPath + ".tmp";
 
                 using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -228,10 +232,6 @@ namespace VisorSingularity
 
                 Debug.WriteLine($"[PeerSync] Peer remoto '{remoteId}' recibido desde {sourceIp} ({json.Length} chars)");
                 PeerReceived?.Invoke(remoteId, json);
-            }
-            catch (JsonException)
-            {
-                Debug.WriteLine($"[PeerSync] JSON inválido recibido desde {sourceIp}, ignorado.");
             }
             catch (Exception ex)
             {
@@ -250,9 +250,8 @@ namespace VisorSingularity
 
                 foreach (var file in Directory.GetFiles(_peersDir, "peer_*.json"))
                 {
-                    var name = Path.GetFileNameWithoutExtension(file); // "peer_<id>"
-                    var peerId = name.Replace("peer_", "");
-                    if (peerId == _localId) continue; // nunca borrar el propio
+                    string? peerId = PeerSchema.ExtractPeerIdFromFileName(file);
+                    if (peerId == null || peerId == _localId) continue; // nunca borrar el propio
 
                     try
                     {
@@ -298,6 +297,9 @@ namespace VisorSingularity
             if (_disposed) return;
             _cts.Cancel();
 
+            // Detener transporte WAN primero
+            _pubSub?.Stop();
+
             if (_watcher != null)
             {
                 _watcher.EnableRaisingEvents = false;
@@ -311,7 +313,7 @@ namespace VisorSingularity
             try { _listenTask?.Wait(1000); } catch { }
             try { _heartbeatTask?.Wait(500); } catch { }
 
-            Debug.WriteLine("[PeerSync] Servicio detenido.");
+            Debug.WriteLine("[PeerSync] Servicio detenido (LAN + WAN).");
         }
 
         public void Dispose()
@@ -322,6 +324,7 @@ namespace VisorSingularity
             _cts.Dispose();
             _listener?.Dispose();
             _sender?.Dispose();
+            _pubSub?.Dispose();
         }
     }
 }
