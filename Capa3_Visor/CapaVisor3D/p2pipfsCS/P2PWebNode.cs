@@ -23,7 +23,7 @@ namespace VisorSingularity
     ///   3. IPFS en background       → Kubo anuncia el contenido en el DHT para seeding P2P adicional
     ///   4. Fallback CDN             → Pixeldrain/GoFile/Transfer.sh si SSH e IPFS fallan ambos
     /// </summary>
-    public class P2PWebNode
+    public class P2PWebNode : IDisposable
     {
         // ── Propiedades públicas ──────────────────────────────────────────────
         public string NodeId       { get; private set; }
@@ -776,8 +776,18 @@ namespace VisorSingularity
                     r.AddHeader("Content-Disposition",
                         proxyResp.Content.Headers.ContentDisposition.ToString());
 
-                // CORS abierto para que otros nodos/scripts puedan acceder
-                r.AddHeader("Access-Control-Allow-Origin", "*");
+                string? origin = req.Headers["Origin"];
+                if (!string.IsNullOrWhiteSpace(origin))
+                {
+                    if (string.Equals(origin, "http://127.0.0.1:8082", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(origin, "http://localhost:8082", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(origin, "http://127.0.0.1:8080", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(origin, "http://localhost:8080", StringComparison.OrdinalIgnoreCase))
+                    {
+                        r.AddHeader("Access-Control-Allow-Origin", origin);
+                        r.AddHeader("Vary", "Origin");
+                    }
+                }
 
                 // Propagar tamaño si se conoce (evita chunked encoding innecesario)
                 if (proxyResp.Content.Headers.ContentLength.HasValue)
@@ -1129,5 +1139,58 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
         }
 
         private void LogStatus(string msg) => OnStatusChanged?.Invoke(msg);
+
+        // ── Dispose Pattern ──────────────────────────────────────────────────────────────
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                // Dispose managed resources
+                Stop();
+
+                _ipfsManager?.Dispose();
+                _ipfsManager = null;
+
+                if (_listener != null && _listener.IsListening)
+                {
+                    try { _listener.Stop(); } catch { }
+                    _listener.Close();
+                    _listener = null;
+                }
+
+                if (_proxyListener != null)
+                {
+                    try { _proxyListener.Stop(); } catch { }
+                    _proxyListener = null;
+                }
+
+                if (_tunnelProcess != null && !_tunnelProcess.HasExited)
+                {
+                    try { _tunnelProcess.Kill(); } catch { }
+                    _tunnelProcess.Dispose();
+                    _tunnelProcess = null;
+                }
+            }
+
+            // Dispose unmanaged resources (none in this case)
+
+            _disposed = true;
+        }
+
+        ~P2PWebNode()
+        {
+            Dispose(false);
+        }
     }
 }

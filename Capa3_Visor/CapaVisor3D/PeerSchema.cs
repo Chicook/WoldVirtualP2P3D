@@ -62,7 +62,18 @@ namespace VisorSingularity
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                // Extraer ID del primer key del bloque "u" (usuarios)
+                // PRIORIDAD 1: Si hay campo "did", siempre usar el ID derivado del DID
+                if (root.TryGetProperty("did", out var didEl) && didEl.ValueKind == JsonValueKind.String)
+                {
+                    string did = didEl.GetString() ?? "";
+                    if (TryGetPeerIdFromDid(did, out string didPeerId))
+                    {
+                        peerId = didPeerId;
+                        return IsValidPeerId(peerId);
+                    }
+                }
+
+                // PRIORIDAD 2: Extraer ID del primer key del bloque "u" (usuarios)
                 if (root.TryGetProperty("u", out var usersEl) && usersEl.ValueKind == JsonValueKind.Object)
                 {
                     foreach (var prop in usersEl.EnumerateObject())
@@ -82,7 +93,7 @@ namespace VisorSingularity
                     }
                 }
 
-                // Fallback: extraer del bloque "i" (islas) si no hay usuarios
+                // PRIORIDAD 3: Extraer del bloque "i" (islas) si no hay usuarios
                 if (root.TryGetProperty("i", out var islandsEl) && islandsEl.ValueKind == JsonValueKind.Object)
                 {
                     foreach (var prop in islandsEl.EnumerateObject())
@@ -114,10 +125,43 @@ namespace VisorSingularity
 
             foreach (char c in id)
             {
-                if (!char.IsLetterOrDigit(c) && c != '-' && c != '_' && c != ':' && c != '.')
+                if (!char.IsLetterOrDigit(c) && c != '-' && c != '_' && c != '.')
                     return false;
             }
 
+            return true;
+        }
+
+        public static bool TryGetPeerIdFromDid(string did, out string peerId)
+        {
+            peerId = string.Empty;
+            if (string.IsNullOrWhiteSpace(did)) return false;
+
+            if (!did.StartsWith("did:wcv:0x", StringComparison.OrdinalIgnoreCase)) return false;
+            string addr = did.Substring("did:wcv:".Length);
+            if (!addr.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) return false;
+            addr = addr.Substring(2);
+            if (addr.Length != 40) return false;
+
+            foreach (char c in addr)
+                if (!Uri.IsHexDigit(c)) return false;
+
+            peerId = "did_wcv_0x" + addr.ToLowerInvariant();
+            return IsValidPeerId(peerId);
+        }
+
+        public static bool TryGetDidFromPeerId(string peerId, out string did)
+        {
+            did = string.Empty;
+            if (string.IsNullOrWhiteSpace(peerId)) return false;
+            if (!peerId.StartsWith("did_wcv_0x", StringComparison.Ordinal)) return false;
+            string addr = peerId.Substring("did_wcv_".Length);
+            if (!addr.StartsWith("0x", StringComparison.Ordinal)) return false;
+            addr = addr.Substring(2);
+            if (addr.Length != 40) return false;
+            foreach (char c in addr)
+                if (!Uri.IsHexDigit(c)) return false;
+            did = "did:wcv:0x" + addr.ToLowerInvariant();
             return true;
         }
 
@@ -149,6 +193,19 @@ namespace VisorSingularity
                 name.Length - PeerFilePrefix.Length - PeerFileExtension.Length);
 
             return IsValidPeerId(id) ? id : null;
+        }
+
+        private static bool HasPeerKey(JsonElement root, string peerId)
+        {
+            if (root.TryGetProperty("u", out var usersEl) && usersEl.ValueKind == JsonValueKind.Object)
+                if (usersEl.TryGetProperty(peerId, out _))
+                    return true;
+
+            if (root.TryGetProperty("i", out var islandsEl) && islandsEl.ValueKind == JsonValueKind.Object)
+                if (islandsEl.TryGetProperty(peerId, out _))
+                    return true;
+
+            return false;
         }
     }
 }
