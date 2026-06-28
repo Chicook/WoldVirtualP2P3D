@@ -58,6 +58,9 @@ namespace VisorSingularity
         private int                      _internalPort;
         private TcpListener?             _proxyListener;   // Proxy TCP local para reescribir Host header
 
+        /// <summary>Instancia del gestor IPFS (Kubo). Disponible tras el arranque del nodo.</summary>
+        public IpfsManager? IpfsManagerInstance => _ipfsManager;
+
         public event Action<string>? OnStatusChanged;
 
         // ── Constructor ───────────────────────────────────────────────────────

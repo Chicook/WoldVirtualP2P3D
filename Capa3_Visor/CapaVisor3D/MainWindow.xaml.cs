@@ -43,7 +43,8 @@ namespace VisorSingularity
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
         private bool _metaverseUiActivated = false;
-        private PeerSyncService? _peerSync;  // Sincronización P2P LAN de peers
+        private PeerSyncService? _peerSync;  // Sincronización P2P LAN + WAN de peers
+        private CancellationTokenSource? _ipfsHealthCts; // Health-check periódico del daemon IPFS
 
         // ── Login de usuario existente (ZIP detectado) ───────────────────────────
         // Ruta fija donde se guarda una copia del ZIP de registro para detección automática
@@ -2019,7 +2020,9 @@ namespace VisorSingularity
             _metaverseUiActivated = false;
             StopVoiceCapture(); // Liberar micrófono al cerrar
             StopWebcam();       // Liberar webcam al cerrar
-            _peerSync?.Stop();  // Detener sincronización P2P LAN
+            _ipfsHealthCts?.Cancel(); // Detener health-check de IPFS
+            _peerSyncUpgradedToWan = false;
+            _peerSync?.Stop();  // Detener sincronización P2P LAN + WAN
             _peerSync = null;
             if (_p2pNode != null)
             {
@@ -2308,7 +2311,7 @@ namespace VisorSingularity
             BorderBottomLoginBar.Visibility = Visibility.Visible;
             EmbeddedServerNodeBar.Visibility = Visibility.Visible;
 
-            // Iniciar sincronización P2P LAN de peers
+            // Iniciar sincronización P2P de peers (LAN + WAN si IPFS está disponible)
             if (_peerSync == null)
             {
                 try
@@ -2318,13 +2321,24 @@ namespace VisorSingularity
                     if (!Directory.Exists(peersDir))
                         Directory.CreateDirectory(peersDir);
 
-                    _peerSync = new PeerSyncService(peersDir, username);
+                    // Usar transporte dual (LAN + WAN IPFS PubSub) si el nodo P2P ya está activo
+                    var ipfsMgr = _p2pNode?.IpfsManagerInstance;
+                    if (ipfsMgr != null && ipfsMgr.IsDaemonRunning)
+                    {
+                        _peerSync = new PeerSyncService(peersDir, username, ipfsMgr);
+                        Debug.WriteLine($"[PeerSync] Transporte dual LAN+WAN iniciado para '{username}'");
+                    }
+                    else
+                    {
+                        _peerSync = new PeerSyncService(peersDir, username);
+                        Debug.WriteLine($"[PeerSync] Transporte LAN (IPFS no disponible aún) iniciado para '{username}'");
+                    }
+
                     _peerSync.Start();
-                    Debug.WriteLine($"[PeerSync] Servicio LAN iniciado para usuario '{username}' en '{peersDir}'");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[PeerSync] Error al iniciar servicio LAN: {ex.Message}");
+                    Debug.WriteLine($"[PeerSync] Error al iniciar servicio: {ex.Message}");
                 }
             }
 
@@ -2364,10 +2378,96 @@ namespace VisorSingularity
 
                 // Mostrar el widget P2P solo cuando el usuario ya está dentro del metaverso
                 P2PNodeBar.Visibility = Visibility.Visible;
+
+                // Iniciar health-check periódico del daemon IPFS
+                StartIpfsHealthCheck();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error al iniciar P2PWebNode: {ex.Message}");
+            }
+        }
+
+        // ── Health-Check del Daemon IPFS y Hot-Upgrade LAN→WAN ──────────────────
+        /// <summary>
+        /// Loop de fondo que cada 30 segundos:
+        ///   1. Comprueba si el daemon IPFS responde (health-check).
+        ///   2. Si el daemon se ha caído, lo reinicia automáticamente.
+        ///   3. Si PeerSyncService arrancó en modo LAN-only (porque IPFS aún no estaba listo),
+        ///      lo actualiza en caliente a modo dual LAN+WAN conectando el transporte PubSub.
+        /// </summary>
+        private void StartIpfsHealthCheck()
+        {
+            _ipfsHealthCts?.Cancel();
+            _ipfsHealthCts = new CancellationTokenSource();
+            var token = _ipfsHealthCts.Token;
+
+            Task.Run(async () =>
+            {
+                // Esperar 15 s antes del primer chequeo para dar tiempo al arranque inicial
+                await Task.Delay(15000, token).ConfigureAwait(false);
+
+                while (!token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var ipfsMgr = _p2pNode?.IpfsManagerInstance;
+                        if (ipfsMgr != null)
+                        {
+                            // Health-check: reiniciar si el daemon se cayó
+                            await ipfsMgr.EnsureDaemonAliveAsync(token);
+
+                            // Hot-upgrade: si PeerSync arrancó sin WAN y ahora IPFS está disponible
+                            if (_peerSync != null && ipfsMgr.IsDaemonRunning)
+                            {
+                                // Intentar upgrade solo si PeerSync no tiene PubSub todavía.
+                                // Verificamos revisando si el tipo usa el constructor simple (sin WAN).
+                                // La forma más segura es comprobar el campo vía reflexión o un flag.
+                                // Usamos un approach más práctico: intentar conectar, si ya está, es no-op.
+                                UpgradePeerSyncToWan(ipfsMgr);
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException) { break; }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[IpfsHealth] Error en health-check: {ex.Message}");
+                    }
+
+                    await Task.Delay(30000, token).ConfigureAwait(false);
+                }
+            }, token);
+        }
+
+        /// <summary>
+        /// Si PeerSyncService arrancó en modo LAN-only, lo detiene y lo recrea en modo dual
+        /// LAN + WAN (IPFS PubSub) sin interrumpir la sesión de Godot. Los archivos de peers
+        /// en disco se mantienen intactos durante la transición.
+        /// </summary>
+        private bool _peerSyncUpgradedToWan = false;
+        private void UpgradePeerSyncToWan(IpfsManager ipfsMgr)
+        {
+            if (_peerSyncUpgradedToWan || _peerSync == null) return;
+
+            try
+            {
+                // Extraer parámetros del PeerSync actual
+                var (projectDir, _) = FindLocalGodotPaths();
+                string peersDir = Path.GetFullPath(Path.Combine(projectDir, "..", "Estado_Global", "peers"));
+
+                // Detener el servicio LAN-only y recrear con transporte dual
+                _peerSync.Stop();
+                _peerSync.Dispose();
+
+                _peerSync = new PeerSyncService(peersDir, _currentUsername, ipfsMgr);
+                _peerSync.Start();
+
+                _peerSyncUpgradedToWan = true;
+                Debug.WriteLine("[IpfsHealth] ✅ PeerSync actualizado de LAN-only a LAN+WAN (IPFS PubSub)");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[IpfsHealth] Error al hacer hot-upgrade de PeerSync: {ex.Message}");
             }
         }
 
