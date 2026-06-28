@@ -25,7 +25,7 @@ using VisorSingularity.Services;
 
 namespace VisorSingularity
 {
-    public partial class MainWindow : System.Windows.Window
+    public partial class MainWindow : System.Windows.Window, IDisposable
     {
         private string _osName = "Desconocido";
         private string _cpuName = "Desconocido";
@@ -39,6 +39,7 @@ namespace VisorSingularity
         private bool _isClosing = false;
         private GodotHwndHost? _godotHost;
         private string _currentUsername = "Anonymous";
+        private string _currentUserPeerId = "Anonymous";
         private UdpClient? _udpListener;
         private CancellationTokenSource? _udpCancellationTokenSource;
         private P2PWebNode? _p2pNode;
@@ -218,7 +219,7 @@ namespace VisorSingularity
             });
         }
 
-        private bool DoesCurrentUserJsonExist()
+        private static bool DoesCurrentUserJsonExist()
         {
             try
             {
@@ -335,7 +336,7 @@ namespace VisorSingularity
             }
         }
 
-        private string ComputeSHA256(string input)
+        private static string ComputeSHA256(string input)
         {
             using (var sha256 = System.Security.Cryptography.SHA256.Create())
             {
@@ -627,7 +628,7 @@ namespace VisorSingularity
             }
         }
 
-        private string GetPhase3Message(string lang, string path)
+        private static string GetPhase3Message(string lang, string path)
         {
             switch (lang)
             {
@@ -764,6 +765,7 @@ namespace VisorSingularity
             GridLoginScreen.Visibility = Visibility.Collapsed;
             GridMainViewer.Visibility  = Visibility.Visible;
             _currentUsername = user;
+            _currentUserPeerId = NodeIdentityService.GetOrCreate().PeerId;
             TxtChatActiveUser.Text = $"Usuario: {user}";
 
             // 3) Lanzar Godot apuntando DIRECTAMENTE a N3DWoldVirtualMT.tscn
@@ -881,22 +883,22 @@ namespace VisorSingularity
             }
         }
 
-        private string GetOSName()
+        private static string GetOSName()
         {
             return HardwareFingerprintService.GetOSName();
         }
 
-        private string GetCpuName()
+        private static string GetCpuName()
         {
             return HardwareFingerprintService.GetCpuName();
         }
 
-        private string GetMotherboardName()
+        private static string GetMotherboardName()
         {
             return HardwareFingerprintService.GetMotherboardName();
         }
 
-        private string GenerateSHA256Signature(string os, string cpu, string motherboard)
+        private static string GenerateSHA256Signature(string os, string cpu, string motherboard)
         {
             return HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
         }
@@ -1163,6 +1165,7 @@ namespace VisorSingularity
                             GridMainViewer.Visibility         = Visibility.Visible;
 
                             _currentUsername = user;
+                            _currentUserPeerId = NodeIdentityService.GetOrCreate().PeerId;
                             TxtChatActiveUser.Text = $"Usuario: {user}";
 
                             // Registro nuevo: carga EscenaPrincipal (flujo normal)
@@ -1247,7 +1250,9 @@ namespace VisorSingularity
             var (detectedLang, detectedCountry) = GetSystemLocaleInfo();
 
             // Argumentos de línea de comandos de Godot
-            string arguments = $"--path \"{projectDir}\" {scenePath} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\" --lang \"{detectedLang}\" --country \"{detectedCountry}\"";
+            var identity = NodeIdentityService.GetOrCreate();
+            _currentUserPeerId = identity.PeerId;
+            string arguments = $"--path \"{projectDir}\" {scenePath} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{_currentUserPeerId}\" --island-id \"{island}\" --lang \"{detectedLang}\" --country \"{detectedCountry}\"";
 
 
             var startInfo = new ProcessStartInfo
@@ -1366,7 +1371,7 @@ namespace VisorSingularity
             return result;
         }
 
-        private (string projectDir, string exePath) FindLocalGodotPaths()
+        private static (string projectDir, string exePath) FindLocalGodotPaths()
         {
             var paths = GodotProjectLocator.Resolve();
             return (paths.ProjectDir, paths.ExePath);
@@ -1905,7 +1910,7 @@ namespace VisorSingularity
             }
         }
 
-        private void DeleteGodotCurrentUserJson()
+        private static void DeleteGodotCurrentUserJson()
         {
             try
             {
@@ -1940,7 +1945,7 @@ namespace VisorSingularity
         /// Detecta el idioma y país del sistema operativo usando CultureInfo.
         /// Devuelve (langCode, countryCode) p.ej: ("es", "ES"), ("en", "US"), ("fr", "FR").
         /// </summary>
-        private (string lang, string country) GetSystemLocaleInfo()
+        private static (string lang, string country) GetSystemLocaleInfo()
         {
             try
             {
@@ -2023,11 +2028,10 @@ namespace VisorSingularity
             _ipfsHealthCts?.Cancel(); // Detener health-check de IPFS
             _peerSyncUpgradedToWan = false;
             _peerSync?.Stop();  // Detener sincronización P2P LAN + WAN
-            _peerSync = null;
+            
             if (_p2pNode != null)
             {
                 try { _p2pNode.Stop(); } catch { }
-                _p2pNode = null;
             }
             if (ChatOverlayPopup != null)
             {
@@ -2047,7 +2051,6 @@ namespace VisorSingularity
                     _httpListener.Close();
                 }
                 catch { }
-                _httpListener = null;
             }
 
             if (_godotProcess != null && !_godotProcess.HasExited)
@@ -2057,7 +2060,6 @@ namespace VisorSingularity
                     _godotProcess.Kill();
                 }
                 catch { }
-                _godotProcess = null;
             }
 
             ComponentDispatcher.ThreadFilterMessage -= ComponentDispatcher_ThreadFilterMessage;
@@ -2093,7 +2095,8 @@ namespace VisorSingularity
             {
                 using (UdpClient udpClient = new UdpClient())
                 {
-                    string json = $"{{\"type\": \"chat\", \"user\": \"{_currentUsername}\", \"text\": \"{message.Replace("\"", "\\\"")}\"}}";
+                    string safeText = message.Replace("\"", "\\\"");
+                    string json = $"{{\"type\":\"chat\",\"userId\":\"{_currentUserPeerId}\",\"user\":\"{_currentUsername}\",\"text\":\"{safeText}\"}}";
                     byte[] data = Encoding.UTF8.GetBytes(json);
                     udpClient.Send(data, data.Length, "127.0.0.1", 50007);
                 }
@@ -2311,6 +2314,9 @@ namespace VisorSingularity
             BorderBottomLoginBar.Visibility = Visibility.Visible;
             EmbeddedServerNodeBar.Visibility = Visibility.Visible;
 
+            var identity = NodeIdentityService.GetOrCreate();
+            _currentUserPeerId = identity.PeerId;
+
             // Iniciar sincronización P2P de peers (LAN + WAN si IPFS está disponible)
             if (_peerSync == null)
             {
@@ -2325,13 +2331,13 @@ namespace VisorSingularity
                     var ipfsMgr = _p2pNode?.IpfsManagerInstance;
                     if (ipfsMgr != null && ipfsMgr.IsDaemonRunning)
                     {
-                        _peerSync = new PeerSyncService(peersDir, username, ipfsMgr);
-                        Debug.WriteLine($"[PeerSync] Transporte dual LAN+WAN iniciado para '{username}'");
+                        _peerSync = new PeerSyncService(peersDir, _currentUserPeerId, ipfsMgr);
+                        Debug.WriteLine($"[PeerSync] Transporte dual LAN+WAN iniciado para '{_currentUserPeerId}'");
                     }
                     else
                     {
-                        _peerSync = new PeerSyncService(peersDir, username);
-                        Debug.WriteLine($"[PeerSync] Transporte LAN (IPFS no disponible aún) iniciado para '{username}'");
+                        _peerSync = new PeerSyncService(peersDir, _currentUserPeerId);
+                        Debug.WriteLine($"[PeerSync] Transporte LAN (IPFS no disponible aún) iniciado para '{_currentUserPeerId}'");
                     }
 
                     _peerSync.Start();
@@ -2459,7 +2465,7 @@ namespace VisorSingularity
                 _peerSync.Stop();
                 _peerSync.Dispose();
 
-                _peerSync = new PeerSyncService(peersDir, _currentUsername, ipfsMgr);
+                _peerSync = new PeerSyncService(peersDir, _currentUserPeerId, ipfsMgr);
                 _peerSync.Start();
 
                 _peerSyncUpgradedToWan = true;
@@ -2613,7 +2619,7 @@ namespace VisorSingularity
             {
                 using var udp = new UdpClient();
                 string speakingStr = speaking ? "true" : "false";
-                string json = $"{{\"type\":\"voice\",\"user\":\"{_currentUsername}\",\"speaking\":{speakingStr},\"vol\":{volume:F2}}}";
+                string json = $"{{\"type\":\"voice\",\"userId\":\"{_currentUserPeerId}\",\"user\":\"{_currentUsername}\",\"speaking\":{speakingStr},\"vol\":{volume:F2}}}";
                 byte[] data = Encoding.UTF8.GetBytes(json);
                 udp.Send(data, data.Length, "127.0.0.1", 50007);
                 Debug.WriteLine($"[VoiceChat] UDP → Godot: speaking={speaking}, vol={volume:F2}");
@@ -2635,7 +2641,7 @@ namespace VisorSingularity
                 var (projectDir, _) = FindLocalGodotPaths();
                 string peerDir = Path.GetFullPath(
                     Path.Combine(projectDir, "..", "Estado_Global", "peers"));
-                string peerFile = Path.Combine(peerDir, $"peer_{_currentUsername}.json");
+                string peerFile = Path.Combine(peerDir, $"peer_{_currentUserPeerId}.json");
                 if (!File.Exists(peerFile)) return;
 
                 string content = File.ReadAllText(peerFile, Encoding.UTF8).TrimEnd();
@@ -2992,6 +2998,54 @@ namespace VisorSingularity
                 BtnWebcam.Foreground = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#0B0C10"));
             }
+        }
+
+        // ── Dispose Pattern ──────────────────────────────────────────────────────────────
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                // Dispose managed resources
+                Cleanup();
+
+                if (_cancellationTokenSource != null) { _cancellationTokenSource.Dispose(); _cancellationTokenSource = null; }
+                if (_udpCancellationTokenSource != null) { _udpCancellationTokenSource.Dispose(); _udpCancellationTokenSource = null; }
+                if (_ipfsHealthCts != null) { _ipfsHealthCts.Dispose(); _ipfsHealthCts = null; }
+                if (_p2pNode != null) { _p2pNode.Dispose(); _p2pNode = null; }
+                if (_peerSync != null) { _peerSync.Dispose(); _peerSync = null; }
+                if (_godotHost != null) { _godotHost.Dispose(); _godotHost = null; }
+                if (_waveIn != null) { _waveIn.Dispose(); _waveIn = null; }
+                if (_capture != null) { _capture.Dispose(); _capture = null; }
+                if (_webcamHwndSource != null) { _webcamHwndSource.Dispose(); _webcamHwndSource = null; }
+                
+                try { if (_httpListener != null) { _httpListener.Stop(); _httpListener.Close(); } } catch { }
+                _httpListener = null;
+                
+                try { if (_udpListener != null) { _udpListener.Close(); } } catch { }
+                _udpListener = null;
+
+                if (_godotProcess != null) { _godotProcess.Dispose(); _godotProcess = null; }
+            }
+
+            // Dispose unmanaged resources (none in this case, since GodotHwnd uses Win32 via .NET)
+
+            _disposed = true;
+        }
+
+        ~MainWindow()
+        {
+            Dispose(false);
         }
     }
 }

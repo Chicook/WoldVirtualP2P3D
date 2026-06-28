@@ -185,6 +185,10 @@ namespace VisorSingularity
                 // Validación mínima: debe ser un objeto JSON
                 if (!json.TrimStart().StartsWith("{")) return;
 
+                var identity = NodeIdentityService.GetOrCreate();
+                if (_localId == identity.PeerId && PeerAuth.TrySignOutgoing(json, identity, out var signed))
+                    json = signed;
+
                 var bytes = Encoding.UTF8.GetBytes(json);
                 if (bytes.Length > MAX_PACKET_BYTES)
                 {
@@ -209,14 +213,16 @@ namespace VisorSingularity
 
             try
             {
-                // Validación centralizada: esquema, tamaño, ID seguro
-                if (!PeerSchema.TryValidate(json, out string remoteId))
+                string remoteId;
+                if (!PeerAuth.TryValidateIncoming(json, _localId, out remoteId))
                 {
-                    Debug.WriteLine($"[PeerSync] JSON inválido o peer ID inseguro recibido desde {sourceIp}, ignorado.");
-                    return;
+                    if (!PeerSchema.TryValidate(json, out remoteId))
+                    {
+                        Debug.WriteLine($"[PeerSync] JSON inválido o peer ID inseguro recibido desde {sourceIp}, ignorado.");
+                        return;
+                    }
                 }
 
-                // Ignorar paquetes propios
                 if (remoteId == _localId) return;
 
                 // Escritura atómica en el directorio compartido con Godot

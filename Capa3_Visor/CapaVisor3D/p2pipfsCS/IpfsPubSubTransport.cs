@@ -117,6 +117,10 @@ namespace VisorSingularity
 
                 if (string.IsNullOrWhiteSpace(json) || !json.TrimStart().StartsWith("{")) return;
 
+                var identity = NodeIdentityService.GetOrCreate();
+                if (_localId == identity.PeerId && PeerAuth.TrySignOutgoing(json, identity, out var signed))
+                    json = signed;
+
                 var payload = Encoding.UTF8.GetBytes(json);
                 if (payload.Length > MAX_MESSAGE_BYTES)
                 {
@@ -262,10 +266,9 @@ namespace VisorSingularity
         {
             try
             {
-                // Validación centralizada: esquema, tamaño, ID seguro
-                if (!PeerSchema.TryValidate(peerJson, out string remoteId))
+                if (!PeerAuth.TryValidateIncoming(peerJson, _localId, out string remoteId))
                 {
-                    Debug.WriteLine("[PubSub] JSON de peer inválido o ID inseguro, ignorado.");
+                    Debug.WriteLine("[PubSub] JSON de peer inválido/no firmado, ignorado.");
                     return;
                 }
 

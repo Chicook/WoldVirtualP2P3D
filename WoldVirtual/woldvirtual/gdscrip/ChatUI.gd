@@ -45,18 +45,20 @@ func _process_chat_packet(json_str: String):
 		var data = json.get_data()
 		if typeof(data) == TYPE_DICTIONARY and data.get("type") == "chat":
 			var user = data.get("user", "Anonymous")
+			var user_id = data.get("userId", user)
 			var text = data.get("text", "")
 			
 			# Reenviar el mensaje al visor C# (WPF) para su representación
 			_send_chat_message_to_wpf(user, text)
 			
 			# Disparar la burbuja 3D flotante sobre el avatar correspondiente
-			_trigger_bubble_on_avatar(user, text)
+			_trigger_bubble_on_avatar(user_id, user, text)
 		elif data.get("type") == "voice":
 			# Paquete de actividad de voz desde WPF (NAudio VAD)
 			var user = data.get("user", "")
+			var user_id = data.get("userId", user)
 			var speaking = data.get("speaking", false)
-			_trigger_voice_on_avatar(user, speaking)
+			_trigger_voice_on_avatar(user_id, user, speaking)
 
 func _send_chat_message_to_wpf(user: String, text: String):
 	if udp_client:
@@ -77,7 +79,7 @@ func _send_system_message_to_wpf(text: String):
 		var packet_data = JSON.stringify(data).to_utf8_buffer()
 		udp_client.put_packet(packet_data)
 
-func _trigger_bubble_on_avatar(username: String, message: String):
+func _trigger_bubble_on_avatar(peer_id: String, username: String, message: String):
 	if !is_instance_valid(chunk_manager):
 		return
 		
@@ -102,9 +104,9 @@ func _trigger_bubble_on_avatar(username: String, message: String):
 					if typeof(p_data) == TYPE_DICTIONARY:
 						local_name = p_data.get("username", "")
 			
-			if avatar.es_local and username == local_name:
+			if avatar.es_local and (username == local_name or user_id.to_lower() == peer_id.to_lower()):
 				is_match = true
-			elif user_id.to_lower() == username.to_lower() or user_id.to_lower().contains(username.to_lower()):
+			elif user_id.to_lower() == peer_id.to_lower() or user_id.to_lower().contains(peer_id.to_lower()) or user_id.to_lower() == username.to_lower() or user_id.to_lower().contains(username.to_lower()):
 				is_match = true
 				
 			# Fallback si sólo hay una persona en escena
@@ -116,7 +118,7 @@ func _trigger_bubble_on_avatar(username: String, message: String):
 					avatar.mostrar_mensaje_3d(message)
 					break
 
-func _trigger_voice_on_avatar(username: String, speaking: bool):
+func _trigger_voice_on_avatar(peer_id: String, username: String, speaking: bool):
 	# Misma lógica de búsqueda de avatar que _trigger_bubble_on_avatar
 	if !is_instance_valid(chunk_manager):
 		return
@@ -142,9 +144,9 @@ func _trigger_voice_on_avatar(username: String, speaking: bool):
 					if typeof(p_data) == TYPE_DICTIONARY:
 						local_name = p_data.get("username", "")
 			
-			if avatar.es_local and username == local_name:
+			if avatar.es_local and (username == local_name or user_id.to_lower() == peer_id.to_lower()):
 				is_match = true
-			elif user_id.to_lower() == username.to_lower() or user_id.to_lower().contains(username.to_lower()):
+			elif user_id.to_lower() == peer_id.to_lower() or user_id.to_lower().contains(peer_id.to_lower()) or user_id.to_lower() == username.to_lower() or user_id.to_lower().contains(username.to_lower()):
 				is_match = true
 			
 			# Fallback si sólo hay una persona en escena

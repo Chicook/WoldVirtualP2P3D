@@ -1,5 +1,5 @@
 ﻿ServidorVirtualCS
-1.0.0.0
+
 
 winexe
 C#
@@ -12,9 +12,9 @@ TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR
 d:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\App.xaml
 21392722670
 
-14-282072251
+122090096641
 199-938487076
 Controls\EmbeddedNodeControl.xaml;MainWindow.xaml;
 
-True
+False
 
