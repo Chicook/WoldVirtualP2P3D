@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj": {}
+    "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj": {}
   },
   "projects": {
-    "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj": {
-      "version": "1.0.0",
+    "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj": {
+      "version": "0.1.0",
       "restore": {
-        "projectUniqueName": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+        "projectUniqueName": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
         "projectName": "VisorSingularity",
-        "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+        "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
         "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-        "outputPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
+        "outputPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -34,14 +34,15 @@
             "framework": "net8.0-windows7.0",
             "targetAlias": "net8.0-windows",
             "projectReferences": {
-              "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
-                "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj"
+              "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
+                "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj"
               }
             }
           }
         },
         "warningProperties": {
           "noWarn": [
+            "NU1603",
             "NU1701"
           ],
           "warnAsError": [
@@ -64,6 +65,22 @@
               "target": "Package",
               "version": "[2.2.5, )"
             },
+            "BepuPhysics": {
+              "target": "Package",
+              "version": "[2.5.0-beta.29, )"
+            },
+            "HelixToolkit.Wpf.SharpDX": {
+              "target": "Package",
+              "version": "[2.28.0, )"
+            },
+            "LiteDB": {
+              "target": "Package",
+              "version": "[5.0.21, )"
+            },
+            "MessagePack": {
+              "target": "Package",
+              "version": "[3.1.7, )"
+            },
             "NAudio": {
               "target": "Package",
               "version": "[2.3.0, )"
@@ -72,6 +89,14 @@
               "target": "Package",
               "version": "[4.13.0.20260602, )"
             },
+            "SharpDX": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "SharpGLTF.Runtime": {
+              "target": "Package",
+              "version": "[1.0.0-alpha0031, )"
+            },
             "System.Drawing.Common": {
               "target": "Package",
               "version": "[10.0.8, )"
@@ -79,6 +104,14 @@
             "System.Management": {
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "System.Security.Cryptography.ProtectedData": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Websocket.Client": {
+              "target": "Package",
+              "version": "[5.1.1, )"
             }
           },
           "imports": [
@@ -95,19 +128,19 @@
           "downloadDependencies": [
             {
               "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.27, 8.0.27]"
+              "version": "[8.0.28, 8.0.28]"
             },
             {
               "name": "Microsoft.NETCore.App.Host.win-x64",
-              "version": "[8.0.27, 8.0.27]"
+              "version": "[8.0.28, 8.0.28]"
             },
             {
               "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.27, 8.0.27]"
+              "version": "[8.0.28, 8.0.28]"
             },
             {
               "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[8.0.27, 8.0.27]"
+              "version": "[8.0.28, 8.0.28]"
             }
           ],
           "frameworkReferences": {
@@ -118,18 +151,18 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
+    "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj",
+        "projectUniqueName": "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj",
         "projectName": "ServidorVirtualCS",
-        "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj",
+        "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj",
         "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-        "outputPath": "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\obj\\",
+        "outputPath": "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -190,19 +223,19 @@
           "downloadDependencies": [
             {
               "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.27, 8.0.27]"
+              "version": "[8.0.28, 8.0.28]"
             },
             {
               "name": "Microsoft.NETCore.App.Host.win-x64",
-              "version": "[8.0.27, 8.0.27]"
+              "version": "[8.0.28, 8.0.28]"
             },
             {
               "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.27, 8.0.27]"
+              "version": "[8.0.28, 8.0.28]"
             },
             {
               "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[8.0.27, 8.0.27]"
+              "version": "[8.0.28, 8.0.28]"
             }
           ],
           "frameworkReferences": {
@@ -213,7 +246,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
