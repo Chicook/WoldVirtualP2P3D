@@ -242,7 +242,21 @@ namespace VisorSingularity
                 await response.Content.CopyToAsync(fs, token);
             }
 
-            LogStatus("📦 Extrayendo Kubo...");
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            using (var stream = File.OpenRead(zipPath))
+            {
+                byte[] hashBytes = sha256.ComputeHash(stream);
+                string hashHex = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
+                
+                // Hash de kubo_v0.28.0_windows-amd64.zip
+                if (hashHex != "F1583471AA5441A7C6FD8032ACFA2FD1F6D0AC414E12BFF6161AA25967CCA550")
+                {
+                    File.Delete(zipPath);
+                    throw new Exception("Hash SHA-256 inválido para kubo.zip (MitM detectado o binario corrupto).");
+                }
+            }
+
+            LogStatus("📦 Extrayendo Kubo (SHA-256 verificado)...");
             ZipFile.ExtractToDirectory(zipPath, extractRoot, overwriteFiles: true);
             File.Delete(zipPath);
         }

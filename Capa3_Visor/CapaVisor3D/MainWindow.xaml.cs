@@ -324,7 +324,8 @@ namespace VisorSingularity
                     passwordHash = passwordHash
                 };
                 string json = JsonSerializer.Serialize(credData);
-                File.WriteAllText(credPath, json, Encoding.UTF8);
+                string encryptedJson = VisorSingularity.Services.HardwareFingerprintService.EncryptString(json, GetHardwareKey());
+                File.WriteAllText(credPath, encryptedJson, Encoding.UTF8);
                 System.Diagnostics.Debug.WriteLine("[Registro] Credenciales locales guardadas.");
             }
             catch (Exception ex)
@@ -347,6 +348,18 @@ namespace VisorSingularity
             }
         }
 
+        private string GetHardwareKey()
+        {
+            if (string.IsNullOrEmpty(_hardwareFingerprint))
+            {
+                string os = GetOSName();
+                string cpu = GetCpuName();
+                string motherboard = GetMotherboardName();
+                _hardwareFingerprint = VisorSingularity.Services.HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
+            }
+            return _hardwareFingerprint;
+        }
+
         private void LoadLoginSettings()
         {
             try
@@ -354,8 +367,9 @@ namespace VisorSingularity
                 string settingsPath = Path.Combine(APP_DATA_DIR, "login_settings.json");
                 if (File.Exists(settingsPath))
                 {
-                    string json = File.ReadAllText(settingsPath);
-                    using (var doc = JsonDocument.Parse(json))
+                    string encryptedJson = File.ReadAllText(settingsPath);
+                    string decryptedJson = VisorSingularity.Services.HardwareFingerprintService.DecryptString(encryptedJson, GetHardwareKey());
+                    using (var doc = JsonDocument.Parse(decryptedJson))
                     {
                         var root = doc.RootElement;
                         bool rememberUser = root.TryGetProperty("rememberUser", out var remUser) && remUser.GetBoolean();
@@ -413,7 +427,8 @@ namespace VisorSingularity
                 };
 
                 string json = JsonSerializer.Serialize(settingsData);
-                File.WriteAllText(settingsPath, json, Encoding.UTF8);
+                string encryptedJson = VisorSingularity.Services.HardwareFingerprintService.EncryptString(json, GetHardwareKey());
+                File.WriteAllText(settingsPath, encryptedJson, Encoding.UTF8);
             }
             catch (Exception ex)
             {
@@ -446,8 +461,9 @@ namespace VisorSingularity
             {
                 try
                 {
-                    string json = File.ReadAllText(credPath);
-                    using (var doc = JsonDocument.Parse(json))
+                    string encryptedJson = File.ReadAllText(credPath);
+                    string decryptedJson = VisorSingularity.Services.HardwareFingerprintService.DecryptString(encryptedJson, GetHardwareKey());
+                    using (var doc = JsonDocument.Parse(decryptedJson))
                     {
                         var root = doc.RootElement;
                         string savedUser = root.TryGetProperty("username", out var userProp) ? userProp.GetString() ?? "" : "";
