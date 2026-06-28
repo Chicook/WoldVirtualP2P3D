@@ -82,6 +82,12 @@ func _io(data: Dictionary = {}) -> Dictionary:
 		for key in current_peer_data:
 			if not data.has(key): data[key] = current_peer_data[key]
 		
+		# Incluir campo "did" si local_id comienza con "did_wcv_0x"
+		if local_id.begins_with("did_wcv_0x"):
+			# Convertir did_wcv_0x... a did:wcv:0x...
+			var did = "did:wcv:0x" + local_id.substr("did_wcv_0x".length)
+			data["did"] = did
+		
 		# Incluir eventos pendientes
 		if !_event_queue.is_empty():
 			data["e"] = _event_queue.duplicate()
@@ -143,7 +149,17 @@ func _io(data: Dictionary = {}) -> Dictionary:
 			_peer_cache.erase(pcid)
 			_peer_last_seen.erase(pcid)
 
-	if res.u.is_empty(): return _last_good_state
+	if res.u.is_empty(): 
+		# Si no hay usuarios pero hay islas, permitimos que pase para cargar la isla local
+		if res.i.is_empty(): 
+			return _last_good_state
+		
+	# Si local_id no está en res.u ni en res.i, intentamos recuperarlo de la cache si existe
+	if not res.u.has(local_id) and _peer_cache.has(local_id):
+		var lp = _peer_cache[local_id]
+		for uid in lp.get("u", {}): res.u[uid] = lp.u[uid]
+		for iid in lp.get("i", {}): res.i[iid] = lp.i[iid]
+		
 	_first_load_done = true
 	_last_good_state = res
 	return res

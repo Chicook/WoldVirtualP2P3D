@@ -62,20 +62,18 @@ namespace VisorSingularity
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
+                // PRIORIDAD 1: Si hay campo "did", siempre usar el ID derivado del DID
                 if (root.TryGetProperty("did", out var didEl) && didEl.ValueKind == JsonValueKind.String)
                 {
                     string did = didEl.GetString() ?? "";
                     if (TryGetPeerIdFromDid(did, out string didPeerId))
                     {
-                        if (HasPeerKey(root, didPeerId))
-                        {
-                            peerId = didPeerId;
-                            return IsValidPeerId(peerId);
-                        }
+                        peerId = didPeerId;
+                        return IsValidPeerId(peerId);
                     }
                 }
 
-                // Extraer ID del primer key del bloque "u" (usuarios)
+                // PRIORIDAD 2: Extraer ID del primer key del bloque "u" (usuarios)
                 if (root.TryGetProperty("u", out var usersEl) && usersEl.ValueKind == JsonValueKind.Object)
                 {
                     foreach (var prop in usersEl.EnumerateObject())
@@ -95,7 +93,7 @@ namespace VisorSingularity
                     }
                 }
 
-                // Fallback: extraer del bloque "i" (islas) si no hay usuarios
+                // PRIORIDAD 3: Extraer del bloque "i" (islas) si no hay usuarios
                 if (root.TryGetProperty("i", out var islandsEl) && islandsEl.ValueKind == JsonValueKind.Object)
                 {
                     foreach (var prop in islandsEl.EnumerateObject())
