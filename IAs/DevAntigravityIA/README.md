@@ -1,3 +1,22 @@
+Viewed PeerSyncService.cs:1-331
+Searched web: "class IpfsManager"
+Searched web: "IpfsManager.cs"
+Listed directory CapaVisor3D
+Listed directory p2pipfsCS
+Viewed IpfsManager.cs:1-381
+Viewed PeerSchema.cs:1-155
+Viewed P2PWebNode.cs:1-800
+Searched web: "StrictHostKeyChecking=no"
+
+I see you’ve approved the implementation plan. To move forward, I need to know which milestone (hito) you’d like to start with:
+
+- **Hito 1:** Seguridad e Higiene del Puente de Red (Prioridad P0) – file‑sanitization, CORS hardening, SSH host‑key validation, security constants, etc.  
+- **Hito 2:** Identidad Criptográfica y Firma de Estado (Prioridad P0) – DID generation, state‑payload signing, signature verification.  
+- **Hito 3:** Contratos y Desacoplamiento de Red (Prioridad P1) – consolidate Godot sync scripts, clean up `NetworkLayer.gd`/`IslandStateSync.gd`.  
+- **Hito 4:** Transporte IPFS PubSub WAN (Prioridad P2) – replace UDP broadcast with IPFS PubSub, add adapter, performance tests.
+
+Please let me know which one you’d like to begin with (or if you’d prefer a different ordering). Once I have your choice, I’ll start applying the corresponding code changes.
+
 # Especificación Arquitectónica y Plan de Desarrollo - DevAntigravityIA
 
 **Fecha de análisis:** 2026-06-28  
