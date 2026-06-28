@@ -30,9 +30,10 @@ signal intro_completed
 # ─── Fases ─────────────────────────────────────────────────────────────────────
 enum Phase {
 	IDLE,
-	ISLAND_RISING_AND_ORBIT,
-	AVATAR_APPEAR_AND_TURN,
-	CAMERA_ZOOM_AND_SETTLE,
+	ISLAND_RISING,
+	CAMERA_APPROACH,
+	CAMERA_ORBIT,
+	CAMERA_SETTLE,
 	DONE
 }
 
@@ -49,8 +50,6 @@ enum Phase {
 @export var orbit_duration      : float = 3.8
 ## Duración del asentamiento final (enfrente → espalda), segundos
 @export var settle_duration     : float = 1.5
-## Duración total del ascenso de la isla en segundos (copiado de IslandRiseAnimation.gd)
-const rise_duration    : float =  4.2
 ## FOV durante la órbita (más tele = más dramático)
 @export var cinematic_fov       : float = 55.0
 
@@ -87,10 +86,6 @@ func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> voi
 
 	_normal_fov = _cam.fov
 
-	# Calcular el ángulo inicial de la cámara alrededor de la isla
-	var cam_to_island_vec = _cam.global_position - _island.global_position
-	_orbit_start_angle = atan2(cam_to_island_vec.x, cam_to_island_vec.z)
-
 	# ── Congelar avatar durante el ascenso de la isla ──────────────────────────
 	# CRÍTICO: sin esto la gravedad hunde al CharacterBody3D bajo la isla.
 	if is_instance_valid(_avatar):
@@ -110,7 +105,7 @@ func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> voi
 	_cam_ctrl.set_process_input(false)
 
 	# ── Fase 1: lanzar animación de ascenso de la isla ─────────────────────────
-	_phase = Phase.ISLAND_RISING_AND_ORBIT
+	_phase = Phase.ISLAND_RISING
 	var target_y : float = _island.global_position.y
 
 	var rise_anim : Node = load("res://woldvirtual/gdscrip/IslandRiseAnimation.gd").new()
@@ -119,11 +114,8 @@ func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> voi
 	# Conectar la señal ANTES de llamar play() para no perderla
 	rise_anim.finished.connect(_on_island_arrived)
 	rise_anim.play(target_y)
-	
-	# Iniciar el proceso para la órbita de la cámara
-	set_process(true)
 
-	print("[CinematicIntro] Fase 1: isla ascendiendo y cámara orbitando...")
+	print("[CinematicIntro] Fase 1: isla ascendiendo desde el lecho marino...")
 
 ## Salta la cinemática y entrega el control al CameraController inmediatamente.
 func skip() -> void:
@@ -137,7 +129,7 @@ func skip() -> void:
 
 # ─── Callbacks de fases ────────────────────────────────────────────────────────
 func _on_island_arrived() -> void:
-	print("[CinematicIntro] Fase 2: isla en superficie — avatar aparece y gira.")
+	print("[CinematicIntro] Fase 2: isla en superficie — avatar aparece encima.")
 
 	if !is_instance_valid(_avatar):
 		_finish()
@@ -158,27 +150,12 @@ func _on_island_arrived() -> void:
 	_avatar.set_physics_process(true)
 	_avatar.set_process_input(true)
 	_avatar.visible = true
-	
-	# El avatar gira suavemente para mostrar su espalda a la cámara
-	var initial_avatar_rot_y = _avatar.global_rotation.y
-	var target_avatar_rot_y = initial_avatar_rot_y + PI
-
-	var tween = get_tree().create_tween()
-	tween.tween_property(_avatar, "global_rotation:y", target_avatar_rot_y, approach_duration)
-	tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tween.finished.connect(_on_avatar_turn_finished)
 
 	# Iniciar fase de aproximación de cámara
-	# _orbit_start_angle se calcula en base a la rotación FINAL del avatar
-	_orbit_start_angle = target_avatar_rot_y + PI   # enfrente del avatar (después de girar)
-	_phase   = Phase.AVATAR_APPEAR_AND_TURN
+	_orbit_start_angle = _avatar.global_rotation.y + PI   # enfrente del avatar
+	_phase   = Phase.CAMERA_APPROACH
 	_elapsed = 0.0
 	set_process(true)
-
-func _on_avatar_turn_finished() -> void:
-	print("[CinematicIntro] Fase 3: cámara se acerca y asienta.")
-	_phase   = Phase.CAMERA_ZOOM_AND_SETTLE
-	_elapsed = 0.0
 
 # ─── Loop de fases de cámara ───────────────────────────────────────────────────
 func _ready() -> void:
@@ -195,50 +172,59 @@ func _process(delta: float) -> void:
 
 	match _phase:
 
-		# ── FASE 1: Isla ascendiendo y cámara orbitando ──────────────────────────
-		Phase.ISLAND_RISING_AND_ORBIT:
-			var t     : float = clamp(_elapsed / rise_duration, 0.0, 1.0)
+		# ── FASE 2: Espalda → Enfrente ──────────────────────────────────────────
+		Phase.CAMERA_APPROACH:
+			var t       : float = clamp(_elapsed / approach_duration, 0.0, 1.0)
+			var et      : float = _smoothstep(t)
+			var back    : float = _avatar.global_rotation.y
+			var front   : float = _avatar.global_rotation.y + PI
+			var angle   : float = lerp_angle(back, front, et)
+			_place_cam(angle, avatar_pos, look_target)
+
+			if t >= 1.0:
+				print("[CinematicIntro] Fase 3: órbita 360°.")
+				_orbit_start_angle = _avatar.global_rotation.y + PI
+				_phase   = Phase.CAMERA_ORBIT
+				_elapsed = 0.0
+
+		# ── FASE 3: Órbita 360° ─────────────────────────────────────────────────
+		Phase.CAMERA_ORBIT:
+			var t     : float = clamp(_elapsed / orbit_duration, 0.0, 1.0)
 			var et    : float = _ease_in_out_quad(t)
 			var angle : float = _orbit_start_angle - (et * TAU)   # TAU = 2π
 			_place_cam(angle, avatar_pos, look_target)
+			# FOV cinemático
 			_cam.fov = lerp(_cam.fov, cinematic_fov, delta * 2.5)
-			# La transición de fase se maneja en _on_island_arrived()
-
-		# ── FASE 2: Avatar aparece y gira para mostrar la espalda ────────────────
-		Phase.AVATAR_APPEAR_AND_TURN:
-			# La rotación del avatar se maneja con un Tween en _on_island_arrived()
-			# Aquí solo actualizamos la cámara para seguir al avatar
-			var back  : float = _avatar.global_rotation.y
-			_place_cam(back, avatar_pos, look_target)
-
-			# La transición de fase se maneja cuando el tween del avatar termina
-			# (o si el tiempo de approach_duration ha pasado, como fallback)
-			# if _elapsed >= approach_duration:
-			# 	print("[CinematicIntro] Fase 3: cámara se acerca y asienta.")
-			# 	_phase   = Phase.CAMERA_ZOOM_AND_SETTLE
-			# 	_elapsed = 0.0
-
-		# ── FASE 3: Cámara se acerca y asienta en TPV ───────────────────────────
-		Phase.CAMERA_ZOOM_AND_SETTLE:
-			var t     : float = clamp(_elapsed / settle_duration, 0.0, 1.0)
-			var et    : float = _smoothstep(t)
-			var back  : float = _avatar.global_rotation.y
-			_place_cam(back, avatar_pos, look_target, et) # et controla la distancia
-			_cam.fov = lerp(_cam.fov, _normal_fov, delta * 2.5)
 
 			if t >= 1.0:
-				print("[CinematicIntro] Fase 4: cinemática completada, control al jugador.")
+				print("[CinematicIntro] Fase 4: asentamiento en espalda TPV.")
+				_phase   = Phase.CAMERA_SETTLE
+				_elapsed = 0.0
+
+		# ── FASE 4: Enfrente → Espalda (TPV normal) ─────────────────────────────
+		Phase.CAMERA_SETTLE:
+			var t     : float = clamp(_elapsed / settle_duration, 0.0, 1.0)
+			var et    : float = _ease_out_cubic(t)
+			var front : float = _orbit_start_angle
+			var back  : float = _avatar.global_rotation.y
+			var angle : float = lerp_angle(front, back, et)
+			_place_cam(angle, avatar_pos, look_target)
+			# Restaurar FOV normal
+			_cam.fov = lerpf(_cam.fov, _normal_fov, et)
+
+			if t >= 1.0:
 				_sync_cam_ctrl()
 				_finish()
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 ## Coloca la cámara en posición orbital y la apunta al avatar
-func _place_cam(angle: float, avatar_pos: Vector3, look_target: Vector3, progress: float = 1.0) -> void:
-	var current_distance = lerp(cinematic_distance * 2.0, cinematic_distance, progress) # Zoom in from further away
-	var cam_x = avatar_pos.x + current_distance * sin(angle)
-	var cam_z = avatar_pos.z + current_distance * cos(angle)
-	_cam.global_position = Vector3(cam_x, avatar_pos.y + cinematic_height, cam_z)
-	_cam.look_at(look_target)
+func _place_cam(angle: float, origin: Vector3, look_at_pos: Vector3) -> void:
+	_cam.global_position = origin + Vector3(
+		sin(angle) * cinematic_distance,
+		cinematic_height,
+		cos(angle) * cinematic_distance
+	)
+	_cam.look_at(look_at_pos)
 
 ## Sincroniza los ángulos internos del CameraController para evitar salto
 func _sync_cam_ctrl() -> void:
@@ -257,29 +243,15 @@ func _find_camera(ctrl: Node) -> Camera3D:
 	return null
 
 func _finish() -> void:
-	if _phase == Phase.DONE: return
-
-	# Asegurarse de que el avatar esté visible y con físicas/input activados
-	if is_instance_valid(_avatar):
-		_avatar.visible = true
-		_avatar.set_physics_process(true)
-		_avatar.set_process_input(true)
-		if _avatar is CharacterBody3D:
-			(_avatar as CharacterBody3D).velocity = Vector3.ZERO
-
-	# Reactivar CameraController
+	_phase = Phase.DONE
+	set_process(false)
+	if is_instance_valid(_cam):
+		_cam.fov = _normal_fov
 	if is_instance_valid(_cam_ctrl):
 		_cam_ctrl.set_physics_process(true)
 		_cam_ctrl.set_process_input(true)
-		# Sincronizar ángulos para evitar saltos de cámara
-		if _cam_ctrl.has_method("sync_angles_to_camera"):
-			_cam_ctrl.sync_angles_to_camera(_cam)
-
-	_cam.fov = _normal_fov # Restaurar FOV normal
-
-	_phase = Phase.DONE
 	intro_completed.emit()
-	queue_free()
+	print("[CinematicIntro] Secuencia completada. Control devuelto al jugador.")
 
 # ─── Curvas de easing ──────────────────────────────────────────────────────────
 static func _smoothstep(t: float) -> float:
