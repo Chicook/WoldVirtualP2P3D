@@ -215,6 +215,23 @@ namespace VisorSingularity
                 // Ignorar paquetes propios
                 if (string.IsNullOrEmpty(remoteId) || remoteId == _localId) return;
 
+                // Sanitización estricta de remoteId para prevenir Path Traversal y caracteres maliciosos
+                if (remoteId.Contains("..") || remoteId.Contains("/") || remoteId.Contains("\\"))
+                {
+                    Debug.WriteLine($"[PeerSync] Intento de Path Traversal detectado en peer ID: '{remoteId}'");
+                    return;
+                }
+
+                // Verificar que solo contiene caracteres permitidos (alfanuméricos, '-', '_', ':', '.')
+                foreach (char c in remoteId)
+                {
+                    if (!char.IsLetterOrDigit(c) && c != '-' && c != '_' && c != ':' && c != '.')
+                    {
+                        Debug.WriteLine($"[PeerSync] Caracter no seguro '{c}' detectado en peer ID: '{remoteId}'");
+                        return;
+                    }
+                }
+
                 // Escribir el peer en el directorio compartido
                 var targetPath = Path.Combine(_peersDir, $"peer_{remoteId}.json");
                 var tmpPath = targetPath + ".tmp";
