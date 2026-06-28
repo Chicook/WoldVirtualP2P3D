@@ -17,6 +17,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Controls.Ribbon;
 using System.Windows.Data;
 using System.Windows.Documents;
+using System.Windows.Forms.Integration;
 using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Markup;
@@ -45,7 +46,7 @@ namespace VisorSingularity {
         /// InitializeComponent
         /// </summary>
         [System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "10.0.8.0")]
+        [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "10.0.9.0")]
         public void InitializeComponent() {
             if (_contentLoaded) {
                 return;
@@ -57,7 +58,7 @@ namespace VisorSingularity {
             
             #line default
             #line hidden
-            System.Uri resourceLocater = new System.Uri("/VisorSingularity;component/app.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/VisorSingularity;V0.1.0.0;component/app.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\App.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
@@ -71,7 +72,7 @@ namespace VisorSingularity {
         /// </summary>
         [System.STAThreadAttribute()]
         [System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "10.0.8.0")]
+        [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "10.0.9.0")]
         public static void Main() {
             VisorSingularity.App app = new VisorSingularity.App();
             app.InitializeComponent();

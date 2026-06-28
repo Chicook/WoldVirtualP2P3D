@@ -242,7 +242,21 @@ namespace VisorSingularity
                 await response.Content.CopyToAsync(fs, token);
             }
 
-            LogStatus("📦 Extrayendo Kubo...");
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            using (var stream = File.OpenRead(zipPath))
+            {
+                byte[] hashBytes = sha256.ComputeHash(stream);
+                string hashHex = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
+                
+                // Hash de kubo_v0.28.0_windows-amd64.zip
+                if (hashHex != "F1583471AA5441A7C6FD8032ACFA2FD1F6D0AC414E12BFF6161AA25967CCA550")
+                {
+                    File.Delete(zipPath);
+                    throw new Exception("Hash SHA-256 inválido para kubo.zip (MitM detectado o binario corrupto).");
+                }
+            }
+
+            LogStatus("📦 Extrayendo Kubo (SHA-256 verificado)...");
             ZipFile.ExtractToDirectory(zipPath, extractRoot, overwriteFiles: true);
             File.Delete(zipPath);
         }
@@ -254,7 +268,7 @@ namespace VisorSingularity
                 // Configurar direccionamiento básico
                 await RunCliAsync("config Addresses.API /ip4/127.0.0.1/tcp/5001", token);
                 await RunCliAsync("config Addresses.Gateway /ip4/127.0.0.1/tcp/8080", token);
-                await RunCliAsync("config --json API.HTTPHeaders.Access-Control-Allow-Origin \"[\\\"*\\\"]\"", token);
+                await RunCliAsync("config --json API.HTTPHeaders.Access-Control-Allow-Origin \"[\\\"http://127.0.0.1:8080\\\", \\\"http://localhost:8080\\\", \\\"http://127.0.0.1:8082\\\", \\\"http://localhost:8082\\\"]\"", token);
                 await RunCliAsync("config --json Swarm.ConnMgr.HighWater 300", token);
 
                 // Aplicar el perfil de servidor (modo DHT Server activo) para que otros nodos nos descubran
@@ -272,6 +286,11 @@ namespace VisorSingularity
                 // Modo DHT agresivo: anunciar activamente que tenemos los bloques de datos
                 // Esto acelera que las pasarelas públicas encuentren el contenido en el DHT
                 await RunCliAsync("config --json Routing.Type \"\\\"dhtserver\\\"\"", token);
+
+                // ── PubSub: Habilitar GossipSub para sincronización WAN de avatares ──
+                // Requerido para que la API /api/v0/pubsub/* funcione.
+                await RunCliAsync("config --json Pubsub.Enabled true", token);
+                await RunCliAsync("config --json Pubsub.Router \"\\\"gossipsub\\\"\"", token);
             }
             catch (Exception ex)
             {
@@ -284,7 +303,7 @@ namespace VisorSingularity
             var psi = new ProcessStartInfo
             {
                 FileName               = IpfsExePath,
-                Arguments              = "daemon --migrate=true --enable-gc",
+                Arguments              = "daemon --migrate=true --enable-gc --enable-pubsub-experiment",
                 UseShellExecute        = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError  = false,
@@ -293,6 +312,48 @@ namespace VisorSingularity
             psi.EnvironmentVariables["IPFS_PATH"] = RepoPath;
 
             _daemon = Process.Start(psi);
+        }
+
+        // ─── Health-Check y Auto-Reinicio ─────────────────────────────────────
+
+        /// <summary>
+        /// Comprueba si la API del daemon IPFS responde correctamente.
+        /// Útil para health-checks periódicos desde MainWindow.
+        /// </summary>
+        public async Task<bool> IsApiHealthyAsync(CancellationToken token = default)
+        {
+            try
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                var resp = await http.PostAsync(ApiUrl + "/api/v0/id", null, token);
+                return resp.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Reinicia el daemon IPFS si se ha caído. Devuelve true si el daemon
+        /// está activo tras la operación (ya estaba o se reinició correctamente).
+        /// </summary>
+        public async Task<bool> EnsureDaemonAliveAsync(CancellationToken token = default)
+        {
+            if (IsDaemonRunning && await IsApiHealthyAsync(token))
+                return true;
+
+            LogStatus("⚠️ Daemon IPFS caído. Reiniciando automáticamente...");
+            Debug.WriteLine("[IpfsManager] Daemon no responde, reiniciando...");
+
+            StopDaemon();
+            CleanStaleLocks();
+            StartDaemon();
+
+            bool ready = await WaitForApiAsync(maxAttempts: 20, token);
+            if (ready)
+                LogStatus("✅ Daemon IPFS reiniciado correctamente.");
+            else
+                LogStatus("⚠️ Reinicio de daemon IPFS fallido.");
+
+            return ready;
         }
 
         private async Task<bool> WaitForApiAsync(int maxAttempts, CancellationToken token)

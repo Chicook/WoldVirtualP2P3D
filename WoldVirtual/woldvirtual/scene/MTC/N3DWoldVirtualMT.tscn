@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dtertvx225v7s"]
 
 [ext_resource type="Script" uid="uid://dhdfxcp41d760" path="res://woldvirtual/gdscrip/PerformanceManager.gd" id="1_gji8q"]
-[ext_resource type="Script" uid="uid://rwt235x5a563" path="res://woldvirtual/gdscrip/IslandStateSync.gd" id="2_n5mwy"]
+
 [ext_resource type="Script" uid="uid://c6tis784j3jvp" path="res://woldvirtual/gdscrip/EnvironmentManager.gd" id="3_vqtay"]
 [ext_resource type="Script" uid="uid://bkf56gkqihh28" path="res://woldvirtual/gdscrip/ChunkManager.gd" id="4_iyycb"]
 [ext_resource type="PackedScene" uid="uid://cke6ysj8j866s" path="res://woldvirtual/scene/islachunk3D.tscn" id="5_ll5l3"]
@@ -75,9 +75,6 @@ shadow_enabled = true
 
 [node name="PerformanceManager" type="Node" parent="." unique_id=893491695]
 script = ExtResource("1_gji8q")
-
-[node name="IslandStateSync" type="Node" parent="." unique_id=1980898897]
-script = ExtResource("2_n5mwy")
 
 [node name="EnvironmentManager" type="Node" parent="." unique_id=313361532]
 script = ExtResource("3_vqtay")

@@ -7,21 +7,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>x64</Platforms>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <PublishTrimmed>false</PublishTrimmed> <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <IncludeNativeLibrariesForSelfContained>true</IncludeNativeLibrariesForSelfContained>
   </PropertyGroup>
 
   <PropertyGroup>
     <AnalysisLevel>latest</AnalysisLevel>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <ReportAnalyzerDiagnostics>true</ReportAnalyzerDiagnostics>
-    <NoWarn>$(NoWarn);NU1701;CA1416</NoWarn> </PropertyGroup>
+    <NoWarn>$(NoWarn);NU1701;CA1416</NoWarn>
+  </PropertyGroup>
 
   <PropertyGroup>
     <Version>0.1.0</Version>
@@ -40,139 +33,49 @@
     </DefaultItemExcludes>
   </PropertyGroup>
 
+  <!-- Motor 3D -->
   <ItemGroup>
     <PackageReference Include="HelixToolkit.Wpf.SharpDX" Version="2.28.0" />
+    <PackageReference Include="SharpDX" Version="4.2.0" />
     <PackageReference Include="SharpGLTF.Runtime" Version="1.0.0-alpha0031" />
   </ItemGroup>
 
+  <!-- Multimedia -->
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.3.0" />
-    <PackageReference Include="OpenCvSharp4.Windows" Version="4.13.0.*" /> <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
+    <PackageReference Include="OpenCvSharp4.Windows" Version="4.13.0.20260602" />
+    <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
   </ItemGroup>
 
+  <!-- Red P2P -->
   <ItemGroup>
     <PackageReference Include="Websocket.Client" Version="5.1.1" />
     <PackageReference Include="MessagePack" Version="3.1.4" />
-    <PackageReference Include="LiteDB" Version="5.0.21" /> </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="BepuPhysics" Version="2.5.0" />
+    <PackageReference Include="LiteDB" Version="5.0.21" />
   </ItemGroup>
 
+  <!-- Sistema -->
   <ItemGroup>
     <PackageReference Include="System.Management" Version="8.0.0" />
-    <PackageReference Include="System.Drawing.Common" Version="8.0.0" /> </ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
+  </ItemGroup>
 
+  <!-- Física -->
+  <ItemGroup>
+    <PackageReference Include="BepuPhysics" Version="2.5.0-beta.29" />
+  </ItemGroup>
+
+  <!-- Proyecto servidor -->
   <ItemGroup>
     <ProjectReference Include="..\ServidorVirtualCS\ServidorVirtualCS.csproj" />
   </ItemGroup>
 
+  <!-- Recursos web -->
   <ItemGroup>
     <None Update="www\**\*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Shaders\**\*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Worlds\**\*" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-</Project>
-    <FileVersion>0.1.0.0</FileVersion>
-
-  </PropertyGroup>
-
-  <!-- Motor 3D -->
-
-  <ItemGroup>
-
-    <PackageReference Include="HelixToolkit.Wpf.SharpDX"
-                      Version="2.28.0" />
-
-    <PackageReference Include="SharpDX"
-                      Version="4.2.0" />
-
-    <PackageReference Include="SharpGLTF.Runtime"
-                      Version="1.0.0-alpha0031" />
-
-  </ItemGroup>
-
-  <!-- Multimedia -->
-
-  <ItemGroup>
-
-    <PackageReference Include="NAudio"
-                      Version="2.3.0" />
-
-    <PackageReference Include="OpenCvSharp4.Windows"
-                      Version="4.13.0.20260602" />
-
-    <PackageReference Include="AForge.Video.DirectShow"
-                      Version="2.2.5" />
-
-  </ItemGroup>
-
-  <!-- Red P2P -->
-
-  <ItemGroup>
-
-    <PackageReference Include="Websocket.Client"
-                      Version="5.1.1" />
-
-    <PackageReference Include="MessagePack"
-                      Version="3.1.4" />
-
-    <PackageReference Include="LiteDB"
-                      Version="5.0.21" />
-
-  </ItemGroup>
-
-  <!-- Sistema -->
-
-  <ItemGroup>
-
-    <PackageReference Include="System.Management"
-                      Version="8.0.0" />
-
-    <PackageReference Include="System.Drawing.Common"
-                      Version="10.0.8" />
-
-  </ItemGroup>
-
-  <!-- Física -->
-
-  <ItemGroup>
-
-    <PackageReference Include="BepuPhysics"
-                      Version="2.5.0" />
-
-  </ItemGroup>
-
-  <!-- Proyecto servidor -->
-
-  <ItemGroup>
-
-    <ProjectReference Include="..\ServidorVirtualCS\ServidorVirtualCS.csproj" />
-
-  </ItemGroup>
-
-  <!-- Recursos web -->
-
-  <ItemGroup>
-
-    <None Update="www\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Shaders\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Assets\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Worlds\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
   </ItemGroup>
 
 </Project>

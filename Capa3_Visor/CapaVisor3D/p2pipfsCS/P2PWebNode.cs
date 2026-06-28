@@ -58,6 +58,9 @@ namespace VisorSingularity
         private int                      _internalPort;
         private TcpListener?             _proxyListener;   // Proxy TCP local para reescribir Host header
 
+        /// <summary>Instancia del gestor IPFS (Kubo). Disponible tras el arranque del nodo.</summary>
+        public IpfsManager? IpfsManagerInstance => _ipfsManager;
+
         public event Action<string>? OnStatusChanged;
 
         // ── Constructor ───────────────────────────────────────────────────────
@@ -214,21 +217,30 @@ namespace VisorSingularity
             string sshExe = @"C:\Windows\System32\OpenSSH\ssh.exe";
             if (!File.Exists(sshExe)) sshExe = "ssh";
 
+            string knownHostsPath = Path.Combine(Path.GetTempPath(), "wcv_known_hosts");
+            try
+            {
+                File.WriteAllText(knownHostsPath, 
+                    "serveo.net ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDxYGqSKVwJpQD1F0YIhz+bd5lpl7YesKjtrn1QD1RjQcSj724lJdCwlv4J8PcLuFFtlAA8AbGQju7qWdMN9ihdHvRcWf0tSjZ+bzwYkxaCydq4JnCrbvLJPwLFaqV1NdcOzY2NVLuX5CfY8VTHrps49LnO0QpGaavqrbk+wTWDD9MHklNfJ1zSFpQAkSQnSNSYi/M2J3hX7P0G2R7dsUvNov+UgNKpc4n9+Lq5Vmcqjqo2KhFyHP0NseDLpgjaqGJq2Kvit3QowhqZkK4K77AA65CxZjdDfpjwZSuX075F9vNi0IFpFkGJW9KlrXzI4lIzSAjPZBURhUb8nZSiPuzj\n" +
+                    "localhost.run ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC3lJnhW1oCXuAYV9IBdcJA+Vx7AHL5S/ZQvV2fhceOAPgO2kNQZla6xvUwoE4iw8lYu3zoE1KtieCU9yInWOVI6W/wFaT/ETH1tn55T2FVsK/zaxPiHZVJGLPPdEEid0vS2p1JDfc9onZ0pNSHLl1QusIOeMUyZ2bUMMLLgw46KOT9S3s/LmxgoJ3PocVUn5rVXz/Dng7Y8jYNe4IFrZOAUsi7hNBa+OYja6ceefpDvNDEJ1BdhbYfGolBdNA7f+FNl0kfaWru4Cblr843wBe2ckO/sNqgeAMXO/qH+SSgQxUXF2AgAw+TGp3yCIyYoOPvOgvcPsQziJLmDbUuQpnH\n");
+            }
+            catch { }
+
             var candidates = new[]
             {
                 new {
                     Name = "serveo.net",
-                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Args = $"-o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"{knownHostsPath}\" -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
                     Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "serveo.net:443",
-                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Args = $"-p 443 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"{knownHostsPath}\" -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
                     Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "localhost.run",
-                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} nokey@localhost.run",
+                    Args = $"-o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"{knownHostsPath}\" -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} nokey@localhost.run",
                     Pat  = @"https://[\w\-]+\.lhr\\.rocks"
                 }
             };
@@ -304,10 +316,27 @@ namespace VisorSingularity
                 using var resp = await dl.GetAsync(cfUrl, HttpCompletionOption.ResponseHeadersRead, token);
                 if (resp.IsSuccessStatusCode)
                 {
-                    await using var fs = File.Create(localCf);
-                    await resp.Content.CopyToAsync(fs, token);
-                    LogStatus("✅ cloudflared descargado correctamente.");
-                    Debug.WriteLine($"[Cloudflared] Descargado en: {localCf}");
+                    await using (var fs = File.Create(localCf))
+                    {
+                        await resp.Content.CopyToAsync(fs, token);
+                    }
+                    
+                    using (var sha256 = System.Security.Cryptography.SHA256.Create())
+                    using (var stream = File.OpenRead(localCf))
+                    {
+                        byte[] hashBytes = sha256.ComputeHash(stream);
+                        string hashHex = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
+                        
+                        // Hash de cloudflared-windows-amd64.exe (Versión estática / Aprobada)
+                        if (hashHex != "5253E66F1F493C4E13539749F1AA86FD0C61E3072900FEC29A44BA046A6D97E2")
+                        {
+                            File.Delete(localCf);
+                            throw new Exception("Hash SHA-256 inválido para cloudflared.exe (MitM detectado o versión no aprobada).");
+                        }
+                    }
+
+                    LogStatus("✅ cloudflared descargado y verificado (SHA-256 correcto).");
+                    System.Diagnostics.Debug.WriteLine($"[Cloudflared] Descargado en: {localCf}");
                     return localCf;
                 }
                 LogStatus($"⚠️ Descarga de cloudflared falló: HTTP {(int)resp.StatusCode}");

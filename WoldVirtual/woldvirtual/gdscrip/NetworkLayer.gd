@@ -40,6 +40,9 @@ func _setup_identity():
 			break
 	if local_id == "":
 		local_id = str(Time.get_ticks_usec() + OS.get_process_id()).md5_text().substr(0, 8)
+	else:
+		# Sanitizar local_id para evitar Path Traversal o caracteres maliciosos
+		local_id = local_id.replace("..", "").replace("/", "").replace("\\", "")
 
 func _initial_sync():
 	for i in 5:
