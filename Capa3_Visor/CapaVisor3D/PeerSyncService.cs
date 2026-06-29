@@ -7,6 +7,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using System.Text.Json.Nodes;
 
 namespace VisorSingularity
 {
@@ -163,6 +166,27 @@ namespace VisorSingularity
                 // Validación mínima: debe ser un objeto JSON
                 if (!json.TrimStart().StartsWith("{")) return;
 
+                // Cargar identidad local y firmar el estado
+                var node = JsonNode.Parse(json);
+                if (node != null)
+                {
+                    node.AsObject().Remove("sig");
+                    node.AsObject().Remove("pubkey");
+
+                    string cleanJson = node.ToJsonString();
+                    byte[] cleanBytes = Encoding.UTF8.GetBytes(cleanJson);
+
+                    using var identity = VisorSingularity.Identity.NodeIdentity.LoadOrCreate();
+                    byte[] signatureBytes = identity.Sign(cleanBytes);
+                    string signatureHex = BitConverter.ToString(signatureBytes).Replace("-", "").ToLower();
+                    string pubKeyHex = BitConverter.ToString(identity.PublicKey).Replace("-", "").ToLower();
+
+                    node.AsObject()["sig"] = signatureHex;
+                    node.AsObject()["pubkey"] = pubKeyHex;
+
+                    json = node.ToJsonString();
+                }
+
                 var bytes = Encoding.UTF8.GetBytes(json);
                 if (bytes.Length > MAX_PACKET_BYTES)
                 {
@@ -172,7 +196,7 @@ namespace VisorSingularity
 
                 var endpoint = new IPEndPoint(IPAddress.Broadcast, UDP_PORT);
                 _sender.Send(bytes, bytes.Length, endpoint);
-                Debug.WriteLine($"[PeerSync] Broadcast enviado ({bytes.Length} bytes)");
+                Debug.WriteLine($"[PeerSync] Broadcast enviado con firma criptográfica ({bytes.Length} bytes)");
             }
             catch (Exception ex)
             {
@@ -212,8 +236,65 @@ namespace VisorSingularity
                     }
                 }
 
-                // Ignorar paquetes propios
+                // Ignorar paquetes propios o vacíos
                 if (string.IsNullOrEmpty(remoteId) || remoteId == _localId) return;
+
+                // Saneamiento de Directory Traversal
+                if (!Regex.IsMatch(remoteId, "^[a-fA-F0-9]{64}$") && !Regex.IsMatch(remoteId, "^[a-zA-Z0-9_\\-]+$"))
+                {
+                    Debug.WriteLine($"[PeerSync] Intento de inyección detectado o remoteId inválido '{remoteId}', omitiendo.");
+                    return;
+                }
+
+                // Validación de esquema y firma
+                if (root.TryGetProperty("sig", out var sigEl) && root.TryGetProperty("pubkey", out var pubKeyEl))
+                {
+                    string sigHex = sigEl.GetString() ?? "";
+                    string pubKeyHex = pubKeyEl.GetString() ?? "";
+
+                    if (!string.IsNullOrEmpty(sigHex) && !string.IsNullOrEmpty(pubKeyHex))
+                    {
+                        var node = JsonNode.Parse(json);
+                        if (node != null)
+                        {
+                            node.AsObject().Remove("sig");
+                            node.AsObject().Remove("pubkey");
+                            string cleanJson = node.ToJsonString();
+                            byte[] cleanBytes = Encoding.UTF8.GetBytes(cleanJson);
+
+                            byte[] signatureBytes = ConvertHexToBytes(sigHex);
+                            byte[] publicKeyBytes = ConvertHexToBytes(pubKeyHex);
+
+                            bool isSignatureValid = false;
+                            try
+                            {
+                                using var ecdsa = ECDsa.Create();
+                                ecdsa.ImportSubjectPublicKeyInfo(publicKeyBytes, out _);
+                                isSignatureValid = ecdsa.VerifyData(cleanBytes, signatureBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"[PeerSync] Error al verificar firma remota: {ex.Message}");
+                            }
+
+                            if (!isSignatureValid)
+                            {
+                                Debug.WriteLine($"[PeerSync] Firma criptográfica inválida para el peer '{remoteId}', descartando.");
+                                return;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[PeerSync] Peer '{remoteId}' contiene firma vacía, descartando.");
+                        return;
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"[PeerSync] Peer '{remoteId}' no firmado, descartando.");
+                    return;
+                }
 
                 // Escribir el peer en el directorio compartido
                 var targetPath = Path.Combine(_peersDir, $"peer_{remoteId}.json");
@@ -226,7 +307,7 @@ namespace VisorSingularity
                 if (File.Exists(targetPath)) File.Delete(targetPath);
                 File.Move(tmpPath, targetPath);
 
-                Debug.WriteLine($"[PeerSync] Peer remoto '{remoteId}' recibido desde {sourceIp} ({json.Length} chars)");
+                Debug.WriteLine($"[PeerSync] Peer remoto '{remoteId}' verificado y persistido desde {sourceIp} ({json.Length} chars)");
                 PeerReceived?.Invoke(remoteId, json);
             }
             catch (JsonException)
@@ -237,6 +318,16 @@ namespace VisorSingularity
             {
                 Debug.WriteLine($"[PeerSync] Error al procesar peer remoto: {ex.Message}");
             }
+        }
+
+        private static byte[] ConvertHexToBytes(string hex)
+        {
+            byte[] bytes = new byte[hex.Length / 2];
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+            }
+            return bytes;
         }
 
         // ── Limpiar peers remotos caducados ───────────────────────────────
