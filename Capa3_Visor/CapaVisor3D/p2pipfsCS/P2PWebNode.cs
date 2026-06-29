@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -688,7 +689,60 @@ namespace VisorSingularity
             return null;
         }
 
-        // ── Servidor HTTP local: landing + ZIP + IPFS gateway proxy ───────────
+        // ── Servidor HTTP local: landing + ZIP + IPFS gateway proxy + WebSockets ───────────
+        private static readonly List<System.Net.WebSockets.WebSocket> _wsClients = new();
+
+        public static void BroadcastToWs(string message)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(message);
+            var segment = new ArraySegment<byte>(bytes);
+            lock (_wsClients)
+            {
+                foreach (var ws in _wsClients.ToArray())
+                {
+                    if (ws.State == System.Net.WebSockets.WebSocketState.Open)
+                    {
+                        _ = ws.SendAsync(segment, System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                    }
+                }
+            }
+        }
+
+        private async Task HandleWebSocketSessionAsync(HttpListenerContext ctx)
+        {
+            try
+            {
+                HttpListenerWebSocketContext wsCtx = await ctx.AcceptWebSocketAsync(subProtocol: null);
+                var ws = wsCtx.WebSocket;
+                lock (_wsClients) { _wsClients.Add(ws); }
+                Debug.WriteLine("[WS] Cliente Godot conectado.");
+
+                byte[] buffer = new byte[65536];
+                while (ws.State == System.Net.WebSockets.WebSocketState.Open)
+                {
+                    var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    if (result.MessageType == System.Net.WebSockets.WebSocketMessageType.Close)
+                    {
+                        await ws.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+                        break;
+                    }
+                    else if (result.MessageType == System.Net.WebSockets.WebSocketMessageType.Text)
+                    {
+                        // TODO: Recibir posiciones de Godot si se envían por aquí
+                        // string msg = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    }
+                }
+
+                lock (_wsClients) { _wsClients.Remove(ws); }
+                ws.Dispose();
+                Debug.WriteLine("[WS] Cliente Godot desconectado.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[WS] Error en sesión WebSocket: {ex.Message}");
+            }
+        }
+
         private async Task ListenLoop(CancellationToken token)
         {
             while (!token.IsCancellationRequested && _listener.IsListening)
@@ -696,6 +750,13 @@ namespace VisorSingularity
                 try
                 {
                     var ctx     = await _listener.GetContextAsync();
+
+                    if (ctx.Request.IsWebSocketRequest)
+                    {
+                        _ = Task.Run(() => HandleWebSocketSessionAsync(ctx));
+                        continue;
+                    }
+
                     // ⚠ Preservar la ruta original (no .ToLower()) porque los CIDs son case-sensitive
                     string path = ctx.Request.Url?.AbsolutePath ?? "/";
                     string pLow = path.ToLowerInvariant();

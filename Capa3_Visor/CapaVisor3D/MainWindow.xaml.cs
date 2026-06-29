@@ -2303,6 +2303,10 @@ namespace VisorSingularity
                         Directory.CreateDirectory(peersDir);
 
                     _peerSync = new PeerSyncService(peersDir, username);
+                    _peerSync.PeerReceived += (remoteId, json) => 
+                    {
+                        P2PWebNode.BroadcastToWs(json);
+                    };
                     _peerSync.Start();
                     Debug.WriteLine($"[PeerSync] Servicio LAN iniciado para usuario '{username}' en '{peersDir}'");
                 }
