@@ -241,10 +241,44 @@ namespace VisorSingularity.Services
                 _peerSync.PeerReceived += (remoteId, json) => P2PWebNode.BroadcastToWs(json);
                 _peerSync.Start();
                 Debug.WriteLine($"[MetaverseSessionController] PeerSync LAN iniciado para '{username}'");
+
+                // Bootstrap de Internet: cargar nodos semilla desde IPNS y saludarlos.
+                _ = LoadAndGreetBootstrapPeersAsync(peersDir);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[MetaverseSessionController] Error al iniciar PeerSync: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Resuelve la lista de nodos semilla publicada en IPNS (con caché local)
+        /// y envía un HELLO de bootstrap a cada una para descubrir la malla P2P
+        /// más allá de la LAN. Es best-effort: cualquier fallo se ignora.
+        /// </summary>
+        private async Task LoadAndGreetBootstrapPeersAsync(string peersDir)
+        {
+            try
+            {
+                // La caché vive junto al estado global, un nivel sobre peers/.
+                string estadoGlobalDir = Path.GetFullPath(Path.Combine(peersDir, ".."));
+                string cachePath = Path.Combine(estadoGlobalDir, "bootstrap_peers.json");
+
+                var bootstrap = new BootstrapPeerService(cachePath);
+                var seeds = await bootstrap.GetSeedPeersAsync().ConfigureAwait(false);
+                if (seeds.Count > 0 && _peerSync != null)
+                {
+                    _peerSync.GreetSeedPeers(seeds);
+                    Debug.WriteLine($"[MetaverseSessionController] Bootstrap: {seeds.Count} semillas contactadas.");
+                }
+                else
+                {
+                    Debug.WriteLine("[MetaverseSessionController] Bootstrap: sin semillas disponibles (solo LAN).");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MetaverseSessionController] Error en bootstrap IPNS: {ex.Message}");
             }
         }
 

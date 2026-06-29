@@ -221,6 +221,41 @@ namespace VisorSingularity
             }
         }
 
+        // ── Bootstrap: saludar a nodos semilla por unicast (fuera de la LAN) ──
+        /// <summary>
+        /// Envía un HELLO dirigido a cada nodo semilla conocido (cargado desde la
+        /// lista IPNS de bootstrap). Esto permite descubrir la malla P2P más allá
+        /// del broadcast de la red local; cada semilla que responda iniciará el
+        /// flujo normal de handshake/catch-up.
+        /// </summary>
+        public void GreetSeedPeers(IEnumerable<Services.SeedPeer> seedPeers)
+        {
+            if (_disposed || _sender == null || seedPeers == null) return;
+
+            string hello = Services.CatchupProtocol.BuildHello(_localId, _localClock);
+            foreach (var seed in seedPeers)
+            {
+                if (seed == null || seed.NodeId == _localId) continue;
+                try
+                {
+                    if (!IPAddress.TryParse(seed.Host, out var addr))
+                    {
+                        // Resolver nombres DNS de forma defensiva.
+                        var resolved = Dns.GetHostAddresses(seed.Host);
+                        if (resolved.Length == 0) continue;
+                        addr = resolved[0];
+                    }
+                    var endpoint = new IPEndPoint(addr, seed.Port);
+                    SendUnicast(hello, endpoint);
+                    Debug.WriteLine($"[PeerSync] HELLO de bootstrap enviado a semilla {seed.Host}:{seed.Port}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[PeerSync] No se pudo contactar semilla {seed.Host}: {ex.Message}");
+                }
+            }
+        }
+
         // ── Difundir HELLO con el reloj vectorial (descubrimiento + catch-up) ──
         /// <summary>
         /// Anuncia por broadcast la identidad y el reloj vectorial del nodo. Los
