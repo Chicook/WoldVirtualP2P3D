@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -7,8 +8,12 @@ using System.Threading.Tasks;
 
 namespace VisorSingularity.Services
 {
-    public class GodotLauncherService
+    /// <summary>
+    /// Servicio para lanzar y gestionar el proceso de Godot
+    /// </summary>
+    public static class GodotLauncherService
     {
+        private static Process? _godotProcess;
         [DllImport("user32.dll")]
         private static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
         private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
@@ -24,6 +29,34 @@ namespace VisorSingularity.Services
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        private class WindowCandidate
+        {
+            public IntPtr Hwnd { get; }
+            public string ClassName { get; }
+            public string Title { get; }
+            public long Area { get; }
+
+            public WindowCandidate(IntPtr hwnd, string className, string title, long area)
+            {
+                Hwnd = hwnd;
+                ClassName = className;
+                Title = title;
+                Area = area;
+            }
+        }
 
         public static void DeleteGodotCurrentUserJson()
         {
@@ -64,6 +97,11 @@ namespace VisorSingularity.Services
             IntPtr wpfHwnd,
             Func<bool> isClosingPredicate)
         {
+            Debug.WriteLine($"[GodotLauncher] Iniciando Godot...");
+            Debug.WriteLine($"[GodotLauncher]  - Exe: {exePath}");
+            Debug.WriteLine($"[GodotLauncher]  - Args: {arguments}");
+            Debug.WriteLine($"[GodotLauncher]  - CWD: {projectDir}");
+
             var startInfo = new ProcessStartInfo
             {
                 FileName = exePath,
@@ -85,11 +123,21 @@ namespace VisorSingularity.Services
             {
                 if (!string.IsNullOrEmpty(ev.Data))
                 {
+                    Debug.WriteLine($"[GodotLauncher] stdout: {ev.Data}");
                     onOutputDataReceived(ev.Data);
                 }
             };
 
+            process.ErrorDataReceived += (s, ev) =>
+            {
+                if (!string.IsNullOrEmpty(ev.Data))
+                {
+                    Debug.WriteLine($"[GodotLauncher] stderr: {ev.Data}");
+                }
+            };
+
             process.Start();
+            Debug.WriteLine($"[GodotLauncher] PID: {process.Id}");
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
@@ -100,11 +148,12 @@ namespace VisorSingularity.Services
 
         private static IntPtr ScanForGodotWindow(int targetProcessId, int timeoutMs, IntPtr wpfHwnd, Func<bool> isClosingPredicate)
         {
-            IntPtr result = IntPtr.Zero;
             DateTime start = DateTime.Now;
 
-            while (result == IntPtr.Zero && (DateTime.Now - start).TotalMilliseconds < timeoutMs && !isClosingPredicate())
+            while ((DateTime.Now - start).TotalMilliseconds < timeoutMs && !isClosingPredicate())
             {
+                var candidates = new List<WindowCandidate>();
+
                 EnumWindows((hwnd, lParam) =>
                 {
                     if (hwnd == wpfHwnd) return true; // Ignorar la ventana principal de WPF
@@ -114,29 +163,66 @@ namespace VisorSingularity.Services
                     GetWindowThreadProcessId(hwnd, out uint processId);
                     if (processId != targetProcessId) return true; // No es el proceso de Godot, ignorar
 
-                    StringBuilder className = new StringBuilder(256);
-                    GetClassName(hwnd, className, className.Capacity);
-                    string cls = className.ToString();
+                    StringBuilder classNameSb = new StringBuilder(256);
+                    GetClassName(hwnd, classNameSb, classNameSb.Capacity);
+                    string cls = classNameSb.ToString();
 
-                    StringBuilder sb = new StringBuilder(256);
-                    GetWindowText(hwnd, sb, sb.Capacity);
-                    string title = sb.ToString();
+                    StringBuilder titleSb = new StringBuilder(256);
+                    GetWindowText(hwnd, titleSb, titleSb.Capacity);
+                    string title = titleSb.ToString();
 
-                    // Descartar ventanas de consola o selectores de depuración, buscando la ventana principal de renderizado (Engine)
-                    if (cls == "Engine" || (!title.Contains("Console") && !title.Contains("Select")))
-                    {
-                        result = hwnd;
-                        return false; 
-                    }
+                    GetWindowRect(hwnd, out RECT rect);
+                    long width = rect.Right - rect.Left;
+                    long height = rect.Bottom - rect.Top;
+                    long area = width * height;
+
+                    Debug.WriteLine($"[GodotLauncher] Ventana candidata encontrada: HWND={hwnd}, ClassName=\"{cls}\", Title=\"{title}\", Area={area}px ({width}x{height})");
+
+                    candidates.Add(new WindowCandidate(hwnd, cls, title, area));
 
                     return true;
                 }, IntPtr.Zero);
 
-                if (result != IntPtr.Zero) break;
+                if (candidates.Count > 0)
+                {
+                    // Priorizar: primero className esperado (Engine, Godot, SDL_app, GLFW), luego mayor área
+                    WindowCandidate best = null;
+                    foreach (var candidate in candidates)
+                    {
+                        bool isPreferredClass = candidate.ClassName is "Engine" or "Godot" || candidate.ClassName.StartsWith("SDL") || candidate.ClassName.StartsWith("GLFW");
+                        if (best == null)
+                        {
+                            best = candidate;
+                        }
+                        else if (isPreferredClass && !candidates.Contains(best))
+                        {
+                            best = candidate;
+                        }
+                        else if (isPreferredClass == (best.ClassName is "Engine" or "Godot" || best.ClassName.StartsWith("SDL") || best.ClassName.StartsWith("GLFW")))
+                        {
+                            if (candidate.Area > best.Area)
+                            {
+                                best = candidate;
+                            }
+                        }
+                        else if (isPreferredClass)
+                        {
+                            best = candidate;
+                        }
+                    }
+
+                    if (best != null)
+                    {
+                        Debug.WriteLine($"[GodotLauncher] Ventana elegida para embebido: HWND={best.Hwnd}, ClassName=\"{best.ClassName}\", Title=\"{best.Title}\", Area={best.Area}px");
+                        return best.Hwnd;
+                    }
+                }
+
                 System.Threading.Thread.Sleep(250);
             }
 
-            return result;
+            Debug.WriteLine($"[GodotLauncher] No se encontró ventana de Godot en el timeout de {timeoutMs}ms");
+            return IntPtr.Zero;
         }
     }
 }

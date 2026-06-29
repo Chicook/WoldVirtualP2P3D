@@ -91,15 +91,8 @@ namespace VisorSingularity.Identity
 
             byte[] publicKey = ecdsa.ExportSubjectPublicKeyInfo();
             
-            using var sha256 = SHA256.Create();
-            byte[] hash = sha256.ComputeHash(publicKey);
-            
-            var sb = new StringBuilder();
-            foreach (var b in hash)
-            {
-                sb.Append(b.ToString("x2"));
-            }
-            string nodeId = sb.ToString();
+            byte[] hash = SHA256.HashData(publicKey);
+            string nodeId = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
 
             return new NodeIdentity(ecdsa, nodeId, publicKey, curveName, appDataPath);
         }
@@ -116,7 +109,7 @@ namespace VisorSingularity.Identity
             }
 
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string publicKeyHex = Convert.ToHexString(PublicKey).ToLowerInvariant();
+            string publicKeyHex = Convert.ToHexString(PublicKey).ToUpperInvariant();
             string bindingMessage = HandshakeProtocol.BuildWalletBindingMessage(publicKeyHex, timestamp);
 
             if (!MetaMaskValidator.VerifySignature(walletAddress, bindingMessage, walletSignature, allowSimulated)
@@ -129,7 +122,7 @@ namespace VisorSingularity.Identity
                 }
             }
 
-            WalletAddress = walletAddress;
+            WalletAddress = walletAddress.ToUpperInvariant();
             _walletBindingSignature = walletSignature;
             SaveWalletBinding();
             return true;

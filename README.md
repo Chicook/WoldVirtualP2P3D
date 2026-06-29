@@ -76,6 +76,15 @@ Durante esta jornada se consolido la capa P2P del visor C# y su integracion con 
 | Metricas P2P thread-safe + reconexion tunel con backoff | `NetworkTelemetryService.cs`, `P2PWebNode.MonitorTunnelAsync` | Hecho |
 | Wallet de sesion pasada al arrancar `PeerSync` | `MainWindow.xaml.cs` → `MetaverseSessionController` | Hecho |
 
+### Embebido de Godot y UI del Visor
+
+| Pieza | Archivo | Estado |
+|-------|---------|--------|
+| Captura de stderr y logs detallados del proceso Godot | `GodotLauncherService.cs` | Hecho |
+| Selección determinista de HWND (filtro por clase "Engine" y área) | `GodotLauncherService.cs` | Hecho |
+| Resolución de pantalla negra (estabilización de layout previo al embebido) | `MainWindow.xaml.cs` | Hecho |
+| Posicionamiento correcto del overlay de la Webcam pegado al chat | `MainWindow.xaml.cs` | Pendiente |
+
 ### Calidad
 
 - Suite de tests automatizada: **39/39 en verde** (`Capa3_Visor/VisorSingularity.Tests/`)
@@ -84,7 +93,8 @@ Durante esta jornada se consolido la capa P2P del visor C# y su integracion con 
 
 ### Pendiente inmediato (siguiente iteracion)
 
-- Fase intermedia **Memory-Mapped Files** para posiciones de avatar volatiles (latencia &lt; 5 ms, seccion 2.4 del plan)
+- **Colocación correcta de la webcam:** Resolver la discrepancia de coordenadas entre el `HwndSource` (hijo de Godot) y la ventana WPF para que el recuadro de la cámara quede anclado visualmente a la barra del chat (`BorderBottomLoginBar`).
+- Fase intermedia **Memory-Mapped Files** para posiciones de avatar volatiles (latencia < 5 ms, seccion 2.4 del plan)
 - Interfaz formal `INodeIdentity` y verificacion Ethereum real con Nethereum
 - Tests de payloads firmados incorrectos sobre socket UDP real
 - Ampliar manejo Godot de eventos WS mas alla de `peer_expired`

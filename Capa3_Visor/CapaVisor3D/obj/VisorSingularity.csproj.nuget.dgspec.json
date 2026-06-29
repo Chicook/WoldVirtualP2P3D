@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj": {}
+    "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj": {}
   },
   "projects": {
-    "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj": {
+    "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj": {
       "version": "0.1.0",
       "restore": {
-        "projectUniqueName": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+        "projectUniqueName": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
         "projectName": "VisorSingularity",
-        "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+        "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
         "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-        "outputPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
+        "outputPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -42,7 +42,11 @@
         },
         "warningProperties": {
           "noWarn": [
-            "NU1701"
+            "NU1701",
+            "NU1901",
+            "NU1902",
+            "NU1903",
+            "NU1904"
           ],
           "warnAsError": [
             "NU1605"
@@ -70,7 +74,7 @@
             },
             "HelixToolkit.Wpf.SharpDX": {
               "target": "Package",
-              "version": "[2.28.0, )"
+              "version": "[3.1.1, )"
             },
             "LiteDB": {
               "target": "Package",
@@ -78,7 +82,7 @@
             },
             "MessagePack": {
               "target": "Package",
-              "version": "[3.1.4, )"
+              "version": "[3.1.6, )"
             },
             "NAudio": {
               "target": "Package",
@@ -179,6 +183,13 @@
           }
         },
         "warningProperties": {
+          "noWarn": [
+            "NU1701",
+            "NU1901",
+            "NU1902",
+            "NU1903",
+            "NU1904"
+          ],
           "warnAsError": [
             "NU1605"
           ]

@@ -249,11 +249,11 @@
           }
         }
       },
-      "MessagePack/3.1.4": {
+      "MessagePack/3.1.6": {
         "type": "package",
         "dependencies": {
-          "MessagePack.Annotations": "3.1.4",
-          "MessagePackAnalyzer": "3.1.4",
+          "MessagePack.Annotations": "3.1.6",
+          "MessagePackAnalyzer": "3.1.6",
           "Microsoft.NET.StringTools": "17.11.4"
         },
         "compile": {
@@ -267,7 +267,7 @@
           }
         }
       },
-      "MessagePack.Annotations/3.1.4": {
+      "MessagePack.Annotations/3.1.6": {
         "type": "package",
         "compile": {
           "lib/netstandard2.0/MessagePack.Annotations.dll": {
@@ -280,7 +280,7 @@
           }
         }
       },
-      "MessagePackAnalyzer/3.1.4": {
+      "MessagePackAnalyzer/3.1.6": {
         "type": "package",
         "build": {
           "build/MessagePackAnalyzer.targets": {}
@@ -2609,10 +2609,10 @@
         "litedb.nuspec"
       ]
     },
-    "MessagePack/3.1.4": {
-      "sha512": "BH0wlHWmVoZpbAPyyt2Awbq30C+ZsS3eHSkYdnyUAbqVJ22fAJDzn2xTieBeoT5QlcBzp61vHcv878YJGfi3mg==",
+    "MessagePack/3.1.6": {
+      "sha512": "c5M8C0Lrf6GdGiv01OCB86WEL5YDi7UdH5qsU+q7Q9WvqlhtE4kkJzzJpFufPbz+OULX8FGIB2qo/7CLQ6vizg==",
       "type": "package",
-      "path": "messagepack/3.1.4",
+      "path": "messagepack/3.1.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -2626,34 +2626,34 @@
         "lib/netstandard2.0/MessagePack.xml",
         "lib/netstandard2.1/MessagePack.dll",
         "lib/netstandard2.1/MessagePack.xml",
-        "messagepack.3.1.4.nupkg.sha512",
+        "messagepack.3.1.6.nupkg.sha512",
         "messagepack.nuspec"
       ]
     },
-    "MessagePack.Annotations/3.1.4": {
-      "sha512": "aVWrDAkCdqxwQsz/q0ldPh2EFn48M99YUzE9OvZjMq2RNLKz4o2z88iGFvSvbMqOWRweRvKPHBJZe22PRqzslQ==",
+    "MessagePack.Annotations/3.1.6": {
+      "sha512": "d0r/B7v1frvN6ElIgp5J5/cHeLADOK21qieHutimUpCWGcjhzOJV9glrItZO4E3dUcriMKX3Swsee3rFx9ouOw==",
       "type": "package",
-      "path": "messagepack.annotations/3.1.4",
+      "path": "messagepack.annotations/3.1.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "lib/netstandard2.0/MessagePack.Annotations.dll",
         "lib/netstandard2.0/MessagePack.Annotations.xml",
-        "messagepack.annotations.3.1.4.nupkg.sha512",
+        "messagepack.annotations.3.1.6.nupkg.sha512",
         "messagepack.annotations.nuspec"
       ]
     },
-    "MessagePackAnalyzer/3.1.4": {
-      "sha512": "CTaSsN/liJ7MhLCAB7Z4ZLBNuVGCq9lt2BT/cbrc9vzGv89yK3CqIA+z9T19a11eQYl9etZHL6MQJgCqECRVpg==",
+    "MessagePackAnalyzer/3.1.6": {
+      "sha512": "7Ewqh8D5dAnF4XWy0q76eYFdNLIpDvQqLQOTfrWAGA35ARUB65mrrIES+J5Kw2FVwZGTjudeWh2FB89TC4YMyg==",
       "type": "package",
-      "path": "messagepackanalyzer/3.1.4",
+      "path": "messagepackanalyzer/3.1.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "analyzers/roslyn4.3/cs/MessagePack.Analyzers.CodeFixes.dll",
         "analyzers/roslyn4.3/cs/MessagePack.SourceGenerator.dll",
         "build/MessagePackAnalyzer.targets",
-        "messagepackanalyzer.3.1.4.nupkg.sha512",
+        "messagepackanalyzer.3.1.6.nupkg.sha512",
         "messagepackanalyzer.nuspec"
       ]
     },
@@ -7477,9 +7477,9 @@
     "net8.0-windows": [
       "AForge.Video.DirectShow >= 2.2.5",
       "BepuPhysics >= 2.5.0-beta.29",
-      "HelixToolkit.Wpf.SharpDX >= 2.28.0",
+      "HelixToolkit.Wpf.SharpDX >= 3.1.1",
       "LiteDB >= 5.0.21",
-      "MessagePack >= 3.1.4",
+      "MessagePack >= 3.1.6",
       "NAudio >= 2.3.0",
       "OpenCvSharp4.Windows >= 4.13.0.20260602",
       "ServidorVirtualCS >= 1.0.0",
@@ -7496,11 +7496,11 @@
   "project": {
     "version": "0.1.0",
     "restore": {
-      "projectUniqueName": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+      "projectUniqueName": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
       "projectName": "VisorSingularity",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+      "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
       "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-      "outputPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
+      "outputPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -7531,7 +7531,11 @@
       },
       "warningProperties": {
         "noWarn": [
-          "NU1701"
+          "NU1701",
+          "NU1901",
+          "NU1902",
+          "NU1903",
+          "NU1904"
         ],
         "warnAsError": [
           "NU1605"
@@ -7559,7 +7563,7 @@
           },
           "HelixToolkit.Wpf.SharpDX": {
             "target": "Package",
-            "version": "[2.28.0, )"
+            "version": "[3.1.1, )"
           },
           "LiteDB": {
             "target": "Package",
@@ -7567,7 +7571,7 @@
           },
           "MessagePack": {
             "target": "Package",
-            "version": "[3.1.4, )"
+            "version": "[3.1.6, )"
           },
           "NAudio": {
             "target": "Package",
@@ -7634,137 +7638,5 @@
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
       }
     }
-  },
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "VisorSingularity depende de HelixToolkit.Wpf.SharpDX (>= 2.28.0), pero no se encontró HelixToolkit.Wpf.SharpDX 2.28.0. HelixToolkit.Wpf.SharpDX 3.1.1 se resolvió en su lugar.",
-      "libraryId": "HelixToolkit.Wpf.SharpDX",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2f33-pr97-265q",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2x83-8g95-xh59",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1903",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-382j-8mxh-c7x2",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cj9g-3mj2-g8vv",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cxmj-83gh-fp49",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1903",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-hv8m-jj95-wg3x",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-q2h6-ghwm-5qm8",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-qhmf-xw27-6rqr",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-v72x-2h86-7f8m",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1903",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-vh6j-jc39-fggf",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-w567-gjr2-hm5j",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-wfr3-xj75-pfwh",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    }
-  ]
+  }
 }

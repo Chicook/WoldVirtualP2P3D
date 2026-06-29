@@ -1,0 +1,64 @@
+  Determinando los proyectos que se van a restaurar...
+  Se ha restaurado D:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\ServidorVirtualCS.csproj (en 993 ms).
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1603: VisorSingularity depende de HelixToolkit.Wpf.SharpDX (>= 2.28.0), pero no se encontr├│ HelixToolkit.Wpf.SharpDX 2.28.0. HelixToolkit.Wpf.SharpDX 3.1.1 se resolvi├│ en su lugar.
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2f33-pr97-265q
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2x83-8g95-xh59
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-382j-8mxh-c7x2
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cj9g-3mj2-g8vv
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cxmj-83gh-fp49
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-hv8m-jj95-wg3x
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-q2h6-ghwm-5qm8
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-qhmf-xw27-6rqr
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-v72x-2h86-7f8m
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-vh6j-jc39-fggf
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-w567-gjr2-hm5j
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-wfr3-xj75-pfwh
+  Se ha restaurado d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj (en 1,58 s).
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1603: VisorSingularity depende de HelixToolkit.Wpf.SharpDX (>= 2.28.0), pero no se encontr├│ HelixToolkit.Wpf.SharpDX 2.28.0. HelixToolkit.Wpf.SharpDX 3.1.1 se resolvi├│ en su lugar.
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2f33-pr97-265q
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2x83-8g95-xh59
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-382j-8mxh-c7x2
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cj9g-3mj2-g8vv
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cxmj-83gh-fp49
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-hv8m-jj95-wg3x
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-q2h6-ghwm-5qm8
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-qhmf-xw27-6rqr
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-v72x-2h86-7f8m
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-vh6j-jc39-fggf
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-w567-gjr2-hm5j
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-wfr3-xj75-pfwh
+  ServidorVirtualCS -> d:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\bin\Debug\net8.0-windows\ServidorVirtualCS.dll
+  VisorSingularity -> d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\bin\Debug\net8.0-windows\VisorSingularity.dll
+
+Compilaci├│n correcta.
+
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1603: VisorSingularity depende de HelixToolkit.Wpf.SharpDX (>= 2.28.0), pero no se encontr├│ HelixToolkit.Wpf.SharpDX 2.28.0. HelixToolkit.Wpf.SharpDX 3.1.1 se resolvi├│ en su lugar.
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2f33-pr97-265q
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2x83-8g95-xh59
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-382j-8mxh-c7x2
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cj9g-3mj2-g8vv
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cxmj-83gh-fp49
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-hv8m-jj95-wg3x
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-q2h6-ghwm-5qm8
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-qhmf-xw27-6rqr
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-v72x-2h86-7f8m
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-vh6j-jc39-fggf
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-w567-gjr2-hm5j
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-wfr3-xj75-pfwh
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1603: VisorSingularity depende de HelixToolkit.Wpf.SharpDX (>= 2.28.0), pero no se encontr├│ HelixToolkit.Wpf.SharpDX 2.28.0. HelixToolkit.Wpf.SharpDX 3.1.1 se resolvi├│ en su lugar.
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2f33-pr97-265q
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2x83-8g95-xh59
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-382j-8mxh-c7x2
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cj9g-3mj2-g8vv
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cxmj-83gh-fp49
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-hv8m-jj95-wg3x
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-q2h6-ghwm-5qm8
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-qhmf-xw27-6rqr
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-v72x-2h86-7f8m
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1903: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-vh6j-jc39-fggf
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-w567-gjr2-hm5j
+d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\VisorSingularity.csproj : warning NU1902: El paquete "MessagePack" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-wfr3-xj75-pfwh
+    26 Advertencia(s)
+    0 Errores
+
+Tiempo transcurrido 00:00:05.51
