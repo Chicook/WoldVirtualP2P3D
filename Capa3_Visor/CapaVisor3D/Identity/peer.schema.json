@@ -8,7 +8,9 @@
     "u": { "type": "object" },
     "i": { "type": "object" },
     "sig": { "type": "string" },
-    "pubkey": { "type": "string" }
+    "pubkey": { "type": "string" },
+    "seq": { "type": "integer", "minimum": 0 },
+    "vc": { "type": "object" }
   },
   "required": ["v", "ts", "u", "i"]
 }

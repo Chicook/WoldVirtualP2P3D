@@ -98,6 +98,23 @@ namespace VisorSingularity.Tests
         }
 
         [Fact]
+        public void Test_BindWallet_PersistsAndReturnsBindingProof()
+        {
+            using var identity = NodeIdentity.LoadOrCreate();
+            string wallet = "0x9826a7C841E34b46c9A4B1b7c1264E3bF6b72aEc";
+            string signature = "0x_simulated_signature_binding";
+
+            bool bound = identity.BindWallet(wallet, signature);
+            Assert.True(bound);
+            Assert.Equal(wallet, identity.WalletAddress);
+
+            var proof = identity.GetBindingProof();
+            Assert.Equal(wallet, proof.WalletAddress);
+            Assert.False(string.IsNullOrEmpty(proof.NodePublicKeyHex));
+            Assert.False(string.IsNullOrEmpty(proof.SignatureHex));
+        }
+
+        [Fact]
         public void Test_NetworkTelemetry_CountsTrafficAndSecurityEvents()
         {
             var telemetry = NetworkTelemetryService.Instance;

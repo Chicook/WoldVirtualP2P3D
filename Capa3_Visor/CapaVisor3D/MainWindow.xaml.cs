@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -41,6 +41,8 @@ namespace VisorSingularity
         private bool _isClosing = false;
         private GodotHwndHost? _godotHost;
         private string _currentUsername = "Anonymous";
+        private string _currentWallet = "0x0000";
+        private string _currentWalletSignature = "0x_simulated_signature_local";
         private bool _metaverseUiActivated = false;
 
         // Ã¢â€â‚¬Ã¢â€â‚¬ Login de usuario existente (ZIP detectado) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -680,6 +682,10 @@ namespace VisorSingularity
             GridLoginScreen.Visibility = Visibility.Collapsed;
             GridMainViewer.Visibility  = Visibility.Visible;
             _currentUsername = user;
+            _currentWallet = wallet;
+            _currentWalletSignature = string.IsNullOrWhiteSpace(signature)
+                ? "0x_simulated_signature_local"
+                : signature;
             TxtChatActiveUser.Text = $"Usuario: {user}";
 
             // 3) Lanzar Godot apuntando DIRECTAMENTE a N3DWoldVirtualMT.tscn
@@ -1016,6 +1022,10 @@ namespace VisorSingularity
                     GridUserRegistration.Visibility = Visibility.Collapsed;
                     GridMainViewer.Visibility       = Visibility.Visible;
                     _currentUsername = confirm.User;
+                    _currentWallet = confirm.Wallet;
+                    _currentWalletSignature = string.IsNullOrWhiteSpace(confirm.Signature)
+                        ? "0x_simulated_signature_local"
+                        : confirm.Signature;
                     TxtChatActiveUser.Text = $"Usuario: {confirm.User}";
                     LaunchAndEmbedGodot(confirm.Wallet, confirm.User, confirm.Island,
                         scenePath: "res://EscenaPrincipal.tscn");
@@ -1899,7 +1909,7 @@ namespace VisorSingularity
                 var godotPaths = GodotProjectLocator.Resolve();
                 string peersDir = System.IO.Path.GetFullPath(
                     System.IO.Path.Combine(godotPaths.ProjectDir, "..", "Estado_Global", "peers"));
-                _session.StartPeerSync(peersDir, username);
+                _session.StartPeerSync(peersDir, username, _currentWallet, _currentWalletSignature);
             }
             catch (Exception ex)
             {

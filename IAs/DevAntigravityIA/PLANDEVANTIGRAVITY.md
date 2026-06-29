@@ -55,6 +55,12 @@ namespace WoldVirtual.Core.Identity
 }
 ```
 
+#### Estado de implementación (sección 2.1)
+*   [x] **`NodeIdentity`**: `NodeId` (hash SHA-256), `DID`, firma ECDSA, persistencia DPAPI en `node.key`.
+*   [x] **`WalletAddress` + `BindWallet`**: vinculación tras login MetaMask; persistencia cifrada en `node.wallet` (DPAPI).
+*   [x] **`GetBindingProof()`**: genera `WalletBindingProof` con timestamp actual y firma de sesión (simulada en dev, extensible a Nethereum).
+*   [ ] **`INodeIdentity` formal**: la interfaz del plan no está extraída aún; la clase concreta cubre el contrato.
+
 ---
 
 ### 2.2. Protocolo de Handshake P2P
@@ -95,7 +101,8 @@ sequenceDiagram
 #### Estado de implementación (sección 2.2)
 *   [x] **Handshake formal** (`Services/HandshakeProtocol.cs`): genera `HandshakeRequest`/`HandshakeResponse` con versión `1.0`, `sender_id`, `wallet_address`, timestamp, `node_signature`, `binding_proof` y capacidades.
 *   [x] **Validación local**: verifica versión de protocolo, NodeId seguro, ventana de reloj de 30 segundos, correspondencia `sender_id` ↔ hash SHA-256 de la clave pública, firma ECDSA del nodo y prueba de wallet (simulada en entorno local mediante `MetaMaskValidator`, extensible a recuperación Ethereum real).
-*   [x] **Tests** (`VisorSingularity.Tests/HandshakeTests.cs`): handshake válido, rechazo por `sender_id` manipulado, timestamp expirado, wallet simulada deshabilitada y mensaje de binding determinista. Suite total **35/35 en verde**.
+*   [x] **Integración UDP** (`PeerSyncService.cs`): el handshake se intercambia por unicast tras cada `HELLO` (LAN y bootstrap IPNS); el estado firmado solo se acepta de peers con handshake previo; respuesta mutua automática.
+*   [x] **Tests** (`VisorSingularity.Tests/HandshakeTests.cs`): handshake válido, rechazo por `sender_id` manipulado, timestamp expirado, wallet simulada deshabilitada y mensaje de binding determinista.
 
 ---
 
@@ -110,6 +117,13 @@ Para mitigar ataques de denegación de servicio (DoS), suplantación de identida
 4.  **Límites de Carga**:
     *   Tamaño máximo de payload de actualización: **64 KB**.
     *   Tasa máxima de actualizaciones permitidas: **5 actualizaciones por segundo por peer**.
+
+#### Estado de implementación (sección 2.3)
+*   [x] **Firma del estado** + anti-replay (`seq`) + Vector Clock integrados en `PeerSyncService` / `ConflictResolver`.
+*   [x] **Saneamiento de IDs** con regex estricta; inyección directory traversal descarta el paquete.
+*   [x] **Bloqueo temporal de IP** (`PeerRateLimiter.BlockIp`, 60 s) tras intento de inyección.
+*   [x] **Rate limiting** (`Services/PeerRateLimiter.cs`): máximo 5 actualizaciones/s por `peerId`; cubierto por `PeerRateLimiterTests`.
+*   [x] **Límite 64 KB**: `MAX_PACKET_BYTES = 65000` en envío y catch-up.
 
 ---
 
@@ -147,7 +161,7 @@ graph TD
     *   **Internet**: Lista de nodos semilla (Bootstrap Peers) alojada en la red IPFS (mediante un CID IPNS fijo) y cargada en el arranque del visor C#.
 2.  **Detección de Caídas**:
     *   Los nodos envían un heartbeat cada 3 segundos.
-    *   Si no se recibe actividad de un peer durante 35 segundos (`PEER_STALE_SECONDS`), se marca como inactivo.
+    *   Si no se recibe actividad de un peer durante 35 segundos, se marca como inactivo.
     *   Si se superan los 60 segundos, se purga de la memoria RAM y se notifica al motor Godot para retirar su avatar de la escena 3D.
 3.  **Recuperación tras Desconexiones (Split-Brain / Network Partition)**:
     *   Al reconectarse, los nodos comparan sus Vector Clocks.
@@ -161,6 +175,8 @@ graph TD
 *   [x] **Tests** (`VisorSingularity.Tests/ConsensusTests.cs`): causalidad, concurrencia, merge, round-trip JSON, anti-replay, autoría, resolución LWW y protocolo de catch-up. Suite total **23/23 en verde**.
 *   [x] **Catch-up State Sync** (`Services/CatchupProtocol.cs` + handlers en `PeerSyncService.cs`): los nodos difunden `HELLO` con su reloj vectorial en cada heartbeat; al detectar un peer causalmente más avanzado o concurrente (`ShouldRequestCatchup`) el nodo atrasado envía `SYNC_REQ` (unicast) y recibe `SYNC_RESP` con el estado completo firmado, reconciliado por la misma ruta de validación/resolución. Los mensajes de control viajan por el mismo socket UDP, distinguidos por el campo `_t` para no interferir con los broadcasts de estado.
 *   [x] **Bootstrap por IPNS** (`Services/BootstrapPeerService.cs`): al arrancar `PeerSync`, el visor resuelve la lista de nodos semilla publicada bajo un nombre IPNS fijo a través de varios gateways IPFS públicos (sin depender de un Kubo local), valida cada entrada (NodeId, host sin inyección de rutas, puerto válido) y cachea la última lista buena en `Estado_Global/bootstrap_peers.json` para bootstrap offline. `PeerSyncService.GreetSeedPeers` envía un `HELLO` unicast a cada semilla, permitiendo descubrir la malla más allá de la LAN. Cubierto por `BootstrapTests` (7 casos).
+*   [x] **Purga 60 s + aviso Godot**: `PeerSyncService` purga peers tras `PEER_PURGE_SECONDS` (60 s); `PeerExpired` emite `{"type":"peer_expired","peer_id":"..."}` vía WebSocket local (`MetaverseSessionController` → `P2PWebNode.BroadcastToWs`). Inactividad a los 35 s registrada en `_inactiveSince`.
+*   Suite de tests total: **39/39 en verde** (`IdentityTests`, `ConsensusTests`, `BootstrapTests`, `HandshakeTests`, `PeerRateLimiterTests`).
 
 ---
 
@@ -206,6 +222,9 @@ Fijamos el siguiente roadmap estructurado en fases para mantener un flujo de tra
     *   [x] Integrar la validación criptográfica en `PeerSyncService.cs` antes de persistir los archivos JSON de los peers en disco (verificación de firma ECDSA sobre el payload sin `sig`/`pubkey`).
     *   [x] Implementar el saneamiento estricto contra inyección de directorios (Directory Traversal) en los identificadores de peers (`peerId`) con regex `^[a-fA-F0-9]{64}$ | ^[a-zA-Z0-9_\-]+$`.
     *   [x] Desarrollar pruebas automatizadas de inyección (reglas de Directory Traversal cubiertas en `IdentityTests`). Pendiente: ampliar con casos de payloads firmados incorrectamente sobre el socket real.
+    *   [x] **Rate limiting y bloqueo IP** (`PeerRateLimiter.cs` + integración en `PeerSyncService`).
+    *   [x] **Handshake cableado en UDP** antes de aceptar estado de peers.
+    *   [x] **Vinculación wallet** (`NodeIdentity.BindWallet` / `GetBindingProof`) al iniciar `PeerSync` con credenciales de sesión MetaMask.
 
 ### Fase 3: Transición de Estado y Sincronización en Memoria
 *   **Prioridad**: Media-Alta.

@@ -21,9 +21,75 @@ El objetivo definitivo de **WoldVirtualP2P3D** es demostrar que las leyes de los
 
 README de plan de desarrollo y coordinacion de ramas.
 
-Fecha de auditoria: 2026-05-23
+Fecha de auditoria: 2026-05-23  
+Ultima actualizacion tecnica: **2026-06-29** (rama `DevCursorIA` / plan `DevAntigravityIA`)
 
-## Estado auditado del repositorio
+## Avances del ciclo (2026-06-29)
+
+Durante esta jornada se consolido la capa P2P del visor C# y su integracion con Godot, pasando de un prototipo de sincronizacion JSON local a una arquitectura de estado firmada, con handshake, limites de confianza y bootstrap hacia Internet.
+
+### Identidad y wallet (`NodeIdentity`)
+
+| Pieza | Archivo | Estado |
+|-------|---------|--------|
+| DID `did:wv:node:<hash>` sin doble prefijo | `Capa3_Visor/CapaVisor3D/Identity/NodeIdentity.cs` | Hecho |
+| Clave privada DPAPI (`node.key`) | mismo | Hecho |
+| Vinculacion MetaMask (`BindWallet`, `GetBindingProof`) | mismo + `node.wallet` cifrado | Hecho |
+| Validacion firma simulada / extensible Nethereum | `Identity/MetaMaskValidator.cs` | Hecho |
+
+### Handshake y modelo de confianza P2P
+
+| Pieza | Archivo | Estado |
+|-------|---------|--------|
+| Protocolo handshake v1.0 (request/response, binding proof) | `Services/HandshakeProtocol.cs` | Hecho |
+| Integracion UDP: handshake tras cada `HELLO` (LAN + semillas) | `PeerSyncService.cs` | Hecho |
+| Estado solo de peers con handshake previo | `PeerSyncService.cs` | Hecho |
+| Rate limit 5 actualizaciones/s por peer | `Services/PeerRateLimiter.cs` | Hecho |
+| Bloqueo temporal de IP (60 s) tras directory traversal | `PeerSyncService.cs` | Hecho |
+| Firma ECDSA + anti-replay `seq` + Vector Clock | `PeerSyncService.cs`, `ConflictResolver.cs` | Hecho |
+| Esquema peer ampliado (`seq`, `vc`, `sig`, `pubkey`) | `Identity/peer.schema.json` | Hecho |
+
+### Consenso, bootstrap y recuperacion
+
+| Pieza | Archivo | Estado |
+|-------|---------|--------|
+| Vector Clock y resolucion LWW / autoría de isla | `Services/VectorClock.cs`, `ConflictResolver.cs` | Hecho |
+| Catch-up post-particion (`HELLO`, `SYNC_REQ`, `SYNC_RESP`) | `Services/CatchupProtocol.cs` | Hecho |
+| Bootstrap semillas IPNS + cache local | `Services/BootstrapPeerService.cs` | Hecho |
+| Purga peer a 60 s + evento `peer_expired` por WebSocket | `PeerSyncService.cs`, `NetworkLayer.gd` | Hecho |
+
+### Transporte local C# ↔ Godot
+
+| Pieza | Archivo | Estado |
+|-------|---------|--------|
+| Servidor WebSocket local (`P2PWebNode`, puerto dinamico) | `p2pipfsCS/P2PWebNode.cs` | Hecho |
+| Publicacion puerto en `Estado_Global/ws_port.txt` | `MetaverseSessionController.cs` | Hecho |
+| Cliente WS con reconexion automatica cada 3 s | `WoldVirtual/woldvirtual/gdscrip/NetworkLayer.gd` | Hecho |
+| Retiro de avatar remoto al recibir `peer_expired` | `NetworkLayer.gd` | Hecho |
+
+### Servicios WPF y telemetria
+
+| Pieza | Archivo | Estado |
+|-------|---------|--------|
+| Orquestacion de sesion extraida de `MainWindow` | `Services/MetaverseSessionController.cs` | Hecho |
+| UDP chat, lanzador Godot, huella hardware | `UdpChatService.cs`, `GodotLauncherService.cs`, `HardwareFingerprintService.cs` | Hecho |
+| Metricas P2P thread-safe + reconexion tunel con backoff | `NetworkTelemetryService.cs`, `P2PWebNode.MonitorTunnelAsync` | Hecho |
+| Wallet de sesion pasada al arrancar `PeerSync` | `MainWindow.xaml.cs` → `MetaverseSessionController` | Hecho |
+
+### Calidad
+
+- Suite de tests automatizada: **39/39 en verde** (`Capa3_Visor/VisorSingularity.Tests/`)
+  - `IdentityTests`, `ConsensusTests`, `BootstrapTests`, `HandshakeTests`, `PeerRateLimiterTests`
+- Plan detallado alineado: `IAs/DevAntigravityIA/PLANDEVANTIGRAVITY.md`
+
+### Pendiente inmediato (siguiente iteracion)
+
+- Fase intermedia **Memory-Mapped Files** para posiciones de avatar volatiles (latencia &lt; 5 ms, seccion 2.4 del plan)
+- Interfaz formal `INodeIdentity` y verificacion Ethereum real con Nethereum
+- Tests de payloads firmados incorrectos sobre socket UDP real
+- Ampliar manejo Godot de eventos WS mas alla de `peer_expired`
+
+---
 
 Situacion observada directamente en `d:\WCVcoinMTB`:
 
@@ -73,6 +139,8 @@ Impacto:
 
 El visor concentra UI, login, bridge HTTP, embebido Godot, listeners UDP, arranque P2P y parte del control de sesion.
 
+**Progreso 2026-06-29:** extraccion parcial a `MetaverseSessionController`, `UdpChatService`, `GodotLauncherService` y `HardwareFingerprintService`. La UI principal sigue siendo grande; queda deuda de ViewModels.
+
 Impacto:
 
 - baja mantenibilidad
@@ -82,6 +150,8 @@ Impacto:
 ### DT-04. Sync legacy y sync actual coexistiendo
 
 Conviven piezas como `NetworkLayer.gd`, `IslandStateSync.gd` y logica C# de estado sin un contrato unico y estable.
+
+**Progreso 2026-06-29:** `NetworkLayer.gd` consume estado por WebSocket local con fallback a disco; `PeerSyncService` firma y valida estado P2P; catch-up y handshake unifican el transporte UDP. `IslandStateSync.gd` sigue como legacy.
 
 Impacto:
 
@@ -93,6 +163,8 @@ Impacto:
 
 Existe distribucion por ZIP, HTTP local, tuneles e integracion con IPFS, pero no existe todavia una capa P2P completa del metaverso para estado, presencia y consistencia entre nodos.
 
+**Progreso 2026-06-29:** capa P2P LAN operativa en UDP 50099 con handshake, firmas, vector clock, catch-up, bootstrap IPNS, rate limiting y puente WS a Godot. Falta memory-mapped sync y mesh completa fuera de LAN/semillas.
+
 Impacto:
 
 - el reparto del visor existe
@@ -101,6 +173,8 @@ Impacto:
 ### DT-06. Ausencia de pipeline de calidad
 
 No hay solucion `.sln`, no hay CI visible, no hay suite de tests automatizada y no hay control fuerte sobre formato/encoding.
+
+**Progreso 2026-06-29:** suite `VisorSingularity.Tests` con 39 tests unitarios en verde (identidad, consenso, bootstrap, handshake, rate limit). CI y `.sln` siguen pendientes.
 
 Impacto:
 
@@ -200,19 +274,18 @@ Rol:
 
 Entregables:
 
-1. definir contrato unico de identidad del nodo
-2. especificar handshake entre visor, nodo y capa de estado
-3. definir modelo de confianza y validacion entre peers
-4. bajar a diseno la evolucion desde JSON local a sincronizacion distribuida
-5. fijar criterios de consistencia, bootstrap y recuperacion
+1. ~~definir contrato unico de identidad del nodo~~ **Hecho** (`NodeIdentity`, wallet binding, tests)
+2. ~~especificar handshake entre visor, nodo y capa de estado~~ **Hecho** (`HandshakeProtocol` + integracion UDP)
+3. ~~definir modelo de confianza y validacion entre peers~~ **Hecho** (firmas, `seq`, rate limit, bloqueo IP)
+4. bajar a diseno la evolucion desde JSON local a sincronizacion distribuida — **en curso** (WS hecho; memory-mapped pendiente)
+5. ~~fijar criterios de consistencia, bootstrap y recuperacion~~ **Hecho** (vector clock, catch-up, IPNS, purga 60 s)
 
 Pendientes concretos:
 
-- contrato de identidad de nodo y persistencia
-- contrato de handshake P2P
-- modelo de consistencia del estado global
-- estrategia de aislamiento entre UI, transporte y sincronizacion
-- criterios de seguridad para `P2PWebNode.cs` e IPFS auxiliar
+- interfaz formal `INodeIdentity`
+- verificacion Ethereum real (Nethereum)
+- fase intermedia memory-mapped files (seccion 2.4)
+- tests de ataque sobre socket UDP real
 
 Dependencias:
 
@@ -317,11 +390,11 @@ Objetivo:
 
 El ciclo se considera bien encaminado cuando se cumpla todo esto:
 
-- README alineado en todas las ramas activas
-- repo saneado de artefactos generados y runtime innecesario
-- contratos tecnicos base cerrados
-- transporte desacoplado del visor principal
-- `main` listo para recibir integraciones pequenas sin merge cruzado entre ramas de trabajo
+- README alineado en todas las ramas activas — **en curso** (actualizado 2026-06-29)
+- repo saneado de artefactos generados y runtime innecesario — pendiente
+- contratos tecnicos base cerrados — **mayormente hecho** (falta memory-mapped y Nethereum)
+- transporte desacoplado del visor principal — **parcial** (`MetaverseSessionController`, servicios extraidos)
+- `main` listo para recibir integraciones pequenas sin merge cruzado entre ramas de trabajo — pendiente
 
 ## Estado de sincronizacion de este README
 

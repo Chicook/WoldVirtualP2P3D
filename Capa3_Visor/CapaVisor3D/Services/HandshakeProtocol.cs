@@ -50,6 +50,14 @@ namespace VisorSingularity.Services
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
 
+        public static bool LooksLikeHandshake(JsonElement root)
+        {
+            return root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("protocol_version", out _)
+                && root.TryGetProperty("sender_id", out _)
+                && root.TryGetProperty("node_signature", out _);
+        }
+
         public static string BuildRequest(
             NodeIdentity identity,
             string walletAddress,

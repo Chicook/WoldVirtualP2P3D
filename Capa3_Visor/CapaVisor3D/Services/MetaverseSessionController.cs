@@ -231,14 +231,19 @@ namespace VisorSingularity.Services
 
         // ── Sincronizacion LAN ────────────────────────────────────────────────
 
-        public void StartPeerSync(string peersDir, string username)
+        public void StartPeerSync(string peersDir, string username, string? walletAddress = null, string? walletSignature = null)
         {
             if (_peerSync != null) return;
             try
             {
                 if (!Directory.Exists(peersDir)) Directory.CreateDirectory(peersDir);
-                _peerSync = new PeerSyncService(peersDir, username);
+                _peerSync = new PeerSyncService(peersDir, username, walletAddress, walletSignature);
                 _peerSync.PeerReceived += (remoteId, json) => P2PWebNode.BroadcastToWs(json);
+                _peerSync.PeerExpired += (remoteId) =>
+                {
+                    string payload = $"{{\"type\":\"peer_expired\",\"peer_id\":\"{remoteId}\"}}";
+                    P2PWebNode.BroadcastToWs(payload);
+                };
                 _peerSync.Start();
                 Debug.WriteLine($"[MetaverseSessionController] PeerSync LAN iniciado para '{username}'");
 

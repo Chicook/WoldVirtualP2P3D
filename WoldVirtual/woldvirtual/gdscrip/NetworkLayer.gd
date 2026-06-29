@@ -92,6 +92,16 @@ func _process(delta: float) -> void:
 			var text = packet.get_string_from_utf8()
 			var p = JSON.parse_string(text)
 			if typeof(p) == TYPE_DICTIONARY:
+				if p.get("type", "") == "peer_expired":
+					var expired_id = str(p.get("peer_id", ""))
+					if expired_id != "" and expired_id != local_id:
+						_known_pids.erase(expired_id)
+						_peer_cache.erase(expired_id)
+						_peer_last_seen.erase(expired_id)
+						_missing_counts.erase(expired_id)
+						_emit_aggregated_state()
+					continue
+
 				var rem_id = ""
 				if p.has("u") and typeof(p.u) == TYPE_DICTIONARY and p.u.size() > 0:
 					rem_id = p.u.keys()[0]

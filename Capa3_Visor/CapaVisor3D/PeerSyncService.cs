@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -24,7 +26,8 @@ namespace VisorSingularity
         // ── Configuración ──────────────────────────────────────────────────
         private const int UDP_PORT = 50099;
         private const int BROADCAST_INTERVAL_MS = 3000;   // re-broadcast cada 3 s
-        private const double PEER_STALE_SECONDS = 35.0;   // tiempo sin ver un peer => borrar
+        private const double PEER_INACTIVE_SECONDS = 35.0; // sin actividad => inactivo
+        private const double PEER_PURGE_SECONDS = 60.0;      // purga RAM + aviso a Godot
         private const int MAX_PACKET_BYTES = 65000;        // límite seguro UDP
 
         // ── Estado ─────────────────────────────────────────────────────────
@@ -48,15 +51,41 @@ namespace VisorSingularity
         // Numero de secuencia monotonico de los estados emitidos por este nodo.
         private long _localSeq = 0;
 
+        private readonly Services.PeerRateLimiter _rateLimiter = new();
+        private readonly ConcurrentDictionary<string, byte> _trustedPeers = new();
+        private readonly ConcurrentDictionary<string, string> _helloFromByIp = new();
+        private readonly ConcurrentDictionary<string, double> _inactiveSince = new();
+        private readonly string? _walletAddress;
+        private readonly string? _walletSignature;
+
         public event Action<string, string>? PeerReceived;  // (remoteId, json)
         public event Action<string>? PeerExpired;           // (expiredId)
 
         // ── Constructor ───────────────────────────────────────────────────
-        public PeerSyncService(string peersDir, string localId)
+        public PeerSyncService(
+            string peersDir,
+            string localId,
+            string? walletAddress = null,
+            string? walletSignature = null)
         {
             _peersDir = peersDir;
             _localId = localId;
             _localPeerPath = Path.Combine(peersDir, $"peer_{localId}.json");
+            _walletAddress = walletAddress;
+            _walletSignature = walletSignature ?? "0x_simulated_signature_local";
+
+            if (!string.IsNullOrWhiteSpace(walletAddress))
+            {
+                try
+                {
+                    using var identity = VisorSingularity.Identity.NodeIdentity.LoadOrCreate();
+                    identity.BindWallet(walletAddress, _walletSignature);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[PeerSync] No se pudo vincular wallet al nodo: {ex.Message}");
+                }
+            }
 
             if (!Directory.Exists(_peersDir))
                 Directory.CreateDirectory(_peersDir);
@@ -247,6 +276,7 @@ namespace VisorSingularity
                     }
                     var endpoint = new IPEndPoint(addr, seed.Port);
                     SendUnicast(hello, endpoint);
+                    SendHandshakeUnicast(endpoint);
                     Debug.WriteLine($"[PeerSync] HELLO de bootstrap enviado a semilla {seed.Host}:{seed.Port}");
                 }
                 catch (Exception ex)
@@ -318,7 +348,20 @@ namespace VisorSingularity
                 if (!Regex.IsMatch(remoteId, "^[a-fA-F0-9]{64}$") && !Regex.IsMatch(remoteId, "^[a-zA-Z0-9_\\-]+$"))
                 {
                     Services.NetworkTelemetryService.Instance.RecordInjectionAttempt();
-                    Debug.WriteLine($"[PeerSync] Intento de inyección detectado o remoteId inválido '{remoteId}', omitiendo.");
+                    _rateLimiter.BlockIp(sourceIp);
+                    Debug.WriteLine($"[PeerSync] Intento de inyección detectado o remoteId inválido '{remoteId}', IP bloqueada temporalmente.");
+                    return;
+                }
+
+                if (!_trustedPeers.ContainsKey(remoteId))
+                {
+                    Debug.WriteLine($"[PeerSync] Peer '{remoteId}' sin handshake previo, descartando estado.");
+                    return;
+                }
+
+                if (!_rateLimiter.TryAllowPeerUpdate(remoteId))
+                {
+                    Debug.WriteLine($"[PeerSync] Rate limit excedido para '{remoteId}', descartando.");
                     return;
                 }
 
@@ -426,25 +469,37 @@ namespace VisorSingularity
         {
             if (string.IsNullOrWhiteSpace(json)) return;
 
-            string? messageType = null;
+            string sourceIp = remoteEndpoint.Address.ToString();
+            if (_rateLimiter.IsIpBlocked(sourceIp))
+            {
+                return;
+            }
+
             try
             {
                 using var doc = JsonDocument.Parse(json);
-                messageType = Services.CatchupProtocol.GetMessageType(doc.RootElement);
+                var root = doc.RootElement;
+
+                string? messageType = Services.CatchupProtocol.GetMessageType(root);
                 if (messageType != null)
                 {
-                    HandleControlMessage(messageType, doc.RootElement, remoteEndpoint);
+                    HandleControlMessage(messageType, root, remoteEndpoint);
+                    return;
+                }
+
+                if (Services.HandshakeProtocol.LooksLikeHandshake(root))
+                {
+                    HandleHandshake(json, remoteEndpoint);
                     return;
                 }
             }
             catch (JsonException)
             {
-                Debug.WriteLine($"[PeerSync] JSON inválido recibido desde {remoteEndpoint.Address}, ignorado.");
+                Debug.WriteLine($"[PeerSync] JSON inválido recibido desde {sourceIp}, ignorado.");
                 return;
             }
 
-            // Estado normal: ruta de validación + resolución de conflictos.
-            ProcessReceivedPeer(json, remoteEndpoint.Address.ToString());
+            ProcessReceivedPeer(json, sourceIp);
         }
 
         // ── Handlers del protocolo de catch-up ────────────────────────────────
@@ -476,12 +531,58 @@ namespace VisorSingularity
             string from = Services.CatchupProtocol.GetString(root, "from");
             if (string.IsNullOrEmpty(from) || from == _localId) return;
 
+            _helloFromByIp[remoteEndpoint.Address.ToString()] = from;
+            SendHandshakeUnicast(remoteEndpoint);
+
             var peerClock = Services.CatchupProtocol.ExtractClock(root);
             if (Services.CatchupProtocol.ShouldRequestCatchup(_localClock, peerClock))
             {
                 string req = Services.CatchupProtocol.BuildSyncRequest(_localId, from, _localClock);
                 SendUnicast(req, remoteEndpoint);
                 Debug.WriteLine($"[PeerSync] Catch-up solicitado a '{from}' (peer más avanzado).");
+            }
+        }
+
+        private void HandleHandshake(string json, IPEndPoint remoteEndpoint)
+        {
+            var result = Services.HandshakeProtocol.Validate(json);
+            if (!result.IsValid || result.Envelope == null)
+            {
+                Debug.WriteLine($"[PeerSync] Handshake rechazado desde {remoteEndpoint.Address}: {result.Reason}");
+                return;
+            }
+
+            string peerId = result.Envelope.SenderId;
+            _trustedPeers[peerId] = 1;
+
+            string sourceIp = remoteEndpoint.Address.ToString();
+            if (_helloFromByIp.TryGetValue(sourceIp, out string? username) && !string.IsNullOrEmpty(username))
+            {
+                _trustedPeers[username] = 1;
+            }
+
+            Services.NetworkTelemetryService.Instance.RecordReconnection();
+            Debug.WriteLine($"[PeerSync] Handshake OK con '{peerId}' desde {remoteEndpoint.Address}");
+
+            SendHandshakeUnicast(remoteEndpoint);
+        }
+
+        private void SendHandshakeUnicast(IPEndPoint remoteEndpoint)
+        {
+            if (string.IsNullOrWhiteSpace(_walletAddress)) return;
+
+            try
+            {
+                using var identity = VisorSingularity.Identity.NodeIdentity.LoadOrCreate();
+                string envelope = Services.HandshakeProtocol.BuildResponse(
+                    identity,
+                    _walletAddress,
+                    _walletSignature ?? "0x_simulated_signature_local");
+                SendUnicast(envelope, remoteEndpoint);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PeerSync] Error enviando handshake: {ex.Message}");
             }
         }
 
@@ -719,12 +820,20 @@ namespace VisorSingularity
                             }
                         }
 
-                        if (peerT > 0 && now - peerT > PEER_STALE_SECONDS)
+                        if (peerT > 0 && now - peerT > PEER_INACTIVE_SECONDS)
+                        {
+                            _inactiveSince.TryAdd(peerId, now);
+                        }
+
+                        if (peerT > 0 && now - peerT > PEER_PURGE_SECONDS)
                         {
                             File.Delete(file);
                             _conflictResolver.ForgetPeer(peerId);
+                            _rateLimiter.ForgetPeer(peerId);
+                            _trustedPeers.TryRemove(peerId, out _);
+                            _inactiveSince.TryRemove(peerId, out _);
                             Services.NetworkTelemetryService.Instance.RecordPeerExpired(peerId);
-                            Debug.WriteLine($"[PeerSync] Peer caducado eliminado: {peerId}");
+                            Debug.WriteLine($"[PeerSync] Peer purgado tras {PEER_PURGE_SECONDS}s sin actividad: {peerId}");
                             PeerExpired?.Invoke(peerId);
                         }
                     }
