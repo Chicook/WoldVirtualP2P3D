@@ -7496,11 +7496,11 @@
   "project": {
     "version": "0.1.0",
     "restore": {
-      "projectUniqueName": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+      "projectUniqueName": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
       "projectName": "VisorSingularity",
-      "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
       "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-      "outputPath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
+      "outputPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -7523,8 +7523,8 @@
           "framework": "net8.0-windows7.0",
           "targetAlias": "net8.0-windows",
           "projectReferences": {
-            "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
-              "projectPath": "d:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj"
+            "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
+              "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj"
             }
           }
         }
