@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -27,6 +27,7 @@ namespace VisorSingularity.Services
         private HttpListener? _httpListener;
         private P2PWebNode?   _p2pNode;
         private PeerSyncService? _peerSync;
+        private string? _wsPortFilePath;
         private bool _disposed;
         private volatile bool _isClosing;
 
@@ -180,11 +181,36 @@ namespace VisorSingularity.Services
                 _p2pNode = new P2PWebNode(username, repoPath);
                 _p2pNode.OnStatusChanged += (status) => P2PStatusChanged?.Invoke(status);
                 _p2pNode.Start();
-                Debug.WriteLine($"[MetaverseSessionController] P2PWebNode iniciado para '{username}'");
+
+                // Publicar el puerto WebSocket real para que Godot lo descubra.
+                // El puerto puede diferir de 8082 si TcpPortFinder eligió otro libre.
+                PublishWebSocketPort(repoPath, _p2pNode.Port);
+
+                Debug.WriteLine($"[MetaverseSessionController] P2PWebNode iniciado para '{username}' (WS port {_p2pNode.Port})");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[MetaverseSessionController] Error al iniciar P2PWebNode: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Escribe el puerto real del servidor WebSocket local en
+        /// <c>Estado_Global/ws_port.txt</c> para que el cliente Godot lo lea y
+        /// se conecte al puerto correcto aunque 8082 estuviera ocupado.
+        /// </summary>
+        private void PublishWebSocketPort(string repoPath, int port)
+        {
+            try
+            {
+                string estadoGlobalDir = Path.Combine(repoPath, "Estado_Global");
+                Directory.CreateDirectory(estadoGlobalDir);
+                _wsPortFilePath = Path.Combine(estadoGlobalDir, "ws_port.txt");
+                File.WriteAllText(_wsPortFilePath, port.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MetaverseSessionController] No se pudo publicar el puerto WS: {ex.Message}");
             }
         }
 
@@ -213,6 +239,14 @@ namespace VisorSingularity.Services
             StopHttpBridge();
             _peerSync?.Stop();
             _peerSync = null;
+
+            // Eliminar el archivo de descubrimiento de puerto para que Godot no
+            // intente reconectar a un servidor WebSocket ya apagado.
+            if (!string.IsNullOrEmpty(_wsPortFilePath))
+            {
+                try { if (File.Exists(_wsPortFilePath)) File.Delete(_wsPortFilePath); } catch { }
+                _wsPortFilePath = null;
+            }
         }
 
         // ── Helpers HTTP ──────────────────────────────────────────────────────

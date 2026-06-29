@@ -91,7 +91,7 @@ namespace VisorSingularity.Identity
             {
                 sb.Append(b.ToString("x2"));
             }
-            string nodeId = $"did:wv:node:{sb}";
+            string nodeId = sb.ToString();
 
             return new NodeIdentity(ecdsa, nodeId, publicKey, curveName);
         }

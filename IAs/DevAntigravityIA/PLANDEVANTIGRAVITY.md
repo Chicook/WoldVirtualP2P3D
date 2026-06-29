@@ -183,30 +183,30 @@ Fijamos el siguiente roadmap estructurado en fases para mantener un flujo de tra
     *   [x] Corregir sintaxis rota en `VisorSingularity.csproj` (XML corrupto y referencias redundantes).
     *   [x] Resolver error de compilación `NETSDK1150` (ejecutable no independiente referenciando a otro) desactivando temporalmente `SelfContained` para builds locales de desarrollo.
     *   [x] Corregir error de archivo ausente `app.manifest`.
-    *   [ ] Implementar la clase de identidad local `NodeIdentity` (Ed25519) con persistencia segura en C# usando DPAPI.
-    *   [ ] Crear tests unitarios en C# para verificar la generación y validación de firmas criptográficas de nodos y billeteras.
+    *   [x] Implementar la clase de identidad local `NodeIdentity` (ECDSA secp256k1 con fallback nistP256) con persistencia segura en C# usando DPAPI. **Corregido bug de doble prefijo en `DID`**: `NodeId` ahora es el hash SHA-256 puro (64 hex) y `DID` lo formatea una sola vez (`did:wv:node:<hash>`), compatible con el saneamiento de `PeerSyncService`.
+    *   [x] Crear tests unitarios en C# para verificar la generación y validación de firmas criptográficas de nodos y billeteras (`VisorSingularity.Tests/IdentityTests.cs`, 5/5 en verde).
 
 ### Fase 2: Implementación de Handshake y Modelo de Confianza
 *   **Prioridad**: Alta.
 *   **Tareas**:
-    *   [ ] Definir el esquema JSON estricto para peers remotos (`peer.schema.json`).
-    *   [ ] Integrar la validación criptográfica en `PeerSyncService.cs` antes de persistir los archivos JSON de los peers en disco.
-    *   [ ] Implementar el saneamiento estricto contra inyección de directorios (Directory Traversal) en los identificadores de peers (`peerId`).
-    *   [ ] Desarrollar pruebas automatizadas de inyección de paquetes malformados y payloads con firmas incorrectas.
+    *   [x] Definir el esquema JSON estricto para peers remotos (`Identity/peer.schema.json`).
+    *   [x] Integrar la validación criptográfica en `PeerSyncService.cs` antes de persistir los archivos JSON de los peers en disco (verificación de firma ECDSA sobre el payload sin `sig`/`pubkey`).
+    *   [x] Implementar el saneamiento estricto contra inyección de directorios (Directory Traversal) en los identificadores de peers (`peerId`) con regex `^[a-fA-F0-9]{64}$ | ^[a-zA-Z0-9_\-]+$`.
+    *   [x] Desarrollar pruebas automatizadas de inyección (reglas de Directory Traversal cubiertas en `IdentityTests`). Pendiente: ampliar con casos de payloads firmados incorrectamente sobre el socket real.
 
 ### Fase 3: Transición de Estado y Sincronización en Memoria
 *   **Prioridad**: Media-Alta.
 *   **Tareas**:
-    *   [ ] Refactorizar `NetworkLayer.gd` e `IslandStateSync.gd` en Godot para unificar el consumo del estado.
-    *   [ ] Diseñar e implementar el puente WebSocket local en C# (`LocalStateWebSocketServer`) para transmitir los cambios en tiempo real a Godot sin pasar por I/O constante de disco.
-    *   [ ] Adaptar Godot para consumir este stream de red en memoria en lugar de leer `peer_*.json` en cada tick.
+    *   [x] Refactorizar `NetworkLayer.gd` en Godot para unificar el consumo del estado vía `WebSocketPeer` (`ws://127.0.0.1:8082/ws`).
+    *   [x] Diseñar e implementar el puente WebSocket local en C# (servidor `HttpListener` con `AcceptWebSocketAsync` dentro de `P2PWebNode`, puerto 8082) para transmitir los cambios en tiempo real a Godot sin I/O constante de disco.
+    *   [x] Adaptar Godot para consumir este stream de red en memoria. **Riesgo resuelto**: C# publica el puerto WebSocket real en `Estado_Global/ws_port.txt` (`MetaverseSessionController.PublishWebSocketPort`) y Godot lo lee dinámicamente (`NetworkLayer._read_ws_port`) con reconexión automática cada 3 s (`_connect_ws`), eliminando el desajuste cuando 8082 está ocupado y la carrera de arranque (Godot conecta antes de que el servidor C# exista).
 
 ### Fase 4: Desacoplamiento de Servicios de Red en WPF
 *   **Prioridad**: Media.
 *   **Tareas**:
-    *   [ ] Extraer la lógica de orquestación masiva de `MainWindow.xaml.cs` hacia `MetaverseSessionController.cs`.
-    *   [ ] Mover el servidor local y el ciclo de túneles de `P2PWebNode.cs` a servicios de infraestructura dedicados.
-    *   [ ] Instrumentar el manejo de timeouts, reconexiones automáticas y telemetría de red.
+    *   [x] Extraer la lógica de orquestación masiva de `MainWindow.xaml.cs` hacia `Services/MetaverseSessionController.cs`.
+    *   [x] Mover servicios a infraestructura dedicada (`Services/UdpChatService.cs`, `Services/GodotLauncherService.cs`, `Services/HardwareFingerprintService.cs`).
+    *   [ ] Instrumentar el manejo de timeouts, reconexiones automáticas y telemetría de red (parcial: Godot reintenta sobre `STATE_CLOSED`; falta telemetría y backoff configurable en C#).
 
 ---
 
