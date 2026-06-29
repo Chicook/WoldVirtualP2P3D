@@ -110,6 +110,7 @@ namespace VisorSingularity
                 {
                     var result = await _listener.ReceiveAsync(token);
                     var json = Encoding.UTF8.GetString(result.Buffer);
+                    Services.NetworkTelemetryService.Instance.RecordPacketReceived(result.Buffer.Length);
                     ProcessReceivedPeer(json, result.RemoteEndPoint.Address.ToString());
                 }
                 catch (OperationCanceledException) { break; }
@@ -196,6 +197,7 @@ namespace VisorSingularity
 
                 var endpoint = new IPEndPoint(IPAddress.Broadcast, UDP_PORT);
                 _sender.Send(bytes, bytes.Length, endpoint);
+                Services.NetworkTelemetryService.Instance.RecordPacketSent(bytes.Length);
                 Debug.WriteLine($"[PeerSync] Broadcast enviado con firma criptográfica ({bytes.Length} bytes)");
             }
             catch (Exception ex)
@@ -242,6 +244,7 @@ namespace VisorSingularity
                 // Saneamiento de Directory Traversal
                 if (!Regex.IsMatch(remoteId, "^[a-fA-F0-9]{64}$") && !Regex.IsMatch(remoteId, "^[a-zA-Z0-9_\\-]+$"))
                 {
+                    Services.NetworkTelemetryService.Instance.RecordInjectionAttempt();
                     Debug.WriteLine($"[PeerSync] Intento de inyección detectado o remoteId inválido '{remoteId}', omitiendo.");
                     return;
                 }
@@ -279,6 +282,7 @@ namespace VisorSingularity
 
                             if (!isSignatureValid)
                             {
+                                Services.NetworkTelemetryService.Instance.RecordSignatureRejected();
                                 Debug.WriteLine($"[PeerSync] Firma criptográfica inválida para el peer '{remoteId}', descartando.");
                                 return;
                             }
@@ -286,12 +290,14 @@ namespace VisorSingularity
                     }
                     else
                     {
+                        Services.NetworkTelemetryService.Instance.RecordSignatureRejected();
                         Debug.WriteLine($"[PeerSync] Peer '{remoteId}' contiene firma vacía, descartando.");
                         return;
                     }
                 }
                 else
                 {
+                    Services.NetworkTelemetryService.Instance.RecordSignatureRejected();
                     Debug.WriteLine($"[PeerSync] Peer '{remoteId}' no firmado, descartando.");
                     return;
                 }
@@ -307,6 +313,7 @@ namespace VisorSingularity
                 if (File.Exists(targetPath)) File.Delete(targetPath);
                 File.Move(tmpPath, targetPath);
 
+                Services.NetworkTelemetryService.Instance.RecordPeerSeen(remoteId);
                 Debug.WriteLine($"[PeerSync] Peer remoto '{remoteId}' verificado y persistido desde {sourceIp} ({json.Length} chars)");
                 PeerReceived?.Invoke(remoteId, json);
             }
@@ -370,6 +377,7 @@ namespace VisorSingularity
                         if (peerT > 0 && now - peerT > PEER_STALE_SECONDS)
                         {
                             File.Delete(file);
+                            Services.NetworkTelemetryService.Instance.RecordPeerExpired(peerId);
                             Debug.WriteLine($"[PeerSync] Peer caducado eliminado: {peerId}");
                             PeerExpired?.Invoke(peerId);
                         }

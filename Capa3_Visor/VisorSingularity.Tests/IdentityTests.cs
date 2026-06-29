@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using VisorSingularity.Identity;
+using VisorSingularity.Services;
 
 namespace VisorSingularity.Tests
 {
@@ -94,6 +95,39 @@ namespace VisorSingularity.Tests
             Assert.Matches(pattern, "validPeerId");
             Assert.Matches(pattern, "did_wv_node_123");
             Assert.Matches(pattern, "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f61234"); // 64 chars hex
+        }
+
+        [Fact]
+        public void Test_NetworkTelemetry_CountsTrafficAndSecurityEvents()
+        {
+            var telemetry = NetworkTelemetryService.Instance;
+            telemetry.Reset();
+
+            telemetry.RecordPacketSent(100);
+            telemetry.RecordPacketReceived(250);
+            telemetry.RecordSignatureRejected();
+            telemetry.RecordInjectionAttempt();
+            telemetry.RecordReconnection();
+            telemetry.RecordPeerSeen("peerAlpha");
+            telemetry.RecordPeerSeen("peerBeta");
+
+            var snapshot = telemetry.GetSnapshot();
+
+            Assert.Equal(1, snapshot.PacketsSent);
+            Assert.Equal(1, snapshot.PacketsReceived);
+            Assert.Equal(100, snapshot.BytesSent);
+            Assert.Equal(250, snapshot.BytesReceived);
+            Assert.Equal(1, snapshot.SignaturesRejected);
+            Assert.Equal(1, snapshot.InjectionAttempts);
+            Assert.Equal(1, snapshot.Reconnections);
+            Assert.Equal(2, snapshot.ActivePeers);
+
+            telemetry.RecordPeerExpired("peerAlpha");
+            Assert.Equal(1, telemetry.GetSnapshot().ActivePeers);
+            Assert.Equal(1, telemetry.GetSnapshot().PeersExpired);
+
+            telemetry.Reset();
+            Assert.Equal(0, telemetry.GetSnapshot().PacketsReceived);
         }
     }
 }

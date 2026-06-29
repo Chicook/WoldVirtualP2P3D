@@ -170,6 +170,9 @@ namespace VisorSingularity
                 IsOnIpfs     = false;
                 LogStatus("🌍 ¡Nodo visible! URL activa mientras estés conectado.");
 
+                // Monitor de salud: reestablece el túnel si el proceso SSH cae.
+                _ = Task.Run(() => MonitorTunnelAsync(_cts?.Token ?? default));
+
                 // IPFS en paralelo para seeding DHT adicional (no bloquea)
                 _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
                 return;
@@ -178,6 +181,62 @@ namespace VisorSingularity
             // Paso 3 — SSH no disponible: intentar IPFS + CDN
             LogStatus("⚠️ Túmel SSH no disponible. Intentando IPFS + CDN...");
             await RunIpfsBackgroundAsync(_cts?.Token ?? default);
+        }
+
+        // ── Monitor de salud del túnel + reconexión automática ───────────────────────────────────
+        /// <summary>
+        /// Vigila el proceso del túnel público. Si el túnel cae (el proceso SSH/
+        /// cloudflared termina) intenta reestablecerlo con backoff exponencial,
+        /// registrando cada reconexión en la telemetría de red. Esto cubre la
+        /// instrumentación de "reconexiones automáticas y timeouts" de la Fase 4.
+        /// </summary>
+        private async Task MonitorTunnelAsync(CancellationToken token)
+        {
+            const int HealthCheckMs = 5000;       // frecuencia de sondeo del proceso
+            const int BaseBackoffMs = 2000;       // espera inicial antes de reintentar
+            const int MaxBackoffMs  = 60000;      // techo del backoff exponencial
+            int backoffMs = BaseBackoffMs;
+
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await Task.Delay(HealthCheckMs, token).ConfigureAwait(false);
+
+                    // Túnel sano: resetear el backoff y continuar vigilando.
+                    if (IsTunnelActive)
+                    {
+                        backoffMs = BaseBackoffMs;
+                        continue;
+                    }
+
+                    LogStatus("⚠️ Túnel caído. Reintentando conexión...");
+                    Services.NetworkTelemetryService.Instance.RecordReconnection();
+
+                    await Task.Delay(backoffMs, token).ConfigureAwait(false);
+
+                    string? newUrl = await TryEstablishTunnelAsync(token).ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(newUrl))
+                    {
+                        ZipPublicUrl = $"{newUrl}/visor.zip";
+                        GatewayUrl   = newUrl;
+                        IsOnIpfs     = false;
+                        backoffMs    = BaseBackoffMs;
+                        LogStatus("🌍 Túnel reestablecido. Nodo visible de nuevo.");
+                    }
+                    else
+                    {
+                        // Backoff exponencial acotado para no saturar al reintentar.
+                        backoffMs = Math.Min(backoffMs * 2, MaxBackoffMs);
+                        LogStatus($"❌ Reconexión fallida. Próximo intento en {backoffMs / 1000}s.");
+                    }
+                }
+            }
+            catch (OperationCanceledException) { /* apagado normal */ }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TunnelMonitor] Error: {ex.Message}");
+            }
         }
 
         // ── Túnel Público ────────────────────────────────────────────────────────────────────────

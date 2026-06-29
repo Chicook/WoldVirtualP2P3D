@@ -206,7 +206,7 @@ Fijamos el siguiente roadmap estructurado en fases para mantener un flujo de tra
 *   **Tareas**:
     *   [x] Extraer la lógica de orquestación masiva de `MainWindow.xaml.cs` hacia `Services/MetaverseSessionController.cs`.
     *   [x] Mover servicios a infraestructura dedicada (`Services/UdpChatService.cs`, `Services/GodotLauncherService.cs`, `Services/HardwareFingerprintService.cs`).
-    *   [ ] Instrumentar el manejo de timeouts, reconexiones automáticas y telemetría de red (parcial: Godot reintenta sobre `STATE_CLOSED`; falta telemetría y backoff configurable en C#).
+    *   [x] Instrumentar el manejo de timeouts, reconexiones automáticas y telemetría de red. **Implementado**: nuevo `Services/NetworkTelemetryService.cs` (singleton thread-safe con contadores de tráfico, firmas rechazadas, intentos de inyección, peers activos/expirados y reconexiones); `PeerSyncService` emite estas métricas; `P2PWebNode.MonitorTunnelAsync` reestablece el túnel caído con backoff exponencial acotado; `MetaverseSessionController` expone `NetworkTelemetry`/`NetworkTelemetrySummary` y el evento `NetworkTelemetryUpdated` a la UI. Cubierto por `Test_NetworkTelemetry_CountsTrafficAndSecurityEvents`.
 
 ---
 

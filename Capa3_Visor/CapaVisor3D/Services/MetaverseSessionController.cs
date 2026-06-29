@@ -42,6 +42,21 @@ namespace VisorSingularity.Services
         /// <summary>Se dispara cuando hay un error critico de inicio de servidor.</summary>
         public event Action<string>? BridgeError;
 
+        // ── Telemetria de red ─────────────────────────────────────────────────
+
+        /// <summary>Instantanea actual de la telemetria de red P2P.</summary>
+        public NetworkTelemetrySnapshot NetworkTelemetry => NetworkTelemetryService.Instance.GetSnapshot();
+
+        /// <summary>Resumen de una linea de la telemetria para barras de estado.</summary>
+        public string NetworkTelemetrySummary => NetworkTelemetryService.Instance.GetSummaryLine();
+
+        /// <summary>Se dispara cuando cambia la telemetria de red (peers, trafico, etc.).</summary>
+        public event Action<NetworkTelemetrySnapshot>? NetworkTelemetryUpdated
+        {
+            add    => NetworkTelemetryService.Instance.SnapshotUpdated += value;
+            remove => NetworkTelemetryService.Instance.SnapshotUpdated -= value;
+        }
+
         // ── Propiedades del nodo P2P ──────────────────────────────────────────
         public string? P2PSimulatedUrl => _p2pNode?.SimulatedUrl;
         public string? P2PLocalUrl     => _p2pNode?.LocalUrl;
