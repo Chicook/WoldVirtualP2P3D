@@ -88,5 +88,27 @@ namespace VisorSingularity.Services
 
             return builder.ToString();
         }
+
+        public static (string lang, string country) GetSystemLocaleInfo()
+        {
+            try
+            {
+                var culture = System.Globalization.CultureInfo.CurrentCulture;
+                string lang = culture.TwoLetterISOLanguageName.ToLowerInvariant();
+                string country = "??";
+                try
+                {
+                    var region = new System.Globalization.RegionInfo(culture.Name);
+                    country = region.TwoLetterISORegionName.ToUpperInvariant();
+                }
+                catch { }
+
+                return (lang, country);
+            }
+            catch
+            {
+                return ("es", "ES");
+            }
+        }
     }
 }

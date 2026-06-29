@@ -149,7 +149,7 @@ namespace VisorSingularity
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // Detectar idioma y país del sistema operativo en el inicio y aplicar al WPF UI
-            var (lang, country) = GetSystemLocaleInfo();
+            var (lang, country) = HardwareFingerprintService.GetSystemLocaleInfo();
             ApplyWpfLocale(lang, country);
 
             // Comprobar si estamos en otro PC
@@ -285,7 +285,8 @@ namespace VisorSingularity
                 }
 
                 // Intentar cargar la isla por defecto desde los peers locales para que coincida con lo registrado
-                var (projectDir, _) = FindLocalGodotPaths();
+                var godotPaths = GodotProjectLocator.Resolve();
+                var projectDir = godotPaths.ProjectDir;
                 if (!string.IsNullOrEmpty(projectDir))
                 {
                     string peersDir = Path.Combine(projectDir, "Estado_Global", "peers");
@@ -518,10 +519,10 @@ namespace VisorSingularity
                 await Task.Delay(300);
 
                 // Obtener huella de hardware actual
-                string os = GetOSName();
-                string cpu = GetCpuName();
-                string motherboard = GetMotherboardName();
-                _hardwareFingerprint = GenerateSHA256Signature(os, cpu, motherboard);
+                string os = HardwareFingerprintService.GetOSName();
+                string cpu = HardwareFingerprintService.GetCpuName();
+                string motherboard = HardwareFingerprintService.GetMotherboardName();
+                _hardwareFingerprint = HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
                 _loginFingerprint = _hardwareFingerprint;
 
                 // Actualizar firma mostrada en la pantalla
@@ -808,7 +809,7 @@ namespace VisorSingularity
                 TxtScanStatus.Text = t["ScanOS"];
                 ProgScan.Value = 15;
                 await Task.Delay(500);
-                _osName = GetOSName();
+                _osName = HardwareFingerprintService.GetOSName();
                 TxtOsName.Text = _osName;
                 ProgScan.Value = 35;
                 await Task.Delay(300);
@@ -817,7 +818,7 @@ namespace VisorSingularity
                 TxtScanStatus.Text = t["ScanCPU"];
                 ProgScan.Value = 50;
                 await Task.Delay(600);
-                _cpuName = GetCpuName();
+                _cpuName = HardwareFingerprintService.GetCpuName();
                 TxtCpuName.Text = _cpuName;
                 ProgScan.Value = 70;
                 await Task.Delay(300);
@@ -826,7 +827,7 @@ namespace VisorSingularity
                 TxtScanStatus.Text = t["ScanMB"];
                 ProgScan.Value = 80;
                 await Task.Delay(500);
-                _motherboard = GetMotherboardName();
+                _motherboard = HardwareFingerprintService.GetMotherboardName();
                 TxtMotherboardName.Text = _motherboard;
                 ProgScan.Value = 90;
                 await Task.Delay(200);
@@ -836,7 +837,7 @@ namespace VisorSingularity
                 ProgScan.Value = 95;
                 await Task.Delay(400);
 
-                _hardwareFingerprint = GenerateSHA256Signature(_osName, _cpuName, _motherboard);
+                _hardwareFingerprint = HardwareFingerprintService.GenerateSignature(_osName, _cpuName, _motherboard);
                 TxtHardwareHash.Text = _hardwareFingerprint;
 
                 ProgScan.Value = 100;
@@ -853,7 +854,7 @@ namespace VisorSingularity
                 // Incluso si falla WMI, permitimos generar una firma alternativa basada en variables de entorno
                 if (string.IsNullOrEmpty(_hardwareFingerprint))
                 {
-                    _hardwareFingerprint = GenerateSHA256Signature(
+                    _hardwareFingerprint = HardwareFingerprintService.GenerateSignature(
                         Environment.OSVersion.ToString(),
                         Environment.ProcessorCount.ToString() + " Cores",
                         Environment.MachineName
@@ -864,25 +865,6 @@ namespace VisorSingularity
             }
         }
 
-        private string GetOSName()
-        {
-            return HardwareFingerprintService.GetOSName();
-        }
-
-        private string GetCpuName()
-        {
-            return HardwareFingerprintService.GetCpuName();
-        }
-
-        private string GetMotherboardName()
-        {
-            return HardwareFingerprintService.GetMotherboardName();
-        }
-
-        private string GenerateSHA256Signature(string os, string cpu, string motherboard)
-        {
-            return HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
-        }
 
         private void BtnCopyHash_Click(object sender, RoutedEventArgs e)
         {
@@ -1038,10 +1020,10 @@ namespace VisorSingularity
                 string defaultIsland = "1 : 0.0.0";
                 try
                 {
-                    var godotPaths = FindLocalGodotPaths();
-                    if (!string.IsNullOrEmpty(godotPaths.projectDir))
+                    var godotPaths = GodotProjectLocator.Resolve();
+                    if (!string.IsNullOrEmpty(godotPaths.ProjectDir))
                     {
-                        string peersDir = Path.Combine(godotPaths.projectDir, "Estado_Global", "peers");
+                        string peersDir = Path.Combine(godotPaths.ProjectDir, "Estado_Global", "peers");
                         if (Directory.Exists(peersDir))
                         {
                             bool hasActivePeers = false;
@@ -1197,7 +1179,9 @@ namespace VisorSingularity
             _metaverseUiActivated = false;
 
             // Buscar rutas de Godot localmente
-            var (projectDir, exePath) = FindLocalGodotPaths();
+            var godotPaths = GodotProjectLocator.Resolve();
+            string projectDir = godotPaths.ProjectDir;
+            string exePath = godotPaths.ExePath;
             string repoPath = Directory.GetParent(projectDir)?.FullName ?? projectDir;
 
             if (!File.Exists(exePath))
@@ -1227,51 +1211,35 @@ namespace VisorSingularity
             int height = (int)Math.Max(600, GodotPlaceholder.ActualHeight);
 
             // Detectar país e idioma del sistema para pasarlo a Godot
-            var (detectedLang, detectedCountry) = GetSystemLocaleInfo();
+            var (detectedLang, detectedCountry) = HardwareFingerprintService.GetSystemLocaleInfo();
 
             // Argumentos de línea de comandos de Godot
             string arguments = $"--path \"{projectDir}\" {scenePath} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\" --lang \"{detectedLang}\" --country \"{detectedCountry}\"";
 
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = exePath,
-                Arguments = arguments,
-                WorkingDirectory = projectDir,
-                UseShellExecute = false,
-                CreateNoWindow = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-
-            _godotProcess = new Process();
-            _godotProcess.StartInfo = startInfo;
-            _godotProcess.EnableRaisingEvents = true;
-
-            // Escuchar la salida estándar de Godot para saber cuándo se registra el avatar
-            _godotProcess.OutputDataReceived += (s, ev) =>
-            {
-                if (!string.IsNullOrEmpty(ev.Data))
-                {
-                    // Si se registra el perfil de usuario en Godot, mostramos la barra inferior de conexión en WPF
-                    if (ev.Data.Contains("AVATAR_LOGIN_CLICKED"))
-                    {
-                        Dispatcher.Invoke(() =>
-                        {
-                            ActivateMetaverseUi(user, repoPath);
-                        });
-                    }
-                }
-            };
-
             try
             {
-                _godotProcess.Start();
-                _godotProcess.BeginOutputReadLine();
-                _godotProcess.BeginErrorReadLine();
+                IntPtr wpfHwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                
+                var result = await GodotLauncherService.LaunchGodotAsync(
+                    projectDir,
+                    exePath,
+                    arguments,
+                    (output) =>
+                    {
+                        if (output.Contains("AVATAR_LOGIN_CLICKED"))
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                ActivateMetaverseUi(user, repoPath);
+                            });
+                        }
+                    },
+                    wpfHwnd,
+                    () => _isClosing
+                );
 
-                // Escanear ventana de Godot en segundo plano
-                _godotHwnd = await Task.Run(() => ScanForGodotWindow(_godotProcess.Id, 15000)); // 15 segundos máximo
+                _godotProcess = result.process;
+                _godotHwnd = result.godotHwnd;
 
                 if (_godotHwnd != IntPtr.Zero && !_isClosing)
                 {
@@ -1280,7 +1248,7 @@ namespace VisorSingularity
                     GodotPlaceholder.Children.Add(_godotHost);
 
                     // Hook de desvío de teclado
-                    ComponentDispatcher.ThreadFilterMessage += ComponentDispatcher_ThreadFilterMessage;
+                    System.Windows.Interop.ComponentDispatcher.ThreadFilterMessage += ComponentDispatcher_ThreadFilterMessage;
 
                     // Iniciar el listener de chat UDP en WPF (puerto 50008)
                     StartUdpChatListener();
@@ -1294,65 +1262,6 @@ namespace VisorSingularity
             {
                 MessageBox.Show($"Error al iniciar el metaverso de Godot: {ex.Message}", "Error Crítico", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private IntPtr ScanForGodotWindow(int targetProcessId, int timeoutMs)
-        {
-            IntPtr result = IntPtr.Zero;
-            DateTime start = DateTime.Now;
-            IntPtr wpfHwnd = IntPtr.Zero;
-
-            // Obtener el manejador de la ventana WPF en el hilo UI
-            Dispatcher.Invoke(() =>
-            {
-                wpfHwnd = new WindowInteropHelper(this).Handle;
-            });
-
-            while (result == IntPtr.Zero && (DateTime.Now - start).TotalMilliseconds < timeoutMs && !_isClosing)
-            {
-                EnumWindows((hwnd, lParam) =>
-                {
-                    if (hwnd == wpfHwnd) return true; // Ignorar la ventana principal de WPF
-
-                    // Debe ser una ventana visible en el escritorio
-                    if (!IsWindowVisible(hwnd)) return true;
-
-                    // Validar estrictamente que el HWND pertenezca al proceso de Godot que acabamos de arrancar
-                    uint processId;
-                    GetWindowThreadProcessId(hwnd, out processId);
-                    if (processId != targetProcessId) return true; // No es el proceso de Godot, ignorar
-
-                    // Obtener la clase de la ventana nativa
-                    StringBuilder className = new StringBuilder(256);
-                    GetClassName(hwnd, className, className.Capacity);
-                    string cls = className.ToString();
-
-                    // Obtener el título de la ventana
-                    StringBuilder sb = new StringBuilder(256);
-                    GetWindowText(hwnd, sb, sb.Capacity);
-                    string title = sb.ToString();
-
-                    // Descartar ventanas de consola o selectores de depuración, buscando la ventana principal de renderizado (Engine)
-                    if (cls == "Engine" || (!title.Contains("Console") && !title.Contains("Select")))
-                    {
-                        result = hwnd;
-                        return false; // Detener enumeración, hemos encontrado la ventana de renderizado correcta
-                    }
-
-                    return true; // Continuar
-                }, IntPtr.Zero);
-
-                if (result != IntPtr.Zero) break;
-                System.Threading.Thread.Sleep(250);
-            }
-
-            return result;
-        }
-
-        private (string projectDir, string exePath) FindLocalGodotPaths()
-        {
-            var paths = GodotProjectLocator.Resolve();
-            return (paths.ProjectDir, paths.ExePath);
         }
 
         private string _currentLang = "es";
@@ -1845,10 +1754,10 @@ namespace VisorSingularity
                     return false;
                 }
 
-                string os = GetOSName();
-                string cpu = GetCpuName();
-                string motherboard = GetMotherboardName();
-                string currentFingerprint = GenerateSHA256Signature(os, cpu, motherboard);
+                string os = HardwareFingerprintService.GetOSName();
+                string cpu = HardwareFingerprintService.GetCpuName();
+                string motherboard = HardwareFingerprintService.GetMotherboardName();
+                string currentFingerprint = HardwareFingerprintService.GenerateSignature(os, cpu, motherboard);
 
                 string savedFingerprint = File.ReadAllText(APP_DATA_SIG, Encoding.UTF8).Trim();
 
@@ -1880,7 +1789,7 @@ namespace VisorSingularity
                 string settingsPath = Path.Combine(APP_DATA_DIR, "login_settings.json");
                 if (File.Exists(settingsPath)) File.Delete(settingsPath);
 
-                DeleteGodotCurrentUserJson();
+                GodotLauncherService.DeleteGodotCurrentUserJson();
             }
             catch (Exception ex)
             {
@@ -1888,76 +1797,7 @@ namespace VisorSingularity
             }
         }
 
-        private void DeleteGodotCurrentUserJson()
-        {
-            try
-            {
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                DirectoryInfo? dir = new DirectoryInfo(baseDir);
-                while (dir != null)
-                {
-                    string candidate = Path.Combine(dir.FullName, "WoldVirtual", "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
-                    if (File.Exists(candidate))
-                    {
-                        File.Delete(candidate);
-                        Debug.WriteLine($"[ResetRegistration] Deleted Godot current_user.json at: {candidate}");
-                        return;
-                    }
-                    candidate = Path.Combine(dir.FullName, "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
-                    if (File.Exists(candidate))
-                    {
-                        File.Delete(candidate);
-                        Debug.WriteLine($"[ResetRegistration] Deleted Godot current_user.json at: {candidate}");
-                        return;
-                    }
-                    dir = dir.Parent;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ResetRegistration] Error deleting Godot user JSON: {ex.Message}");
-            }
-        }
 
-        /// <summary>
-        /// Detecta el idioma y país del sistema operativo usando CultureInfo.
-        /// Devuelve (langCode, countryCode) p.ej: ("es", "ES"), ("en", "US"), ("fr", "FR").
-        /// </summary>
-        private (string lang, string country) GetSystemLocaleInfo()
-        {
-            try
-            {
-                var culture = System.Globalization.CultureInfo.CurrentCulture;
-
-                // Código ISO 639-1 del idioma: "es", "en", "fr", "de", "pt", "zh", etc.
-                string lang = culture.TwoLetterISOLanguageName.ToLowerInvariant();
-
-                // Código ISO 3166-1 alpha-2 del país: "ES", "US", "FR", "DE", "BR", "CN", etc.
-                // Se extrae de la región del sistema (RegionInfo)
-                string country = "??";
-                try
-                {
-                    var region = new System.Globalization.RegionInfo(culture.Name);
-                    country = region.TwoLetterISORegionName.ToUpperInvariant();
-                }
-                catch
-                {
-                    // Si la cultura es neutral (sin región), extraerla del nombre: "es-ES" → "ES"
-                    if (culture.Name.Contains('-'))
-                    {
-                        country = culture.Name.Split('-')[1].ToUpperInvariant();
-                    }
-                }
-
-                Debug.WriteLine($"[Locale] Sistema detectado: idioma='{lang}', país='{country}', cultura='{culture.Name}'");
-                return (lang, country);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[Locale] Error detectando locale: {ex.Message}");
-                return ("en", "??");
-            }
-        }
 
         // ── HOOK DE TECLADO PARA AVATAR GODOT ──
         private void ComponentDispatcher_ThreadFilterMessage(ref MSG msg, ref bool handled)
@@ -2297,7 +2137,8 @@ namespace VisorSingularity
             {
                 try
                 {
-                    var (projectDir, _) = FindLocalGodotPaths();
+                    var godotPaths = GodotProjectLocator.Resolve();
+                    var projectDir = godotPaths.ProjectDir;
                     string peersDir = Path.GetFullPath(Path.Combine(projectDir, "..", "Estado_Global", "peers"));
                     if (!Directory.Exists(peersDir))
                         Directory.CreateDirectory(peersDir);
@@ -2520,7 +2361,8 @@ namespace VisorSingularity
         {
             try
             {
-                var (projectDir, _) = FindLocalGodotPaths();
+                var godotPaths = GodotProjectLocator.Resolve();
+                var projectDir = godotPaths.ProjectDir;
                 string peerDir = Path.GetFullPath(
                     Path.Combine(projectDir, "..", "Estado_Global", "peers"));
                 string peerFile = Path.Combine(peerDir, $"peer_{_currentUsername}.json");
@@ -2883,3 +2725,5 @@ namespace VisorSingularity
         }
     }
 }
+
+
