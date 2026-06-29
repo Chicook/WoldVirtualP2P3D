@@ -16,7 +16,7 @@ namespace VisorSingularity.Tests
             
             Assert.NotNull(identity);
             Assert.False(string.IsNullOrEmpty(identity.NodeId));
-            Assert.StartsWith("did:wv:node:", identity.NodeId);
+            Assert.StartsWith("did:wv:node:", identity.DID);
             Assert.NotNull(identity.PublicKey);
             Assert.True(identity.PublicKey.Length > 0);
             Assert.True(identity.CurveName == "secp256k1" || identity.CurveName == "nistP256");
@@ -76,6 +76,20 @@ namespace VisorSingularity.Tests
 
             bool isRealRejected = MetaMaskValidator.VerifySignature(wallet, message, signature, allowSimulation: false);
             Assert.False(isRealRejected);
+        }
+
+        [Fact]
+        public void Test_PeerSyncService_DirectoryTraversalPreventionRules()
+        {
+            var regex = new System.Text.RegularExpressions.Regex("^[a-fA-F0-9]{64}$|^[a-zA-Z0-9_\\-]+$");
+            
+            Assert.False(regex.IsMatch("../../escape"));
+            Assert.False(regex.IsMatch("..\\escape"));
+            Assert.False(regex.IsMatch("peer/escape"));
+            Assert.False(regex.IsMatch("peer\\escape"));
+            Assert.True(regex.IsMatch("validPeerId"));
+            Assert.True(regex.IsMatch("did_wv_node_123"));
+            Assert.True(regex.IsMatch("a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f61234")); // 64 chars hex
         }
     }
 }
