@@ -145,4 +145,71 @@ El rediseño completo se deja como medida secundaria si se confirma que el probl
 - DPI: ejecutar con escala 100% y >100% (si el sistema lo permite).
 - Robustez: cerrar visor mientras Godot arranca y confirmar cierre limpio del proceso.
 
+---
+
+## Plan de Desarrollo: Interconexión de Islas "Desde el Lecho Marino"
+
+#### **Objetivo Principal:**
+Permitir que las islas de diferentes usuarios (`1 usuario "pc-visor" = 1 isla 3D`) aparezcan unidas visualmente desde el lecho marino, creando un mundo continuo y navegable.
+
+#### **Fase 0: Análisis y Diseño de Concepto (Teórico)**
+1.  **Definir "Unidas desde el Lecho Marino":**
+    *   **Visual:** ¿Implica un modelo 3D de "lecho marino" que conecta las islas? ¿Cómo se gestiona la topología (malla, hexágonos, etc.)?
+    *   **Físico:** ¿Los avatares pueden caminar/nadar entre islas a través de este lecho marino? ¿Cómo afecta a la física y la navegación?
+    *   **Lógico:** ¿Cómo se determina qué islas son "vecinas" y cómo se gestionan las transiciones de datos entre ellas?
+2.  **Modelo de Datos de Islas Conectadas:**
+    *   Extender `PeerSchema.cs` para incluir coordenadas espaciales de la isla (ej. `Vector3 Position`, `float RotationY`).
+    *   Añadir un identificador de "tipo de lecho marino" o "bioma" para la conexión visual.
+    *   Considerar un sistema de "puertos" o "puntos de conexión" definidos por el usuario en cada isla.
+3.  **Estrategia de Carga/Descarga:**
+    *   ¿Se cargan las islas adyacentes completas o solo sus "bordes" de conexión?
+    *   ¿Cómo se gestiona la memoria y el rendimiento con múltiples islas cargadas?
+
+#### **Fase 1: Extensión del Protocolo P2P para Geometría de Islas**
+1.  **Modificar `PeerSchema.cs`:**
+    *   Añadir campos para la posición 3D de la isla (ej. `IslandPositionX`, `IslandPositionY`, `IslandPositionZ`).
+    *   Añadir campos para la orientación de la isla (ej. `IslandRotationY`).
+    *   Añadir un campo `IslandBiomeType` para definir el tipo de conexión visual (arena, roca, coral, etc.).
+2.  **Actualizar `PeerSyncService.cs`:**
+    *   Asegurar que los nuevos datos de posición/orientación/bioma de la isla se sincronicen entre peers.
+    *   Implementar lógica para detectar "islas adyacentes" basándose en las coordenadas sincronizadas.
+3.  **Actualizar `MetaverseSessionController.cs`:**
+    *   Gestionar el estado espacial de la isla local y las islas de los peers.
+    *   Proveer una API para que Godot consulte las islas adyacentes y sus propiedades.
+
+#### **Fase 2: Implementación en Godot - Renderizado de Conexiones**
+1.  **Modificar `NetworkLayer.gd`:**
+    *   Recibir y procesar los datos de posición y bioma de las islas adyacentes desde el WebSocket.
+    *   Desarrollar una lógica para instanciar "conectores de lecho marino" entre la isla local y las islas adyacentes.
+2.  **Desarrollar Lógica de "Lecho Marino" en Godot:**
+    *   Crear un sistema de "chunks de conexión" o "mallas de lecho marino" que se generen dinámicamente entre islas.
+    *   Implementar shaders y materiales para el renderizado del lecho marino según el `IslandBiomeType`.
+    *   Asegurar que las transiciones visuales y físicas entre la isla y el lecho marino sean fluidas.
+3.  **Ajustar `ChunkManager.gd`:**
+    *   Extender la lógica de carga/descarga de chunks para incluir los chunks de conexión del lecho marino.
+    *   Optimizar la gestión de recursos para evitar sobrecarga al renderizar múltiples islas y sus conexiones.
+4.  **Navegación y Física:**
+    *   Asegurar que el avatar pueda moverse sin problemas entre la isla y el lecho marino, y entre islas adyacentes.
+    *   Considerar la implementación de zonas de "agua" en el lecho marino con física de natación.
+
+#### **Fase 3: Integración en WPF - Gestión de Múltiples Islas**
+1.  **Actualizar `MainWindow.xaml.cs` y UI:**
+    *   Si es necesario, modificar la UI para mostrar un mapa simplificado o una lista de islas conectadas.
+    *   Implementar eventos o comandos para que el usuario pueda interactuar con las islas adyacentes (ej. teletransporte, vista previa).
+2.  **Gestión de Estado de Sesión:**
+    *   Asegurar que el `MetaverseSessionController` pueda manejar el estado de múltiples islas y sus conexiones de manera coherente.
+
+#### **Fase 4: Pruebas y Optimización**
+1.  **Pruebas de Conectividad:**
+    *   Verificar que las islas se detectan y conectan correctamente a través del lecho marino.
+    *   Probar la sincronización de posición y estado entre usuarios en diferentes islas conectadas.
+2.  **Pruebas Visuales:**
+    *   Asegurar que el renderizado del lecho marino sea continuo y estéticamente agradable.
+    *   Verificar que no haya artefactos visuales o clipping al moverse entre islas.
+3.  **Pruebas de Rendimiento:**
+    *   Optimizar la carga de recursos y el renderizado para mantener un framerate aceptable con múltiples islas.
+    *   Identificar y resolver cuellos de botella en la red o el motor de renderizado.
+4.  **Pruebas de Navegación:**
+    *   Confirmar que el movimiento del avatar entre islas y a través del lecho marino es fluido y sin errores.
+
 **Última actualización**: 2026-06-29
