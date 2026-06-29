@@ -149,6 +149,14 @@ graph TD
     *   El nodo con el estado más antiguo solicita un "Catch-up State Sync" al nodo con el estado más reciente.
     *   Los conflictos de posesión de islas se resuelven mediante la firma de autoría: solo la clave vinculada a la billetera creadora del ID de la isla puede modificar los datos estructurales de dicha isla.
 
+#### Estado de implementación (sección 2.5)
+*   [x] **Vector Clock** (`Services/VectorClock.cs`): contador monotónico por nodo, `Increment`/`Merge` (join del semilattice) y `CompareTo` que distingue `Before`/`After`/`Equal`/`Concurrent` (detección de split-brain). Serialización JSON robusta para el campo `vc` del estado del peer.
+*   [x] **Resolvedor de conflictos** (`Services/ConflictResolver.cs`): tres capas — (1) anti-replay por `seq` monotónico (sección 2.3), (2) causalidad por Vector Clock con desempate **LWW** sobre timestamp firmado en estados concurrentes, (3) **autoría de isla** (solo la wallet creadora puede modificar datos estructurales; el primer creador queda registrado de forma inmutable).
+*   [x] **Integración en `PeerSyncService.cs`**: cada broadcast local incrementa `seq` y el Vector Clock y los incrusta **dentro del payload firmado**; cada estado entrante pasa por `ResolveIncomingState` (anti-replay + causalidad + autoría) antes de persistirse; los intentos de modificar islas ajenas se contabilizan como inyección en la telemetría.
+*   [x] **Tests** (`VisorSingularity.Tests/ConsensusTests.cs`): causalidad, concurrencia, merge, round-trip JSON, anti-replay, autoría, resolución LWW y protocolo de catch-up. Suite total **23/23 en verde**.
+*   [x] **Catch-up State Sync** (`Services/CatchupProtocol.cs` + handlers en `PeerSyncService.cs`): los nodos difunden `HELLO` con su reloj vectorial en cada heartbeat; al detectar un peer causalmente más avanzado o concurrente (`ShouldRequestCatchup`) el nodo atrasado envía `SYNC_REQ` (unicast) y recibe `SYNC_RESP` con el estado completo firmado, reconciliado por la misma ruta de validación/resolución. Los mensajes de control viajan por el mismo socket UDP, distinguidos por el campo `_t` para no interferir con los broadcasts de estado.
+*   [ ] **Pendiente**: bootstrap por CID IPNS fijo (lista de nodos semilla en IPFS) para descubrimiento más allá de la LAN.
+
 ---
 
 ## 🛠️ 3. Aislamiento de Capas y Refactorización WPF

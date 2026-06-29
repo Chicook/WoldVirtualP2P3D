@@ -41,6 +41,13 @@ namespace VisorSingularity
 
         private bool _disposed = false;
 
+        // Resolucion de conflictos: anti-replay (seq), causalidad y autoria de isla.
+        private readonly Services.ConflictResolver _conflictResolver = new();
+        // Reloj vectorial local del nodo, avanzado en cada broadcast propio.
+        private readonly Services.VectorClock _localClock = new();
+        // Numero de secuencia monotonico de los estados emitidos por este nodo.
+        private long _localSeq = 0;
+
         public event Action<string, string>? PeerReceived;  // (remoteId, json)
         public event Action<string>? PeerExpired;           // (expiredId)
 
@@ -111,7 +118,7 @@ namespace VisorSingularity
                     var result = await _listener.ReceiveAsync(token);
                     var json = Encoding.UTF8.GetString(result.Buffer);
                     Services.NetworkTelemetryService.Instance.RecordPacketReceived(result.Buffer.Length);
-                    ProcessReceivedPeer(json, result.RemoteEndPoint.Address.ToString());
+                    DispatchIncoming(json, result.RemoteEndPoint);
                 }
                 catch (OperationCanceledException) { break; }
                 catch (ObjectDisposedException) { break; }
@@ -132,6 +139,7 @@ namespace VisorSingularity
                 {
                     await Task.Delay(BROADCAST_INTERVAL_MS, token);
                     BroadcastLocalPeer();
+                    BroadcastHello();
                     PurgeStaleRemotePeers();
                 }
                 catch (OperationCanceledException) { break; }
@@ -174,6 +182,13 @@ namespace VisorSingularity
                     node.AsObject().Remove("sig");
                     node.AsObject().Remove("pubkey");
 
+                    // Avanzar secuencia monotonica y reloj vectorial del nodo local.
+                    // Ambos campos quedan dentro del payload firmado para evitar manipulacion.
+                    long seq = System.Threading.Interlocked.Increment(ref _localSeq);
+                    _localClock.Increment(_localId);
+                    node.AsObject()["seq"] = seq;
+                    node.AsObject()["vc"] = JsonNode.Parse(_localClock.ToJson());
+
                     string cleanJson = node.ToJsonString();
                     byte[] cleanBytes = Encoding.UTF8.GetBytes(cleanJson);
 
@@ -203,6 +218,29 @@ namespace VisorSingularity
             catch (Exception ex)
             {
                 Debug.WriteLine($"[PeerSync] Error al difundir peer: {ex.Message}");
+            }
+        }
+
+        // ── Difundir HELLO con el reloj vectorial (descubrimiento + catch-up) ──
+        /// <summary>
+        /// Anuncia por broadcast la identidad y el reloj vectorial del nodo. Los
+        /// peers que se reincorporan tras una partición usan este mensaje para
+        /// detectar quién está más avanzado y solicitar un catch-up.
+        /// </summary>
+        private void BroadcastHello()
+        {
+            if (_disposed || _sender == null) return;
+            try
+            {
+                string hello = Services.CatchupProtocol.BuildHello(_localId, _localClock);
+                var bytes = Encoding.UTF8.GetBytes(hello);
+                var endpoint = new IPEndPoint(IPAddress.Broadcast, UDP_PORT);
+                _sender.Send(bytes, bytes.Length, endpoint);
+                Services.NetworkTelemetryService.Instance.RecordPacketSent(bytes.Length);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PeerSync] Error al difundir HELLO: {ex.Message}");
             }
         }
 
@@ -302,6 +340,12 @@ namespace VisorSingularity
                     return;
                 }
 
+                // ── Resolucion de conflictos (anti-replay + causalidad + autoria) ──
+                if (!ResolveIncomingState(remoteId, root))
+                {
+                    return; // estado descartado por el resolvedor
+                }
+
                 // Escribir el peer en el directorio compartido
                 var targetPath = Path.Combine(_peersDir, $"peer_{remoteId}.json");
                 var tmpPath = targetPath + ".tmp";
@@ -335,6 +379,272 @@ namespace VisorSingularity
                 bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
             }
             return bytes;
+        }
+
+        // ── Despacho de entrada: control (catch-up) vs estado normal ──────────
+        /// <summary>
+        /// Determina si el datagrama recibido es un mensaje de control del
+        /// protocolo de catch-up (campo "_t") o un broadcast de estado normal,
+        /// y lo encamina al handler correspondiente.
+        /// </summary>
+        private void DispatchIncoming(string json, IPEndPoint remoteEndpoint)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            string? messageType = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                messageType = Services.CatchupProtocol.GetMessageType(doc.RootElement);
+                if (messageType != null)
+                {
+                    HandleControlMessage(messageType, doc.RootElement, remoteEndpoint);
+                    return;
+                }
+            }
+            catch (JsonException)
+            {
+                Debug.WriteLine($"[PeerSync] JSON inválido recibido desde {remoteEndpoint.Address}, ignorado.");
+                return;
+            }
+
+            // Estado normal: ruta de validación + resolución de conflictos.
+            ProcessReceivedPeer(json, remoteEndpoint.Address.ToString());
+        }
+
+        // ── Handlers del protocolo de catch-up ────────────────────────────────
+        private void HandleControlMessage(string messageType, JsonElement root, IPEndPoint remoteEndpoint)
+        {
+            switch (messageType)
+            {
+                case Services.CatchupMessageType.Hello:
+                    HandleHello(root, remoteEndpoint);
+                    break;
+                case Services.CatchupMessageType.SyncRequest:
+                    HandleSyncRequest(root, remoteEndpoint);
+                    break;
+                case Services.CatchupMessageType.SyncResponse:
+                    HandleSyncResponse(root, remoteEndpoint);
+                    break;
+                default:
+                    Debug.WriteLine($"[PeerSync] Mensaje de control desconocido '{messageType}'.");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Al recibir un HELLO, si el reloj del peer indica que está más avanzado
+        /// (o concurrente) le solicitamos un catch-up dirigido (unicast).
+        /// </summary>
+        private void HandleHello(JsonElement root, IPEndPoint remoteEndpoint)
+        {
+            string from = Services.CatchupProtocol.GetString(root, "from");
+            if (string.IsNullOrEmpty(from) || from == _localId) return;
+
+            var peerClock = Services.CatchupProtocol.ExtractClock(root);
+            if (Services.CatchupProtocol.ShouldRequestCatchup(_localClock, peerClock))
+            {
+                string req = Services.CatchupProtocol.BuildSyncRequest(_localId, from, _localClock);
+                SendUnicast(req, remoteEndpoint);
+                Debug.WriteLine($"[PeerSync] Catch-up solicitado a '{from}' (peer más avanzado).");
+            }
+        }
+
+        /// <summary>
+        /// Al recibir una solicitud dirigida a este nodo, respondemos con nuestro
+        /// estado local firmado para que el peer atrasado reconcilie.
+        /// </summary>
+        private void HandleSyncRequest(JsonElement root, IPEndPoint remoteEndpoint)
+        {
+            string to = Services.CatchupProtocol.GetString(root, "to");
+            if (to != _localId) return; // no es para nosotros
+
+            string from = Services.CatchupProtocol.GetString(root, "from");
+            string? signedState = BuildSignedLocalState();
+            if (signedState == null) return;
+
+            string resp = Services.CatchupProtocol.BuildSyncResponse(_localId, from, signedState);
+            var bytes = Encoding.UTF8.GetBytes(resp);
+            if (bytes.Length <= MAX_PACKET_BYTES)
+            {
+                SendUnicast(resp, remoteEndpoint);
+                Debug.WriteLine($"[PeerSync] Catch-up respondido a '{from}'.");
+            }
+            else
+            {
+                Debug.WriteLine($"[PeerSync] Estado de catch-up demasiado grande ({bytes.Length} bytes), omitido.");
+            }
+        }
+
+        /// <summary>
+        /// Al recibir una respuesta de catch-up, extraemos el estado embebido y lo
+        /// procesamos por la misma ruta de validación/resolución que un broadcast.
+        /// </summary>
+        private void HandleSyncResponse(JsonElement root, IPEndPoint remoteEndpoint)
+        {
+            string to = Services.CatchupProtocol.GetString(root, "to");
+            if (to != _localId) return;
+
+            string? embedded = Services.CatchupProtocol.ExtractEmbeddedState(root);
+            if (embedded != null)
+            {
+                Services.NetworkTelemetryService.Instance.RecordReconnection();
+                Debug.WriteLine("[PeerSync] Catch-up recibido, reconciliando estado.");
+                ProcessReceivedPeer(embedded, remoteEndpoint.Address.ToString());
+            }
+        }
+
+        // ── Envío dirigido (unicast) para el protocolo de catch-up ────────────
+        private void SendUnicast(string message, IPEndPoint endpoint)
+        {
+            if (_disposed || _sender == null) return;
+            try
+            {
+                var bytes = Encoding.UTF8.GetBytes(message);
+                _sender.Send(bytes, bytes.Length, endpoint);
+                Services.NetworkTelemetryService.Instance.RecordPacketSent(bytes.Length);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PeerSync] Error en envío unicast: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Lee el estado local del disco y le añade firma, seq y vector clock
+        /// (sin avanzar el seq) para responder a una solicitud de catch-up.
+        /// Reutiliza el formato firmado del broadcast normal.
+        /// </summary>
+        private string? BuildSignedLocalState()
+        {
+            if (!File.Exists(_localPeerPath)) return null;
+            try
+            {
+                string json;
+                using (var fs = new FileStream(_localPeerPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var sr = new StreamReader(fs, Encoding.UTF8))
+                    json = sr.ReadToEnd();
+
+                if (string.IsNullOrWhiteSpace(json) || !json.TrimStart().StartsWith("{"))
+                    return null;
+
+                var node = JsonNode.Parse(json);
+                if (node == null) return null;
+
+                node.AsObject().Remove("sig");
+                node.AsObject().Remove("pubkey");
+                node.AsObject()["seq"] = System.Threading.Interlocked.Read(ref _localSeq);
+                node.AsObject()["vc"] = JsonNode.Parse(_localClock.ToJson());
+
+                string cleanJson = node.ToJsonString();
+                byte[] cleanBytes = Encoding.UTF8.GetBytes(cleanJson);
+
+                using var identity = VisorSingularity.Identity.NodeIdentity.LoadOrCreate();
+                byte[] signatureBytes = identity.Sign(cleanBytes);
+                node.AsObject()["sig"] = BitConverter.ToString(signatureBytes).Replace("-", "").ToLower();
+                node.AsObject()["pubkey"] = BitConverter.ToString(identity.PublicKey).Replace("-", "").ToLower();
+
+                return node.ToJsonString();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PeerSync] Error construyendo estado firmado: {ex.Message}");
+                return null;
+            }
+        }
+
+        // ── Resolucion de conflictos del estado entrante ──────────────────────
+        /// <summary>
+        /// Aplica anti-replay (seq), causalidad (vector clock + LWW) y autoria de
+        /// isla al estado recibido. Devuelve true si debe persistirse, false si se
+        /// descarta. Mantiene compatibilidad con estados antiguos sin seq/vc.
+        /// </summary>
+        private bool ResolveIncomingState(string remoteId, JsonElement root)
+        {
+            long incomingSeq = Services.ConflictResolver.ExtractSeq(root);
+            var incomingClock = Services.ConflictResolver.ExtractClock(root);
+            long incomingTs = ExtractStateTimestamp(root);
+
+            var decision = _conflictResolver.Resolve(
+                remoteId, incomingSeq, incomingClock, _localClock,
+                incomingTs, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+            if (decision == Services.ResolutionDecision.IgnoreStale)
+            {
+                Debug.WriteLine($"[PeerSync] Estado de '{remoteId}' ignorado (replay/anterior).");
+                return false;
+            }
+            if (decision == Services.ResolutionDecision.RejectConcurrentLose)
+            {
+                Debug.WriteLine($"[PeerSync] Conflicto concurrente con '{remoteId}' resuelto a favor local (LWW).");
+                return false;
+            }
+
+            // Autoria de isla: solo el creador puede modificar datos estructurales.
+            if (!ValidateIslandAuthorship(remoteId, root))
+            {
+                Services.NetworkTelemetryService.Instance.RecordInjectionAttempt();
+                Debug.WriteLine($"[PeerSync] '{remoteId}' intento modificar una isla ajena, descartando.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Verifica que el peer es el autor de cada isla que declara en su bloque
+        /// "i". Usa la wallet vinculada (campo "w" de la isla) o, en su defecto, el
+        /// propio remoteId como clave de autoria.
+        /// </summary>
+        private bool ValidateIslandAuthorship(string remoteId, JsonElement root)
+        {
+            if (!root.TryGetProperty("i", out var islandsEl) ||
+                islandsEl.ValueKind != JsonValueKind.Object)
+            {
+                return true; // sin islas que validar
+            }
+
+            foreach (var island in islandsEl.EnumerateObject())
+            {
+                string islandId = island.Name;
+                string claimant = remoteId;
+                if (island.Value.ValueKind == JsonValueKind.Object &&
+                    island.Value.TryGetProperty("w", out var wEl) &&
+                    wEl.ValueKind == JsonValueKind.String)
+                {
+                    claimant = wEl.GetString() ?? remoteId;
+                }
+
+                if (!_conflictResolver.IsIslandModificationAuthorized(islandId, claimant))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Obtiene un timestamp comparable del estado para el desempate LWW.
+        /// Prioriza el campo "t" del primer usuario; si no existe usa 0.
+        /// </summary>
+        private static long ExtractStateTimestamp(JsonElement root)
+        {
+            if (root.TryGetProperty("u", out var usersEl) &&
+                usersEl.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var user in usersEl.EnumerateObject())
+                {
+                    if (user.Value.ValueKind == JsonValueKind.Object &&
+                        user.Value.TryGetProperty("t", out var tEl) &&
+                        tEl.ValueKind == JsonValueKind.Number &&
+                        tEl.TryGetDouble(out double t))
+                    {
+                        return (long)(t * 1000); // segundos → ms
+                    }
+                    break;
+                }
+            }
+            return 0;
         }
 
         // ── Limpiar peers remotos caducados ───────────────────────────────
@@ -377,6 +687,7 @@ namespace VisorSingularity
                         if (peerT > 0 && now - peerT > PEER_STALE_SECONDS)
                         {
                             File.Delete(file);
+                            _conflictResolver.ForgetPeer(peerId);
                             Services.NetworkTelemetryService.Instance.RecordPeerExpired(peerId);
                             Debug.WriteLine($"[PeerSync] Peer caducado eliminado: {peerId}");
                             PeerExpired?.Invoke(peerId);
