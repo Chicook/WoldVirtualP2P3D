@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/CapaVisor3D/">
+    <Project Path="CapaVisor3D/VisorSingularity.csproj" />
+  </Folder>
+  <Project Path="ServidorVirtualCS/ServidorVirtualCS.csproj" />
+  <Project Path="VisorSingularity.Tests/VisorSingularity.Tests.csproj" />
+</Solution>

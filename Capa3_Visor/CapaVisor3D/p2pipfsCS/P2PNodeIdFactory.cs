@@ -1,4 +1,5 @@
 using System;
+using VisorSingularity.Identity;
 
 namespace VisorSingularity
 {
@@ -6,8 +7,8 @@ namespace VisorSingularity
     {
         public static string Create(string username)
         {
-            int seed = Math.Abs((username + DateTime.Now.Ticks).GetHashCode()) % 90000 + 10000;
-            return $"ND{seed}";
+            using var identity = NodeIdentity.LoadOrCreate();
+            return identity.NodeId;
         }
     }
 }
