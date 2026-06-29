@@ -1,335 +1,172 @@
-# WoldVirtualP2P3D: El Santuario de la Soberanía Digital y la Economía Cooperativa Extrema
-En un contexto global marcado por el endurecimiento radical de las normativas financieras —como el cierre definitivo del periodo de transición de la ley MiCA en Europa—, el ecosistema cripto tradicional se encuentra en un callejón sin salida. La asfixia regulatoria, las exigencias de licencias bancarias millonarias y la persecución a gigantes centralizados están obligando a creadores, programadores y estudios independientes a buscar un refugio. En esta coyuntura histórica, **WoldVirtualP2P3D** no nace como un proyecto cripto especulativo más, sino como la infraestructura definitiva de resistencia: un territorio virtual tridimensional, soberano e inexpugnable.
-## 🏛️ La Regla de Oro: 1 Usuario, 1 Isla, 1 Nodo, 1 Servidor
-Frente al modelo de los metaversos comerciales que replican el monopolio corporativo y la especulación inmobiliaria, WoldVirtualP2P3D automatiza los principios del **cooperativismo extremo** directamente en su código. Su pilar fundamental es de una igualdad matemática absoluta: **1 Usuario = 1 Isla = 1 Nodo = 1 Servidor**.
-Aquí no existen los privilegios de administrador ni los rascacielos corporativos. Si un gran exchange, un desarrollador consagrado o un usuario amateur desean formar parte del ecosistema, deben hacerlo bajo las mismas condiciones exactas: levantando su propio nodo doméstico. La red se estructura como una malla (mesh) descentralizada, distribuida a través de **túneles SSH efímeros y encriptados**, lo que vuelve al tráfico de datos y a la propia arquitectura de la plataforma invisibles e indestructibles frente a la censura estatal o los bloqueos de DNS.
-## 🎭 El Camuflaje del Emprendimiento "Builder-to-Peer" (B2P)
-Al carecer de dueños, juntas directivas o sedes fiscales, el metaverso se transforma en el mayor santuario de emprendimiento anónimo del mundo. Los creadores pueden integrarse y "camuflarse" a través de dinámicas nativas que protegen su derecho legítimo a comerciar sin la necesidad de registrar empresas en el mundo físico:
- * **Vendors 3D y Activos Volumétricos:** Los diseñadores venden herramientas, ropa o estructuras directamente desde sus islas. Su identidad real queda blindada tras su clave privada.
- * **Economía Circular Pura:** En WoldVirtualP2P3D está prohibido el uso de dinero fiat directo, pasarelas P2P tradicionales y *stablecoins* (vulnerables a la congelación gubernamental). El comercio del token nativo, **WCVcoin**, se realiza única y exclusivamente contra criptomonedas puras descentralizadas (como Bitcoin, Ethereum o BNB) a través de un **Dex3D** interno.
- * **La Cola Dinámica:** Cada transacción está sujeta a una tasa fija de 0,001 WCVcoin y a un reparto del 50% que alimenta de forma matemática al usuario anterior de la red (Wallet 1). La riqueza no se acumula en un intermediario; se redistribuye para sostener la liquidez común.
-## 🎮 Una Consola P2P para Estudios de Videojuegos Indies
-El visor en tiempo de ejecución, desarrollado con la potencia de **Godot** y el alto rendimiento de **C#**, expande las fronteras del metaverso al integrar un **motor de creación de videojuegos sin código**. Inspirado en los míticos *Logic Bricks* de Blender y los *Blueprints* de Unreal, permite a los usuarios conectar nodos visuales gráficos (Sensores y Actuadores) en el espacio tridimensional para programar mecánicas directamente "in-game".
-La única condición inquebrantable es que **todo el contenido debe ser estrictamente 3D**, manteniendo la coherencia espacial y física del avatar. Esto permite a los pequeños estudios independientes:
- 1. **Eliminar costes de servidor:** El juego no se compila ni se sube a tiendas centralizadas como Steam (que confiscan el 30% de las ventas). El juego vive en la propia isla del creador, corriendo en su propio hardware local de coste cero.
- 2. **Monetizar mediante Assets de Blender:** El acceso a la experiencia es libre; la economía radica en la compra de los activos 3D (armas, llaves, vehículos) necesarios para interactuar y avanzar en el escenario, adquiridos mediante WCVcoin de billetera a billetera.
-## 🎯 Conclusión: El Arca de Noé de la Libertad Digital
-Si el viejo mundo reacciona persiguiendo la vía democrática —incluso llegando a ilegalizar los movimientos políticos digitales—, la respuesta de la comunidad no será la protesta pasiva, sino la **desconexión económica**. Una huelga fiscal masiva apoyada en esta tecnología colapsaría la recaudación estatal por falta de un sujeto jurídico al que embargar.
-El objetivo definitivo de **WoldVirtualP2P3D** es demostrar que las leyes de los hombres no pueden derogar las leyes de la matemática. Mientras el marco regulatorio tradicional intenta asfixiar el libre mercado de la Web3, este metaverso cooperativo emerge como un organismo vivo y autónomo. Un ecosistema donde el software sigue procesando relevos, bloque a bloque y nodo a nodo, garantizando un espacio de libertad, entretenimiento y soberanía económica para las generaciones del futuro.
- 
- # WoldVirtual P2P 3D
+# WoldVirtual P2P 3D
 
-README de plan de desarrollo y coordinacion de ramas.
+Plan de desarrollo y estado de la rama `DevCodexIA`.
 
-Fecha de auditoria: 2026-05-23
+Fecha de revision: 2026-06-28
 
-## Estado auditado del repositorio
+## Estado actual de la rama
 
-Situacion observada directamente en `d:\WCVcoinMTB`:
+Estado observado en el repositorio:
 
-- Ramas locales activas: `main`, `DevAntigravityIA`, `DevCodexIA`, `DevTraeIA`.
-- HEAD actual durante la auditoria: `DevTraeIA`.
-- Arbol git limpio al iniciar la revision.
-- Diferencias reales entre ramas activas: casi solo datos runtime (`peer_*.json`, `current_user.json`), no cambios estructurales fuertes.
-- Base funcional existente:
-  - Visor WPF en `Capa3_Visor/CapaVisor3D`
-  - Motor Godot en `WoldVirtual`
-  - Estado global en `WoldVirtual/Estado_Global`
-  - Nodo P2P del visor en `Capa3_Visor/CapaVisor3D/p2pipfsCS`
-- Tamano funcional del codebase auditado: 342 archivos entre C#, GDScript, XAML, escenas y JSON.
+- Rama actual: `DevCodexIA`
+- Rama remota de seguimiento: `origin/DevCodexIA`
+- Arbol limpio al momento de la revision
+- El proyecto combina:
+  - visor WPF en `Capa3_Visor/CapaVisor3D`
+  - motor Godot en `WoldVirtual`
+  - estado global en `WoldVirtual/Estado_Global`
+  - logica P2P y publicacion IPFS en `Capa3_Visor/CapaVisor3D/p2pipfsCS`
+- Hay bastante artefacto generado versionado (`bin/`, `obj/`, ejecutables y salidas de publish)
+- Tambien hay datos de sesion y estado runtime dentro del repositorio, lo que dificulta comparar ramas
 
-Conclusion operativa:
+Lectura rapida:
 
-- El repositorio esta en fase de prototipo funcional integrado.
-- La prioridad ya no es anadir mas features aisladas, sino ordenar contratos, separar runtime de fuente, reducir deuda tecnica y estabilizar el camino hacia una integracion multi-rama limpia.
+- La base funcional existe
+- La estructura necesita higiene
+- La red y la sincronizacion necesitan contratos mas claros
+- La UI principal concentra demasiadas responsabilidades
 
-## Deuda tecnica prioritaria
+## Objetivo de esta rama
 
-### DT-01. Artefactos generados versionados
+Convertir la rama en una base mas limpia, mantenible y preparada para integracion, sin romper la funcion actual del visor ni del mundo Godot.
 
-Se observan `bin/`, `obj/`, ejecutables generados y librerias compiladas dentro del repo.
+La meta no es agregar features aisladas, sino reducir deuda tecnica para que el siguiente desarrollo sea mas predecible.
 
-Impacto:
+## Principios de trabajo
 
-- ensucia diffs
-- aumenta el peso del repositorio
-- dificulta saber que es fuente y que es build
-- favorece ejecuciones contra binarios viejos
+1. Mantener separacion entre fuente, runtime y artefactos compilados.
+2. Evitar que archivos generados se conviertan en diferencias permanentes entre ramas.
+3. Reducir el acoplamiento entre UI, red, persistencia y logica de mundo.
+4. Hacer cambios pequenos y verificables.
+5. Documentar cada paso importante para facilitar la coordinacion entre ramas.
 
-### DT-02. Datos runtime versionados
+## Plan de desarrollo
 
-Se observan archivos de estado vivos dentro del repo, por ejemplo:
-
-- `WoldVirtual/Estado_Global/peers/peer_ChicookDirector.json`
-- `WoldVirtual/woldvirtual/scene/MTC/users3D/current_user.json`
-
-Impacto:
-
-- genera divergencia artificial entre ramas
-- mezcla sesion local con codigo fuente
-- complica integraciones y validacion
-
-### DT-03. Orquestacion demasiado concentrada en `MainWindow.xaml.cs`
-
-El visor concentra UI, login, bridge HTTP, embebido Godot, listeners UDP, arranque P2P y parte del control de sesion.
-
-Impacto:
-
-- baja mantenibilidad
-- alto riesgo de regresiones
-- dificil de testear por modulo
-
-### DT-04. Sync legacy y sync actual coexistiendo
-
-Conviven piezas como `NetworkLayer.gd`, `IslandStateSync.gd` y logica C# de estado sin un contrato unico y estable.
-
-Impacto:
-
-- doble fuente de verdad
-- mas complejidad de integracion
-- deuda funcional en la sincronizacion multipeer
-
-### DT-05. P2P del visor incompleto como red real
-
-Existe distribucion por ZIP, HTTP local, tuneles e integracion con IPFS, pero no existe todavia una capa P2P completa del metaverso para estado, presencia y consistencia entre nodos.
-
-Impacto:
-
-- el reparto del visor existe
-- el reparto del estado del mundo aun no esta cerrado
-
-### DT-06. Ausencia de pipeline de calidad
-
-No hay solucion `.sln`, no hay CI visible, no hay suite de tests automatizada y no hay control fuerte sobre formato/encoding.
-
-Impacto:
-
-- poca trazabilidad
-- menor confianza en cambios cruzados entre ramas
-- mas coste al integrar
-
-## Objetivo del siguiente ciclo
-
-Pasar de "prototipo local funcional" a "base integrable y mantenible" en cuatro frentes:
-
-1. estabilizar el repositorio
-2. aislar responsabilidades tecnicas
-3. consolidar el transporte y la sincronizacion
-4. preparar una integracion posterior sobre `main` sin deuda acumulada
-
-## Politica de trabajo entre ramas
-
-Este plan asume estas reglas:
-
-- No hacer merge directo entre ramas de trabajo.
-- Cada rama entrega piezas acotadas y verificables.
-- `main` actua como rama de integracion, no como rama de experimentacion.
-- Los archivos runtime no deben volver a ser el factor principal de divergencia entre ramas.
-- La documentacion de plan debe mantenerse identica en todas las ramas activas.
-
-## Plan de implementacion distribuido por ramas
-
-### `main`
-
-Rol:
-
-- base de integracion
-- referencia estable de build
-- control de calidad del proyecto
-
-Entregables:
-
-1. definir la linea base de compilacion valida del visor
-2. fijar la politica de que solo entra codigo integrable y sin basura de runtime
-3. centralizar changelog tecnico del ciclo
-4. validar que las ramas de trabajo entregan piezas compatibles
-
-Pendientes:
-
-- introducir `.gitignore` coherente para artefactos generados
-- separar datos de sesion local del codigo fuente
-- crear solucion `.sln` para el visor
-- preparar estructura minima para CI y smoke build
-
-Criterio de cierre:
-
-- `main` debe poder compilar de forma repetible
-- `main` no debe arrastrar `peer_*.json` o `current_user.json` como diferencia estructural
-
-### `DevCodexIA`
-
-Rol:
-
-- saneamiento del repositorio
-- consolidacion de estructura
-- reduccion de deuda tecnica transversal
-
-Entregables:
-
-1. limpieza de artefactos versionados (`bin`, `obj`, ejecutables de salida, residuos de build)
-2. normalizacion de estructura y nombres
-3. separacion clara entre fuente, runtime, assets y resultados compilados
-4. unificacion de encoding a UTF-8 sin corrupciones visibles
-5. inventario de codigo legacy o duplicado
-
-Pendientes concretos:
-
-- mover datos runtime a rutas no versionadas o plantillas base
-- revisar coexistencia de `IslandStateSync.gd` y `NetworkLayer.gd`
-- revisar carpetas y binarios que no deben vivir en control de versiones
-- documentar mapa real del repo despues de la limpieza
-
-Dependencias:
-
-- ninguna fuerte para empezar
-- su salida desbloquea trabajo mas seguro para el resto
-
-Criterio de cierre:
-
-- repo mas pequeno y legible
-- menos ruido en diffs
-- estructura apta para automatizacion posterior
-
-### `DevAntigravityIA`
-
-Rol:
-
-- arquitectura
-- contratos tecnicos
-- seguridad y modelo de evolucion del sistema
-
-Entregables:
-
-1. definir contrato unico de identidad del nodo
-2. especificar handshake entre visor, nodo y capa de estado
-3. definir modelo de confianza y validacion entre peers
-4. bajar a diseno la evolucion desde JSON local a sincronizacion distribuida
-5. fijar criterios de consistencia, bootstrap y recuperacion
-
-Pendientes concretos:
-
-- contrato de identidad de nodo y persistencia
-- contrato de handshake P2P
-- modelo de consistencia del estado global
-- estrategia de aislamiento entre UI, transporte y sincronizacion
-- criterios de seguridad para `P2PWebNode.cs` e IPFS auxiliar
-
-Dependencias:
-
-- necesita la limpieza basica de `DevCodexIA` para trabajar con menos ruido
-- su salida define interfaces para `DevTraeIA`
-
-Criterio de cierre:
-
-- decisiones de arquitectura cerradas y accionables
-- contratos suficientemente concretos para implementacion
-
-### `DevTraeIA`
-
-Rol:
-
-- transporte
-- servicios de red
-- endurecimiento del nodo del visor
-- preparacion del camino hacia sincronizacion real
-
-Entregables:
-
-1. extraer listeners y transporte de `MainWindow.xaml.cs` a servicios dedicados
-2. formalizar heartbeat, reconexion y manejo de peers
-3. endurecer `P2PWebNode.cs` para uso mas estable
-4. preparar discovery local y pool de conexiones
-5. reducir acoplamiento entre UI WPF y red del visor
-
-Pendientes concretos:
-
-- encapsular UDP actual en una capa reutilizable
-- extraer logica de inicio/parada del nodo P2P a servicios
-- instrumentar timeouts, reintentos y estados de conexion
-- definir capa de eventos para que la UI consuma estado sin conocer la red en detalle
-- preparar compatibilidad futura con cache, chunks o discovery real
-
-Dependencias:
-
-- consume contratos definidos por `DevAntigravityIA`
-- se beneficia de la limpieza estructural de `DevCodexIA`
-
-Criterio de cierre:
-
-- transporte desacoplado del visor
-- nodo P2P mas predecible
-- menos logica de red dentro de la UI principal
-
-## Secuencia recomendada
-
-### Fase 1. Higiene y estabilizacion
-
-Responsables:
-
-- `DevCodexIA`
-- `main`
+### Fase 1. Higiene del repositorio
 
 Objetivo:
 
-- limpiar repo
-- separar runtime
-- fijar baseline de compilacion
+- eliminar ruido de compilacion y salida generada del control de versiones
+- identificar datos runtime que no deberian versionarse
+- preparar una base estable para trabajar sobre codigo fuente real
 
-### Fase 2. Contratos y arquitectura
+Acciones:
 
-Responsable principal:
+- revisar y consolidar `.gitignore`
+- separar `bin/`, `obj/`, `publish/` y otros artefactos generados
+- mover o aislar archivos de estado local como `current_user.json` y `peer_*.json`
+- verificar que los binarios del visor no se usan como fuente de verdad
 
-- `DevAntigravityIA`
+Resultado esperado:
 
-Objetivo:
+- diffs mas limpios
+- menor peso del repositorio
+- menos divergencias artificiales entre ramas
 
-- cerrar definiciones de identidad, handshake, estado y seguridad
-
-### Fase 3. Implementacion del transporte
-
-Responsable principal:
-
-- `DevTraeIA`
-
-Objetivo:
-
-- convertir la red actual en modulos mantenibles y reutilizables
-
-### Fase 4. Integracion sobre `main`
-
-Responsable:
-
-- `main` como rama receptora
+### Fase 2. Orden de arquitectura
 
 Objetivo:
 
-- integrar por lotes pequenos, verificables y sin merge masivo entre ramas de trabajo
+- aclarar responsabilidades entre UI, transporte, estado global y mundo 3D
+
+Acciones:
+
+- revisar `MainWindow.xaml.cs` y extraer logica que no sea estrictamente de interfaz
+- separar arranque, conexiones, eventos y persistencia en servicios dedicados
+- revisar coexistencia de `NetworkLayer.gd` e `IslandStateSync.gd`
+- definir una unica fuente de verdad para estado compartido
+
+Resultado esperado:
+
+- codigo mas legible
+- menos riesgo de regresiones
+- mejor capacidad de test y mantenimiento
+
+### Fase 3. Contratos tecnicos
+
+Objetivo:
+
+- definir interfaces claras entre visor, nodo y sincronizacion
+
+Acciones:
+
+- documentar identidad del nodo
+- definir handshake minimo entre componentes
+- acordar el formato de eventos de red
+- fijar criterios de consistencia y recuperacion
+
+Resultado esperado:
+
+- integraciones mas seguras
+- menos improvisacion al conectar nuevas piezas
+- base tecnica util para futuras ramas
+
+### Fase 4. Transporte y estabilidad
+
+Objetivo:
+
+- hacer que la capa de red sea mas robusta y reutilizable
+
+Acciones:
+
+- encapsular listeners y reintentos
+- formalizar heartbeat, reconexion y estados de conexion
+- reducir dependencia de la UI respecto a detalles del transporte
+- preparar la capa P2P para crecer sin rehacerla
+
+Resultado esperado:
+
+- nodo mas predecible
+- mejor manejo de desconexiones
+- menos logica de red en la ventana principal
+
+### Fase 5. Preparacion para integracion
+
+Objetivo:
+
+- dejar la rama lista para recibir cambios futuros sin acumular deuda nueva
+
+Acciones:
+
+- validar que los cambios importantes estan documentados
+- revisar compatibilidad con `main`
+- dejar trazabilidad de decisiones y pendientes
+
+Resultado esperado:
+
+- rama util como base de integracion
+- menor costo de merge o rebase posterior
+
+## Prioridades concretas
+
+Orden recomendado de ejecucion:
+
+1. limpieza de artefactos generados
+2. separacion de runtime y fuente
+3. extraccion de responsabilidades desde `MainWindow.xaml.cs`
+4. unificacion de contratos de red y estado
+5. endurecimiento del transporte P2P
+6. documentacion de la nueva estructura
 
 ## Riesgos a vigilar
 
-- seguir versionando datos de sesion y artefactos compilados
-- continuar ampliando `MainWindow.xaml.cs` en vez de dividir responsabilidades
-- introducir nueva funcionalidad de red sin contrato previo
-- intentar integrar ramas por volumen en vez de por entregables pequenos
-- seguir usando JSON locales como sustituto indefinido de una capa de sincronizacion real
+- seguir versionando salidas de compilacion
+- mezclar datos de sesion con codigo fuente
+- ampliar la UI principal en vez de dividirla
+- mantener dos rutas de sincronizacion sin contrato comun
+- introducir cambios de red sin criterios de recuperacion o reconexion
 
-## Definition of done del ciclo
+## Definition of Done
 
-El ciclo se considera bien encaminado cuando se cumpla todo esto:
+Esta rama se considera mejorada cuando:
 
-- README alineado en todas las ramas activas
-- repo saneado de artefactos generados y runtime innecesario
-- contratos tecnicos base cerrados
-- transporte desacoplado del visor principal
-- `main` listo para recibir integraciones pequenas sin merge cruzado entre ramas de trabajo
+- el repositorio tiene menos ruido de build
+- los datos runtime estan fuera del flujo normal de versionado
+- `MainWindow.xaml.cs` no concentra toda la orquestacion
+- existe una base clara para la sincronizacion de estado
+- la documentacion del proyecto explica el estado real de la rama
 
-## Estado de sincronizacion de este README
+## Siguiente paso sugerido
 
-Este README debe mantenerse identico en:
+La siguiente accion mas rentable es limpiar primero los artefactos generados y los datos runtime versionados, porque eso mejora inmediatamente la lectura de la rama y reduce el riesgo de arrastrar basura a futuras integraciones.
 
-- `main`
-- `DevCodexIA`
-- `DevAntigravityIA`
-- `DevTraeIA`
-
-La sincronizacion entre ramas debe hacerse sin merge, mediante aplicacion explicita del mismo cambio documental.
