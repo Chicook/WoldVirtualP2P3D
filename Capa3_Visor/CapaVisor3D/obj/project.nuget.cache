@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "0QpsxgN/KdI=",
+  "dgSpecHash": "b/ErMEv1E+I=",
   "success": true,
-  "projectFilePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
+  "projectFilePath": "d:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Usuario\\.nuget\\packages\\aforge\\2.2.5\\aforge.2.2.5.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\aforge.video\\2.2.5\\aforge.video.2.2.5.nupkg.sha512",
@@ -19,9 +19,9 @@
     "C:\\Users\\Usuario\\.nuget\\packages\\helixtoolkit.sharpdx\\3.1.1\\helixtoolkit.sharpdx.3.1.1.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\helixtoolkit.wpf.sharpdx\\3.1.1\\helixtoolkit.wpf.sharpdx.3.1.1.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\litedb\\5.0.21\\litedb.5.0.21.nupkg.sha512",
-    "C:\\Users\\Usuario\\.nuget\\packages\\messagepack\\3.1.4\\messagepack.3.1.4.nupkg.sha512",
-    "C:\\Users\\Usuario\\.nuget\\packages\\messagepack.annotations\\3.1.4\\messagepack.annotations.3.1.4.nupkg.sha512",
-    "C:\\Users\\Usuario\\.nuget\\packages\\messagepackanalyzer\\3.1.4\\messagepackanalyzer.3.1.4.nupkg.sha512",
+    "C:\\Users\\Usuario\\.nuget\\packages\\messagepack\\3.1.6\\messagepack.3.1.6.nupkg.sha512",
+    "C:\\Users\\Usuario\\.nuget\\packages\\messagepack.annotations\\3.1.6\\messagepack.annotations.3.1.6.nupkg.sha512",
+    "C:\\Users\\Usuario\\.nuget\\packages\\messagepackanalyzer\\3.1.6\\messagepackanalyzer.3.1.6.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.3.4\\microsoft.codeanalysis.analyzers.3.3.4.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.codeanalysis.common\\4.11.0\\microsoft.codeanalysis.common.4.11.0.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.codeanalysis.csharp\\4.11.0\\microsoft.codeanalysis.csharp.4.11.0.nupkg.sha512",
@@ -137,162 +137,5 @@
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.28\\microsoft.aspnetcore.app.ref.8.0.28.nupkg.sha512",
     "C:\\Users\\Usuario\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.28\\microsoft.netcore.app.host.win-x64.8.0.28.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "message": "VisorSingularity depende de HelixToolkit.Wpf.SharpDX (>= 2.28.0), pero no se encontró HelixToolkit.Wpf.SharpDX 2.28.0. HelixToolkit.Wpf.SharpDX 3.1.1 se resolvió en su lugar.",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "HelixToolkit.Wpf.SharpDX",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2f33-pr97-265q",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-2x83-8g95-xh59",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1903",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-382j-8mxh-c7x2",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cj9g-3mj2-g8vv",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-cxmj-83gh-fp49",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1903",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-hv8m-jj95-wg3x",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-q2h6-ghwm-5qm8",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-qhmf-xw27-6rqr",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-v72x-2h86-7f8m",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1903",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad alta conocida, https://github.com/advisories/GHSA-vh6j-jc39-fggf",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-w567-gjr2-hm5j",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    },
-    {
-      "code": "NU1902",
-      "level": "Warning",
-      "message": "El paquete \"MessagePack\" 3.1.4 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-wfr3-xj75-pfwh",
-      "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\WCVcoinMTB\\Capa3_Visor\\CapaVisor3D\\VisorSingularity.csproj",
-      "libraryId": "MessagePack",
-      "targetGraphs": [
-        "net8.0-windows"
-      ]
-    }
-  ]
+  "logs": []
 }

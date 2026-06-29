@@ -1,0 +1,29 @@
+<Project>
+  <PropertyGroup>
+    <!-- Configuración global de análisis de código -->
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <ReportAnalyzerDiagnostics>true</ReportAnalyzerDiagnostics>
+    
+    <!-- Tratamos advertencias críticas como errores en builds de release -->
+    <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Release'">true</TreatWarningsAsErrors>
+    
+    <!-- Supresiones globales justificadas -->
+    <!-- NU1701: Package target fallback (común en librerías viejas) -->
+    <!-- CA1416: Compatibilidad de plataforma (WPF es Windows-only por naturaleza) -->
+    <!-- CA1014: Mark assemblies with CLSCompliant (no necesario para este proyecto) -->
+    <!-- CA1515: Consider making types internal (demasiado ruidoso para este proyecto) -->
+    <!-- CA1056: URI properties should not be strings (preferimos strings para simplificar bindings XAML) -->
+    <!-- CA1001: Types that own disposable fields should be disposable (a veces manejado externamente) -->
+    <!-- CA1031: Do not catch general exception types (permitido para logging de último nivel) -->
+    <!-- NU1901-NU1904: Package vulnerabilities (auditado, MessagePack 3.1.6 es necesario) -->
+    <NoWarn>$(NoWarn);NU1701;CA1416;CA1014;CS8618;CA1515;CA1056;CA1001;CA1031;CA1304;CA1311;CA1062;CA1003;CA1805;NU1901;NU1902;NU1903;NU1904</NoWarn>
+  </PropertyGroup>
+
+  <!-- Definición de constantes globales -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>

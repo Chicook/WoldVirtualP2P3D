@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -41,6 +41,8 @@ namespace VisorSingularity
         private bool _isClosing = false;
         private GodotHwndHost? _godotHost;
         private string _currentUsername = "Anonymous";
+        private string _currentWallet = "0x0000";
+        private string _currentWalletSignature = "0x_simulated_signature_local";
         private bool _metaverseUiActivated = false;
 
         // Ã¢â€â‚¬Ã¢â€â‚¬ Login de usuario existente (ZIP detectado) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -680,6 +682,10 @@ namespace VisorSingularity
             GridLoginScreen.Visibility = Visibility.Collapsed;
             GridMainViewer.Visibility  = Visibility.Visible;
             _currentUsername = user;
+            _currentWallet = wallet;
+            _currentWalletSignature = string.IsNullOrWhiteSpace(signature)
+                ? "0x_simulated_signature_local"
+                : signature;
             TxtChatActiveUser.Text = $"Usuario: {user}";
 
             // 3) Lanzar Godot apuntando DIRECTAMENTE a N3DWoldVirtualMT.tscn
@@ -1016,6 +1022,10 @@ namespace VisorSingularity
                     GridUserRegistration.Visibility = Visibility.Collapsed;
                     GridMainViewer.Visibility       = Visibility.Visible;
                     _currentUsername = confirm.User;
+                    _currentWallet = confirm.Wallet;
+                    _currentWalletSignature = string.IsNullOrWhiteSpace(confirm.Signature)
+                        ? "0x_simulated_signature_local"
+                        : confirm.Signature;
                     TxtChatActiveUser.Text = $"Usuario: {confirm.User}";
                     LaunchAndEmbedGodot(confirm.Wallet, confirm.User, confirm.Island,
                         scenePath: "res://EscenaPrincipal.tscn");
@@ -1033,7 +1043,7 @@ namespace VisorSingularity
             });
         }
 
-        // Ã¢â€â‚¬Ã¢â€â‚¬ LANZAMIENTO E INCRUSTACIÃƒâ€œN DEL MOTOR GODOT Ã¢â€â‚¬Ã¢â€â‚¬
+        // ─── LANZAMIENTO E INCRUSTACIÓN DEL MOTOR GODOT ───
         /// <param name="scenePath">Ruta de escena Godot (res://...). Null = usa EscenaPrincipal.tscn</param>
         private async void LaunchAndEmbedGodot(string wallet, string user, string island, string scenePath = "res://EscenaPrincipal.tscn")
         {
@@ -1061,7 +1071,7 @@ namespace VisorSingularity
 
             if (scenePath == "res://EscenaPrincipal.tscn")
             {
-                // Ocultar barra inferior de conexiÃƒÂ³n inicialmente mientras se registra el avatar en Godot
+                // Ocultar barra inferior de conexión inicialmente mientras se registra el avatar en Godot
                 BorderBottomLoginBar.Visibility = Visibility.Collapsed;
                 P2PNodeBar.Visibility = Visibility.Collapsed;
                 EmbeddedServerNodeBar.Visibility = Visibility.Collapsed;
@@ -1072,14 +1082,18 @@ namespace VisorSingularity
                 ActivateMetaverseUi(user, repoPath);
             }
 
-            // Configurar resoluciÃƒÂ³n de inicio
+            // Forzar layout settle para que el placeholder tenga dimensiones válidas
+            GodotPlaceholder.UpdateLayout();
+            await Task.Delay(100);
+
+            // Configurar resolución de inicio
             int width = (int)Math.Max(800, GodotPlaceholder.ActualWidth);
             int height = (int)Math.Max(600, GodotPlaceholder.ActualHeight);
 
-            // Detectar paÃƒÂ­s e idioma del sistema para pasarlo a Godot
+            // Detectar país e idioma del sistema para pasarlo a Godot
             var (detectedLang, detectedCountry) = HardwareFingerprintService.GetSystemLocaleInfo();
 
-            // Argumentos de lÃƒÂ­nea de comandos de Godot
+            // Argumentos de línea de comandos de Godot
             string arguments = $"--path \"{projectDir}\" {scenePath} --rendering-driver opengl3 --windowed --resolution {width}x{height} -- --wallet {wallet} --user-id \"{user}\" --island-id \"{island}\" --lang \"{detectedLang}\" --country \"{detectedCountry}\"";
 
             try
@@ -1113,7 +1127,11 @@ namespace VisorSingularity
                     _godotHost = new GodotHwndHost(_godotHwnd);
                     GodotPlaceholder.Children.Add(_godotHost);
 
-                    // Hook de desvÃƒÂ­o de teclado
+                    // Forzar resize inmediato para asegurar que la ventana de Godot se ajusta correctamente
+                    await Task.Delay(50);
+                    _godotHost.ResizeToActualPixels();
+
+                    // Hook de desvío de teclado
                     System.Windows.Interop.ComponentDispatcher.ThreadFilterMessage += ComponentDispatcher_ThreadFilterMessage;
 
                     // Iniciar el listener de chat UDP en WPF (puerto 50008)
@@ -1123,12 +1141,12 @@ namespace VisorSingularity
                 }
                 else
                 {
-                    MessageBox.Show("Tiempo de espera agotado para incrustar el motor 3D de Godot.", "Error de IntegraciÃƒÂ³n", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Tiempo de espera agotado para incrustar el motor 3D de Godot.", "Error de Integración", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al iniciar el metaverso de Godot: {ex.Message}", "Error CrÃƒÂ­tico", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error al iniciar el metaverso de Godot: {ex.Message}", "Error Crítico", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1899,7 +1917,7 @@ namespace VisorSingularity
                 var godotPaths = GodotProjectLocator.Resolve();
                 string peersDir = System.IO.Path.GetFullPath(
                     System.IO.Path.Combine(godotPaths.ProjectDir, "..", "Estado_Global", "peers"));
-                _session.StartPeerSync(peersDir, username);
+                _session.StartPeerSync(peersDir, username, _currentWallet, _currentWalletSignature);
             }
             catch (Exception ex)
             {
@@ -2334,8 +2352,23 @@ namespace VisorSingularity
 
             int width = (int)(320 * dpiX);
             int height = (int)(240 * dpiY);
-            int targetLeft = (int)((GodotPlaceholder.ActualWidth - 340) * dpiX);
-            int targetTop = (int)((GodotPlaceholder.ActualHeight - 260) * dpiY);
+            
+            // El HwndSource de la webcam se crea como hijo de _godotHost.Handle
+            // por lo que las coordenadas deben ser relativas al área de cliente del GodotHwndHost.
+            // El GodotHwndHost tiene Stretch y ocupa todo el GodotPlaceholder.
+            
+            // Posicionar en la esquina inferior derecha del área de Godot
+            // con un pequeño margen
+            int marginRight = 10;   // margen desde la derecha
+            int marginBottom = 4;   // margen desde abajo (pegado a la barra del chat)
+            
+            // Convertir margenes a espacio de coordenadas del DPI
+            int marginRightDpi = (int)(marginRight * dpiX);
+            int marginBottomDpi = (int)(marginBottom * dpiY);
+            
+            // Calcular posición: esquina inferior derecha
+            int targetLeft = (int)(GodotPlaceholder.ActualWidth * dpiX) - width - marginRightDpi;
+            int targetTop = (int)(GodotPlaceholder.ActualHeight * dpiY) - height - marginBottomDpi;
 
             HwndSourceParameters parameters = new HwndSourceParameters("WebcamOverlay")
             {
@@ -2413,10 +2446,37 @@ namespace VisorSingularity
                         dpiY = matrix.M22;
                     }
 
-                    int targetLeft = (int)((GodotPlaceholder.ActualWidth - 340) * dpiX);
-                    int targetTop = (int)((GodotPlaceholder.ActualHeight - 260) * dpiY);
                     int width = (int)(320 * dpiX);
                     int height = (int)(240 * dpiY);
+                    int targetLeft;
+                    int targetTop;
+
+                    if (BorderBottomLoginBar != null && BorderBottomLoginBar.Visibility == Visibility.Visible)
+                    {
+                        // La webcam debe aparecer dentro de GodotPlaceholder (Grid.Row="1"),
+                        // justo encima de BorderBottomLoginBar (Grid.Row="2", Height="80")
+                        // El HwndSource de la webcam es hijo de _godotHost.Handle,
+                        // por lo que las coordenadas deben ser relativas al área de cliente del GodotHwndHost.
+                        
+                        // Posicionar en la esquina inferior derecha del área de Godot
+                        // con un pequeño margen
+                        int marginRight = 10;   // margen desde la derecha
+                        int marginBottom = 4;   // margen desde abajo (pegado a la barra del chat)
+                        
+                        // Convertir margenes a espacio de coordenadas del DPI
+                        int marginRightDpi = (int)(marginRight * dpiX);
+                        int marginBottomDpi = (int)(marginBottom * dpiY);
+                        
+                        // Calcular posición: esquina inferior derecha del GodotPlaceholder
+                        targetLeft = (int)(GodotPlaceholder.ActualWidth * dpiX) - width - marginRightDpi;
+                        targetTop = (int)(GodotPlaceholder.ActualHeight * dpiY) - height - marginBottomDpi;
+                    }
+                    else
+                    {
+                        // Fallback: esquina inferior derecha del placeholder
+                        targetLeft = (int)((GodotPlaceholder.ActualWidth - 340) * dpiX);
+                        targetTop = (int)((GodotPlaceholder.ActualHeight - 260) * dpiY);
+                    }
 
                     MoveWindow(_webcamHwndSource.Handle, targetLeft, targetTop, width, height, true);
                 }

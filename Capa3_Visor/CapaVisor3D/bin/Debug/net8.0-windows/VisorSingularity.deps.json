@@ -12,7 +12,7 @@
           "BepuPhysics": "2.5.0-beta.29",
           "HelixToolkit.Wpf.SharpDX": "3.1.1",
           "LiteDB": "5.0.21",
-          "MessagePack": "3.1.4",
+          "MessagePack": "3.1.6",
           "NAudio": "2.3.0",
           "OpenCvSharp4.Windows": "4.13.0.20260602",
           "ServidorVirtualCS": "1.0.0",
@@ -197,23 +197,23 @@
           }
         }
       },
-      "MessagePack/3.1.4": {
+      "MessagePack/3.1.6": {
         "dependencies": {
-          "MessagePack.Annotations": "3.1.4",
+          "MessagePack.Annotations": "3.1.6",
           "Microsoft.NET.StringTools": "17.11.4"
         },
         "runtime": {
           "lib/net8.0/MessagePack.dll": {
-            "assemblyVersion": "3.1.4.0",
-            "fileVersion": "3.1.4.0"
+            "assemblyVersion": "3.1.6.0",
+            "fileVersion": "3.1.6.0"
           }
         }
       },
-      "MessagePack.Annotations/3.1.4": {
+      "MessagePack.Annotations/3.1.6": {
         "runtime": {
           "lib/netstandard2.0/MessagePack.Annotations.dll": {
-            "assemblyVersion": "3.1.4.0",
-            "fileVersion": "3.1.4.0"
+            "assemblyVersion": "3.1.6.0",
+            "fileVersion": "3.1.6.0"
           }
         }
       },
@@ -753,19 +753,19 @@
       "path": "litedb/5.0.21",
       "hashPath": "litedb.5.0.21.nupkg.sha512"
     },
-    "MessagePack/3.1.4": {
+    "MessagePack/3.1.6": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-BH0wlHWmVoZpbAPyyt2Awbq30C+ZsS3eHSkYdnyUAbqVJ22fAJDzn2xTieBeoT5QlcBzp61vHcv878YJGfi3mg==",
-      "path": "messagepack/3.1.4",
-      "hashPath": "messagepack.3.1.4.nupkg.sha512"
+      "sha512": "sha512-c5M8C0Lrf6GdGiv01OCB86WEL5YDi7UdH5qsU+q7Q9WvqlhtE4kkJzzJpFufPbz+OULX8FGIB2qo/7CLQ6vizg==",
+      "path": "messagepack/3.1.6",
+      "hashPath": "messagepack.3.1.6.nupkg.sha512"
     },
-    "MessagePack.Annotations/3.1.4": {
+    "MessagePack.Annotations/3.1.6": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-aVWrDAkCdqxwQsz/q0ldPh2EFn48M99YUzE9OvZjMq2RNLKz4o2z88iGFvSvbMqOWRweRvKPHBJZe22PRqzslQ==",
-      "path": "messagepack.annotations/3.1.4",
-      "hashPath": "messagepack.annotations.3.1.4.nupkg.sha512"
+      "sha512": "sha512-d0r/B7v1frvN6ElIgp5J5/cHeLADOK21qieHutimUpCWGcjhzOJV9glrItZO4E3dUcriMKX3Swsee3rFx9ouOw==",
+      "path": "messagepack.annotations/3.1.6",
+      "hashPath": "messagepack.annotations.3.1.6.nupkg.sha512"
     },
     "Microsoft.CodeAnalysis.Common/4.11.0": {
       "type": "package",

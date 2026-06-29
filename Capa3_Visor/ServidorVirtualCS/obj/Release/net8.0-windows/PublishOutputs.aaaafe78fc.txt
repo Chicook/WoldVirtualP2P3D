@@ -1,7 +1,0 @@
-D:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\bin\Release\net8.0-windows\publish\ServidorVirtualCS.exe
-D:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\bin\Release\net8.0-windows\publish\ServidorVirtualCS.dll
-D:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\bin\Release\net8.0-windows\publish\ServidorVirtualCS.deps.json
-D:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\bin\Release\net8.0-windows\publish\ServidorVirtualCS.runtimeconfig.json
-D:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\bin\Release\net8.0-windows\publish\ServidorVirtualCS.pdb
-D:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\bin\Release\net8.0-windows\publish\System.Management.dll
-D:\WCVcoinMTB\Capa3_Visor\ServidorVirtualCS\bin\Release\net8.0-windows\publish\runtimes\win\lib\net8.0\System.Management.dll

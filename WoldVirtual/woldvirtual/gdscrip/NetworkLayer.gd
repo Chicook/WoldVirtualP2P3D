@@ -20,6 +20,9 @@ var _missing_counts: Dictionary = {}
 
 var _ws := WebSocketPeer.new()
 var _ws_connected := false
+var _ws_port: int = 8082
+var _ws_reconnect_timer: float = 0.0
+const WS_RECONNECT_INTERVAL := 3.0  # reintentar conexión cada 3 s mientras no haya WS
 
 func _ready() -> void:
 	# Calculamos las rutas absolutas basadas en la ubicación del proyecto
@@ -34,11 +37,31 @@ func _ready() -> void:
 		
 	_setup_identity()
 	
-	var err = _ws.connect_to_url("ws://127.0.0.1:8082/ws")
-	if err != OK:
-		print("Failed to start WebSocket connection: ", err)
+	_connect_ws()
 		
 	_initial_sync()
+
+# Lee el puerto real del servidor WebSocket que publica el visor C# en
+# Estado_Global/ws_port.txt. Si el archivo no existe todavía, mantiene 8082.
+func _read_ws_port() -> int:
+	var port_path = BASE_DIR + "/ws_port.txt"
+	var f = FileAccess.open(port_path, FileAccess.READ)
+	if f:
+		var txt = f.get_as_text().strip_edges()
+		f.close()
+		if txt.is_valid_int():
+			var p = int(txt)
+			if p > 0 and p <= 65535:
+				return p
+	return 8082
+
+# (Re)inicia la conexión WebSocket usando el puerto descubierto dinámicamente.
+func _connect_ws() -> void:
+	_ws_port = _read_ws_port()
+	var url = "ws://127.0.0.1:%d/ws" % _ws_port
+	var err = _ws.connect_to_url(url)
+	if err != OK:
+		print("Failed to start WebSocket connection to ", url, ": ", err)
 
 func _setup_identity():
 	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
@@ -69,6 +92,16 @@ func _process(delta: float) -> void:
 			var text = packet.get_string_from_utf8()
 			var p = JSON.parse_string(text)
 			if typeof(p) == TYPE_DICTIONARY:
+				if p.get("type", "") == "peer_expired":
+					var expired_id = str(p.get("peer_id", ""))
+					if expired_id != "" and expired_id != local_id:
+						_known_pids.erase(expired_id)
+						_peer_cache.erase(expired_id)
+						_peer_last_seen.erase(expired_id)
+						_missing_counts.erase(expired_id)
+						_emit_aggregated_state()
+					continue
+
 				var rem_id = ""
 				if p.has("u") and typeof(p.u) == TYPE_DICTIONARY and p.u.size() > 0:
 					rem_id = p.u.keys()[0]
@@ -88,6 +121,12 @@ func _process(delta: float) -> void:
 		if _ws_connected:
 			_ws_connected = false
 			print("Godot WebSocket closed.")
+		# Reintento de conexión: cubre el arranque (el servidor C# levanta tras
+		# el login) y los cambios de puerto publicados en ws_port.txt.
+		_ws_reconnect_timer += delta
+		if _ws_reconnect_timer >= WS_RECONNECT_INTERVAL:
+			_ws_reconnect_timer = 0.0
+			_connect_ws()
 			
 	poll += delta
 	_peer_scan_timer += delta
