@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VisorSingularity")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0-alpha+2026.bc76e7ee83a177fc5e2090c7daa3677ba7efd1a4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0-alpha+2026.cb199fc8fe0651e210c7e5f33dccfe68b1e4427b")]
 [assembly: System.Reflection.AssemblyProductAttribute("VisorSingularity")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VisorSingularity")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.1.0.0")]

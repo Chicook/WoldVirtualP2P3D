@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ServidorVirtualCS")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bc76e7ee83a177fc5e2090c7daa3677ba7efd1a4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cb199fc8fe0651e210c7e5f33dccfe68b1e4427b")]
 [assembly: System.Reflection.AssemblyProductAttribute("ServidorVirtualCS")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ServidorVirtualCS")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
