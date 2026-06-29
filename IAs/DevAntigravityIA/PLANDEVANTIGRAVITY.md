@@ -92,6 +92,11 @@ sequenceDiagram
 }
 ```
 
+#### Estado de implementación (sección 2.2)
+*   [x] **Handshake formal** (`Services/HandshakeProtocol.cs`): genera `HandshakeRequest`/`HandshakeResponse` con versión `1.0`, `sender_id`, `wallet_address`, timestamp, `node_signature`, `binding_proof` y capacidades.
+*   [x] **Validación local**: verifica versión de protocolo, NodeId seguro, ventana de reloj de 30 segundos, correspondencia `sender_id` ↔ hash SHA-256 de la clave pública, firma ECDSA del nodo y prueba de wallet (simulada en entorno local mediante `MetaMaskValidator`, extensible a recuperación Ethereum real).
+*   [x] **Tests** (`VisorSingularity.Tests/HandshakeTests.cs`): handshake válido, rechazo por `sender_id` manipulado, timestamp expirado, wallet simulada deshabilitada y mensaje de binding determinista. Suite total **35/35 en verde**.
+
 ---
 
 ### 2.3. Modelo de Confianza y Validación entre Peers (`Trust Model`)
