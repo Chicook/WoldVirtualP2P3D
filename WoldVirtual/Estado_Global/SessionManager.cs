@@ -13,7 +13,7 @@ namespace WoldVirtual.EstadoGlobal;
 public sealed class SessionManager : IDisposable
 {
     private readonly string _sessionsDir;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private IslandStateManager? _islandManager;
     private SessionState? _current;
     private IslandVisit? _activeVisit;

@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Management;
 using System.Security.Cryptography;
 using System.Text;
@@ -90,56 +89,25 @@ namespace VisorSingularity.Services
             return builder.ToString();
         }
 
-        public static string EncryptString(string plainText, string keyString)
+        public static (string lang, string country) GetSystemLocaleInfo()
         {
-            if (string.IsNullOrEmpty(plainText)) return "";
             try
             {
-                byte[] key = SHA256.HashData(Encoding.UTF8.GetBytes(keyString));
-                byte[] iv = new byte[16];
-                Array.Copy(key, iv, 16);
-
-                using var aes = Aes.Create();
-                aes.Key = key;
-                aes.IV = iv;
-
-                using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-                using var ms = new MemoryStream();
-                using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
-                using (var sw = new StreamWriter(cs, Encoding.UTF8))
+                var culture = System.Globalization.CultureInfo.CurrentCulture;
+                string lang = culture.TwoLetterISOLanguageName.ToLowerInvariant();
+                string country = "??";
+                try
                 {
-                    sw.Write(plainText);
+                    var region = new System.Globalization.RegionInfo(culture.Name);
+                    country = region.TwoLetterISORegionName.ToUpperInvariant();
                 }
-                return Convert.ToBase64String(ms.ToArray());
+                catch { }
+
+                return (lang, country);
             }
             catch
             {
-                return plainText;
-            }
-        }
-
-        public static string DecryptString(string cipherText, string keyString)
-        {
-            if (string.IsNullOrEmpty(cipherText)) return "";
-            try
-            {
-                byte[] key = SHA256.HashData(Encoding.UTF8.GetBytes(keyString));
-                byte[] iv = new byte[16];
-                Array.Copy(key, iv, 16);
-
-                using var aes = Aes.Create();
-                aes.Key = key;
-                aes.IV = iv;
-
-                using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-                using var ms = new MemoryStream(Convert.FromBase64String(cipherText));
-                using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-                using var sr = new StreamReader(cs, Encoding.UTF8);
-                return sr.ReadToEnd();
-            }
-            catch
-            {
-                return cipherText;
+                return ("es", "ES");
             }
         }
     }

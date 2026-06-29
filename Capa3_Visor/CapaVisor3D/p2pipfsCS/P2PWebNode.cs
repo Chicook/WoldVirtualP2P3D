@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -23,7 +24,7 @@ namespace VisorSingularity
     ///   3. IPFS en background       → Kubo anuncia el contenido en el DHT para seeding P2P adicional
     ///   4. Fallback CDN             → Pixeldrain/GoFile/Transfer.sh si SSH e IPFS fallan ambos
     /// </summary>
-    public class P2PWebNode : IDisposable
+    public class P2PWebNode
     {
         // ── Propiedades públicas ──────────────────────────────────────────────
         public string NodeId       { get; private set; }
@@ -57,9 +58,6 @@ namespace VisorSingularity
         private Process?                 _tunnelProcess;   // Proceso SSH del túmel reverso activo
         private int                      _internalPort;
         private TcpListener?             _proxyListener;   // Proxy TCP local para reescribir Host header
-
-        /// <summary>Instancia del gestor IPFS (Kubo). Disponible tras el arranque del nodo.</summary>
-        public IpfsManager? IpfsManagerInstance => _ipfsManager;
 
         public event Action<string>? OnStatusChanged;
 
@@ -172,6 +170,9 @@ namespace VisorSingularity
                 IsOnIpfs     = false;
                 LogStatus("🌍 ¡Nodo visible! URL activa mientras estés conectado.");
 
+                // Monitor de salud: reestablece el túnel si el proceso SSH cae.
+                _ = Task.Run(() => MonitorTunnelAsync(_cts?.Token ?? default));
+
                 // IPFS en paralelo para seeding DHT adicional (no bloquea)
                 _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
                 return;
@@ -180,6 +181,62 @@ namespace VisorSingularity
             // Paso 3 — SSH no disponible: intentar IPFS + CDN
             LogStatus("⚠️ Túmel SSH no disponible. Intentando IPFS + CDN...");
             await RunIpfsBackgroundAsync(_cts?.Token ?? default);
+        }
+
+        // ── Monitor de salud del túnel + reconexión automática ───────────────────────────────────
+        /// <summary>
+        /// Vigila el proceso del túnel público. Si el túnel cae (el proceso SSH/
+        /// cloudflared termina) intenta reestablecerlo con backoff exponencial,
+        /// registrando cada reconexión en la telemetría de red. Esto cubre la
+        /// instrumentación de "reconexiones automáticas y timeouts" de la Fase 4.
+        /// </summary>
+        private async Task MonitorTunnelAsync(CancellationToken token)
+        {
+            const int HealthCheckMs = 5000;       // frecuencia de sondeo del proceso
+            const int BaseBackoffMs = 2000;       // espera inicial antes de reintentar
+            const int MaxBackoffMs  = 60000;      // techo del backoff exponencial
+            int backoffMs = BaseBackoffMs;
+
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await Task.Delay(HealthCheckMs, token).ConfigureAwait(false);
+
+                    // Túnel sano: resetear el backoff y continuar vigilando.
+                    if (IsTunnelActive)
+                    {
+                        backoffMs = BaseBackoffMs;
+                        continue;
+                    }
+
+                    LogStatus("⚠️ Túnel caído. Reintentando conexión...");
+                    Services.NetworkTelemetryService.Instance.RecordReconnection();
+
+                    await Task.Delay(backoffMs, token).ConfigureAwait(false);
+
+                    string? newUrl = await TryEstablishTunnelAsync(token).ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(newUrl))
+                    {
+                        ZipPublicUrl = $"{newUrl}/visor.zip";
+                        GatewayUrl   = newUrl;
+                        IsOnIpfs     = false;
+                        backoffMs    = BaseBackoffMs;
+                        LogStatus("🌍 Túnel reestablecido. Nodo visible de nuevo.");
+                    }
+                    else
+                    {
+                        // Backoff exponencial acotado para no saturar al reintentar.
+                        backoffMs = Math.Min(backoffMs * 2, MaxBackoffMs);
+                        LogStatus($"❌ Reconexión fallida. Próximo intento en {backoffMs / 1000}s.");
+                    }
+                }
+            }
+            catch (OperationCanceledException) { /* apagado normal */ }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TunnelMonitor] Error: {ex.Message}");
+            }
         }
 
         // ── Túnel Público ────────────────────────────────────────────────────────────────────────
@@ -217,30 +274,21 @@ namespace VisorSingularity
             string sshExe = @"C:\Windows\System32\OpenSSH\ssh.exe";
             if (!File.Exists(sshExe)) sshExe = "ssh";
 
-            string knownHostsPath = Path.Combine(Path.GetTempPath(), "wcv_known_hosts");
-            try
-            {
-                File.WriteAllText(knownHostsPath, 
-                    "serveo.net ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDxYGqSKVwJpQD1F0YIhz+bd5lpl7YesKjtrn1QD1RjQcSj724lJdCwlv4J8PcLuFFtlAA8AbGQju7qWdMN9ihdHvRcWf0tSjZ+bzwYkxaCydq4JnCrbvLJPwLFaqV1NdcOzY2NVLuX5CfY8VTHrps49LnO0QpGaavqrbk+wTWDD9MHklNfJ1zSFpQAkSQnSNSYi/M2J3hX7P0G2R7dsUvNov+UgNKpc4n9+Lq5Vmcqjqo2KhFyHP0NseDLpgjaqGJq2Kvit3QowhqZkK4K77AA65CxZjdDfpjwZSuX075F9vNi0IFpFkGJW9KlrXzI4lIzSAjPZBURhUb8nZSiPuzj\n" +
-                    "localhost.run ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC3lJnhW1oCXuAYV9IBdcJA+Vx7AHL5S/ZQvV2fhceOAPgO2kNQZla6xvUwoE4iw8lYu3zoE1KtieCU9yInWOVI6W/wFaT/ETH1tn55T2FVsK/zaxPiHZVJGLPPdEEid0vS2p1JDfc9onZ0pNSHLl1QusIOeMUyZ2bUMMLLgw46KOT9S3s/LmxgoJ3PocVUn5rVXz/Dng7Y8jYNe4IFrZOAUsi7hNBa+OYja6ceefpDvNDEJ1BdhbYfGolBdNA7f+FNl0kfaWru4Cblr843wBe2ckO/sNqgeAMXO/qH+SSgQxUXF2AgAw+TGp3yCIyYoOPvOgvcPsQziJLmDbUuQpnH\n");
-            }
-            catch { }
-
             var candidates = new[]
             {
                 new {
                     Name = "serveo.net",
-                    Args = $"-o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"{knownHostsPath}\" -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
                     Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "serveo.net:443",
-                    Args = $"-p 443 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"{knownHostsPath}\" -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
                     Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "localhost.run",
-                    Args = $"-o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"{knownHostsPath}\" -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} nokey@localhost.run",
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} nokey@localhost.run",
                     Pat  = @"https://[\w\-]+\.lhr\\.rocks"
                 }
             };
@@ -316,27 +364,10 @@ namespace VisorSingularity
                 using var resp = await dl.GetAsync(cfUrl, HttpCompletionOption.ResponseHeadersRead, token);
                 if (resp.IsSuccessStatusCode)
                 {
-                    await using (var fs = File.Create(localCf))
-                    {
-                        await resp.Content.CopyToAsync(fs, token);
-                    }
-                    
-                    using (var sha256 = System.Security.Cryptography.SHA256.Create())
-                    using (var stream = File.OpenRead(localCf))
-                    {
-                        byte[] hashBytes = sha256.ComputeHash(stream);
-                        string hashHex = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
-                        
-                        // Hash de cloudflared-windows-amd64.exe (Versión estática / Aprobada)
-                        if (hashHex != "5253E66F1F493C4E13539749F1AA86FD0C61E3072900FEC29A44BA046A6D97E2")
-                        {
-                            File.Delete(localCf);
-                            throw new Exception("Hash SHA-256 inválido para cloudflared.exe (MitM detectado o versión no aprobada).");
-                        }
-                    }
-
-                    LogStatus("✅ cloudflared descargado y verificado (SHA-256 correcto).");
-                    System.Diagnostics.Debug.WriteLine($"[Cloudflared] Descargado en: {localCf}");
+                    await using var fs = File.Create(localCf);
+                    await resp.Content.CopyToAsync(fs, token);
+                    LogStatus("✅ cloudflared descargado correctamente.");
+                    Debug.WriteLine($"[Cloudflared] Descargado en: {localCf}");
                     return localCf;
                 }
                 LogStatus($"⚠️ Descarga de cloudflared falló: HTTP {(int)resp.StatusCode}");
@@ -717,7 +748,60 @@ namespace VisorSingularity
             return null;
         }
 
-        // ── Servidor HTTP local: landing + ZIP + IPFS gateway proxy ───────────
+        // ── Servidor HTTP local: landing + ZIP + IPFS gateway proxy + WebSockets ───────────
+        private static readonly List<System.Net.WebSockets.WebSocket> _wsClients = new();
+
+        public static void BroadcastToWs(string message)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(message);
+            var segment = new ArraySegment<byte>(bytes);
+            lock (_wsClients)
+            {
+                foreach (var ws in _wsClients.ToArray())
+                {
+                    if (ws.State == System.Net.WebSockets.WebSocketState.Open)
+                    {
+                        _ = ws.SendAsync(segment, System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                    }
+                }
+            }
+        }
+
+        private async Task HandleWebSocketSessionAsync(HttpListenerContext ctx)
+        {
+            try
+            {
+                HttpListenerWebSocketContext wsCtx = await ctx.AcceptWebSocketAsync(subProtocol: null);
+                var ws = wsCtx.WebSocket;
+                lock (_wsClients) { _wsClients.Add(ws); }
+                Debug.WriteLine("[WS] Cliente Godot conectado.");
+
+                byte[] buffer = new byte[65536];
+                while (ws.State == System.Net.WebSockets.WebSocketState.Open)
+                {
+                    var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    if (result.MessageType == System.Net.WebSockets.WebSocketMessageType.Close)
+                    {
+                        await ws.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+                        break;
+                    }
+                    else if (result.MessageType == System.Net.WebSockets.WebSocketMessageType.Text)
+                    {
+                        // TODO: Recibir posiciones de Godot si se envían por aquí
+                        // string msg = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    }
+                }
+
+                lock (_wsClients) { _wsClients.Remove(ws); }
+                ws.Dispose();
+                Debug.WriteLine("[WS] Cliente Godot desconectado.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[WS] Error en sesión WebSocket: {ex.Message}");
+            }
+        }
+
         private async Task ListenLoop(CancellationToken token)
         {
             while (!token.IsCancellationRequested && _listener.IsListening)
@@ -725,6 +809,13 @@ namespace VisorSingularity
                 try
                 {
                     var ctx     = await _listener.GetContextAsync();
+
+                    if (ctx.Request.IsWebSocketRequest)
+                    {
+                        _ = Task.Run(() => HandleWebSocketSessionAsync(ctx));
+                        continue;
+                    }
+
                     // ⚠ Preservar la ruta original (no .ToLower()) porque los CIDs son case-sensitive
                     string path = ctx.Request.Url?.AbsolutePath ?? "/";
                     string pLow = path.ToLowerInvariant();
@@ -776,18 +867,8 @@ namespace VisorSingularity
                     r.AddHeader("Content-Disposition",
                         proxyResp.Content.Headers.ContentDisposition.ToString());
 
-                string? origin = req.Headers["Origin"];
-                if (!string.IsNullOrWhiteSpace(origin))
-                {
-                    if (string.Equals(origin, "http://127.0.0.1:8082", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(origin, "http://localhost:8082", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(origin, "http://127.0.0.1:8080", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(origin, "http://localhost:8080", StringComparison.OrdinalIgnoreCase))
-                    {
-                        r.AddHeader("Access-Control-Allow-Origin", origin);
-                        r.AddHeader("Vary", "Origin");
-                    }
-                }
+                // CORS abierto para que otros nodos/scripts puedan acceder
+                r.AddHeader("Access-Control-Allow-Origin", "*");
 
                 // Propagar tamaño si se conoce (evita chunked encoding innecesario)
                 if (proxyResp.Content.Headers.ContentLength.HasValue)
@@ -1139,58 +1220,5 @@ a.btn.disabled{{border-color:#334;color:#556;pointer-events:none;cursor:not-allo
         }
 
         private void LogStatus(string msg) => OnStatusChanged?.Invoke(msg);
-
-        // ── Dispose Pattern ──────────────────────────────────────────────────────────────
-        private bool _disposed = false;
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed)
-                return;
-
-            if (disposing)
-            {
-                // Dispose managed resources
-                Stop();
-
-                _ipfsManager?.Dispose();
-                _ipfsManager = null;
-
-                if (_listener != null && _listener.IsListening)
-                {
-                    try { _listener.Stop(); } catch { }
-                    _listener.Close();
-                    _listener = null;
-                }
-
-                if (_proxyListener != null)
-                {
-                    try { _proxyListener.Stop(); } catch { }
-                    _proxyListener = null;
-                }
-
-                if (_tunnelProcess != null && !_tunnelProcess.HasExited)
-                {
-                    try { _tunnelProcess.Kill(); } catch { }
-                    _tunnelProcess.Dispose();
-                    _tunnelProcess = null;
-                }
-            }
-
-            // Dispose unmanaged resources (none in this case)
-
-            _disposed = true;
-        }
-
-        ~P2PWebNode()
-        {
-            Dispose(false);
-        }
     }
 }

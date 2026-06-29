@@ -2,7 +2,7 @@ extends Node
 
 signal network_updated(state: Dictionary)
 
-# Rutas dinámicas para portabilidad (DevTraeIA)
+# Rutas dinámicas para portabilidad
 var BASE_DIR: String
 var PEER_DIR: String
 const INTERVAL = 1.5
@@ -18,6 +18,12 @@ var _peer_last_seen: Dictionary = {}
 var _known_pids: Array = []
 var _missing_counts: Dictionary = {}
 
+var _ws := WebSocketPeer.new()
+var _ws_connected := false
+var _ws_port: int = 8082
+var _ws_reconnect_timer: float = 0.0
+const WS_RECONNECT_INTERVAL := 3.0  # reintentar conexión cada 3 s mientras no haya WS
+
 func _ready() -> void:
 	# Calculamos las rutas absolutas basadas en la ubicación del proyecto
 	var project_path = ProjectSettings.globalize_path("res://")
@@ -26,18 +32,36 @@ func _ready() -> void:
 	BASE_DIR = base_folder + "/Estado_Global"
 	PEER_DIR = BASE_DIR + "/peers/"
 	
-	print("[NetworkLayer] PEER_DIR calculado: ", PEER_DIR)
-	
-	if not DirAccess.dir_exists_absolute(BASE_DIR):
-		var res_base = DirAccess.make_dir_recursive_absolute(BASE_DIR)
-		print("[NetworkLayer] Creación de BASE_DIR (Estado_Global): ", "Éxito" if res_base == OK else "Fallo")
-	if not DirAccess.dir_exists_absolute(PEER_DIR):
-		var res_peer = DirAccess.make_dir_recursive_absolute(PEER_DIR)
-		print("[NetworkLayer] Creación de PEER_DIR (peers): ", "Éxito" if res_peer == OK else "Fallo")
+	if !DirAccess.dir_exists_absolute(PEER_DIR):
+		DirAccess.make_dir_recursive_absolute(PEER_DIR)
 		
 	_setup_identity()
-	print("[NetworkLayer] local_id después de setup_identity: ", local_id)
+	
+	_connect_ws()
+		
 	_initial_sync()
+
+# Lee el puerto real del servidor WebSocket que publica el visor C# en
+# Estado_Global/ws_port.txt. Si el archivo no existe todavía, mantiene 8082.
+func _read_ws_port() -> int:
+	var port_path = BASE_DIR + "/ws_port.txt"
+	var f = FileAccess.open(port_path, FileAccess.READ)
+	if f:
+		var txt = f.get_as_text().strip_edges()
+		f.close()
+		if txt.is_valid_int():
+			var p = int(txt)
+			if p > 0 and p <= 65535:
+				return p
+	return 8082
+
+# (Re)inicia la conexión WebSocket usando el puerto descubierto dinámicamente.
+func _connect_ws() -> void:
+	_ws_port = _read_ws_port()
+	var url = "ws://127.0.0.1:%d/ws" % _ws_port
+	var err = _ws.connect_to_url(url)
+	if err != OK:
+		print("Failed to start WebSocket connection to ", url, ": ", err)
 
 func _setup_identity():
 	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
@@ -47,9 +71,6 @@ func _setup_identity():
 			break
 	if local_id == "":
 		local_id = str(Time.get_ticks_usec() + OS.get_process_id()).md5_text().substr(0, 8)
-	else:
-		# Sanitizar local_id para evitar Path Traversal o caracteres maliciosos
-		local_id = local_id.replace("..", "").replace("/", "").replace("\\", "")
 
 func _initial_sync():
 	for i in 5:
@@ -58,13 +79,73 @@ func _initial_sync():
 		OS.delay_msec(100)
 
 func _process(delta: float) -> void:
+	_ws.poll()
+	var state = _ws.get_ready_state()
+	
+	if state == WebSocketPeer.STATE_OPEN:
+		if not _ws_connected:
+			_ws_connected = true
+			print("Godot WebSocket connected!")
+			
+		while _ws.get_available_packet_count() > 0:
+			var packet = _ws.get_packet()
+			var text = packet.get_string_from_utf8()
+			var p = JSON.parse_string(text)
+			if typeof(p) == TYPE_DICTIONARY:
+				if p.get("type", "") == "peer_expired":
+					var expired_id = str(p.get("peer_id", ""))
+					if expired_id != "" and expired_id != local_id:
+						_known_pids.erase(expired_id)
+						_peer_cache.erase(expired_id)
+						_peer_last_seen.erase(expired_id)
+						_missing_counts.erase(expired_id)
+						_emit_aggregated_state()
+					continue
+
+				var rem_id = ""
+				if p.has("u") and typeof(p.u) == TYPE_DICTIONARY and p.u.size() > 0:
+					rem_id = p.u.keys()[0]
+				elif p.has("i") and typeof(p.i) == TYPE_DICTIONARY and p.i.size() > 0:
+					rem_id = p.i.keys()[0]
+				
+				if rem_id != "" and rem_id != local_id:
+					_peer_cache[rem_id] = p
+					_peer_last_seen[rem_id] = Time.get_unix_time_from_system()
+					if not _known_pids.has(rem_id):
+						_known_pids.append(rem_id)
+						_missing_counts[rem_id] = 0
+					
+					_emit_aggregated_state()
+					
+	elif state == WebSocketPeer.STATE_CLOSED:
+		if _ws_connected:
+			_ws_connected = false
+			print("Godot WebSocket closed.")
+		# Reintento de conexión: cubre el arranque (el servidor C# levanta tras
+		# el login) y los cambios de puerto publicados en ws_port.txt.
+		_ws_reconnect_timer += delta
+		if _ws_reconnect_timer >= WS_RECONNECT_INTERVAL:
+			_ws_reconnect_timer = 0.0
+			_connect_ws()
+			
 	poll += delta
 	_peer_scan_timer += delta
-	if poll >= INTERVAL + randf_range(0.0, 0.05):
+	if poll >= (INTERVAL if not _ws_connected else 5.0) + randf_range(0.0, 0.05):
 		poll = 0.0
-		var state = _io()
-		if !state.is_empty():
-			network_updated.emit(state)
+		var io_state = _io()
+		if not io_state.is_empty():
+			network_updated.emit(io_state)
+
+func _emit_aggregated_state():
+	var res = {"u": {}, "i": {}, "e": {}, "_pids": _known_pids.duplicate()}
+	for pid in _known_pids:
+		if _peer_cache.has(pid):
+			_merge_peer(res, _peer_cache[pid], pid)
+	
+	if res.u.is_empty(): return
+	_first_load_done = true
+	_last_good_state = res
+	network_updated.emit(res)
 
 func get_local_id() -> String:
 	return local_id
@@ -85,17 +166,9 @@ func push_event(type: String, data: Dictionary = {}):
 func _io(data: Dictionary = {}) -> Dictionary:
 	var final_path = PEER_DIR + "peer_" + local_id + ".json"
 	if !data.is_empty():
-		print("[NetworkLayer] Intentando escribir peer JSON para local_id: ", local_id)
-		print("[NetworkLayer] Datos a escribir (parcial): ", data.keys())
 		var current_peer_data = _peer_cache.get(local_id, {})
 		for key in current_peer_data:
 			if not data.has(key): data[key] = current_peer_data[key]
-		
-		# Incluir campo "did" si local_id comienza con "did_wcv_0x"
-		if local_id.begins_with("did_wcv_0x"):
-			# Convertir did_wcv_0x... a did:wcv:0x...
-			var did = "did:wcv:0x" + local_id.substr("did_wcv_0x".length())
-			data["did"] = did
 		
 		# Incluir eventos pendientes
 		if !_event_queue.is_empty():
@@ -109,16 +182,33 @@ func _io(data: Dictionary = {}) -> Dictionary:
 		var tmp = final_path + ".tmp"
 		var f = FileAccess.open(tmp, FileAccess.WRITE)
 		if f:
-			print("[NetworkLayer] Archivo temporal abierto con éxito: ", tmp)
 			f.store_string(JSON.stringify(data))
 			f.close()
 			if FileAccess.file_exists(final_path): DirAccess.remove_absolute(final_path)
 			DirAccess.rename_absolute(tmp, final_path)
-			print("[NetworkLayer] Peer JSON escrito con éxito: ", final_path)
-		else:
-			printerr("[NetworkLayer] ERROR: No se pudo abrir el archivo temporal para escribir: ", tmp)
 		return {}
 
+	# Optimización en Memoria vía WebSockets
+	if _ws_connected:
+		var current_time = Time.get_unix_time_from_system()
+		var to_remove = []
+		for pid in _known_pids:
+			if _peer_cache.has(pid) and current_time - _peer_last_seen[pid] > 10.0:
+				to_remove.append(pid)
+		for pid in to_remove:
+			_known_pids.erase(pid)
+			_peer_cache.erase(pid)
+			_peer_last_seen.erase(pid)
+			
+		var res = {"u": {}, "i": {}, "e": {}, "_pids": _known_pids.duplicate()}
+		for pid in _known_pids:
+			if _peer_cache.has(pid): _merge_peer(res, _peer_cache[pid], pid)
+		if res.u.is_empty(): return _last_good_state
+		_first_load_done = true
+		_last_good_state = res
+		return res
+
+	# Fallback a lectura de disco (si no hay WS)
 	if _peer_scan_timer >= 1.5 or _known_pids.is_empty():
 		_peer_scan_timer = 0.0
 		var found_now = []
@@ -162,17 +252,7 @@ func _io(data: Dictionary = {}) -> Dictionary:
 			_peer_cache.erase(pcid)
 			_peer_last_seen.erase(pcid)
 
-	if res.u.is_empty(): 
-		# Si no hay usuarios pero hay islas, permitimos que pase para cargar la isla local
-		if res.i.is_empty(): 
-			return _last_good_state
-		
-	# Si local_id no está en res.u ni en res.i, intentamos recuperarlo de la cache si existe
-	if not res.u.has(local_id) and _peer_cache.has(local_id):
-		var lp = _peer_cache[local_id]
-		for uid in lp.get("u", {}): res.u[uid] = lp.u[uid]
-		for iid in lp.get("i", {}): res.i[iid] = lp.i[iid]
-		
+	if res.u.is_empty(): return _last_good_state
 	_first_load_done = true
 	_last_good_state = res
 	return res

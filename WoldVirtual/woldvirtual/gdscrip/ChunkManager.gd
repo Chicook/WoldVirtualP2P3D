@@ -102,8 +102,6 @@ func _on_network_updated(state: Dictionary):
 	var lid = network.get_local_id()
 	var users = state.get("u", {})
 	var islands = state.get("i", {})
-	
-	print("[ChunkManager] Sincronización recibida. Usuarios: ", users.keys(), " Islas: ", islands.keys())
 
 	if !users.has(lid):
 		# A list of slots occupied by OTHER active users:
@@ -153,8 +151,7 @@ func _on_network_updated(state: Dictionary):
 			"n": island_name,
 			"o": true,
 			"x": slot.x,
-			"z": slot.y,
-			"w": lid
+			"z": slot.y
 		}
 		network.send_state(me_data, _local_island_data)
 	else:
