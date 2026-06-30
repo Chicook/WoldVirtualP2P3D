@@ -58,7 +58,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ServidorVirtualCS\ServidorVirtualCS.csproj" />
+    <Reference Include="ServidorVirtualCS">
+      <HintPath>..\ServidorVirtualCS\bin\Debug\net8.0-windows\ServidorVirtualCS.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
