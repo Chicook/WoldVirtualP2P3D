@@ -58,6 +58,10 @@ func _ready() -> void:
 	_initialize_sub_controllers()
 	_setup_connections()
 	_setup_dynamic_chat_ui()
+	set_process(true)
+
+func _process(_delta: float) -> void:
+	_try_launch_pending_cinematic()
 
 func _initialize_sub_controllers():
 	# Cargar NetworkLayer modular
@@ -176,8 +180,6 @@ func _on_network_updated(state: Dictionary):
 		if is_instance_valid(island_node) and island_node != _local_island_node:
 			_local_island_node = island_node
 			_pending_cinematic_island = island_node
-
-	_try_launch_pending_cinematic()
 
 	if is_instance_valid(avatar_ctrl.my_avatar):
 		var entity = avatar_ctrl.my_avatar.get_node_or_null("ECSEntity")
