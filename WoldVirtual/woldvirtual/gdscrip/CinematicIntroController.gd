@@ -65,6 +65,12 @@ var _normal_fov         : float    = 75.0
 var _orbit_start_angle  : float    = 0.0
 ## Posición XZ del avatar al momento de spawnar (para recolocarle encima de la isla)
 var _avatar_spawn_pos   : Vector3  = Vector3.ZERO
+## Posición inicial de la cámara para el giro alrededor de la isla
+var _camera_initial_pos : Vector3  = Vector3.ZERO
+## Distancia inicial de la cámara a la isla
+var _camera_initial_dist: float    = 0.0
+## Ángulo inicial de la cámara alrededor de la isla
+var _camera_initial_angle: float   = 0.0
 
 # ─── API Pública ───────────────────────────────────────────────────────────────
 ## Inicia la secuencia completa.
@@ -104,7 +110,20 @@ func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> voi
 	_cam_ctrl.set_physics_process(false)
 	_cam_ctrl.set_process_input(false)
 
-	# ── Fase 1: lanzar animación de ascenso de la isla ─────────────────────────
+	# ── Calcular parámetros iniciales para el giro de cámara ───────────────────
+	_camera_initial_pos = _cam.global_position
+	var island_pos = _island.global_position
+	
+	# Calcular distancia horizontal (XZ) entre cámara e isla
+	var cam_xz = Vector2(_camera_initial_pos.x, _camera_initial_pos.z)
+	var island_xz = Vector2(island_pos.x, island_pos.z)
+	_camera_initial_dist = cam_xz.distance_to(island_xz)
+	
+	# Calcular ángulo inicial de la cámara alrededor de la isla (en plano XZ)
+	var cam_to_island = island_pos - _camera_initial_pos
+	_camera_initial_angle = atan2(cam_to_island.x, cam_to_island.z)
+	
+	# ── Fase 1: lanzar animación de ascenso de la isla con giro de cámara ──────
 	_phase = Phase.ISLAND_RISING
 	var target_y : float = _island.global_position.y
 
@@ -115,7 +134,8 @@ func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> voi
 	rise_anim.finished.connect(_on_island_arrived)
 	rise_anim.play(target_y)
 
-	print("[CinematicIntro] Fase 1: isla ascendiendo desde el lecho marino...")
+	print("[CinematicIntro] Fase 1: isla ascendiendo desde el lecho marino con giro de cámara 360°...")
+	set_process(true)
 
 ## Salta la cinemática y entrega el control al CameraController inmediatamente.
 func skip() -> void:
@@ -151,11 +171,20 @@ func _on_island_arrived() -> void:
 	_avatar.set_process_input(true)
 	_avatar.visible = true
 
+	# Asegurar que la cámara esté en la posición final del giro 360°
+	var island_pos = _island.global_position
+	var final_angle = _camera_initial_angle + TAU  # 360° completos
+	_cam.global_position = Vector3(
+		island_pos.x + sin(final_angle) * _camera_initial_dist,
+		_camera_initial_pos.y,  # Mantener altura absoluta de la cámara
+		island_pos.z + cos(final_angle) * _camera_initial_dist
+	)
+	_cam.look_at(island_pos)
+
 	# Iniciar fase de aproximación de cámara
 	_orbit_start_angle = _avatar.global_rotation.y + PI   # enfrente del avatar
 	_phase   = Phase.CAMERA_APPROACH
 	_elapsed = 0.0
-	set_process(true)
 
 # ─── Loop de fases de cámara ───────────────────────────────────────────────────
 func _ready() -> void:
@@ -171,6 +200,29 @@ func _process(delta: float) -> void:
 	var look_target : Vector3 = avatar_pos + Vector3(0.0, look_at_height, 0.0)
 
 	match _phase:
+
+		# ── FASE 1: Isla emergiendo con giro de cámara 360° ────────────────────
+		Phase.ISLAND_RISING:
+			# Duración del ascenso de la isla (4.2 segundos)
+			var island_rise_duration = 4.2
+			var t = clamp(_elapsed / island_rise_duration, 0.0, 1.0)
+			
+			# Calcular ángulo de giro (360° = TAU radianes)
+			var angle = _camera_initial_angle + (t * TAU)
+			
+			# Obtener posición actual de la isla
+			var island_pos = _island.global_position
+			
+			# Posicionar cámara manteniendo distancia horizontal inicial y altura absoluta
+			# La cámara gira alrededor de la isla manteniendo su altura Y inicial
+			_cam.global_position = Vector3(
+				island_pos.x + sin(angle) * _camera_initial_dist,
+				_camera_initial_pos.y,  # Mantener altura absoluta de la cámara
+				island_pos.z + cos(angle) * _camera_initial_dist
+			)
+			
+			# Enfocar la isla
+			_cam.look_at(island_pos)
 
 		# ── FASE 2: Espalda → Enfrente ──────────────────────────────────────────
 		Phase.CAMERA_APPROACH:
