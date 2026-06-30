@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WoldVirtual — Conectar Wallet</title>
+    <title>WoldVirtual — Conectar MetaMask</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             background-color: #050811;
             color: #ffffff;
@@ -20,18 +16,16 @@
             min-height: 100vh;
             overflow: hidden;
         }
-        /* Grid de fondo Cyberpunk */
         .bg-grid {
             position: absolute;
             width: 100%;
             height: 100%;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
             background-size: 30px 30px;
             z-index: 1;
         }
-        /* Contenedor principal con efecto de cristal y neón */
         .wallet-card {
             position: relative;
             z-index: 2;
@@ -44,14 +38,11 @@
             box-shadow: 0 0 30px rgba(0, 217, 255, 0.15);
             backdrop-filter: blur(10px);
         }
-        /* Esquinas Sci-Fi decorativas */
         .wallet-card::before {
             content: '';
             position: absolute;
-            top: -1px;
-            left: -1px;
-            width: 20px;
-            height: 20px;
+            top: -1px; left: -1px;
+            width: 20px; height: 20px;
             border-top: 3px solid #00d9ff;
             border-left: 3px solid #00d9ff;
             border-top-left-radius: 16px;
@@ -59,24 +50,16 @@
         .wallet-card::after {
             content: '';
             position: absolute;
-            bottom: -1px;
-            right: -1px;
-            width: 20px;
-            height: 20px;
+            bottom: -1px; right: -1px;
+            width: 20px; height: 20px;
             border-bottom: 3px solid #00ff8c;
             border-right: 3px solid #00ff8c;
             border-bottom-right-radius: 16px;
         }
-        /* Icono de Zorro MetaMask en SVG brillante */
         .wallet-icon {
-            width: 80px;
-            height: 80px;
+            width: 80px; height: 80px;
             margin-bottom: 25px;
             filter: drop-shadow(0 0 10px rgba(230, 119, 0, 0.5));
-            transition: transform 0.3s ease;
-        }
-        .wallet-icon:hover {
-            transform: scale(1.1) rotate(5deg);
         }
         h1 {
             font-size: 22px;
@@ -90,14 +73,14 @@
             font-size: 13px;
             color: #8e9cb2;
             line-height: 1.6;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         .session-info {
             background: rgba(17, 27, 48, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 8px;
             padding: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             text-align: left;
         }
         .info-row {
@@ -106,18 +89,11 @@
             font-size: 12px;
             margin-bottom: 8px;
         }
-        .info-row:last-child {
-            margin-bottom: 0;
-        }
-        .info-label {
-            color: #8e9cb2;
-            font-weight: 600;
-        }
-        .info-val {
-            color: #00ff8c;
-            font-weight: 700;
-        }
-        /* Botón de acción con neón */
+        .info-row:last-child { margin-bottom: 0; }
+        .info-label { color: #8e9cb2; font-weight: 600; }
+        .info-val { color: #00ff8c; font-weight: 700; }
+        .info-val.warn { color: #ffb347; }
+        .info-val.error { color: #ff6b6b; }
         .btn-connect {
             display: block;
             width: 100%;
@@ -132,23 +108,28 @@
             cursor: pointer;
             box-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
             transition: all 0.3s ease;
-            text-decoration: none;
             letter-spacing: 1px;
         }
-        .btn-connect:hover {
+        .btn-connect:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 0 25px rgba(0, 217, 255, 0.7);
             background: linear-gradient(135deg, #00ff8c 0%, #00aa66 100%);
         }
-        .btn-connect:active {
-            transform: translateY(1px);
+        .btn-connect:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        .hint {
+            margin-top: 14px;
+            font-size: 11px;
+            color: #6b7a90;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
     <div class="bg-grid"></div>
     <div class="wallet-card">
-        <!-- Zorro de Metamask en SVG Plano de Alta Calidad -->
         <svg class="wallet-icon" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
             <g fill="none" fill-rule="evenodd">
                 <path d="M298.667 80l-21.334-32-64 16L160 16 106.667 64l-64-16L21.333 80l53.334 26.667 5.333 106.666L160 304l80-90.667 5.333-106.666z" fill="#E67E22"/>
@@ -164,7 +145,7 @@
         </svg>
 
         <h1>CONECTAR METAMASK</h1>
-        <p>Autoriza la firma DeFi de tu nodo virtual para desbloquear el metaverso 3D.</p>
+        <p>Autoriza la firma DeFi de tu nodo virtual. Solo se usa MetaMask — Coinbase Wallet no es válido para esta sesión.</p>
 
         <div class="session-info">
             <div class="info-row">
@@ -175,71 +156,202 @@
                 <span class="info-label">ISLA ASIGNADA:</span>
                 <span class="info-val" id="lblIsland">1 : 0.0.0</span>
             </div>
+            <div class="info-row">
+                <span class="info-label">PROVEEDOR:</span>
+                <span class="info-val warn" id="lblProvider">Buscando MetaMask...</span>
+            </div>
         </div>
 
-        <button class="btn-connect" onclick="connectWallet()">CONECTAR Y ENTRAR</button>
+        <button class="btn-connect" id="btnConnect" onclick="connectWallet()" disabled>CONECTAR CON METAMASK</button>
+        <p class="hint" id="lblHint">Si tienes Coinbase Wallet instalada, esta página ignora ese proveedor y abre solo MetaMask.</p>
     </div>
 
     <script>
-        // Obtener parámetros de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const username = urlParams.get('user') || 'Usuario';
         const islandId = urlParams.get('islandId') || '1 : 0.0.0';
+        const devMode = urlParams.get('dev') === '1';
 
         document.getElementById('lblUser').innerText = username.toUpperCase();
         document.getElementById('lblIsland').innerText = islandId;
 
-        async function connectWallet() {
-            // Verificar si MetaMask está instalado en el navegador
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    // 1. Solicitar acceso a las cuentas de MetaMask
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    if (accounts && accounts.length > 0) {
-                        const walletAddress = accounts[0];
-                        
-                        // 2. Preparar el mensaje formal de firma DeFi
-                        const timestamp = new Date().toLocaleString('es-ES', { timeZoneName: 'short' });
-                        const message = `AUTENTICACIÓN DE NODO VIRTUAL — WOLDVIRTUAL P2P\n\n` +
-                                        `• Usuario de Cuenta: ${username}\n` +
-                                        `• Isla Asignada: ${islandId}\n` +
-                                        `• Dirección de Billetera: ${walletAddress}\n` +
-                                        `• Fecha y Hora Local: ${timestamp}\n\n` +
-                                        `Firma este mensaje para validar la propiedad de esta firma criptográfica y autorizar el acceso del Visor 3D a tu nodo.`;
-                        
-                        // Convertir mensaje a formato hexadecimal para personal_sign
-                        const hexMessage = '0x' + Array.from(new TextEncoder().encode(message))
-                            .map(b => b.toString(16).padStart(2, '0'))
-                            .join('');
-                        
-                        // 3. Solicitar la firma real de MetaMask
-                        const signature = await window.ethereum.request({
-                            method: 'personal_sign',
-                            params: [hexMessage, walletAddress]
-                        });
-                        
-                        // 4. Redirigir al endpoint /confirm del Visor local incluyendo la firma obtenida
-                        window.location.href = `/confirm?user=${encodeURIComponent(username)}&wallet=${walletAddress}&islandId=${encodeURIComponent(islandId)}&signature=${encodeURIComponent(signature)}`;
-                        return;
+        let metaMaskProvider = null;
+
+        function isCoinbaseProvider(provider) {
+            return !!(provider && (provider.isCoinbaseWallet || provider.isCoinbaseBrowser));
+        }
+
+        function isMetaMaskProvider(provider) {
+            return !!(provider && provider.isMetaMask && !isCoinbaseProvider(provider));
+        }
+
+        /** Busca MetaMask en ethereum.providers o en el provider raíz (ignora Coinbase). */
+        function findMetaMaskProviderSync() {
+            const eth = window.ethereum;
+            if (!eth) return null;
+
+            if (Array.isArray(eth.providers) && eth.providers.length > 0) {
+                const mm = eth.providers.find(isMetaMaskProvider);
+                if (mm) return mm;
+            }
+
+            if (isMetaMaskProvider(eth)) return eth;
+            return null;
+        }
+
+        /** EIP-6963: descubrimiento explícito de MetaMask entre varias wallets. */
+        function discoverMetaMaskViaEip6963(timeoutMs) {
+            return new Promise((resolve) => {
+                let resolved = false;
+                const candidates = [];
+
+                const onAnnounce = (event) => {
+                    const detail = event.detail || {};
+                    const info = detail.info || {};
+                    const provider = detail.provider;
+                    const rdns = (info.rdns || '').toLowerCase();
+                    const name = (info.name || '').toLowerCase();
+
+                    if (rdns === 'io.metamask' || name === 'metamask') {
+                        if (provider && isMetaMaskProvider(provider)) {
+                            candidates.push(provider);
+                        }
                     }
-                } catch (error) {
-                    alert("Firma de MetaMask denegada o cancelada por el usuario:\n" + error.message);
-                    return;
+                };
+
+                window.addEventListener('eip6963:announceProvider', onAnnounce);
+                window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+                setTimeout(() => {
+                    window.removeEventListener('eip6963:announceProvider', onAnnounce);
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(candidates[0] || null);
+                    }
+                }, timeoutMs);
+            });
+        }
+
+        async function resolveMetaMaskProvider() {
+            let provider = findMetaMaskProviderSync();
+            if (!provider) {
+                provider = await discoverMetaMaskViaEip6963(800);
+            }
+            return provider;
+        }
+
+        function setProviderStatus(found) {
+            const lbl = document.getElementById('lblProvider');
+            const btn = document.getElementById('btnConnect');
+            const hint = document.getElementById('lblHint');
+
+            if (found) {
+                lbl.innerText = 'METAMASK DETECTADO';
+                lbl.className = 'info-val';
+                btn.disabled = false;
+                hint.innerText = 'Pulsa el botón para abrir el popup de MetaMask y firmar la sesión.';
+            } else {
+                const hasCoinbase = !!(window.ethereum && (
+                    isCoinbaseProvider(window.ethereum) ||
+                    (Array.isArray(window.ethereum.providers) && window.ethereum.providers.some(isCoinbaseProvider))
+                ));
+                lbl.innerText = 'METAMASK NO ENCONTRADO';
+                lbl.className = 'info-val error';
+                btn.disabled = true;
+                if (hasCoinbase) {
+                    hint.innerText = 'Coinbase Wallet está instalada pero no se usará. Instala o activa MetaMask desde https://metamask.io/download/';
+                } else {
+                    hint.innerText = 'Instala la extensión MetaMask y recarga esta página.';
                 }
             }
-            
-            // Fallback: Generar una wallet simulada con firma de desarrollo si no tiene MetaMask
-            alert("MetaMask no detectado o bloqueado. Usando firma de desarrollo simulada.");
+        }
+
+        async function init() {
+            metaMaskProvider = await resolveMetaMaskProvider();
+            setProviderStatus(!!metaMaskProvider);
+        }
+
+        function buildSignMessage(walletAddress) {
+            const timestamp = new Date().toLocaleString('es-ES', { timeZoneName: 'short' });
+            return (
+                `AUTENTICACIÓN DE NODO VIRTUAL — WOLDVIRTUAL P2P\n\n` +
+                `• Usuario de Cuenta: ${username}\n` +
+                `• Isla Asignada: ${islandId}\n` +
+                `• Dirección de Billetera: ${walletAddress}\n` +
+                `• Proveedor: MetaMask\n` +
+                `• Fecha y Hora Local: ${timestamp}\n\n` +
+                `Firma este mensaje para validar la propiedad de esta firma criptográfica y autorizar el acceso del Visor 3D a tu nodo.`
+            );
+        }
+
+        function redirectConfirm(walletAddress, signature) {
+            const qs = new URLSearchParams({
+                user: username,
+                wallet: walletAddress,
+                islandId: islandId,
+                signature: signature,
+                walletProvider: 'metamask'
+            });
+            window.location.href = `/confirm?${qs.toString()}`;
+        }
+
+        async function connectWallet() {
+            const btn = document.getElementById('btnConnect');
+            btn.disabled = true;
+            btn.innerText = 'ESPERANDO METAMASK...';
+
+            try {
+                if (!metaMaskProvider) {
+                    metaMaskProvider = await resolveMetaMaskProvider();
+                }
+
+                if (!metaMaskProvider) {
+                    alert(
+                        'MetaMask no está disponible.\n\n' +
+                        'Esta sesión requiere MetaMask. Coinbase Wallet no es compatible.\n' +
+                        'Instala MetaMask: https://metamask.io/download/'
+                    );
+                    setProviderStatus(false);
+                    btn.innerText = 'CONECTAR CON METAMASK';
+                    return;
+                }
+
+                const accounts = await metaMaskProvider.request({ method: 'eth_requestAccounts' });
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('MetaMask no devolvió ninguna cuenta.');
+                }
+
+                const walletAddress = accounts[0];
+                const message = buildSignMessage(walletAddress);
+
+                // personal_sign con string UTF-8 (estándar MetaMask)
+                const signature = await metaMaskProvider.request({
+                    method: 'personal_sign',
+                    params: [message, walletAddress]
+                });
+
+                redirectConfirm(walletAddress, signature);
+            } catch (error) {
+                const msg = (error && error.message) ? error.message : String(error);
+                alert('Firma de MetaMask denegada o cancelada:\n' + msg);
+                btn.disabled = false;
+                btn.innerText = 'CONECTAR CON METAMASK';
+            }
+        }
+
+        function useSimulatedWallet() {
+            if (!devMode) return false;
             const characters = '0123456789abcdef';
             let randomWallet = '0x';
             for (let i = 0; i < 40; i++) {
                 randomWallet += characters.charAt(Math.floor(Math.random() * characters.length));
             }
             const dummySignature = '0x_simulated_signature_' + Math.random().toString(36).substring(2);
-
-            // Redirigir al endpoint /confirm del Visor local
-            window.location.href = `/confirm?user=${encodeURIComponent(username)}&wallet=${randomWallet}&islandId=${encodeURIComponent(islandId)}&signature=${dummySignature}`;
+            redirectConfirm(randomWallet, dummySignature);
+            return true;
         }
+
+        init();
     </script>
 </body>
 </html>

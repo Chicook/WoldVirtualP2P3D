@@ -1,0 +1,45 @@
+# EditorConfig for WoldVirtualP2P3D project
+# Estándar de reglas para prevenir la acumulación de advertencias
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.cs]
+# Reglas de lenguaje C#
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_expression_bodied_methods = true:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+
+# Reglas de ordenación
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# Analizadores de código (.NET)
+# CA1822: Marcar miembros como estáticos si no acceden a datos de instancia
+dotnet_diagnostic.CA1822.severity = suggestion
+# CA1062: Validar argumentos de métodos públicos
+dotnet_diagnostic.CA1062.severity = warning
+# CA1305: Especificar IFormatProvider
+dotnet_diagnostic.CA1305.severity = suggestion
+# CA2007: No esperar directamente a un Task (use ConfigureAwait)
+dotnet_diagnostic.CA2007.severity = suggestion
+# IDE0051: Eliminar miembros privados no utilizados
+dotnet_diagnostic.IDE0051.severity = warning
+# IDE0052: Eliminar miembros privados no leídos
+dotnet_diagnostic.IDE0052.severity = warning
+# IDE0060: Eliminar parámetros no utilizados
+dotnet_diagnostic.IDE0060.severity = warning
+dotnet_diagnostic.SYSLIB1054.severity = none
+
+[*.{xml,csproj,xaml}]
+indent_size = 2

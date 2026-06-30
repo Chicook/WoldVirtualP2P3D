@@ -1,326 +1,215 @@
-# Rediseño Completo del Visor Wold Virtual P2P 3D
+# Visor Wold Virtual P2P 3D (WPF + Godot) — Estado y Plan (DevTraeIA)
 
-## Problema Actual
-La pantalla del visor muestra una pantalla negra completa cuando debería mostrar el contenido 3D de Godot. El problema persiste a pesar de intentos previos de ajustes.
+Este documento refleja el estado real del repositorio y define un plan de implementación y corrección de errores enfocado en el síntoma crítico: pantalla negra en el área embebida de Godot dentro del visor WPF.
 
-## Análisis del Problema
+## Estado actual (lo que ya existe)
 
-### Causas Identificadas:
-1. **Dimensiones iniciales 0x0**: El `GodotPlaceholder` tiene `ActualWidth=0` y `ActualHeight=0` al inicio
-2. **ClipToBounds problemático**: Los contenedores tienen `ClipToBounds="True"` que podría estar recortando el contenido
-3. **Fondos transparentes/negros**: Los fondos transparentes podrían estar ocultando el contenido de Godot
-4. **DPI Scaling no optimizado**: La transición entre Wizard y Viewport no maneja correctamente el escalado DPI
-5. **Estructura de layout compleja**: Múltiples Grids anidados causan problemas de cálculo de dimensiones
+### Proyectos y piezas principales
+- Visor WPF: `Capa3_Visor/CapaVisor3D` (app `VisorSingularity`)
+- Servidor WPF: `Capa3_Visor/ServidorVirtualCS`
+- Embed de Godot en WPF: `Capa3_Visor/CapaVisor3D/GodotHwndHost.cs`
+- Lanzamiento + detección de ventana Godot: `Capa3_Visor/CapaVisor3D/Services/GodotLauncherService.cs`
+- Resolución de rutas (project + exe Godot): `Capa3_Visor/CapaVisor3D/Services/GodotProjectLocator.cs`
+- Orquestación de sesión: `Capa3_Visor/CapaVisor3D/Services/MetaverseSessionController.cs`
 
-### Estructura Actual Examinada:
-- **MainWindow.xaml**: 447 líneas de XAML complejo
-- **MainWindow.xaml.cs**: Lógica de control completa
-- **GodotEmbedder.cs**: Implementación profesional de incrustación Godot
-- **DatabaseManager.cs**: Gestión de base de datos SQLite
+### UI actual (XAML)
+El XAML del visor no es un “wizard separado + viewport” como una maqueta; es un conjunto de pantallas en la misma ventana con `Visibility`:
+- `GridPcRegistration` (registro hardware)
+- `GridUserRegistration` (registro usuario)
+- `GridLoginScreen` (login por ZIP/credenciales)
+- `GridMainViewer` (visor principal + área 3D)
 
-## Plan de Rediseño Completo
+En `GridMainViewer`, el área de render 3D se define así:
+- Contenedor visible: un `Border` con fondo negro.
+- Placeholder destino: `Grid x:Name="GodotPlaceholder"` donde se inserta el `GodotHwndHost`.
 
-### Objetivos Principales:
-1. **Resolver pantalla negra**: Garantizar que Godot se vea correctamente
-2. **Mantener estilo cyberpunk**: Preservar colores neón, tipografía y efectos
-3. **No modificar lógica**: Mantener intacto el código C# existente
-4. **Optimizar DPI scaling**: Asegurar compatibilidad con diferentes resoluciones
-5. **Simplificar estructura**: Reducir complejidad del XAML
+Archivo: `Capa3_Visor/CapaVisor3D/MainWindow.xaml`
 
-### Estilo Visual a Mantener:
+### Flujo real de embebido (code-behind)
+El flujo de “entrar al metaverso” actual hace lo siguiente:
+1. Muestra `GridMainViewer`.
+2. Llama a `LaunchAndEmbedGodot(wallet, user, island, scenePath)`.
+3. Limpia `GodotPlaceholder.Children`.
+4. Lanza proceso Godot (con args, driver `opengl3`, resolución inicial calculada).
+5. Escanea ventanas del proceso, elige un HWND.
+6. Crea `GodotHwndHost(godotHwnd)` y lo agrega a `GodotPlaceholder.Children`.
 
-#### Paleta de Colores:
-- **Fondos oscuros**: `#0A0E17`, `#070A10`, `#0E1524`, `#121B2D`
-- **Colores neón**: 
-  - Cian: `#00E5FF`
-  - Esmeralda: `#00FF8C` 
-  - Magenta: `#FF007F`
-- **Texto**: 
-  - Primario: `#FFFFFF`
-  - Secundario: `#8E9AA8`
-  - Claro: `#E2E8F0`
+Archivo: `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`
 
-#### Tipografía:
-- **FontFamily**: "Segoe UI"
-- **Tamaños**: 9px a 18px según importancia
-- **FontWeight**: Bold, SemiBold, Medium
+### Red P2P y servicios ya integrados
+Dentro del visor ya hay infraestructura bastante avanzada:
+- Puente HTTP local (MetaMask) puerto `8080` para login/registro.
+- WebNode local y publicación de puerto WS en `Estado_Global/ws_port.txt`.
+- Sincronización LAN (peers) y broadcast al WS para consumo por Godot.
+- Chat UDP (`UdpChatService`) y UI de chat.
+- Telemetría de red (`NetworkTelemetryService`).
 
-#### Efectos:
-- **Bordes neón**: `BorderBrush="#00E5FF"`
-- **Esquinas redondeadas**: `CornerRadius="8"`, `CornerRadius="12"`
-- **Glassmorphism**: Transparencias y gradientes sutiles
+## Problema crítico (síntoma)
+La zona 3D del visor queda negra cuando debería verse Godot embebido.
 
-## Nueva Estructura XAML Propuesta
+## Hallazgos técnicos (evidencia directa del código)
 
-### 1. Layout Principal Simplificado
-```xml
-<Grid>
-    <!-- Header (60px) -->
-    <Grid.RowDefinitions>
-        <RowDefinition Height="60"/>
-        <RowDefinition Height="*"/>
-        <RowDefinition Height="45"/>
-    </Grid.RowDefinitions>
-    
-    <!-- Header existente -->
-    <!-- Main Content Area -->
-    <!-- Footer existente -->
-</Grid>
-```
+### 1) Selección de HWND de Godot potencialmente incorrecta
+`GodotLauncherService.ScanForGodotWindow(...)` elige la ventana con una condición muy amplia:
+- Acepta className `"Engine"` o “cualquier ventana cuyo título no contenga Console/Select”.
+Esto puede seleccionar una ventana no-render (auxiliar) o una ventana incorrecta del proceso.
 
-### 2. Área de Contenido Principal Rediseñada
-```xml
-<Grid Grid.Row="1">
-    <!-- Single Column Layout - Sin Sidebar por defecto -->
-    <Grid>
-        <!-- Wizard Container (Visible durante registro) -->
-        <Grid x:Name="WizardContainer" Visibility="Visible">
-            <!-- Contenido Wizard simplificado -->
-        </Grid>
-        
-        <!-- Godot Viewport Container (Visible durante metaverso) -->
-        <Grid x:Name="PanViewportContainer" Visibility="Collapsed">
-            <!-- Viewport Status Bar (45px) -->
-            <!-- Godot Container con dimensiones explícitas -->
-            <Border x:Name="GodotPlaceholder" Background="#070A10">
-                <!-- Godot se incrustará aquí -->
-            </Border>
-        </Grid>
-    </Grid>
-</Grid>
-```
+Archivo: `Capa3_Visor/CapaVisor3D/Services/GodotLauncherService.cs`
 
-### 3. Cambios Clave en el Diseño:
+### 2) ErrorDataReceived no está conectado
+Se redirige `StandardError` y se llama `BeginErrorReadLine()`, pero no se subscribe a `process.ErrorDataReceived`.
+Consecuencia: se pierden errores críticos de Godot (render, argumentos, fallos de escena) y el diagnóstico queda ciego.
 
-#### A. GodotPlaceholder Rediseñado:
-- **Fondo sólido**: `Background="#070A10"` (no transparente)
-- **Sin ClipToBounds**: Remover `ClipToBounds="True"`
-- **Dimensiones explícitas**: Usar `Width` y `Height` bindeados al contenedor padre
-- **Alineación**: `HorizontalAlignment="Stretch"`, `VerticalAlignment="Stretch"`
+Archivo: `Capa3_Visor/CapaVisor3D/Services/GodotLauncherService.cs`
 
-#### B. Contenedores Optimizados:
-- **Remover Grids anidados innecesarios**
-- **Usar StackPanels donde sea apropiado**
-- **Asegurar que todos los contenedores tengan dimensiones válidas**
+### 3) Dependencia de timing/layout al cambiar pantallas
+`GridMainViewer` se muestra y, en el mismo salto de UI, se lanza Godot.
+Aunque la resolución se clampa a mínimo, el host WPF puede estar aún estabilizando layout al insertar el `HwndHost`.
 
-#### C. Transición Wizard/Viewport Mejorada:
-- **Visibilidad mutuamente excluyente**: Nunca ambos visibles simultáneamente
-- **Forzar UpdateLayout()** después de cambios de visibilidad
-- **Manejar DPI scaling** en el evento `SizeChanged`
+Archivo: `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`
 
-### 4. Solución para Dimensiones 0x0:
+### 4) Señales de corrupción de encoding en UI/strings
+Hay segmentos con texto “mojibake” (`Ã¢â€`, etc.) en el code-behind, que indica problemas de codificación del archivo o contenido pegado con encoding incorrecto.
+No necesariamente causa pantalla negra, pero sí es un bug real que afecta UX y mantenimiento.
 
-#### Estrategia 1: Dimensiones Explícitas Iniciales
-```xml
-<Border x:Name="GodotPlaceholder" 
-        Background="#070A10"
-        Width="{Binding ActualWidth, ElementName=PanViewportContainer}"
-        Height="{Binding ActualHeight, ElementName=PanViewportContainer}"
-        HorizontalAlignment="Stretch"
-        VerticalAlignment="Stretch">
-</Border>
-```
+Archivo: `Capa3_Visor/CapaVisor3D/MainWindow.xaml.cs`
 
-#### Estrategia 2: Forzar Recalculo en Loaded
-```csharp
-private void EnsureGodotDimensions()
-{
-    if (GodotPlaceholder.ActualWidth == 0 || GodotPlaceholder.ActualHeight == 0)
-    {
-        GodotPlaceholder.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        GodotPlaceholder.Arrange(new Rect(0, 0, 
-            PanViewportContainer.ActualWidth, 
-            PanViewportContainer.ActualHeight));
-    }
-}
-```
+## Plan de corrección (prioridad: que Godot se vea)
 
-#### Estrategia 3: Retrasar Inicialización de Godot
-```csharp
-private async Task LaunchGodotWithDelay()
-{
-    // Esperar a que el layout se estabilice
-    await Task.Delay(100);
-    await Dispatcher.InvokeAsync(() => GodotPlaceholder.UpdateLayout());
-    
-    // Solo entonces lanzar Godot
-    LaunchGodot(_wallet, _username, _islandId);
-}
-```
+### Fase 0 — Reproducibilidad y diagnóstico mínimo (sin rediseñar UI)
+- Capturar evidencias en logs del visor:
+  - argumentos exactos de lanzamiento,
+  - PID de Godot,
+  - lista de ventanas candidatas detectadas (HWND, className, title, visible),
+  - ventana elegida para embebido.
+- Conectar `ErrorDataReceived` y volcar stderr al mismo canal de diagnóstico.
+- Asegurar que el visor no “finge éxito” si no hay HWND válido.
 
-## Implementación Paso a Paso
+Objetivo: saber si el problema es “no hay render” vs “se eligió mal la ventana” vs “render driver/scene”.
 
-### Fase 1: Análisis y Planificación (COMPLETADO)
-- [x] Investigar estructura actual del visor
-- [x] Analizar problema de pantalla negra
-- [x] Examinar estilo visual actual
-- [x] Crear plan de rediseño completo
+### Fase 1 — Fijar selección del HWND correcto (causa probable)
+- Endurecer el filtro de ventana:
+  - preferir ventanas top-level visibles del proceso,
+  - preferir className esperado (por ejemplo `Godot`/`SDL_app`/`GLFW*` según build),
+  - evitar ventanas tool/owner/auxiliares,
+  - escoger la de mayor área si hay varias.
+- Guardar (en log) className/título real observado en ejecución para ajustar el matcher.
 
-### Fase 2: Rediseño XAML (PRÓXIMO)
-- [ ] Crear nueva estructura XAML simplificada
-- [ ] Mantener recursos y estilos existentes
-- [ ] Optimizar contenedores para Godot
-- [ ] Asegurar compatibilidad con lógica C#
+Resultado esperado: el `GodotHwndHost` se parenta a la ventana correcta.
 
-### Fase 3: Pruebas y Validación
-- [ ] Probar nuevo diseño en diferentes DPI
-- [ ] Verificar que Godot se ve correctamente
-- [ ] Validar transición Wizard/Viewport
-- [ ] Ajustar dimensiones y posicionamiento
+### Fase 2 — Robustez de embebido (DPI, resize, foco)
+- Forzar un “layout settle” antes de insertar el `HwndHost`:
+  - `UpdateLayout()` y una espera corta en Dispatcher antes de lanzar o antes de `Children.Add`.
+- Reforzar resize:
+  - llamar explícitamente a `ResizeToActualPixels()` tras el `Children.Add` y en `SizeChanged` del placeholder/contenedor.
+- Revisar foco/teclado:
+  - confirmar que el forward de mensajes no está anulando eventos o dejando el child sin input.
 
-### Fase 4: Optimización Final
-- [ ] Asegurar performance del layout
-- [ ] Verificar manejo de resizing
-- [ ] Documentar cambios realizados
-- [ ] Preparar para despliegue
+Resultado esperado: el canvas 3D no queda en 1x1 ni en tamaño incorrecto, y responde al resize/DPI.
 
-## Consideraciones Técnicas
+### Fase 3 — Render driver y argumentos (fallback controlado)
+- Validar si `--rendering-driver opengl3` es compatible con “reparenting” en el build actual de Godot.
+- Implementar fallback automático:
+  - si hay error de render en stderr o ventana no muestra contenido, reintentar con driver alternativo soportado por el build.
+- Validar que el scenePath/args son correctos para el runtime actual de Godot.
 
-### 1. Compatibilidad con GodotEmbedder:
-- El `GodotPlaceholder` debe proporcionar un HWND válido
-- Las dimensiones deben ser correctas antes de lanzar Godot
-- El DPI scaling debe propagarse correctamente
+Resultado esperado: incluso si un driver falla, el visor muestra Godot con otro.
 
-### 2. Mantenimiento de Funcionalidad:
-- Todos los botones deben mantener sus eventos `Click`
-- Los controles de entrada deben conservar sus bindings
-- La navegación entre pasos del Wizard debe funcionar
+### Fase 4 — Rediseño XAML (solo si todavía hay clipping/overlay/layout problemático)
+El XAML actual ya es relativamente directo en el área 3D (un `Border` + `Grid GodotPlaceholder`).
+El rediseño completo se deja como medida secundaria si se confirma que el problema proviene del layout (no del HWND/driver).
 
-### 3. Performance:
-- Minimizar número de elementos visuales
-- Evitar animaciones complejas innecesarias
-- Optimizar uso de recursos gráficos
+## Plan de corrección de errores (lista concreta)
 
-## Archivos a Modificar
+### Bugs de alta prioridad
+- Pantalla negra: corregir selección de HWND + capturar stderr + robustecer el ciclo de embebido.
+- Diagnóstico incompleto: conectar `ErrorDataReceived` y registrar salida.
 
-### 1. MainWindow.xaml (PRINCIPAL)
-- **Rediseño completo**: Nueva estructura XAML
-- **Mantener recursos**: Todos los brushes y styles existentes
-- **Optimizar layout**: Simplificar Grids y contenedores
+### Bugs de prioridad media
+- Corruptelas de encoding en textos/strings del visor: normalizar a UTF-8 y corregir cadenas visibles.
+- Inconsistencias de “estado UI” (barras ocultas/visibles) al entrar por login vs registro: consolidar activación de UI.
 
-### 2. Archivos de Soporte (NO MODIFICAR):
-- **MainWindow.xaml.cs**: Lógica intacta
-- **GodotEmbedder.cs**: Implementación profesional existente
-- **DatabaseManager.cs**: Gestión de datos intacta
+### Riesgos a vigilar
+- Reparenting + OpenGL/Vulkan: ciertos drivers/builds pueden renderizar negro al ser reparentados.
+- Multiplicidad de ventanas Godot (console, selector, debug): el selector de HWND debe ser determinista.
 
-## Validación del Rediseño
+## Criterios de aceptación (definición de “arreglado”)
+- El área `GodotPlaceholder` muestra el render de Godot de forma consistente tras entrar al metaverso.
+- El render sobrevive a `resize` de ventana y a cambios de DPI sin degradarse a negro.
+- Si Godot falla al iniciar/renderizar, el visor registra la causa (stderr) y da feedback claro (sin quedar “negro silencioso”).
 
-### Criterios de Éxito:
-1. **Godot visible**: Pantalla negra resuelta
-2. **Estilo mantenido**: Apariencia cyberpunk preservada
-3. **Funcionalidad completa**: Todas las features operativas
-4. **DPI compatible**: Funciona en diferentes resoluciones
-5. **Performance aceptable**: Sin lag o problemas de renderizado
+## Checklist de pruebas
+- Flujo registro: PC → usuario → MetaMask → entra al metaverso → se ve Godot.
+- Flujo login: ZIP/credenciales → MetaMask → entra al metaverso → se ve Godot.
+- Resize: maximizar, restaurar, cambiar proporción.
+- DPI: ejecutar con escala 100% y >100% (si el sistema lo permite).
+- Robustez: cerrar visor mientras Godot arranca y confirmar cierre limpio del proceso.
 
-### Pruebas a Realizar:
-- [ ] Inicio de aplicación (Wizard visible)
-- [ ] Registro completo (4 pasos)
-- [ ] Transición a Viewport 3D
-- [ ] Visualización correcta de Godot
-- [ ] Resizing de ventana
-- [ ] DPI scaling en diferentes configuraciones
-- [ ] Funcionalidad Sidebar (teletransporte P2P)
+---
 
-## Notas Importantes
+## Plan de Desarrollo: Interconexión de Islas "Desde el Lecho Marino"
 
-### Restricciones:
-- **NO modificar lógica C#**: Solo cambios en XAML
-- **NO cambiar nombres de controles**: Los eventos dependen de ellos
-- **NO alterar estructura de datos**: Bindings deben mantenerse
+#### **Objetivo Principal:**
+Permitir que las islas de diferentes usuarios (`1 usuario "pc-visor" = 1 isla 3D`) aparezcan unidas visualmente desde el lecho marino, creando un mundo continuo y navegable.
 
-### Prioridades:
-1. **Resolver pantalla negra** (CRÍTICO)
-2. **Mantener funcionalidad existente** (IMPORTANTE)
-3. **Optimizar experiencia visual** (DESEABLE)
+#### **Fase 0: Análisis y Diseño de Concepto (Teórico)**
+1.  **Definir "Unidas desde el Lecho Marino":**
+    *   **Visual:** ¿Implica un modelo 3D de "lecho marino" que conecta las islas? ¿Cómo se gestiona la topología (malla, hexágonos, etc.)?
+    *   **Físico:** ¿Los avatares pueden caminar/nadar entre islas a través de este lecho marino? ¿Cómo afecta a la física y la navegación?
+    *   **Lógico:** ¿Cómo se determina qué islas son "vecinas" y cómo se gestionan las transiciones de datos entre ellas?
+2.  **Modelo de Datos de Islas Conectadas:**
+    *   Extender `PeerSchema.cs` para incluir coordenadas espaciales de la isla (ej. `Vector3 Position`, `float RotationY`).
+    *   Añadir un identificador de "tipo de lecho marino" o "bioma" para la conexión visual.
+    *   Considerar un sistema de "puertos" o "puntos de conexión" definidos por el usuario en cada isla.
+3.  **Estrategia de Carga/Descarga:**
+    *   ¿Se cargan las islas adyacentes completas o solo sus "bordes" de conexión?
+    *   ¿Cómo se gestiona la memoria y el rendimiento con múltiples islas cargadas?
 
-### Timeline Estimado:
-- **Análisis**: Completado
-- **Rediseño XAML**: 1-2 horas
-- **Pruebas y ajustes**: 1 hora
-- **Validación final**: 30 minutos
+#### **Fase 1: Extensión del Protocolo P2P para Geometría de Islas**
+1.  **Modificar `PeerSchema.cs`:**
+    *   Añadir campos para la posición 3D de la isla (ej. `IslandPositionX`, `IslandPositionY`, `IslandPositionZ`).
+    *   Añadir campos para la orientación de la isla (ej. `IslandRotationY`).
+    *   Añadir un campo `IslandBiomeType` para definir el tipo de conexión visual (arena, roca, coral, etc.).
+2.  **Actualizar `PeerSyncService.cs`:**
+    *   Asegurar que los nuevos datos de posición/orientación/bioma de la isla se sincronicen entre peers.
+    *   Implementar lógica para detectar "islas adyacentes" basándose en las coordenadas sincronizadas.
+3.  **Actualizar `MetaverseSessionController.cs`:**
+    *   Gestionar el estado espacial de la isla local y las islas de los peers.
+    *   Proveer una API para que Godot consulte las islas adyacentes y sus propiedades.
 
-## Contacto y Seguimiento
+#### **Fase 2: Implementación en Godot - Renderizado de Conexiones**
+1.  **Modificar `NetworkLayer.gd`:**
+    *   Recibir y procesar los datos de posición y bioma de las islas adyacentes desde el WebSocket.
+    *   Desarrollar una lógica para instanciar "conectores de lecho marino" entre la isla local y las islas adyacentes.
+2.  **Desarrollar Lógica de "Lecho Marino" en Godot:**
+    *   Crear un sistema de "chunks de conexión" o "mallas de lecho marino" que se generen dinámicamente entre islas.
+    *   Implementar shaders y materiales para el renderizado del lecho marino según el `IslandBiomeType`.
+    *   Asegurar que las transiciones visuales y físicas entre la isla y el lecho marino sean fluidas.
+3.  **Ajustar `ChunkManager.gd`:**
+    *   Extender la lógica de carga/descarga de chunks para incluir los chunks de conexión del lecho marino.
+    *   Optimizar la gestión de recursos para evitar sobrecarga al renderizar múltiples islas y sus conexiones.
+4.  **Navegación y Física:**
+    *   Asegurar que el avatar pueda moverse sin problemas entre la isla y el lecho marino, y entre islas adyacentes.
+    *   Considerar la implementación de zonas de "agua" en el lecho marino con física de natación.
 
-Este documento sirve como plan maestro para el rediseño completo del visor Wold Virtual P2P 3D. Todos los cambios se realizarán manteniendo la compatibilidad con la lógica existente y preservando el estilo visual cyberpunk característico de la aplicación.
+#### **Fase 3: Integración en WPF - Gestión de Múltiples Islas**
+1.  **Actualizar `MainWindow.xaml.cs` y UI:**
+    *   Si es necesario, modificar la UI para mostrar un mapa simplificado o una lista de islas conectadas.
+    *   Implementar eventos o comandos para que el usuario pueda interactuar con las islas adyacentes (ej. teletransporte, vista previa).
+2.  **Gestión de Estado de Sesión:**
+    *   Asegurar que el `MetaverseSessionController` pueda manejar el estado de múltiples islas y sus conexiones de manera coherente.
 
-**Última actualización**: 2026-05-19
-**Estado actual**: Fase 1 completada, preparando Fase 2
+#### **Fase 4: Pruebas y Optimización**
+1.  **Pruebas de Conectividad:**
+    *   Verificar que las islas se detectan y conectan correctamente a través del lecho marino.
+    *   Probar la sincronización de posición y estado entre usuarios en diferentes islas conectadas.
+2.  **Pruebas Visuales:**
+    *   Asegurar que el renderizado del lecho marino sea continuo y estéticamente agradable.
+    *   Verificar que no haya artefactos visuales o clipping al moverse entre islas.
+3.  **Pruebas de Rendimiento:**
+    *   Optimizar la carga de recursos y el renderizado para mantener un framerate aceptable con múltiples islas.
+    *   Identificar y resolver cuellos de botella en la red o el motor de renderizado.
+4.  **Pruebas de Navegación:**
+    *   Confirmar que el movimiento del avatar entre islas y a través del lecho marino es fluido y sin errores.
 
-toolName: todo_write
-            
-status: success
-          
-Todos updated: 7 items
-          
-
-        
-            
-toolName: todo_write
-            
-status: success
-          
-Todos updated: 7 items
-          
-
-        
-            
-toolName: Write
-            
-status: success
-          
-            
-filePath: d:\WCVcoinMTB\WoldVirtual\WoldVirtual3Dp2p\IAs\DevTraeIA\README.md
-          
-changes: undefined
-          
-
-        
-            
-toolName: todo_write
-            
-status: success
-          
-Todos updated: 7 items
-          
-Perfecto, he creado un README completo con todo el plan de rediseño en [DevTraeIA/README.md](file:///d:/WCVcoinMTB/WoldVirtual/WoldVirtual3Dp2p/IAs/DevTraeIA/README.md). El documento incluye:
-
-## Resumen del Plan de Rediseño:
-
-### **Problema Identificado:**
-- Pantalla negra completa en el visor 3D de Godot
-- Dimensiones iniciales 0x0 del `GodotPlaceholder`
-- Estructura XAML compleja con múltiples Grids anidados
-- Problemas con `ClipToBounds` y DPI scaling
-
-### **Solución Propuesta:**
-1. **Rediseñar completamente el XAML** manteniendo la lógica C# intacta
-2. **Simplificar la estructura** de contenedores
-3. **Garantizar dimensiones válidas** para Godot desde el inicio
-4. **Optimizar DPI scaling** y manejo de resizing
-
-### **Cambios Clave:**
-- **GodotPlaceholder**: Fondo sólido `#070A10` (no transparente), sin `ClipToBounds`
-- **Layout simplificado**: Reducir Grids anidados, usar StackPanels donde sea apropiado
-- **Transición mejorada**: Visibilidad mutuamente excluyente entre Wizard y Viewport
-- **DPI handling**: Forzar `UpdateLayout()` y manejar correctamente el escalado
-
-### **Estrategias Técnicas:**
-1. Dimensiones explícitas con binding al contenedor padre
-2. Forzar recálculo del layout en eventos `Loaded` y `SizeChanged`
-3. Retrasar inicialización de Godot hasta que el layout esté estabilizado
-
-### **Fases de Implementación:**
-1. ✅ **Fase 1**: Análisis y planificación (completada)
-2. 🔄 **Fase 2**: Rediseño XAML (en progreso)
-3. ⏳ **Fase 3**: Pruebas y validación
-4. ⏳ **Fase 4**: Optimización final
-
-### **Validación:**
-- Godot visible y funcional
-- Estilo cyberpunk preservado
-- Todas las features operativas
-- Compatible con diferentes DPI y resoluciones
-
-Ahora voy a proceder con la **Fase 2: Rediseño XAML**. Voy a crear una nueva versión simplificada del `MainWindow.xaml` que resuelva el problema de la pantalla negra manteniendo el estilo y la funcionalidad existente.
-
-¿Quieres que comience con la implementación del nuevo diseño XAML ahora?
+**Última actualización**: 2026-06-29
