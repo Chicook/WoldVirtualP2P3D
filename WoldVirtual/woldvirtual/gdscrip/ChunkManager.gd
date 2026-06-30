@@ -59,6 +59,7 @@ func _ready() -> void:
 	_setup_connections()
 	_setup_dynamic_chat_ui()
 	set_process(true)
+	call_deferred("_try_launch_pending_cinematic")
 
 func _process(_delta: float) -> void:
 	_try_launch_pending_cinematic()
