@@ -10,13 +10,13 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("VisorSingularity")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("ServidorVirtualCS")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0-alpha+2026.873a660ad2915bc258d1db431ffdb81e6771038e")]
-[assembly: System.Reflection.AssemblyProductAttribute("VisorSingularity")]
-[assembly: System.Reflection.AssemblyTitleAttribute("VisorSingularity")]
-[assembly: System.Reflection.AssemblyVersionAttribute("0.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4d271efbf2b8ff415e42d2fdff5a2e2bc7b229fc")]
+[assembly: System.Reflection.AssemblyProductAttribute("ServidorVirtualCS")]
+[assembly: System.Reflection.AssemblyTitleAttribute("ServidorVirtualCS")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows7.0")]
 

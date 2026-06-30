@@ -2253,22 +2253,6 @@
             "related": ".xml"
           }
         }
-      },
-      "ServidorVirtualCS/1.0.0": {
-        "type": "project",
-        "framework": ".NETCoreApp,Version=v8.0",
-        "dependencies": {
-          "System.Management": "8.0.0"
-        },
-        "compile": {
-          "bin/placeholder/ServidorVirtualCS.dll": {}
-        },
-        "runtime": {
-          "bin/placeholder/ServidorVirtualCS.dll": {}
-        },
-        "frameworkReferences": [
-          "Microsoft.WindowsDesktop.App.WPF"
-        ]
       }
     }
   },
@@ -7466,11 +7450,6 @@
         "websocket.client.5.1.1.nupkg.sha512",
         "websocket.client.nuspec"
       ]
-    },
-    "ServidorVirtualCS/1.0.0": {
-      "type": "project",
-      "path": "../ServidorVirtualCS/ServidorVirtualCS.csproj",
-      "msbuildProject": "../ServidorVirtualCS/ServidorVirtualCS.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -7482,7 +7461,6 @@
       "MessagePack >= 3.1.6",
       "NAudio >= 2.3.0",
       "OpenCvSharp4.Windows >= 4.13.0.20260602",
-      "ServidorVirtualCS >= 1.0.0",
       "SharpGLTF.Runtime >= 1.0.0-alpha0031",
       "System.Drawing.Common >= 10.0.9",
       "System.Management >= 8.0.0",
@@ -7522,11 +7500,7 @@
         "net8.0-windows": {
           "framework": "net8.0-windows7.0",
           "targetAlias": "net8.0-windows",
-          "projectReferences": {
-            "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj": {
-              "projectPath": "D:\\WCVcoinMTB\\Capa3_Visor\\ServidorVirtualCS\\ServidorVirtualCS.csproj"
-            }
-          }
+          "projectReferences": {}
         }
       },
       "warningProperties": {

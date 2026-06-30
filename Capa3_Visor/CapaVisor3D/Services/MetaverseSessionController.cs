@@ -22,7 +22,7 @@ namespace VisorSingularity.Services
     /// </summary>
     public sealed class MetaverseSessionController : IDisposable
     {
-        private const int BridgePort = 8080;
+        private const int BridgePort = 8088;
 
         private HttpListener? _httpListener;
         private P2PWebNode?   _p2pNode;
