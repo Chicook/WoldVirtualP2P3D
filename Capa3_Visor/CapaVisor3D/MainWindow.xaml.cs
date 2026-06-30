@@ -32,7 +32,7 @@ namespace VisorSingularity
         private string _motherboard = "Desconocido";
         private string _hardwareFingerprint = "";
 
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Servicios de sesiÃƒÂ³n/red Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Servicios de sesión/red Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         private readonly MetaverseSessionController _session = new MetaverseSessionController();
         private readonly UdpChatService _udpChat = new UdpChatService();
 
@@ -46,13 +46,13 @@ namespace VisorSingularity
         private bool _metaverseUiActivated = false;
 
         // Ã¢â€â‚¬Ã¢â€â‚¬ Login de usuario existente (ZIP detectado) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-        // Ruta fija donde se guarda una copia del ZIP de registro para detecciÃƒÂ³n automÃƒÂ¡tica
+        // Ruta fija donde se guarda una copia del ZIP de registro para detección automática
         private static readonly string APP_DATA_DIR    = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WoldVirtual");
         private static readonly string APP_DATA_ZIP    = Path.Combine(APP_DATA_DIR, "firma_hardware.zip");
         private static readonly string APP_DATA_SIG    = Path.Combine(APP_DATA_DIR, "hardware_sig.txt");
         private string _loginFingerprint = "";
 #pragma warning disable CS0414
-        private bool   _isLoginMode      = false;   // true = usuario ya registrado (reservado para lÃƒÂ³gica futura)
+        private bool   _isLoginMode      = false;   // true = usuario ya registrado (reservado para lógica futura)
 #pragma warning restore CS0414
 
         // === Voice Chat (NAudio VAD) ===
@@ -61,7 +61,7 @@ namespace VisorSingularity
         private bool _isSpeaking = false;
         private DateTime _lastSpeechTime = DateTime.MinValue;
         private const double VoiceSilenceMs = 500.0;  // ms de silencio antes de "stopped"
-        private const float VoiceThreshold = 0.015f;  // umbral RMS normalizado (0.0Ã¢â‚¬â€œ1.0)
+        private const float VoiceThreshold = 0.015f;  // umbral RMS normalizado (0.0–1.0)
 
         // === Webcam (OpenCvSharp embedded child window) ===
         private VideoCapture? _capture;
@@ -131,11 +131,11 @@ namespace VisorSingularity
             TxtChatMessage.KeyDown += TxtChatMessage_KeyDown;
             BtnCopyP2PLink.Click += BtnCopyP2PLink_Click;
 
-            // Vincular botÃƒÂ³n de voz y webcam
+            // Vincular botón de voz y webcam
             BtnVoiceChat.Click += BtnVoiceChat_Click;
             BtnWebcam.Click += BtnWebcam_Click;
 
-            // Vincular botÃƒÂ³n de Login (usuario existente)
+            // Vincular botón de Login (usuario existente)
             BtnLoginMetaMask.Click += BtnLoginMetaMask_Click;
             BtnLoginPhase1.Click += BtnLoginPhase1_Click;
             BtnLoginPhase2.Click += BtnLoginPhase2_Click;
@@ -148,7 +148,7 @@ namespace VisorSingularity
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Detectar idioma y paÃƒÂ­s del sistema operativo en el inicio y aplicar al WPF UI
+            // Detectar idioma y país del sistema operativo en el inicio y aplicar al WPF UI
             var (lang, country) = HardwareFingerprintService.GetSystemLocaleInfo();
             ApplyWpfLocale(lang, country);
 
@@ -167,7 +167,7 @@ namespace VisorSingularity
             }
         }
 
-        // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DETECCIÃƒâ€œN DE CUENTA EXISTENTE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DETECCIÓN DE CUENTA EXISTENTE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         /// <summary>
         /// Comprueba si existe el registro de PC (ZIP y firma) y el usuario (credentials y current_user.json).
         /// Si existe todo: muestra la pantalla de Login y devuelve true.
@@ -210,7 +210,7 @@ namespace VisorSingularity
                     string display = sig.Length > 48 ? sig.Substring(0, 48) + "..." : sig;
                     TxtLoginFingerprint.Text = $"SHA-256: {display}";
 
-                    // Cargar configuraciones guardadas de recordar usuario/contraseÃƒÂ±a
+                    // Cargar configuraciones guardadas de recordar usuario/contraseña
                     LoadLoginSettings();
                 });
                 return true;
@@ -307,7 +307,7 @@ namespace VisorSingularity
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("[Login] Error al cargar informaciÃƒÂ³n de usuario guardado: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("[Login] Error al cargar información de usuario guardado: " + ex.Message);
             }
             return (username, wallet, islandId);
         }
@@ -383,7 +383,7 @@ namespace VisorSingularity
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("[Login] Error al cargar configuraciÃƒÂ³n de login: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("[Login] Error al cargar configuración de login: " + ex.Message);
             }
         }
 
@@ -418,7 +418,7 @@ namespace VisorSingularity
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("[Login] Error al guardar configuraciÃƒÂ³n de login: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("[Login] Error al guardar configuración de login: " + ex.Message);
             }
         }
 
@@ -429,7 +429,7 @@ namespace VisorSingularity
 
             if (string.IsNullOrEmpty(enteredUser) || string.IsNullOrEmpty(enteredPass))
             {
-                MessageBox.Show("Por favor, ingrese usuario y contraseÃƒÂ±a.", "Error de ValidaciÃƒÂ³n", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Por favor, ingrese usuario y contraseña.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -439,7 +439,7 @@ namespace VisorSingularity
 
             if (!File.Exists(credPath))
             {
-                // Fallback de migraciÃƒÂ³n de cuenta existente: registrar credenciales al primer ingreso
+                // Fallback de migración de cuenta existente: registrar credenciales al primer ingreso
                 SaveUserCredentials(enteredUser, enteredPass);
                 isValid = true;
             }
@@ -470,11 +470,11 @@ namespace VisorSingularity
 
             if (!isValid)
             {
-                MessageBox.Show("Usuario o contraseÃƒÂ±a incorrectos.", "Ingreso Fallido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Usuario o contraseña incorrectos.", "Ingreso Fallido", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // Guardar configuraciÃƒÂ³n de recordar
+            // Guardar configuración de recordar
             SaveLoginSettings();
 
             // Bloquear Fase 1
@@ -529,7 +529,7 @@ namespace VisorSingularity
                 string display = _loginFingerprint.Length > 48 ? _loginFingerprint.Substring(0, 48) + "..." : _loginFingerprint;
                 TxtLoginFingerprint.Text = $"SHA-256: {display}";
 
-                // Ã¢â€â‚¬Ã¢â€â‚¬ Crear ZIP de actualizaciÃƒÂ³n de firma temporal Ã¢â€â‚¬Ã¢â€â‚¬
+                // Ã¢â€â‚¬Ã¢â€â‚¬ Crear ZIP de actualización de firma temporal Ã¢â€â‚¬Ã¢â€â‚¬
                 string tempDir = Path.Combine(Path.GetTempPath(), "WoldVirtualLoginUpdate_" + Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(tempDir);
 
@@ -539,7 +539,7 @@ namespace VisorSingularity
                 reportBuilder.AppendLine("==================================================");
                 reportBuilder.AppendLine("  WOLD VIRTUAL P2P 3D - REGISTRO DE HARDWARE");
                 reportBuilder.AppendLine("==================================================");
-                reportBuilder.AppendLine($"Fecha de ActualizaciÃƒÂ³n : {DateTime.Now}");
+                reportBuilder.AppendLine($"Fecha de Actualización : {DateTime.Now}");
                 reportBuilder.AppendLine($"Sistema Operativo      : {os}");
                 reportBuilder.AppendLine($"Procesador             : {cpu}");
                 reportBuilder.AppendLine($"Placa Base             : {motherboard}");
@@ -566,7 +566,7 @@ namespace VisorSingularity
                 bool? dialogResult = saveDialog.ShowDialog(this);
                 if (dialogResult != true)
                 {
-                    // El usuario cancelÃƒÂ³ Ã¢â‚¬â€ limpiar y abortar sin error
+                    // El usuario canceló Ã¢â‚¬â€ limpiar y abortar sin error
                     Directory.Delete(tempDir, true);
                     TxtLoginScanStatus.Text = t["CancelledShort"];
                     BtnLoginPhase2.IsEnabled = true;
@@ -581,7 +581,7 @@ namespace VisorSingularity
                 // Copiar el ZIP a la ruta del usuario
                 File.Copy(tempZip, userZipPath, overwrite: true);
 
-                // TambiÃƒÂ©n actualizar AppData interno para que la app pueda verificar la firma
+                // También actualizar AppData interno para que la app pueda verificar la firma
                 Directory.CreateDirectory(APP_DATA_DIR);
                 if (File.Exists(APP_DATA_ZIP)) File.Delete(APP_DATA_ZIP);
                 File.Copy(tempZip, APP_DATA_ZIP);
@@ -618,11 +618,11 @@ namespace VisorSingularity
                 case "en":
                     return $"Phase 2 completed successfully. ZIP saved at: {path}\nPhase 3 unlocked: Login with MetaMask to enter.";
                 case "fr":
-                    return $"Phase 2 terminÃƒÂ©e avec succÃƒÂ¨s. ZIP enregistrÃƒÂ© sous : {path}\nPhase 3 dÃƒÂ©verrouillÃƒÂ©e : Connectez-vous avec MetaMask pour entrer.";
+                    return $"Phase 2 terminée avec succès. ZIP enregistré sous : {path}\nPhase 3 déverrouillée : Connectez-vous avec MetaMask pour entrer.";
                 case "de":
                     return $"Phase 2 erfolgreich abgeschlossen. ZIP gespeichert unter: {path}\nPhase 3 freigeschaltet: Melden Sie sich mit MetaMask an, um fortzufahren.";
                 case "pt":
-                    return $"Fase 2 concluÃƒÂ­da com sucesso. ZIP salvo em: {path}\nFase 3 desbloqueada: FaÃƒÂ§a login com MetaMask para entrar.";
+                    return $"Fase 2 concluída com sucesso. ZIP salvo em: {path}\nFase 3 desbloqueada: Faça login com MetaMask para entrar.";
                 case "it":
                     return $"Fase 2 completata con successo. ZIP salvato in: {path}\nFase 3 sbloccata: Accedi con MetaMask per entrare.";
                 case "zh":
@@ -631,7 +631,7 @@ namespace VisorSingularity
                     return $"Ã£Æ’â€¢Ã£â€šÂ§Ã£Æ’Â¼Ã£â€šÂº 2 Ã£ÂÅ’Ã¦Â­Â£Ã¥Â¸Â¸Ã£ÂÂ«Ã¥Â®Å’Ã¤Âºâ€ Ã£Ââ€”Ã£ÂÂ¾Ã£Ââ€”Ã£ÂÅ¸Ã£â‚¬â€šZIP Ã¤Â¿ÂÃ¥Â­ËœÃ¥â€¦Ë†: {path}\nÃ£Æ’â€¢Ã£â€šÂ§Ã£Æ’Â¼Ã£â€šÂº 3 Ã¨Â§Â£Ã©â„¢Â¤: MetaMaskÃ£ÂÂ§Ã£Æ’Â­Ã£â€šÂ°Ã£â€šÂ¤Ã£Æ’Â³Ã£Ââ€”Ã£ÂÂ¦Ã¥â€¦Â¥Ã£ÂÂ£Ã£ÂÂ¦Ã£ÂÂÃ£ÂÂ Ã£Ââ€¢Ã£Ââ€žÃ£â‚¬â€š";
                 case "es":
                 default:
-                    return $"Fase 2 completada con ÃƒÂ©xito. ZIP guardado en: {path}\nFase 3 desbloqueada: Inicie sesiÃƒÂ³n con MetaMask para entrar.";
+                    return $"Fase 2 completada con éxito. ZIP guardado en: {path}\nFase 3 desbloqueada: Inicie sesión con MetaMask para entrar.";
             }
         }
 
@@ -641,7 +641,7 @@ namespace VisorSingularity
         {
             BtnLoginMetaMask.IsEnabled     = false;
             BorderLoginStatus.Visibility   = Visibility.Visible;
-            TxtLoginStatus.Text            = "INICIANDO SESIÃƒâ€œN CON METAMASK...";
+            TxtLoginStatus.Text            = "INICIANDO SESIÓN CON METAMASK...";
 
             var userInfo = GetSavedUserInfo();
 
@@ -657,25 +657,25 @@ namespace VisorSingularity
             // Abrir navegador con metamask.html en modo login pasando el usuario e isla correctos
             try
             {
-                string url = $"http://localhost:8080/?mode=login&user={Uri.EscapeDataString(userInfo.username)}&islandId={Uri.EscapeDataString(userInfo.islandId)}";
+                string url = $"http://localhost:8088/?mode=login&user={Uri.EscapeDataString(userInfo.username)}&islandId={Uri.EscapeDataString(userInfo.islandId)}";
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"No se pudo abrir el navegador: {ex.Message}\nNavega a http://localhost:8080/ manualmente.",
+                MessageBox.Show($"No se pudo abrir el navegador: {ex.Message}\nNavega a http://localhost:8088/ manualmente.",
                     "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
 
-        // StartHttpBridgeLogin Ã¢â€ â€™ delegado a MetaverseSessionController
+        // StartHttpBridgeLogin → delegado a MetaverseSessionController
 
         /// <summary>Llamado tras confirmar la firma MetaMask en modo login.</summary>
         private void _OnLoginConfirmed(string user, string wallet, string island, string signature)
         {
-            TxtLoginStatus.Text = "Ã¢Å“â€¦ FIRMA CONFIRMADA Ã¢â‚¬â€ ENTRANDO AL METAVERSO...";
+            TxtLoginStatus.Text = "✅ FIRMA CONFIRMADA Ã¢â‚¬â€ ENTRANDO AL METAVERSO...";
 
-            // 1) Actualizar el ZIP de registro con la firma de esta sesiÃƒÂ³n
+            // 1) Actualizar el ZIP de registro con la firma de esta sesión
             UpdateLoginZip(wallet, signature);
 
             // 2) Transicionar al visor
@@ -693,7 +693,7 @@ namespace VisorSingularity
                 scenePath: "res://woldvirtual/scene/MTC/N3DWoldVirtualMT.tscn");
         }
 
-        /// <summary>Actualiza el ZIP de registro aÃƒÂ±adiendo la firma de sesiÃƒÂ³n MetaMask.</summary>
+        /// <summary>Actualiza el ZIP de registro añadiendo la firma de sesión MetaMask.</summary>
         private void UpdateLoginZip(string wallet, string signature)
         {
             try
@@ -706,10 +706,10 @@ namespace VisorSingularity
                 // Extraer ZIP existente
                 ZipFile.ExtractToDirectory(APP_DATA_ZIP, tempDir, overwriteFiles: true);
 
-                // AÃƒÂ±adir/actualizar archivo de sesiÃƒÂ³n
+                // Añadir/actualizar archivo de sesión
                 string sessionPath = Path.Combine(tempDir, "ultima_sesion.txt");
                 var sb = new System.Text.StringBuilder();
-                sb.AppendLine("=== ÃƒÅ¡ltima SesiÃƒÂ³n de Login ===");
+                sb.AppendLine("=== Última Sesión de Login ===");
                 sb.AppendLine($"Fecha       : {DateTime.Now}");
                 sb.AppendLine($"Usuario     : {_currentUsername}");
                 sb.AppendLine($"Wallet      : {wallet}");
@@ -725,7 +725,7 @@ namespace VisorSingularity
                 File.Move(tmpZip, APP_DATA_ZIP);
 
                 Directory.Delete(tempDir, true);
-                System.Diagnostics.Debug.WriteLine("[Login] ZIP actualizado con firma de sesiÃƒÂ³n.");
+                System.Diagnostics.Debug.WriteLine("[Login] ZIP actualizado con firma de sesión.");
             }
             catch (Exception ex)
             {
@@ -781,7 +781,7 @@ namespace VisorSingularity
                 ProgScan.Value = 100;
                 TxtScanStatus.Text = t["ScanDone"];
 
-                // Habilitar botÃƒÂ³n para guardar el ZIP de respaldo
+                // Habilitar botón para guardar el ZIP de respaldo
                 BtnGenerateZip.IsEnabled = true;
             }
             catch (Exception ex)
@@ -809,7 +809,7 @@ namespace VisorSingularity
             if (!string.IsNullOrEmpty(TxtHardwareHash.Text))
             {
                 Clipboard.SetText(TxtHardwareHash.Text);
-                MessageBox.Show("Firma criptogrÃƒÂ¡fica copiada al portapapeles.", "Firma Copiada", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Firma criptográfica copiada al portapapeles.", "Firma Copiada", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -864,11 +864,11 @@ namespace VisorSingularity
                     // Limpiar directorio temporal
                     Directory.Delete(tempDir, true);
 
-                    // Cambiar apariencia del botÃƒÂ³n
-                    BtnGenerateZip.Content    = "Ã¢Å“â€œ RESPALDO GUARDADO";
+                    // Cambiar apariencia del botón
+                    BtnGenerateZip.Content    = "✔ RESPALDO GUARDADO";
                     BtnGenerateZip.IsEnabled  = false;
 
-                    // Ã¢â€â‚¬Ã¢â€â‚¬ Guardar TAMBIÃƒâ€°N copia automÃƒÂ¡tica en AppData para detecciÃƒÂ³n de login Ã¢â€â‚¬Ã¢â€â‚¬
+                    // Ã¢â€â‚¬Ã¢â€â‚¬ Guardar TAMBIÃƒâ€°N copia automática en AppData para detección de login Ã¢â€â‚¬Ã¢â€â‚¬
                     try
                     {
                         Directory.CreateDirectory(APP_DATA_DIR);
@@ -881,11 +881,11 @@ namespace VisorSingularity
                         System.Diagnostics.Debug.WriteLine($"[Registro] Aviso: no se pudo copiar a AppData: {exAppData.Message}");
                     }
 
-                    // Desbloquear botÃƒÂ³n de ingreso al metaverso
+                    // Desbloquear botón de ingreso al metaverso
                     BtnEnterMetaverse.IsEnabled = true;
 
                     MessageBox.Show(
-                        $"Ã‚Â¡Registro completado!\n\nSe ha generado y guardado el archivo de respaldo seguro en:\n{targetZipPath}\n\nGuarde este archivo ZIP en un lugar seguro para su autenticaciÃƒÂ³n de hardware.",
+                        $"¡Registro completado!\n\nSe ha generado y guardado el archivo de respaldo seguro en:\n{targetZipPath}\n\nGuarde este archivo ZIP en un lugar seguro para su autenticación de hardware.",
                         "Respaldo Exitoso",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information
@@ -907,7 +907,7 @@ namespace VisorSingularity
 
         private void BtnGenerateUuid_Click(object sender, RoutedEventArgs e)
         {
-            // Generar UUID ÃƒÂºnico y ponerlo en el recuadro
+            // Generar UUID único y ponerlo en el recuadro
             TxtRegUuid.Text = Guid.NewGuid().ToString().ToUpper();
         }
 
@@ -921,32 +921,32 @@ namespace VisorSingularity
             // Validaciones
             if (string.IsNullOrEmpty(username))
             {
-                MessageBox.Show("Por favor, ingrese un nombre de usuario.", "Error de ValidaciÃƒÂ³n", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Por favor, ingrese un nombre de usuario.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrEmpty(password))
             {
-                MessageBox.Show("Por favor, ingrese una contraseÃƒÂ±a.", "Error de ValidaciÃƒÂ³n", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Por favor, ingrese una contraseña.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (password != confirmPass)
             {
-                MessageBox.Show("Las contraseÃƒÂ±as no coinciden. Por favor, verifÃƒÂ­quelas.", "Error de ValidaciÃƒÂ³n", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Las contraseñas no coinciden. Por favor, verifíquelas.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrEmpty(uuid))
             {
-                MessageBox.Show("Por favor, genere un UUID ÃƒÂºnico pulsando el botÃƒÂ³n 'GENERAR UUID'.", "Error de ValidaciÃƒÂ³n", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Por favor, genere un UUID único pulsando el botón 'GENERAR UUID'.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // Guardar credenciales locales para validaciÃƒÂ³n de login posterior
+            // Guardar credenciales locales para validación de login posterior
             SaveUserCredentials(username, password);
 
-            // Activar visualizaciÃƒÂ³n de carga MetaMask en el Paso 2
+            // Activar visualización de carga MetaMask en el Paso 2
             GridMetaMaskOverlay.Visibility = Visibility.Visible;
 
             // Iniciar el Servidor HTTP puente local en el puerto 8080
@@ -956,7 +956,7 @@ namespace VisorSingularity
             _session.BridgeError += OnSessionBridgeError;
             _session.StartHttpBridgeRegister(username);
 
-            // Abrir automÃƒÂ¡ticamente el navegador predeterminado para iniciar MetaMask
+            // Abrir automáticamente el navegador predeterminado para iniciar MetaMask
             try
             {
                 string defaultIsland = "1 : 0.0.0";
@@ -995,16 +995,16 @@ namespace VisorSingularity
                     System.Diagnostics.Debug.WriteLine("Error al determinar isla por defecto: " + ex.Message);
                 }
 
-                string url = $"http://localhost:8080/?user={Uri.EscapeDataString(username)}&islandId={Uri.EscapeDataString(defaultIsland)}";
+                string url = $"http://localhost:8088/?user={Uri.EscapeDataString(username)}&islandId={Uri.EscapeDataString(defaultIsland)}";
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"No se pudo abrir el navegador automÃƒÂ¡ticamente: {ex.Message}. Por favor, navegue a http://localhost:8080/ de forma manual.", "Error de Navegador", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"No se pudo abrir el navegador automáticamente: {ex.Message}. Por favor, navegue a http://localhost:8088/ de forma manual.", "Error de Navegador", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
-        // Ã¢â€â‚¬Ã¢â€â‚¬ SERVIDOR PUENTE HTTP LOCAL (METAMASK) Ã¢â€ â€™ MetaverseSessionController Ã¢â€â‚¬Ã¢â€â‚¬
+        // Ã¢â€â‚¬Ã¢â€â‚¬ SERVIDOR PUENTE HTTP LOCAL (METAMASK) → MetaverseSessionController Ã¢â€â‚¬Ã¢â€â‚¬
 
         private void OnSessionLoginConfirmed(MetaMaskConfirm confirm)
         {
@@ -1157,8 +1157,8 @@ namespace VisorSingularity
             {
                 "es", new Dictionary<string, string>
                 {
-                    { "PcRegTitle", "WOLD VIRTUAL Ã¢â‚¬â€ SISTEMA DE INGRESO" },
-                    { "PcRegSubtitle", "REGISTRO AUTOMÃƒÂTICO DE FIRMA DE HARDWARE" },
+                    { "PcRegTitle", "WOLD VIRTUAL — SISTEMA DE INGRESO" },
+                    { "PcRegSubtitle", "REGISTRO AUTOMÁTICO DE FIRMA DE HARDWARE" },
                     { "OsCardTitle", "SISTEMA OPERATIVO" },
                     { "CpuCardTitle", "PROCESADOR" },
                     { "MbCardTitle", "PLACA BASE (MOTHERBOARD)" },
@@ -1166,45 +1166,45 @@ namespace VisorSingularity
                     { "Copy", "COPIAR" },
                     { "RegisterPc", "REGISTRAR PC & GUARDAR ZIP" },
                     { "EnterMetaverse", "INGRESAR AL METAVERSO" },
-                    { "UserRegTitle", "WOLD VIRTUAL Ã¢â‚¬â€ REGISTRO DE USUARIO" },
-                    { "UserRegSubtitle", "CREACIÃƒâ€œN DE IDENTIDAD Y ASIGNACIÃƒâ€œN DE CREDENCIALES" },
+                    { "UserRegTitle", "WOLD VIRTUAL — REGISTRO DE USUARIO" },
+                    { "UserRegSubtitle", "CREACIÓN DE IDENTIDAD Y ASIGNACIÓN DE CREDENCIALES" },
                     { "UsernameLabel", "Nombre de Usuario:" },
-                    { "PasswordLabel", "ContraseÃƒÂ±a:" },
-                    { "ConfirmPasswordLabel", "Repetir ContraseÃƒÂ±a:" },
-                    { "UuidLabel", "Identificador ÃƒÅ¡nico Universal (UUID):" },
+                    { "PasswordLabel", "Contraseña:" },
+                    { "ConfirmPasswordLabel", "Repetir Contraseña:" },
+                    { "UuidLabel", "Identificador Único Universal (UUID):" },
                     { "GenerateUuid", "GENERAR UUID" },
                     { "RegisterAndEnter", "REGISTRAR & INGRESAR" },
                     { "WaitingMetaMaskTitle", "ESPERANDO FIRMA DE METAMASK" },
                     { "WaitingMetaMaskDesc", "Por favor, abre tu navegador predeterminado y firma la solicitud de MetaMask para vincular tu billetera." },
                     { "LoginInfoTitle", "FIRMA DE HARDWARE DETECTADA" },
-                    { "LoginPhaseStatus_Phase1", "Fase 1: Ingrese su usuario y contraseÃƒÂ±a para continuar." },
-                    { "LoginPhaseStatus_Phase2", "Fase 1 completada con ÃƒÂ©xito. Fase 2 desbloqueada: Firme y actualice el registro ZIP de su PC." },
+                    { "LoginPhaseStatus_Phase1", "Fase 1: Ingrese su usuario y contraseña para continuar." },
+                    { "LoginPhaseStatus_Phase2", "Fase 1 completada con éxito. Fase 2 desbloqueada: Firme y actualice el registro ZIP de su PC." },
                     { "LoginMetaMaskDesc", "Abre tu navegador y autoriza la solicitud de MetaMask" },
                     { "LoginUserLabel", "Usuario:" },
                     { "LoginRememberUser", "Recordar Nombre" },
-                    { "LoginPassLabel", "ContraseÃƒÂ±a:" },
-                    { "LoginRememberPass", "Recordar ContraseÃƒÂ±a" },
-                    { "LoginMetaMaskBtn", "Ã°Å¸Â¦Å  Entrar con MetaMask" },
-                    { "LoginBtn", "Iniciar SesiÃƒÂ³n" },
-                    { "UpdateSignatureBtn", "Ã¢Å“ÂÃ¯Â¸Â Actualizar Firma" },
+                    { "LoginPassLabel", "Contraseña:" },
+                    { "LoginRememberPass", "Recordar Contraseña" },
+                    { "LoginMetaMaskBtn", "🦊 Entrar con MetaMask" },
+                    { "LoginBtn", "Iniciar Sesión" },
+                    { "UpdateSignatureBtn", "✍️ Actualizar Firma" },
                     { "ScanInit", "Inicializando escaneo del sistema..." },
                     { "ScanOS", "Escaneando OS..." },
                     { "ScanCPU", "Identificando CPU..." },
                     { "ScanMB", "Detectando Placa Base..." },
-                    { "ScanHash", "Generando firma criptogrÃƒÂ¡fica SHA-256..." },
+                    { "ScanHash", "Generando firma criptográfica SHA-256..." },
                     { "ScanDone", "Escaneo completado. Firma de hardware generada." },
                     { "ScanError", "Error durante el escaneo: " },
-                    { "ScanOSLoading", "Obteniendo informaciÃƒÂ³n del sistema..." },
+                    { "ScanOSLoading", "Obteniendo información del sistema..." },
                     { "ScanCPULoading", "Obteniendo especificaciones de la CPU..." },
                     { "ScanMBLoading", "Detectando placa base..." },
-                    { "GeneratingHashText", "GENERANDO FIRMA CRIPTOGRÃƒÂFICA..." },
+                    { "GeneratingHashText", "GENERANDO FIRMA CRIPTOGRÁFICA..." },
                     { "ScanningShort", "Escaneando..." },
                     { "IdentifyingCpuShort", "Identificando CPU..." },
                     { "MotherboardShort", "Placa base..." },
                     { "SigningShort", "Firmando..." },
                     { "SignatureOkShort", "Firma OK" },
                     { "CancelledShort", "Cancelado" },
-                    { "SignatureUpdated", "Ã¢Å“â€œ FIRMA ACTUALIZADA" }
+                    { "SignatureUpdated", "✔ FIRMA ACTUALIZADA" }
                 }
             },
             {
@@ -1237,9 +1237,9 @@ namespace VisorSingularity
                     { "LoginRememberUser", "Remember Username" },
                     { "LoginPassLabel", "Password:" },
                     { "LoginRememberPass", "Remember Password" },
-                    { "LoginMetaMaskBtn", "Ã°Å¸Â¦Å  Login with MetaMask" },
+                    { "LoginMetaMaskBtn", "🦊 Login with MetaMask" },
                     { "LoginBtn", "Login" },
-                    { "UpdateSignatureBtn", "Ã¢Å“ÂÃ¯Â¸Â Update Signature" },
+                    { "UpdateSignatureBtn", "✍️ Update Signature" },
                     { "ScanInit", "Initializing system scan..." },
                     { "ScanOS", "Scanning Operating System..." },
                     { "ScanCPU", "Identifying Processor (CPU)..." },
@@ -1257,7 +1257,7 @@ namespace VisorSingularity
                     { "SigningShort", "Signing..." },
                     { "SignatureOkShort", "Signature OK" },
                     { "CancelledShort", "Cancelled" },
-                    { "SignatureUpdated", "Ã¢Å“â€œ SIGNATURE UPDATED" }
+                    { "SignatureUpdated", "✔ SIGNATURE UPDATED" }
                 }
             },
             {
@@ -1276,41 +1276,41 @@ namespace VisorSingularity
                     { "UserRegSubtitle", "CRÃƒâ€°ATION D'IDENTITÃƒâ€° ET ATTRIBUTION DE CRÃƒâ€°DENTIELS" },
                     { "UsernameLabel", "Nom d'utilisateur :" },
                     { "PasswordLabel", "Mot de passe :" },
-                    { "ConfirmPasswordLabel", "RÃƒÂ©pÃƒÂ©ter le mot de passe :" },
+                    { "ConfirmPasswordLabel", "Répéter le mot de passe :" },
                     { "UuidLabel", "Identifiant unique universel (UUID) :" },
                     { "GenerateUuid", "GÃƒâ€°NÃƒâ€°RER UN UUID" },
                     { "RegisterAndEnter", "S'INSCRIRE & ENTRER" },
                     { "WaitingMetaMaskTitle", "ATTENTE DE LA SIGNATURE METAMASK" },
-                    { "WaitingMetaMaskDesc", "Veuillez ouvrir votre navigateur par dÃƒÂ©faut et signer la demande MetaMask pour lier votre portefeuille." },
+                    { "WaitingMetaMaskDesc", "Veuillez ouvrir votre navigateur par défaut et signer la demande MetaMask pour lier votre portefeuille." },
                     { "LoginInfoTitle", "SIGNATURE MATÃƒâ€°RIELLE DÃƒâ€°TECTÃƒâ€°E" },
                     { "LoginPhaseStatus_Phase1", "Phase 1 : Entrez votre nom d'utilisateur et votre mot de passe pour continuer." },
-                    { "LoginPhaseStatus_Phase2", "Phase 1 terminÃƒÂ©e avec succÃƒÂ¨s. Phase 2 dÃƒÂ©verrouillÃƒÂ©e : Signez et mettez ÃƒÂ  jour l'enregistrement ZIP de votre PC." },
+                    { "LoginPhaseStatus_Phase2", "Phase 1 terminée avec succÃƒÂ¨s. Phase 2 déverrouillée : Signez et mettez ÃƒÂ  jour l'enregistrement ZIP de votre PC." },
                     { "LoginMetaMaskDesc", "Ouvrez votre navigateur et autorisez la demande MetaMask" },
                     { "LoginUserLabel", "Nom d'utilisateur :" },
                     { "LoginRememberUser", "Se souvenir du nom" },
                     { "LoginPassLabel", "Mot de passe :" },
                     { "LoginRememberPass", "Se souvenir du mot de passe" },
-                    { "LoginMetaMaskBtn", "Ã°Å¸Â¦Å  Connexion avec MetaMask" },
+                    { "LoginMetaMaskBtn", "🦊 Connexion avec MetaMask" },
                     { "LoginBtn", "Connexion" },
-                    { "UpdateSignatureBtn", "Ã¢Å“ÂÃ¯Â¸Â Mettre ÃƒÂ  jour la signature" },
+                    { "UpdateSignatureBtn", "✍️ Mettre ÃƒÂ  jour la signature" },
                     { "ScanInit", "Initialisation de l'analyse du systÃƒÂ¨me..." },
                     { "ScanOS", "Analyse du systÃƒÂ¨me d'exploitation..." },
                     { "ScanCPU", "Identification du processeur (CPU)..." },
-                    { "ScanMB", "DÃƒÂ©tection de la carte mÃƒÂ¨re et du chipset..." },
-                    { "ScanHash", "GÃƒÂ©nÃƒÂ©ration de la signature cryptographique SHA-256..." },
-                    { "ScanDone", "Analyse terminÃƒÂ©e. Signature matÃƒÂ©rielle gÃƒÂ©nÃƒÂ©rÃƒÂ©e." },
+                    { "ScanMB", "Détection de la carte mÃƒÂ¨re et du chipset..." },
+                    { "ScanHash", "Génération de la signature cryptographique SHA-256..." },
+                    { "ScanDone", "Analyse terminée. Signature matérielle générée." },
                     { "ScanError", "Erreur lors de l'analyse : " },
                     { "ScanOSLoading", "Obtention des informations systÃƒÂ¨me..." },
-                    { "ScanCPULoading", "Obtention des spÃƒÂ©cifications du processeur..." },
-                    { "ScanMBLoading", "DÃƒÂ©tection de la carte mÃƒÂ¨re..." },
+                    { "ScanCPULoading", "Obtention des spécifications du processeur..." },
+                    { "ScanMBLoading", "Détection de la carte mÃƒÂ¨re..." },
                     { "GeneratingHashText", "GÃƒâ€°NÃƒâ€°RATION DE LA SIGNATURE CRYPTOGRAPHIQUE..." },
                     { "ScanningShort", "Analyse..." },
                     { "IdentifyingCpuShort", "Identification du processeur..." },
                     { "MotherboardShort", "Carte mÃƒÂ¨re..." },
                     { "SigningShort", "Signature..." },
                     { "SignatureOkShort", "Signature OK" },
-                    { "CancelledShort", "AnnulÃƒÂ©" },
-                    { "SignatureUpdated", "Ã¢Å“â€œ SIGNATURE MISE Ãƒâ‚¬ GRANDE" }
+                    { "CancelledShort", "Annulé" },
+                    { "SignatureUpdated", "✔ SIGNATURE MISE Ãƒâ‚¬ GRANDE" }
                 }
             },
             {
@@ -1343,9 +1343,9 @@ namespace VisorSingularity
                     { "LoginRememberUser", "Benutzername merken" },
                     { "LoginPassLabel", "Kennwort:" },
                     { "LoginRememberPass", "Kennwort merken" },
-                    { "LoginMetaMaskBtn", "Ã°Å¸Â¦Å  Mit MetaMask anmelden" },
+                    { "LoginMetaMaskBtn", "🦊 Mit MetaMask anmelden" },
                     { "LoginBtn", "Anmelden" },
-                    { "UpdateSignatureBtn", "Ã¢Å“ÂÃ¯Â¸Â Signatur aktualisieren" },
+                    { "UpdateSignatureBtn", "✍️ Signatur aktualisieren" },
                     { "ScanInit", "Systemscan wird initialisiert..." },
                     { "ScanOS", "Betriebssystem wird gescannt..." },
                     { "ScanCPU", "Prozessor (CPU) wird identifiziert..." },
@@ -1363,60 +1363,60 @@ namespace VisorSingularity
                     { "SigningShort", "Signieren..." },
                     { "SignatureOkShort", "Signatur OK" },
                     { "CancelledShort", "Abgebrochen" },
-                    { "SignatureUpdated", "Ã¢Å“â€œ SIGNATUR AKTUALISIERT" }
+                    { "SignatureUpdated", "✔ SIGNATUR AKTUALISIERT" }
                 }
             },
             {
                 "pt", new Dictionary<string, string>
                 {
                     { "PcRegTitle", "WOLD VIRTUAL Ã¢â‚¬â€ SISTEMA DE LOGIN" },
-                    { "PcRegSubtitle", "REGISTRO AUTOMÃƒÂTICO DA ASSINATURA DE HARDWARE" },
+                    { "PcRegSubtitle", "REGISTRO AUTOMÁTICO DA ASSINATURA DE HARDWARE" },
                     { "OsCardTitle", "SISTEMA OPERACIONAL" },
                     { "CpuCardTitle", "PROCESSADOR" },
                     { "MbCardTitle", "PLACA-MÃƒÆ’E" },
-                    { "CryptoLabel", "ASSINADO EM HARDWARE / HUELLA CRYPTO ÃƒÅ¡NICA (SHA-256)" },
+                    { "CryptoLabel", "ASSINADO EM HARDWARE / HUELLA CRYPTO ÚNICA (SHA-256)" },
                     { "Copy", "COPIAR" },
                     { "RegisterPc", "REGISTRAR PC & SALVAR ZIP" },
                     { "EnterMetaverse", "ENTRAR NO METAVERSO" },
-                    { "UserRegTitle", "WOLD VIRTUAL Ã¢â‚¬â€ REGISTRO DE USUÃƒÂRIO" },
+                    { "UserRegTitle", "WOLD VIRTUAL Ã¢â‚¬â€ REGISTRO DE USUÁRIO" },
                     { "UserRegSubtitle", "CRIAÃƒâ€¡ÃƒÆ’O DE IDENTIDADE E ATRIBUIÃƒâ€¡ÃƒÆ’O DE CREDENCIAIS" },
-                    { "UsernameLabel", "Nome de UsuÃƒÂ¡rio:" },
+                    { "UsernameLabel", "Nome de Usuário:" },
                     { "PasswordLabel", "Senha:" },
                     { "ConfirmPasswordLabel", "Repetir Senha:" },
-                    { "UuidLabel", "Identificador ÃƒÅ¡nico Universal (UUID):" },
+                    { "UuidLabel", "Identificador Único Universal (UUID):" },
                     { "GenerateUuid", "GERAR UUID" },
                     { "RegisterAndEnter", "REGISTRAR & ENTRAR" },
                     { "WaitingMetaMaskTitle", "AGUARDANDO ASSINATURA METAMASK" },
                     { "WaitingMetaMaskDesc", "Por favor, abra o navegador padrÃƒÂ£o e assine a solicitaÃƒÂ§ÃƒÂ£o do MetaMask para vincular a sua carteira." },
                     { "LoginInfoTitle", "ASSINATURA DE HARDWARE DETECTADA" },
-                    { "LoginPhaseStatus_Phase1", "Fase 1: Insira seu usuÃƒÂ¡rio e senha para continuar." },
-                    { "LoginPhaseStatus_Phase2", "Fase 1 concluÃƒÂ­da com sucesso. Fase 2 desbloqueada: Assine e atualize o registro ZIP do seu PC." },
+                    { "LoginPhaseStatus_Phase1", "Fase 1: Insira seu usuário e senha para continuar." },
+                    { "LoginPhaseStatus_Phase2", "Fase 1 concluída com sucesso. Fase 2 desbloqueada: Assine e atualize o registro ZIP do seu PC." },
                     { "LoginMetaMaskDesc", "Abra seu navegador e autorize a solicitaÃƒÂ§ÃƒÂ£o do MetaMask" },
-                    { "LoginUserLabel", "UsuÃƒÂ¡rio:" },
+                    { "LoginUserLabel", "Usuário:" },
                     { "LoginRememberUser", "Lembrar Nome" },
                     { "LoginPassLabel", "Senha:" },
                     { "LoginRememberPass", "Lembrar Senha" },
-                    { "LoginMetaMaskBtn", "Ã°Å¸Â¦Å  Entrar com MetaMask" },
+                    { "LoginMetaMaskBtn", "🦊 Entrar com MetaMask" },
                     { "LoginBtn", "Entrar" },
-                    { "UpdateSignatureBtn", "Ã¢Å“ÂÃ¯Â¸Â Atualizar Assinatura" },
+                    { "UpdateSignatureBtn", "✍️ Atualizar Assinatura" },
                     { "ScanInit", "Inicializando escaneamento do sistema..." },
                     { "ScanOS", "Escaneando Sistema Operacional..." },
                     { "ScanCPU", "Identificando Processador (CPU)..." },
                     { "ScanMB", "Detectando Placa-MÃƒÂ£e e Chipset..." },
-                    { "ScanHash", "Gerando assinatura criptogrÃƒÂ¡fica SHA-256..." },
-                    { "ScanDone", "Escaneamento concluÃƒÂ­do. Assinatura de hardware gerada." },
+                    { "ScanHash", "Gerando assinatura criptográfica SHA-256..." },
+                    { "ScanDone", "Escaneamento concluído. Assinatura de hardware gerada." },
                     { "ScanError", "Erro durante o escaneamento: " },
                     { "ScanOSLoading", "Obtendo informaÃƒÂ§ÃƒÂµes do sistema..." },
                     { "ScanCPULoading", "Obtendo especificaÃƒÂ§ÃƒÂµes da CPU..." },
                     { "ScanMBLoading", "Detectando placa-mÃƒÂ£e..." },
-                    { "GeneratingHashText", "GERANDO ASSINATURA CRIPTOGRÃƒÂFICA..." },
+                    { "GeneratingHashText", "GERANDO ASSINATURA CRIPTOGRÁFICA..." },
                     { "ScanningShort", "Escaneando..." },
                     { "IdentifyingCpuShort", "Identificando CPU..." },
                     { "MotherboardShort", "Placa-mÃƒÂ£e..." },
                     { "SigningShort", "Assinando..." },
                     { "SignatureOkShort", "Assinatura OK" },
                     { "CancelledShort", "Cancelado" },
-                    { "SignatureUpdated", "Ã¢Å“â€œ ASSINATURA ATUALIZADA" }
+                    { "SignatureUpdated", "✔ ASSINATURA ATUALIZADA" }
                 }
             },
             {
@@ -1449,9 +1449,9 @@ namespace VisorSingularity
                     { "LoginRememberUser", "Ricorda Nome" },
                     { "LoginPassLabel", "Password:" },
                     { "LoginRememberPass", "Ricorda Password" },
-                    { "LoginMetaMaskBtn", "Ã°Å¸Â¦Å  Accedi con MetaMask" },
+                    { "LoginMetaMaskBtn", "🦊 Accedi con MetaMask" },
                     { "LoginBtn", "Accedi" },
-                    { "UpdateSignatureBtn", "Ã¢Å“ÂÃ¯Â¸Â Aggiorna Firma" },
+                    { "UpdateSignatureBtn", "✍️ Aggiorna Firma" },
                     { "ScanInit", "Inizializzazione della scansione del sistema..." },
                     { "ScanOS", "Scansione del sistema operativo..." },
                     { "ScanCPU", "Identificazione del processore (CPU)..." },
@@ -1469,7 +1469,7 @@ namespace VisorSingularity
                     { "SigningShort", "Firma in corso..." },
                     { "SignatureOkShort", "Firma OK" },
                     { "CancelledShort", "Annullato" },
-                    { "SignatureUpdated", "Ã¢Å“â€œ FIRMA AGGIORNATA" }
+                    { "SignatureUpdated", "✔ FIRMA AGGIORNATA" }
                 }
             },
             {
@@ -1502,9 +1502,9 @@ namespace VisorSingularity
                     { "LoginRememberUser", "Ã¨Â®Â°Ã¤Â½ÂÃ§â€Â¨Ã¦Ë†Â·Ã¥ÂÂ" },
                     { "LoginPassLabel", "Ã¥Â¯â€ Ã§Â Â:" },
                     { "LoginRememberPass", "Ã¨Â®Â°Ã¤Â½ÂÃ¥Â¯â€ Ã§Â Â" },
-                    { "LoginMetaMaskBtn", "Ã°Å¸Â¦Å  Ã©â‚¬Å¡Ã¨Â¿â€¡ MetaMask Ã§â„¢Â»Ã¥Â½â€¢" },
+                    { "LoginMetaMaskBtn", "🦊 Ã©â‚¬Å¡Ã¨Â¿â€¡ MetaMask Ã§â„¢Â»Ã¥Â½â€¢" },
                     { "LoginBtn", "Ã§â„¢Â»Ã¥Â½â€¢" },
-                    { "UpdateSignatureBtn", "Ã¢Å“ÂÃ¯Â¸Â Ã¦â€ºÂ´Ã¦â€“Â°Ã§Â­Â¾Ã¥ÂÂ" },
+                    { "UpdateSignatureBtn", "✍️ Ã¦â€ºÂ´Ã¦â€“Â°Ã§Â­Â¾Ã¥ÂÂ" },
                     { "ScanInit", "Ã¦Â­Â£Ã¥Å“Â¨Ã¥Ë†ÂÃ¥Â§â€¹Ã¥Å’â€“Ã§Â³Â»Ã§Â»Å¸Ã¦â€°Â«Ã¦ÂÂ..." },
                     { "ScanOS", "Ã¦Â­Â£Ã¥Å“Â¨Ã¦â€°Â«Ã¦ÂÂÃ¦â€œÂÃ¤Â½Å“Ã§Â³Â»Ã§Â»Å¸..." },
                     { "ScanCPU", "Ã¦Â­Â£Ã¥Å“Â¨Ã¨Â¯â€ Ã¥Ë†Â«Ã¥Â¤â€žÃ§Ââ€ Ã¥â„¢Â¨ (CPU)..." },
@@ -1522,7 +1522,7 @@ namespace VisorSingularity
                     { "SigningShort", "Ã¦Â­Â£Ã¥Å“Â¨Ã§Â­Â¾Ã¥ÂÂ..." },
                     { "SignatureOkShort", "Ã§Â­Â¾Ã¥ÂÂÃ¦Ë†ÂÃ¥Å Å¸" },
                     { "CancelledShort", "Ã¥Â·Â²Ã¥Ââ€“Ã¦Â¶Ë†" },
-                    { "SignatureUpdated", "Ã¢Å“â€œ Ã§Â­Â¾Ã¥ÂÂÃ¥Â·Â²Ã¦â€ºÂ´Ã¦â€“Â°" }
+                    { "SignatureUpdated", "✔ Ã§Â­Â¾Ã¥ÂÂÃ¥Â·Â²Ã¦â€ºÂ´Ã¦â€“Â°" }
                 }
             },
             {
@@ -1555,9 +1555,9 @@ namespace VisorSingularity
                     { "LoginRememberUser", "Ã£Æ’Â¦Ã£Æ’Â¼Ã£â€šÂ¶Ã£Æ’Â¼Ã¥ÂÂÃ£â€šâ€™Ã¨Â¨ËœÃ¦â€ Â¶Ã£Ââ„¢Ã£â€šâ€¹" },
                     { "LoginPassLabel", "Ã£Æ’â€˜Ã£â€šÂ¹Ã£Æ’Â¯Ã£Æ’Â¼Ã£Æ’â€°:" },
                     { "LoginRememberPass", "Ã£Æ’â€˜Ã£â€šÂ¹Ã£Æ’Â¯Ã£Æ’Â¼Ã£Æ’â€°Ã£â€šâ€™Ã¨Â¨ËœÃ¦â€ Â¶Ã£Ââ„¢Ã£â€šâ€¹" },
-                    { "LoginMetaMaskBtn", "Ã°Å¸Â¦Å  MetaMaskÃ£ÂÂ§Ã£Æ’Â­Ã£â€šÂ°Ã£â€šÂ¤Ã£Æ’Â³" },
+                    { "LoginMetaMaskBtn", "🦊 MetaMaskÃ£ÂÂ§Ã£Æ’Â­Ã£â€šÂ°Ã£â€šÂ¤Ã£Æ’Â³" },
                     { "LoginBtn", "Ã£Æ’Â­Ã£â€šÂ°Ã£â€šÂ¤Ã£Æ’Â³" },
-                    { "UpdateSignatureBtn", "Ã¢Å“ÂÃ¯Â¸Â Ã§Â½Â²Ã¥ÂÂÃ£â€šâ€™Ã¦â€ºÂ´Ã¦â€“Â°" },
+                    { "UpdateSignatureBtn", "✍️ Ã§Â½Â²Ã¥ÂÂÃ£â€šâ€™Ã¦â€ºÂ´Ã¦â€“Â°" },
                     { "ScanInit", "Ã£â€šÂ·Ã£â€šÂ¹Ã£Æ’â€ Ã£Æ’Â Ã£â€šÂ¹Ã£â€šÂ­Ã£Æ’Â£Ã£Æ’Â³Ã£â€šâ€™Ã¥Ë†ÂÃ¦Å“Å¸Ã¥Å’â€“Ã¤Â¸Â­..." },
                     { "ScanOS", "OSÃ£â€šâ€™Ã£â€šÂ¹Ã£â€šÂ­Ã£Æ’Â£Ã£Æ’Â³Ã¤Â¸Â­..." },
                     { "ScanCPU", "Ã£Æ’â€”Ã£Æ’Â­Ã£â€šÂ»Ã£Æ’Æ’Ã£â€šÂµ (CPU) Ã£â€šâ€™Ã¨Â­ËœÃ¥Ë†Â¥Ã¤Â¸Â­..." },
@@ -1575,7 +1575,7 @@ namespace VisorSingularity
                     { "SigningShort", "Ã§Â½Â²Ã¥ÂÂÃ¤Â¸Â­..." },
                     { "SignatureOkShort", "Ã§Â½Â²Ã¥ÂÂÃ¥Â®Å’Ã¤Âºâ€ " },
                     { "CancelledShort", "Ã£â€šÂ­Ã£Æ’Â£Ã£Æ’Â³Ã£â€šÂ»Ã£Æ’Â«" },
-                    { "SignatureUpdated", "Ã¢Å“â€œ Ã§Â½Â²Ã¥ÂÂÃ£ÂÅ’Ã¦â€ºÂ´Ã¦â€“Â°Ã£Ââ€¢Ã£â€šÅ’Ã£ÂÂ¾Ã£Ââ€”Ã£ÂÅ¸" }
+                    { "SignatureUpdated", "✔ Ã§Â½Â²Ã¥ÂÂÃ£ÂÅ’Ã¦â€ºÂ´Ã¦â€“Â°Ã£Ââ€¢Ã£â€šÅ’Ã£ÂÂ¾Ã£Ââ€”Ã£ÂÅ¸" }
                 }
             }
         };
@@ -1694,7 +1694,7 @@ namespace VisorSingularity
             const int WM_SYSKEYDOWN = 0x0104;
             const int WM_SYSKEYUP = 0x0105;
 
-            // Si el foco estÃƒÂ¡ en un control de texto (TextBox o PasswordBox), permitimos escribir normalmente y no lo enviamos a Godot
+            // Si el foco está en un control de texto (TextBox o PasswordBox), permitimos escribir normalmente y no lo enviamos a Godot
             var focusedElement = System.Windows.Input.Keyboard.FocusedElement;
             if (focusedElement is System.Windows.Controls.TextBox || focusedElement is System.Windows.Controls.PasswordBox)
             {
@@ -1709,7 +1709,7 @@ namespace VisorSingularity
                     {
                         PostMessage(_godotHwnd, (uint)msg.message, msg.wParam, msg.lParam);
 
-                        // Consumir controles del avatar para evitar comportamientos extraÃƒÂ±os en WPF
+                        // Consumir controles del avatar para evitar comportamientos extraños en WPF
                         int key = (int)msg.wParam;
                         if (key == 0x57 || key == 0x41 || key == 0x53 || key == 0x44 || // W A S D
                             key == 0x20 || // Espacio
@@ -1727,7 +1727,7 @@ namespace VisorSingularity
         private void Cleanup()
         {
             _metaverseUiActivated = false;
-            StopVoiceCapture(); // Liberar micrÃƒÂ³fono al cerrar
+            StopVoiceCapture(); // Liberar micrófono al cerrar
             StopWebcam();       // Liberar webcam al cerrar
             // UDP chat y sesion detenidos por _session.StopAll() y _udpChat.Stop()
             _udpChat.Stop();
@@ -1971,7 +1971,7 @@ namespace VisorSingularity
         }
 
         // ===================================================================
-        // Ã¢â€â‚¬Ã¢â€â‚¬ VOICE CHAT (NAudio + VAD + UDP + Peer JSON) Ã¢â€â‚¬Ã¢â€â‚¬
+        // — VOICE CHAT (NAudio + VAD + UDP + Peer JSON) —
         // ===================================================================
 
         private void BtnVoiceChat_Click(object sender, RoutedEventArgs e)
@@ -1998,12 +1998,12 @@ namespace VisorSingularity
                 _isSpeaking = false;
                 _lastSpeechTime = DateTime.MinValue;
                 Dispatcher.Invoke(UpdateVoiceButtonStyle);
-                Debug.WriteLine("[VoiceChat] Captura de micrÃƒÂ³fono iniciada.");
+                Debug.WriteLine("[VoiceChat] Captura de micrófono iniciada.");
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"No se pudo acceder al micrÃƒÂ³fono:\n{ex.Message}",
+                    $"No se pudo acceder al micrófono:\n{ex.Message}",
                     "Error de Voz", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -2031,7 +2031,7 @@ namespace VisorSingularity
 
             _voiceEnabled = false;
             try { Dispatcher.Invoke(UpdateVoiceButtonStyle); } catch { }
-            Debug.WriteLine("[VoiceChat] Captura de micrÃƒÂ³fono detenida.");
+            Debug.WriteLine("[VoiceChat] Captura de micrófono detenida.");
         }
 
         /// <summary>
@@ -2042,7 +2042,7 @@ namespace VisorSingularity
         {
             if (e.BytesRecorded == 0) return;
 
-            // Ã¢â‚¬â€ CÃƒÂ¡lculo RMS sobre muestras PCM 16-bit signed Ã¢â‚¬â€
+            // — Cálculo RMS sobre muestras PCM 16-bit signed — 
             double sumSquares = 0.0;
             int sampleCount = e.BytesRecorded / 2;
             for (int i = 0; i < e.BytesRecorded - 1; i += 2)
@@ -2076,7 +2076,7 @@ namespace VisorSingularity
             }
         }
 
-        /// <summary>EnvÃƒÂ­a el estado de voz a Godot por UDP (puerto 50007).</summary>
+        /// <summary>Envía el estado de voz a Godot por UDP (puerto 50007).</summary>
         private void SendVoiceStateUdp(bool speaking, float volume)
         {
             try
@@ -2086,7 +2086,7 @@ namespace VisorSingularity
                 string json = $"{{\"type\":\"voice\",\"user\":\"{_currentUsername}\",\"speaking\":{speakingStr},\"vol\":{volume:F2}}}";
                 byte[] data = Encoding.UTF8.GetBytes(json);
                 udp.Send(data, data.Length, "127.0.0.1", 50007);
-                Debug.WriteLine($"[VoiceChat] UDP Ã¢â€ â€™ Godot: speaking={speaking}, vol={volume:F2}");
+                Debug.WriteLine($"[VoiceChat] UDP → Godot: speaking={speaking}, vol={volume:F2}");
             }
             catch (Exception ex)
             {
@@ -2124,7 +2124,7 @@ namespace VisorSingularity
                 }
                 else
                 {
-                    // AÃƒÂ±adir campo antes del cierre JSON
+                    // Añadir campo antes del cierre JSON
                     if (content.EndsWith("}"))
                         content = content.Substring(0, content.Length - 1)
                                   + $",\"vc\":{vcVal}}}";
@@ -2141,23 +2141,23 @@ namespace VisorSingularity
             }
         }
 
-        /// <summary>Actualiza el aspecto visual del botÃƒÂ³n de voz segÃƒÂºn el estado actual.</summary>
+        /// <summary>Actualiza el aspecto visual del botón de voz según el estado actual.</summary>
         private void UpdateVoiceButtonStyle()
         {
             if (BtnVoiceChat == null) return;
 
             if (!_voiceEnabled)
             {
-                // Estado inactivo Ã¢â‚¬â€ estilo por defecto
-                BtnVoiceChat.Content = "Ã°Å¸Å½Â¤ VOZ";
+                // Estado inactivo - estilo por defecto
+                BtnVoiceChat.Content = "🎤 VOZ";
                 BtnVoiceChat.ClearValue(BackgroundProperty);
                 BtnVoiceChat.ClearValue(ForegroundProperty);
                 BtnVoiceChat.ToolTip = "Activar chat de voz";
             }
             else if (_isSpeaking)
             {
-                // Hablando Ã¢â‚¬â€ verde cyberpunk brillante
-                BtnVoiceChat.Content = "Ã°Å¸â€Â´ VOZ ON";
+                // Hablando - verde cyberpunk brillante
+                BtnVoiceChat.Content = "🔴 VOZ ON";
                 BtnVoiceChat.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#00FF8C"));
                 BtnVoiceChat.Foreground = new SolidColorBrush(
@@ -2166,8 +2166,8 @@ namespace VisorSingularity
             }
             else
             {
-                // Activo pero en silencio Ã¢â‚¬â€ teal suave
-                BtnVoiceChat.Content = "Ã°Å¸Å½Â¤ ...";
+                // Activo pero en silencio - teal suave
+                BtnVoiceChat.Content = "🎤 ...";
                 BtnVoiceChat.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#1A3040"));
                 BtnVoiceChat.Foreground = new SolidColorBrush(
@@ -2177,7 +2177,7 @@ namespace VisorSingularity
         }
 
         // ===================================================================
-        // Ã¢â€â‚¬Ã¢â€â‚¬ WEBCAM (OpenCvSharp PIP) Ã¢â€â‚¬Ã¢â€â‚¬
+        // — WEBCAM (OpenCvSharp PIP) —
         // ===================================================================
 
         private void BtnWebcam_Click(object sender, RoutedEventArgs e)
@@ -2185,7 +2185,7 @@ namespace VisorSingularity
             if (!_webcamEnabled)
             {
                 var result = MessageBox.Show(this,
-                    "Ã‚Â¿Deseas encender y compartir tu cÃƒÂ¡mara web?",
+                    "¿Deseas encender y compartir tu cámara web?",
                     "Compartir Webcam",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
@@ -2205,14 +2205,14 @@ namespace VisorSingularity
         {
             try
             {
-                // Intentar buscar la cÃƒÂ¡mara en mÃƒÂºltiples ÃƒÂ­ndices y con distintos backends de Windows
+                // Intentar buscar la cámara en múltiples índices y con distintos backends de Windows
                 for (int i = 0; i < 4; i++)
                 {
                     _capture = new VideoCapture(i, VideoCaptureAPIs.MSMF); // Media Foundation (moderno)
                     if (_capture.IsOpened()) break;
                     _capture.Dispose();
 
-                    _capture = new VideoCapture(i, VideoCaptureAPIs.DSHOW); // DirectShow (clÃƒÂ¡sico)
+                    _capture = new VideoCapture(i, VideoCaptureAPIs.DSHOW); // DirectShow (clásico)
                     if (_capture.IsOpened()) break;
                     _capture.Dispose();
                     
@@ -2222,11 +2222,11 @@ namespace VisorSingularity
                 if (_capture == null || !_capture.IsOpened())
                 {
                     MessageBox.Show(this, 
-                        "No se pudo acceder a la cÃƒÂ¡mara.\n\n" +
+                        "No se pudo acceder a la cámara.\n\n" +
                         "Posibles causas:\n" +
-                        "1. Otra aplicaciÃƒÂ³n (como Zoom, OBS o el navegador) la estÃƒÂ¡ usando.\n" +
-                        "2. Windows estÃƒÂ¡ bloqueando el acceso. Ve a ConfiguraciÃƒÂ³n de Windows -> Privacidad -> CÃƒÂ¡mara, y activa 'Permitir que las aplicaciones de escritorio accedan a la cÃƒÂ¡mara'.\n" +
-                        "3. La cÃƒÂ¡mara estÃƒÂ¡ desconectada.", 
+                        "1. Otra aplicación (como Zoom, OBS o el navegador) la está usando.\n" +
+                        "2. Windows está bloqueando el acceso. Ve a Configuración de Windows -> Privacidad -> Cámara, y activa 'Permitir que las aplicaciones de escritorio accedan a la cámara'.\n" +
+                        "3. La cámara está desconectada.", 
                         "Webcam no disponible", MessageBoxButton.OK, MessageBoxImage.Warning);
                     
                     if (_capture != null) { _capture.Dispose(); _capture = null; }
@@ -2241,18 +2241,18 @@ namespace VisorSingularity
                 if (_webcamStatusControl != null)
                 {
                     _webcamStatusControl.Visibility = Visibility.Visible;
-                    _webcamStatusControl.Text = "Iniciando cÃƒÂ¡mara...";
+                    _webcamStatusControl.Text = "Iniciando cámara...";
                 }
 
                 _cancellationTokenSource = new CancellationTokenSource();
                 _captureTask = Task.Run(() => CaptureLoop(_cancellationTokenSource.Token));
 
                 UpdateWebcamButtonStyle();
-                Debug.WriteLine("[Webcam] CÃƒÂ¡mara iniciada con OpenCV.");
+                Debug.WriteLine("[Webcam] Cámara iniciada con OpenCV.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"Error al acceder a la cÃƒÂ¡mara:\n{ex.Message}", "Error de Webcam", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(this, $"Error al acceder a la cámara:\n{ex.Message}", "Error de Webcam", MessageBoxButton.OK, MessageBoxImage.Error);
                 StopWebcam();
             }
         }
@@ -2282,7 +2282,7 @@ namespace VisorSingularity
                             }, System.Windows.Threading.DispatcherPriority.Render);
                         }
                         
-                        // PequeÃƒÂ±a pausa para no saturar CPU (aprox 30 FPS)
+                        // Pequeña pausa para no saturar CPU (aprox 30 FPS)
                         Thread.Sleep(33);
                     }
                 }
@@ -2322,7 +2322,7 @@ namespace VisorSingularity
 
             DestroyWebcamWindow();
             UpdateWebcamButtonStyle();
-            Debug.WriteLine("[Webcam] CÃƒÂ¡mara detenida.");
+            Debug.WriteLine("[Webcam] Cámara detenida.");
         }
 
         private void CreateWebcamWindow()
@@ -2357,10 +2357,9 @@ namespace VisorSingularity
             // por lo que las coordenadas deben ser relativas al área de cliente del GodotHwndHost.
             // El GodotHwndHost tiene Stretch y ocupa todo el GodotPlaceholder.
             
-            // Posicionar en la esquina inferior derecha del área de Godot
-            // con un pequeño margen
-            int marginRight = 10;   // margen desde la derecha
-            int marginBottom = 4;   // margen desde abajo (pegado a la barra del chat)
+            // Posicionar en la esquina inferior derecha del área de Godot (sin márgenes, pegado a los bordes)
+            int marginRight = 0;   // margen desde la derecha
+            int marginBottom = 0;   // margen desde abajo (pegado a la barra del chat)
             
             // Convertir margenes a espacio de coordenadas del DPI
             int marginRightDpi = (int)(marginRight * dpiX);
@@ -2458,10 +2457,9 @@ namespace VisorSingularity
                         // El HwndSource de la webcam es hijo de _godotHost.Handle,
                         // por lo que las coordenadas deben ser relativas al área de cliente del GodotHwndHost.
                         
-                        // Posicionar en la esquina inferior derecha del área de Godot
-                        // con un pequeño margen
-                        int marginRight = 10;   // margen desde la derecha
-                        int marginBottom = 4;   // margen desde abajo (pegado a la barra del chat)
+                        // Posicionar en la esquina inferior derecha del área de Godot (sin márgenes, pegado a los bordes)
+                        int marginRight = 0;   // margen desde la derecha
+                        int marginBottom = 0;   // margen desde abajo (pegado a la barra del chat)
                         
                         // Convertir margenes a espacio de coordenadas del DPI
                         int marginRightDpi = (int)(marginRight * dpiX);
@@ -2473,16 +2471,16 @@ namespace VisorSingularity
                     }
                     else
                     {
-                        // Fallback: esquina inferior derecha del placeholder
-                        targetLeft = (int)((GodotPlaceholder.ActualWidth - 340) * dpiX);
-                        targetTop = (int)((GodotPlaceholder.ActualHeight - 260) * dpiY);
+                        // Fallback: esquina inferior derecha del placeholder (sin márgenes)
+                        targetLeft = (int)(GodotPlaceholder.ActualWidth * dpiX) - width;
+                        targetTop = (int)(GodotPlaceholder.ActualHeight * dpiY) - height;
                     }
 
                     MoveWindow(_webcamHwndSource.Handle, targetLeft, targetTop, width, height, true);
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[Webcam] Error al actualizar posiciÃƒÂ³n: {ex.Message}");
+                    Debug.WriteLine($"[Webcam] Error al actualizar posición: {ex.Message}");
                 }
             }
         }
