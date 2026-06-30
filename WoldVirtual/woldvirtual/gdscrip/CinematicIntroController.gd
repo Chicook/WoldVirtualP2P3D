@@ -5,17 +5,9 @@
 ##     La isla asciende desde el lecho marino (-160 m) hasta su posición final.
 ##     El avatar permanece invisible durante este período.
 ##
-##   FASE 2 — CAMERA_APPROACH  (≈1.2 s)
-##     La cámara parte desde la espalda del avatar y se desplaza suavemente
-##     hasta quedar enfrente de él (avatar.rotation.y + 180°).
-##
-##   FASE 3 — CAMERA_ORBIT  (≈3.8 s)
-##     La cámara orbita 360° completos alrededor del avatar con FOV cinemático.
-##
-##   FASE 4 — CAMERA_SETTLE  (≈1.5 s)
-##     La cámara regresa suavemente a la espalda del avatar (TPV normal)
-##     y se sincronizan los ángulos internos del CameraController para que
-##     el control manual sea inmediatamente fluido.
+##   FASE 2 — CAMERA_ORBIT  (paralela al ascenso)
+##     La cámara orbita 360° completos alrededor del avatar mientras la isla
+##     sigue emergiendo. Cuando ambos procesos terminan, se devuelve el control.
 ##
 ## Uso (desde ChunkManager):
 ##   var ctrl = CinematicIntroController.new()
@@ -31,9 +23,7 @@ signal intro_completed
 enum Phase {
 	IDLE,
 	ISLAND_RISING,
-	CAMERA_APPROACH,
 	CAMERA_ORBIT,
-	CAMERA_SETTLE,
 	DONE
 }
 
@@ -44,12 +34,8 @@ enum Phase {
 @export var cinematic_height    : float = 1.8
 ## Altura del punto de mira (cabeza del avatar)
 @export var look_at_height      : float = 1.3
-## Duración del arco de aproximación (espalda → enfrente), segundos
-@export var approach_duration   : float = 1.2
-## Duración de la órbita 360°, segundos
-@export var orbit_duration      : float = 3.8
-## Duración del asentamiento final (enfrente → espalda), segundos
-@export var settle_duration     : float = 1.5
+## Duración de la órbita 360°; por defecto acompaña el ascenso de la isla
+@export var orbit_duration      : float = 4.2
 ## FOV durante la órbita (más tele = más dramático)
 @export var cinematic_fov       : float = 55.0
 
@@ -61,10 +47,10 @@ var _avatar             : Node3D   = null
 var _cam_ctrl           : Node     = null   # CameraController
 var _cam                : Camera3D = null
 var _normal_fov         : float    = 75.0
-## Ángulo (radianes) que marcará el inicio del arco de órbita
-var _orbit_start_angle  : float    = 0.0
 ## Posición XZ del avatar al momento de spawnar (para recolocarle encima de la isla)
 var _avatar_spawn_pos   : Vector3  = Vector3.ZERO
+var _island_rise_done   : bool     = false
+var _camera_orbit_done  : bool     = false
 
 # ─── API Pública ───────────────────────────────────────────────────────────────
 ## Inicia la secuencia completa.
@@ -115,7 +101,13 @@ func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> voi
 	rise_anim.finished.connect(_on_island_arrived)
 	rise_anim.play(target_y)
 
+	# Arrancar la órbita desde ya para que acompañe el ascenso.
+	_phase = Phase.CAMERA_ORBIT
+	_elapsed = 0.0
+	set_process(true)
+
 	print("[CinematicIntro] Fase 1: isla ascendiendo desde el lecho marino...")
+	print("[CinematicIntro] Fase 2: cámara orbitando 360° en paralelo.")
 
 ## Salta la cinemática y entrega el control al CameraController inmediatamente.
 func skip() -> void:
@@ -130,9 +122,11 @@ func skip() -> void:
 # ─── Callbacks de fases ────────────────────────────────────────────────────────
 func _on_island_arrived() -> void:
 	print("[CinematicIntro] Fase 2: isla en superficie — avatar aparece encima.")
+	_island_rise_done = true
 
 	if !is_instance_valid(_avatar):
-		_finish()
+		if _camera_orbit_done:
+			_finish()
 		return
 
 	# ── Reposicionar el avatar SOBRE la isla ───────────────────────────────────
@@ -151,11 +145,9 @@ func _on_island_arrived() -> void:
 	_avatar.set_process_input(true)
 	_avatar.visible = true
 
-	# Iniciar fase de aproximación de cámara
-	_orbit_start_angle = _avatar.global_rotation.y + PI   # enfrente del avatar
-	_phase   = Phase.CAMERA_APPROACH
-	_elapsed = 0.0
-	set_process(true)
+	if _camera_orbit_done:
+		_sync_cam_ctrl()
+		_finish()
 
 # ─── Loop de fases de cámara ───────────────────────────────────────────────────
 func _ready() -> void:
@@ -172,49 +164,22 @@ func _process(delta: float) -> void:
 
 	match _phase:
 
-		# ── FASE 2: Espalda → Enfrente ──────────────────────────────────────────
-		Phase.CAMERA_APPROACH:
-			var t       : float = clamp(_elapsed / approach_duration, 0.0, 1.0)
-			var et      : float = _smoothstep(t)
-			var back    : float = _avatar.global_rotation.y
-			var front   : float = _avatar.global_rotation.y + PI
-			var angle   : float = lerp_angle(back, front, et)
-			_place_cam(angle, avatar_pos, look_target)
-
-			if t >= 1.0:
-				print("[CinematicIntro] Fase 3: órbita 360°.")
-				_orbit_start_angle = _avatar.global_rotation.y + PI
-				_phase   = Phase.CAMERA_ORBIT
-				_elapsed = 0.0
-
 		# ── FASE 3: Órbita 360° ─────────────────────────────────────────────────
 		Phase.CAMERA_ORBIT:
 			var t     : float = clamp(_elapsed / orbit_duration, 0.0, 1.0)
 			var et    : float = _ease_in_out_quad(t)
-			var angle : float = _orbit_start_angle - (et * TAU)   # TAU = 2π
+			var orbit_start_angle : float = _avatar.global_rotation.y + PI
+			var angle : float = orbit_start_angle - (et * TAU)   # TAU = 2π
 			_place_cam(angle, avatar_pos, look_target)
 			# FOV cinemático
 			_cam.fov = lerp(_cam.fov, cinematic_fov, delta * 2.5)
 
 			if t >= 1.0:
-				print("[CinematicIntro] Fase 4: asentamiento en espalda TPV.")
-				_phase   = Phase.CAMERA_SETTLE
-				_elapsed = 0.0
-
-		# ── FASE 4: Enfrente → Espalda (TPV normal) ─────────────────────────────
-		Phase.CAMERA_SETTLE:
-			var t     : float = clamp(_elapsed / settle_duration, 0.0, 1.0)
-			var et    : float = _ease_out_cubic(t)
-			var front : float = _orbit_start_angle
-			var back  : float = _avatar.global_rotation.y
-			var angle : float = lerp_angle(front, back, et)
-			_place_cam(angle, avatar_pos, look_target)
-			# Restaurar FOV normal
-			_cam.fov = lerpf(_cam.fov, _normal_fov, et)
-
-			if t >= 1.0:
-				_sync_cam_ctrl()
-				_finish()
+				_camera_orbit_done = true
+				_cam.fov = _normal_fov
+				if _island_rise_done:
+					_sync_cam_ctrl()
+					_finish()
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 ## Coloca la cámara en posición orbital y la apunta al avatar
@@ -260,9 +225,3 @@ static func _smoothstep(t: float) -> float:
 static func _ease_out_cubic(t: float) -> float:
 	var u := 1.0 - t
 	return 1.0 - (u * u * u)
-
-static func _ease_in_out_quad(t: float) -> float:
-	if t < 0.5:
-		return 2.0 * t * t
-	else:
-		return 1.0 - pow(-2.0 * t + 2.0, 2.0) * 0.5

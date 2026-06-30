@@ -25,6 +25,7 @@ var _persistent_island_id: String = ""
 var _cinematic_played    : bool  = false
 var _cinematic_ctrl      : Node  = null
 var _local_island_node   : Node3D = null
+var _pending_cinematic_island : Node3D = null
 
 func _parse_cmdline_args():
 	var args = OS.get_cmdline_args() + OS.get_cmdline_user_args()
@@ -174,7 +175,9 @@ func _on_network_updated(state: Dictionary):
 		var island_node = world.active_islands[local_key]
 		if is_instance_valid(island_node) and island_node != _local_island_node:
 			_local_island_node = island_node
-			_launch_cinematic(island_node)
+			_pending_cinematic_island = island_node
+
+	_try_launch_pending_cinematic()
 
 	if is_instance_valid(avatar_ctrl.my_avatar):
 		var entity = avatar_ctrl.my_avatar.get_node_or_null("ECSEntity")
@@ -195,24 +198,38 @@ func _setup_camera_controller(av: Node3D):
 
 # ─── Cinemática de introducción ───────────────────────────────────────────────
 func _launch_cinematic(island_node: Node3D) -> void:
-	_cinematic_played = true  # Marcar como reproducida aunque algo falle
-
 	var av       = avatar_ctrl.my_avatar if avatar_ctrl else null
 	var cam_ctrl = get_node_or_null("CameraController")
 
 	if !is_instance_valid(av) or !is_instance_valid(cam_ctrl):
-		# Avatar o cámara aún no listos: aplicar solo el rise sin cinemática de cámara
-		_play_island_rise_only(island_node)
+		# Todavía no están listos: reintentar en el siguiente update en vez de saltar
+		_cinematic_played = false
+		_local_island_node = null
+		print("[ChunkManager] Cinemática aplazada: avatar/cámara aún no listos.")
 		return
 
 	# 1) Crear el CinematicIntroController
 	_cinematic_ctrl = load("res://woldvirtual/gdscrip/CinematicIntroController.gd").new()
 	_cinematic_ctrl.name = "CinematicIntroController"
 	add_child(_cinematic_ctrl)
+	_cinematic_played = true
 
 	# 2) Iniciar secuencia completa
 	_cinematic_ctrl.begin(island_node, av, cam_ctrl)
 	print("[ChunkManager] Cinemática de introducción iniciada.")
+
+func _try_launch_pending_cinematic() -> void:
+	if _cinematic_played:
+		return
+	if !is_instance_valid(_pending_cinematic_island):
+		return
+
+	var av = avatar_ctrl.my_avatar if avatar_ctrl else null
+	var cam_ctrl = get_node_or_null("CameraController")
+	if !is_instance_valid(av) or !is_instance_valid(cam_ctrl):
+		return
+
+	_launch_cinematic(_pending_cinematic_island)
 
 func _play_island_rise_only(island_node: Node3D) -> void:
 	# Fallback: solo anima el ascenso de la isla sin secuencia de cámara
