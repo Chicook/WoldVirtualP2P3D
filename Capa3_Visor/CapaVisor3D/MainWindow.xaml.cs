@@ -2491,13 +2491,13 @@ namespace VisorSingularity
 
             if (!_webcamEnabled)
             {
-                BtnWebcam.Content = "Ã°Å¸â€œÂ· CAM";
+                BtnWebcam.Content = "\U0001F4F7 CAM";
                 BtnWebcam.ClearValue(BackgroundProperty);
                 BtnWebcam.ClearValue(ForegroundProperty);
             }
             else
             {
-                BtnWebcam.Content = "Ã°Å¸â€Â´ CAM ON";
+                BtnWebcam.Content = "\U0001F534 CAM ON";
                 BtnWebcam.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#00FF8C"));
                 BtnWebcam.Foreground = new SolidColorBrush(
