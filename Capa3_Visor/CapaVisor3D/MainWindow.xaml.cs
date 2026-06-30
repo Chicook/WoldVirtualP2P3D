@@ -1037,7 +1037,7 @@ namespace VisorSingularity
         {
             Dispatcher.Invoke(() =>
             {
-                MessageBox.Show($"ERROR al iniciar HTTP Bridge: {msg}. Asegurate de que el puerto 8080 no este en uso.",
+                MessageBox.Show($"ERROR al iniciar HTTP Bridge: {msg}. Asegurate de que el puerto 8088 no este en uso.",
                     "Error de Servidor", MessageBoxButton.OK, MessageBoxImage.Error);
                 GridMetaMaskOverlay.Visibility = Visibility.Collapsed;
             });
