@@ -14,14 +14,16 @@ var cam: Camera3D
 var _rot_x: float = 0.0
 var _rot_y: float = 0.0
 
+func _enter_tree():
+	if !is_instance_valid(cam):
+		cam = Camera3D.new()
+		cam.current = true
+		cam.fov = 75.0
+		cam.near = 0.05
+		cam.far = 4000.0
+		add_child(cam)
+
 func _ready():
-	cam = Camera3D.new()
-	cam.current = true
-	cam.fov = 75.0
-	cam.near = 0.05
-	cam.far = 4000.0
-	add_child(cam)
-	
 	# Mouse mode: visible by default (Social experience)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
