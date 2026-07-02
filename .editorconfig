@@ -13,8 +13,10 @@ insert_final_newline = true
 
 [*.cs]
 # Reglas de lenguaje C#
+# 'var' SOLO cuando el tipo es evidente; cualquier otro caso debe declararse.
 csharp_style_var_for_built_in_types = true:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = false:warning
 csharp_style_expression_bodied_methods = true:suggestion
 csharp_style_expression_bodied_properties = true:suggestion
 
@@ -33,6 +35,13 @@ dotnet_diagnostic.CA1062.severity = warning
 dotnet_diagnostic.CA1305.severity = suggestion
 # CA2007: No esperar directamente a un Task (use ConfigureAwait)
 dotnet_diagnostic.CA2007.severity = suggestion
+# CS8602: posible desreferencia de null (prevenido por Diagnostics/DiagnosticsGuard.cs)
+dotnet_diagnostic.CS8602.severity = warning
+# CS8604: argumento posiblemente null
+dotnet_diagnostic.CS8604.severity = warning
+# IDE0007/IDE0008: usar 'var' (recordatorio suave)
+dotnet_diagnostic.IDE0007.severity = suggestion
+dotnet_diagnostic.IDE0008.severity = suggestion
 # IDE0051: Eliminar miembros privados no utilizados
 dotnet_diagnostic.IDE0051.severity = warning
 # IDE0052: Eliminar miembros privados no leídos

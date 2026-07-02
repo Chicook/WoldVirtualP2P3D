@@ -18,6 +18,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using NAudio.Wave;
+using VisorSingularity.Diagnostics;
 using VisorSingularity.Interop;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
@@ -1096,7 +1097,7 @@ namespace VisorSingularity
 
                     // Forzar resize inmediato para asegurar que la ventana de Godot se ajusta correctamente
                     await Task.Delay(50);
-                    _godotHost.ResizeToActualPixels();
+                    Guard.NotNull(_godotHost).ResizeToActualPixels();
 
                     // Hook de desvío de teclado
                     System.Windows.Interop.ComponentDispatcher.ThreadFilterMessage += ComponentDispatcher_ThreadFilterMessage;
@@ -1757,7 +1758,7 @@ namespace VisorSingularity
                 }
                 if (_godotHost != null)
                 {
-                    _godotHost.Focus();
+                    Guard.NotNull(_godotHost).Focus();
                 }
             }
             catch (Exception ex)
@@ -1958,8 +1959,9 @@ namespace VisorSingularity
                     WaveFormat = new WaveFormat(16000, 16, 1),
                     BufferMilliseconds = 100
                 };
-                _waveIn.DataAvailable += OnVoiceDataAvailable;
-                _waveIn.StartRecording();
+                var wave = Guard.NotNull(_waveIn);
+                wave.DataAvailable += OnVoiceDataAvailable;
+                wave.StartRecording();
 
                 _voiceEnabled = true;
                 _isSpeaking = false;
