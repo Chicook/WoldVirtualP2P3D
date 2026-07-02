@@ -53,9 +53,9 @@ namespace VisorSingularity
         private static readonly string APP_DATA_ZIP    = Path.Combine(APP_DATA_DIR, "firma_hardware.zip");
         private static readonly string APP_DATA_SIG    = Path.Combine(APP_DATA_DIR, "hardware_sig.txt");
         private string _loginFingerprint = "";
-#pragma warning disable CS0414
+#pragma warning disable CS0414, IDE0052
         private bool   _isLoginMode      = false;   // true = usuario ya registrado (reservado para lógica futura)
-#pragma warning restore CS0414
+#pragma warning restore CS0414, IDE0052
 
         // === Voice Chat (NAudio VAD) ===
         private WaveInEvent? _waveIn;
@@ -1548,8 +1548,9 @@ namespace VisorSingularity
             }
         };
 
-        private void ApplyWpfLocale(string lang, string country)
+        private void ApplyWpfLocale(string lang, string _country)
         {
+            Debug.Assert(_country is not null, "country is reserved for future locale expansion.");
             if (!WpfTranslations.ContainsKey(lang))
             {
                 lang = "en"; // fallback
@@ -1908,9 +1909,6 @@ namespace VisorSingularity
             TxtP2PStatus.Text = "Generando ZIP...";
             P2PNodeBar.Visibility = Visibility.Visible;
         }
-
-        private void StartP2PWebNode(string username, string repoPath) =>
-            _session.StartP2PWebNode(username, repoPath);
 
         private void BtnCopyP2PLink_Click(object sender, RoutedEventArgs e)
         {
