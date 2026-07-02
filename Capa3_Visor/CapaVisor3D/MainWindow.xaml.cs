@@ -2116,7 +2116,7 @@ namespace VisorSingularity
             if (!_voiceEnabled)
             {
                 // Estado inactivo - estilo por defecto
-                BtnVoiceChat.Content = "🎤 VOZ";
+                BtnVoiceChat.Content = "VOZ";
                 BtnVoiceChat.ClearValue(BackgroundProperty);
                 BtnVoiceChat.ClearValue(ForegroundProperty);
                 BtnVoiceChat.ToolTip = "Activar chat de voz";
@@ -2124,7 +2124,7 @@ namespace VisorSingularity
             else if (_isSpeaking)
             {
                 // Hablando - verde cyberpunk brillante
-                BtnVoiceChat.Content = "🔴 VOZ ON";
+                BtnVoiceChat.Content = "VOZ ON";
                 BtnVoiceChat.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#00FF8C"));
                 BtnVoiceChat.Foreground = new SolidColorBrush(
@@ -2134,7 +2134,7 @@ namespace VisorSingularity
             else
             {
                 // Activo pero en silencio - teal suave
-                BtnVoiceChat.Content = "🎤 ...";
+                BtnVoiceChat.Content = "VOZ ...";
                 BtnVoiceChat.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#1A3040"));
                 BtnVoiceChat.Foreground = new SolidColorBrush(
@@ -2458,13 +2458,13 @@ namespace VisorSingularity
 
             if (!_webcamEnabled)
             {
-                BtnWebcam.Content = "Ã°Å¸â€œÂ· CAM";
+                BtnWebcam.Content = "WEBCAM";
                 BtnWebcam.ClearValue(BackgroundProperty);
                 BtnWebcam.ClearValue(ForegroundProperty);
             }
             else
             {
-                BtnWebcam.Content = "Ã°Å¸â€Â´ CAM ON";
+                BtnWebcam.Content = "WEBCAM ON";
                 BtnWebcam.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#00FF8C"));
                 BtnWebcam.Foreground = new SolidColorBrush(
