@@ -116,23 +116,19 @@ namespace VisorSingularity
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // VISOR CONSTRUCTOR: Siempre forzar registro completo
+            System.Diagnostics.Debug.WriteLine("[VISOR CONSTRUCTOR] Iniciando - Siempre requiere registro completo");
+
             // Detectar idioma y país del sistema operativo en el inicio y aplicar al WPF UI
             var (lang, country) = HardwareFingerprintService.GetSystemLocaleInfo();
             ApplyWpfLocale(lang, country);
 
-            // Comprobar si estamos en otro PC
-            if (IsOnAnotherPc())
-            {
-                ResetRegistrationForNewPc();
-            }
+            // VISOR CONSTRUCTOR: Ignorar detección de PC diferente - siempre forzar registro
+            // No llamar a IsOnAnotherPc() ni ResetRegistrationForNewPc()
 
-            // Detectar si el usuario ya tiene registro previo
-            bool hasAccount = await CheckExistingRegistrationAsync();
-            if (!hasAccount)
-            {
-                // Primer uso: mostrar flujo de registro de hardware
-                await RunHardwareScanAsync();
-            }
+            // VISOR CONSTRUCTOR: Siempre mostrar flujo de registro de hardware
+            // No verificar registro existente - forzar registro completo
+            await RunHardwareScanAsync();
         }
 
         // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DETECCIÓN DE CUENTA EXISTENTE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -318,150 +314,45 @@ namespace VisorSingularity
 
         private void LoadLoginSettings()
         {
-            try
-            {
-                string settingsPath = Path.Combine(APP_DATA_DIR, "login_settings.json");
-                if (File.Exists(settingsPath))
-                {
-                    string json = File.ReadAllText(settingsPath);
-                    using (var doc = JsonDocument.Parse(json))
-                    {
-                        var root = doc.RootElement;
-                        bool rememberUser = root.TryGetProperty("rememberUser", out var remUser) && remUser.GetBoolean();
-                        bool rememberPass = root.TryGetProperty("rememberPass", out var remPass) && remPass.GetBoolean();
-
-                        ChkRememberUser.IsChecked = rememberUser;
-                        ChkRememberPass.IsChecked = rememberPass;
-
-                        if (rememberUser && root.TryGetProperty("savedUser", out var userProp))
-                        {
-                            TxtLoginUser.Text = userProp.GetString() ?? "";
-                        }
-                        if (rememberPass && root.TryGetProperty("savedPass", out var passProp))
-                        {
-                            string base64Pass = passProp.GetString() ?? "";
-                            if (!string.IsNullOrEmpty(base64Pass))
-                            {
-                                byte[] data = Convert.FromBase64String(base64Pass);
-                                TxtLoginPass.Password = Encoding.UTF8.GetString(data);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("[Login] Error al cargar configuración de login: " + ex.Message);
-            }
+            // VISOR CONSTRUCTOR: No cargar configuración de login - siempre forzar registro completo
+            System.Diagnostics.Debug.WriteLine("[VISOR CONSTRUCTOR] LoadLoginSettings ignorado - no hay sesión persistente");
+            
+            // Resetear checkboxes a valores por defecto
+            if (ChkRememberUser != null) ChkRememberUser.IsChecked = false;
+            if (ChkRememberPass != null) ChkRememberPass.IsChecked = false;
+            
+            // Limpiar campos de login
+            if (TxtLoginUser != null) TxtLoginUser.Text = "";
+            if (TxtLoginPass != null) TxtLoginPass.Password = "";
         }
 
         private void SaveLoginSettings()
         {
-            try
-            {
-                Directory.CreateDirectory(APP_DATA_DIR);
-                string settingsPath = Path.Combine(APP_DATA_DIR, "login_settings.json");
-
-                bool rememberUser = ChkRememberUser.IsChecked == true;
-                bool rememberPass = ChkRememberPass.IsChecked == true;
-
-                string savedUser = rememberUser ? TxtLoginUser.Text : "";
-                string savedPass = "";
-                if (rememberPass)
-                {
-                    byte[] data = Encoding.UTF8.GetBytes(TxtLoginPass.Password);
-                    savedPass = Convert.ToBase64String(data);
-                }
-
-                var settingsData = new
-                {
-                    rememberUser = rememberUser,
-                    rememberPass = rememberPass,
-                    savedUser = savedUser,
-                    savedPass = savedPass
-                };
-
-                string json = JsonSerializer.Serialize(settingsData);
-                File.WriteAllText(settingsPath, json, Encoding.UTF8);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("[Login] Error al guardar configuración de login: " + ex.Message);
-            }
+            // VISOR CONSTRUCTOR: No guardar configuración de login - siempre forzar registro completo
+            System.Diagnostics.Debug.WriteLine("[VISOR CONSTRUCTOR] SaveLoginSettings ignorado - no se persiste sesión");
+            // No crear directorios ni archivos
         }
 
         private void BtnLoginPhase1_Click(object sender, RoutedEventArgs e)
         {
-            string enteredUser = TxtLoginUser.Text.Trim();
-            string enteredPass = TxtLoginPass.Password;
-
-            if (string.IsNullOrEmpty(enteredUser) || string.IsNullOrEmpty(enteredPass))
-            {
-                MessageBox.Show("Por favor, ingrese usuario y contraseña.", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Validar contra credentials.json
-            string credPath = Path.Combine(APP_DATA_DIR, "credentials.json");
-            bool isValid = false;
-
-            if (!File.Exists(credPath))
-            {
-                // Fallback de migración de cuenta existente: registrar credenciales al primer ingreso
-                SaveUserCredentials(enteredUser, enteredPass);
-                isValid = true;
-            }
-            else
-            {
-                try
-                {
-                    string json = File.ReadAllText(credPath);
-                    using (var doc = JsonDocument.Parse(json))
-                    {
-                        var root = doc.RootElement;
-                        string savedUser = root.TryGetProperty("username", out var userProp) ? userProp.GetString() ?? "" : "";
-                        string savedHash = root.TryGetProperty("passwordHash", out var hashProp) ? hashProp.GetString() ?? "" : "";
-
-                        string enteredHash = ComputeSHA256(enteredPass);
-                        if (savedUser.Equals(enteredUser, StringComparison.OrdinalIgnoreCase) && savedHash.Equals(enteredHash, StringComparison.Ordinal))
-                        {
-                            isValid = true;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error al leer credenciales locales: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-            }
-
-            if (!isValid)
-            {
-                MessageBox.Show("Usuario o contraseña incorrectos.", "Ingreso Fallido", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Guardar configuración de recordar
-            SaveLoginSettings();
-
-            // Bloquear Fase 1
-            TxtLoginUser.IsEnabled = false;
-            TxtLoginPass.IsEnabled = false;
-            ChkRememberUser.IsEnabled = false;
-            ChkRememberPass.IsEnabled = false;
-            BtnLoginPhase1.IsEnabled = false;
-
-            // Mostrar Fase 2
-            PanelPhase2.Visibility = Visibility.Visible;
-            TxtLoginPhaseStatus.Text = WpfTranslations[_currentLang]["LoginPhaseStatus_Phase2"];
+            // VISOR CONSTRUCTOR: No hay login - siempre requiere registro completo
+            MessageBox.Show("VISOR CONSTRUCTOR: Se requiere registro completo.\nPor favor, complete el proceso de registro desde el inicio.", 
+                "Registro Requerido", MessageBoxButton.OK, MessageBoxImage.Information);
+            
+            // Volver a pantalla de registro de hardware
+            GridLoginScreen.Visibility = Visibility.Collapsed;
+            GridPcRegistration.Visibility = Visibility.Visible;
         }
 
         private async void BtnLoginPhase2_Click(object sender, RoutedEventArgs e)
         {
-            BtnLoginPhase2.IsEnabled = false;
-            ScanProgressPanel.Visibility = Visibility.Visible;
-            await RunLoginHardwareScanAsync();
+            // VISOR CONSTRUCTOR: No hay actualización de firma - siempre requiere registro completo
+            MessageBox.Show("VISOR CONSTRUCTOR: Se requiere registro completo.\nPor favor, complete el proceso de registro desde el inicio.", 
+                "Registro Requerido", MessageBoxButton.OK, MessageBoxImage.Information);
+            
+            // Volver a pantalla de registro de hardware
+            GridLoginScreen.Visibility = Visibility.Collapsed;
+            GridPcRegistration.Visibility = Visibility.Visible;
         }
 
         private async Task RunLoginHardwareScanAsync()
@@ -607,32 +498,13 @@ namespace VisorSingularity
         // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ BOTON LOGIN METAMASK Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         private void BtnLoginMetaMask_Click(object sender, RoutedEventArgs e)
         {
-            BtnLoginMetaMask.IsEnabled     = false;
-            BorderLoginStatus.Visibility   = Visibility.Visible;
-            TxtLoginStatus.Text            = "INICIANDO SESIÓN CON METAMASK...";
-
-            var userInfo = GetSavedUserInfo();
-
-            // Arrancar el servidor HTTP puente en modo login (puerto 8088)
-            _session.LoginConfirmed += (confirm) => Dispatcher.Invoke(() => _OnLoginConfirmed(confirm.User, confirm.Wallet, confirm.Island, confirm.Signature));
-            _session.BridgeError += (msg) => Dispatcher.Invoke(() => {
-                MessageBox.Show($"ERROR al iniciar HTTP Bridge: {msg}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                BorderLoginStatus.Visibility = Visibility.Collapsed;
-                BtnLoginMetaMask.IsEnabled = true;
-            });
-            _session.StartHttpBridgeLogin();
-
-            // Abrir navegador con metamask.html en modo login pasando el usuario e isla correctos
-            try
-            {
-                string url = $"http://localhost:8088/?mode=login&user={Uri.EscapeDataString(userInfo.username)}&islandId={Uri.EscapeDataString(userInfo.islandId)}";
-                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"No se pudo abrir el navegador: {ex.Message}\nNavega a http://localhost:8088/ manualmente.",
-                    "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            // VISOR CONSTRUCTOR: No hay login con MetaMask - siempre requiere registro completo
+            MessageBox.Show("VISOR CONSTRUCTOR: Se requiere registro completo.\nPor favor, complete el proceso de registro desde el inicio.", 
+                "Registro Requerido", MessageBoxButton.OK, MessageBoxImage.Information);
+            
+            // Volver a pantalla de registro de hardware
+            GridLoginScreen.Visibility = Visibility.Collapsed;
+            GridPcRegistration.Visibility = Visibility.Visible;
         }
 
 
@@ -1015,6 +887,7 @@ namespace VisorSingularity
         /// <param name="scenePath">Ruta de escena Godot (res://...). Null = usa EscenaPrincipal.tscn</param>
         private async void LaunchAndEmbedGodot(string wallet, string user, string island, string scenePath = "res://EscenaPrincipal.tscn")
         {
+            Debug.WriteLine($"[DEBUG-CINEMATICA] LaunchAndEmbedGodot() llamado: wallet={wallet}, user={user}, island={island}, scenePath={scenePath}");
             if (_godotProcess != null && !_godotProcess.HasExited)
             {
                 return;
@@ -1074,8 +947,10 @@ namespace VisorSingularity
                     arguments,
                     (output) =>
                     {
+                        Debug.WriteLine($"[DEBUG-CINEMATICA] Salida de Godot: {output}");
                         if (output.Contains("AVATAR_LOGIN_CLICKED"))
                         {
+                            Debug.WriteLine($"[DEBUG-CINEMATICA] AVATAR_LOGIN_CLICKED detectado, llamando a ActivateMetaverseUi()");
                             Dispatcher.Invoke(() =>
                             {
                                 ActivateMetaverseUi(user, repoPath);
@@ -1701,6 +1576,9 @@ namespace VisorSingularity
             // UDP chat y sesion detenidos por _session.StopAll() y _udpChat.Stop()
             _udpChat.Stop();
 
+            // OLVIDAR SESIÓN Y PC - VISOR CONSTRUCTOR
+            // Eliminar todos los archivos de sesión y configuración al cerrar
+            ForgetSessionAndPC();
 
             if (_godotProcess != null && !_godotProcess.HasExited)
             {
@@ -1713,6 +1591,150 @@ namespace VisorSingularity
             }
 
             ComponentDispatcher.ThreadFilterMessage -= ComponentDispatcher_ThreadFilterMessage;
+        }
+
+        /// <summary>
+        /// Método del VISOR CONSTRUCTOR: Olvida completamente la sesión y el PC al cerrar
+        /// Elimina todos los archivos de configuración, sesión y datos persistentes
+        /// </summary>
+        private void ForgetSessionAndPC()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("[VISOR CONSTRUCTOR] Olvidando sesión y PC...");
+
+                // 1. Eliminar archivos en APP_DATA_DIR
+                if (Directory.Exists(APP_DATA_DIR))
+                {
+                    // Eliminar firma_hardware.zip
+                    if (File.Exists(APP_DATA_ZIP))
+                    {
+                        File.Delete(APP_DATA_ZIP);
+                        System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Eliminado: {APP_DATA_ZIP}");
+                    }
+
+                    // Eliminar hardware_sig.txt
+                    if (File.Exists(APP_DATA_SIG))
+                    {
+                        File.Delete(APP_DATA_SIG);
+                        System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Eliminado: {APP_DATA_SIG}");
+                    }
+
+                    // Eliminar credentials.json
+                    string credPath = Path.Combine(APP_DATA_DIR, "credentials.json");
+                    if (File.Exists(credPath))
+                    {
+                        File.Delete(credPath);
+                        System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Eliminado: {credPath}");
+                    }
+
+                    // Eliminar login_settings.json
+                    string settingsPath = Path.Combine(APP_DATA_DIR, "login_settings.json");
+                    if (File.Exists(settingsPath))
+                    {
+                        File.Delete(settingsPath);
+                        System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Eliminado: {settingsPath}");
+                    }
+
+                    // Eliminar cualquier otro archivo en el directorio
+                    foreach (var file in Directory.GetFiles(APP_DATA_DIR))
+                    {
+                        try
+                        {
+                            File.Delete(file);
+                            System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Eliminado: {file}");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Error al eliminar {file}: {ex.Message}");
+                        }
+                    }
+
+                    // Intentar eliminar el directorio (puede fallar si hay archivos bloqueados)
+                    try
+                    {
+                        Directory.Delete(APP_DATA_DIR, true);
+                        System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Directorio eliminado: {APP_DATA_DIR}");
+                    }
+                    catch
+                    {
+                        // Ignorar si no se puede eliminar el directorio
+                    }
+                }
+
+                // 2. Eliminar archivos peer_*.json en el directorio de peers
+                try
+                {
+                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    string peersDir = Path.Combine(baseDir, "peers");
+                    if (Directory.Exists(peersDir))
+                    {
+                        var peerFiles = Directory.GetFiles(peersDir, "peer_*.json");
+                        foreach (var file in peerFiles)
+                        {
+                            try
+                            {
+                                File.Delete(file);
+                                System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Eliminado peer: {file}");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Error al eliminar peer {file}: {ex.Message}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Error al buscar peers: {ex.Message}");
+                }
+
+                // 3. Eliminar current_user.json en el proyecto Godot
+                try
+                {
+                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    DirectoryInfo? dir = new DirectoryInfo(baseDir);
+                    while (dir != null)
+                    {
+                        // Buscar en la estructura del proyecto Godot
+                        string candidate = Path.Combine(dir.FullName, "WoldVirtual", "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                        if (File.Exists(candidate))
+                        {
+                            File.Delete(candidate);
+                            System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Eliminado current_user.json: {candidate}");
+                            break;
+                        }
+
+                        candidate = Path.Combine(dir.FullName, "woldvirtual", "scene", "MTC", "users3D", "current_user.json");
+                        if (File.Exists(candidate))
+                        {
+                            File.Delete(candidate);
+                            System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Eliminado current_user.json: {candidate}");
+                            break;
+                        }
+
+                        dir = dir.Parent;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Error al buscar current_user.json: {ex.Message}");
+                }
+
+                // 4. Resetear variables de sesión
+                _currentUsername = "Anonymous";
+                _currentWallet = "0x0000";
+                _currentWalletSignature = "0x_simulated_signature_local";
+                _loginFingerprint = "";
+                _isLoginMode = false;
+                _hardwareFingerprint = "";
+
+                System.Diagnostics.Debug.WriteLine("[VISOR CONSTRUCTOR] Sesión olvidada completamente. Requiere registro completo en próximo inicio.");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[VISOR CONSTRUCTOR] Error general al olvidar sesión: {ex.Message}");
+            }
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -1876,6 +1898,7 @@ namespace VisorSingularity
         // ActivateMetaverseUi: delega PeerSync y P2PWebNode a MetaverseSessionController
         private void ActivateMetaverseUi(string username, string repoPath)
         {
+            Debug.WriteLine($"[DEBUG-CINEMATICA] ActivateMetaverseUi() llamado: username={username}, repoPath={repoPath}");
             if (_metaverseUiActivated) return;
             _metaverseUiActivated = true;
             BorderBottomLoginBar.Visibility = Visibility.Visible;

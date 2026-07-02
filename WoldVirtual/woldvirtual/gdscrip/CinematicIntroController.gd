@@ -70,7 +70,11 @@ var _avatar_spawn_pos   : Vector3  = Vector3.ZERO
 ## Inicia la secuencia completa.
 ## Llama a begin() una sola vez; llamadas posteriores son ignoradas.
 func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> void:
+	print("[DEBUG-CINEMATICA] CinematicIntroController.begin() llamado")
+	print("[DEBUG-CINEMATICA] island_node=", island_node, ", avatar_node=", avatar_node, ", cam_ctrl_node=", cam_ctrl_node)
+	
 	if _phase != Phase.IDLE:
+		print("[DEBUG-CINEMATICA] _phase != IDLE (", _phase, "), retornando")
 		return
 
 	_island   = island_node
@@ -79,16 +83,19 @@ func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> voi
 
 	# Localizar la Camera3D hija del CameraController
 	_cam = _find_camera(_cam_ctrl)
+	print("[DEBUG-CINEMATICA] Camera encontrada: ", _cam, ", is_instance_valid=", is_instance_valid(_cam))
 	if !is_instance_valid(_cam):
 		push_warning("CinematicIntroController: Camera3D no encontrada en CameraController.")
 		_finish()
 		return
 
 	_normal_fov = _cam.fov
+	print("[DEBUG-CINEMATICA] _normal_fov=", _normal_fov)
 
 	# ── Congelar avatar durante el ascenso de la isla ──────────────────────────
 	# CRÍTICO: sin esto la gravedad hunde al CharacterBody3D bajo la isla.
 	if is_instance_valid(_avatar):
+		print("[DEBUG-CINEMATICA] Congelando avatar...")
 		_avatar_spawn_pos = _avatar.global_position        # Guardar posición XZ
 		_avatar.visible   = false
 		# Desactivar física Y input del avatar para que no caiga
@@ -99,14 +106,18 @@ func begin(island_node: Node3D, avatar_node: Node3D, cam_ctrl_node: Node) -> voi
 		# Mover al avatar a una posición segura fuera de cámara (invisible)
 		# pero dentro de la isla para que las físicas no lo alteren
 		_avatar.global_position = _avatar_spawn_pos
+	else:
+		print("[DEBUG-CINEMATICA] Avatar no es válido")
 
 	# ── Suspender CameraController ─────────────────────────────────────────────
+	print("[DEBUG-CINEMATICA] Suspending CameraController...")
 	_cam_ctrl.set_physics_process(false)
 	_cam_ctrl.set_process_input(false)
 
 	# ── Fase 1: lanzar animación de ascenso de la isla ─────────────────────────
 	_phase = Phase.ISLAND_RISING
 	var target_y : float = _island.global_position.y
+	print("[DEBUG-CINEMATICA] target_y=", target_y, ", _phase=", _phase)
 
 	var rise_anim : Node = load("res://woldvirtual/gdscrip/IslandRiseAnimation.gd").new()
 	rise_anim.name = "IslandRiseAnim"
@@ -129,9 +140,11 @@ func skip() -> void:
 
 # ─── Callbacks de fases ────────────────────────────────────────────────────────
 func _on_island_arrived() -> void:
+	print("[DEBUG-CINEMATICA] _on_island_arrived() llamado")
 	print("[CinematicIntro] Fase 2: isla en superficie — avatar aparece encima.")
 
 	if !is_instance_valid(_avatar):
+		print("[DEBUG-CINEMATICA] Avatar no válido, llamando a _finish()")
 		_finish()
 		return
 
@@ -139,6 +152,7 @@ func _on_island_arrived() -> void:
 	# La isla ya está en su Y final; colocamos al avatar en esa misma XZ
 	# pero a la Y de spawn original (que es la altura correcta de la superficie).
 	var surface_y : float = _avatar_spawn_pos.y
+	print("[DEBUG-CINEMATICA] Reposicionando avatar. surface_y=", surface_y, ", _avatar_spawn_pos=", _avatar_spawn_pos)
 	_avatar.global_position = Vector3(
 		_avatar_spawn_pos.x,
 		surface_y,
@@ -150,35 +164,42 @@ func _on_island_arrived() -> void:
 	_avatar.set_physics_process(true)
 	_avatar.set_process_input(true)
 	_avatar.visible = true
+	print("[DEBUG-CINEMATICA] Avatar reactivado y visible")
 
 	# Iniciar fase de aproximación de cámara
 	_orbit_start_angle = _avatar.global_rotation.y + PI   # enfrente del avatar
 	_phase   = Phase.CAMERA_APPROACH
 	_elapsed = 0.0
 	set_process(true)
+	print("[DEBUG-CINEMATICA] _phase cambiado a CAMERA_APPROACH, set_process(true)")
 
 # ─── Loop de fases de cámara ───────────────────────────────────────────────────
 func _ready() -> void:
 	set_process(false)
 
 func _process(delta: float) -> void:
+	print("[DEBUG-CINEMATICA] _process() llamado, delta=", delta, ", _phase=", _phase)
 	if !is_instance_valid(_avatar) or !is_instance_valid(_cam):
+		print("[DEBUG-CINEMATICA] Avatar o Camera no válidos, llamando a _finish()")
 		_finish()
 		return
 
 	_elapsed += delta
 	var avatar_pos  : Vector3 = _avatar.global_position
 	var look_target : Vector3 = avatar_pos + Vector3(0.0, look_at_height, 0.0)
+	print("[DEBUG-CINEMATICA] avatar_pos=", avatar_pos, ", look_target=", look_target)
 
 	match _phase:
 
 		# ── FASE 2: Espalda → Enfrente ──────────────────────────────────────────
 		Phase.CAMERA_APPROACH:
+			print("[DEBUG-CINEMATICA] Fase CAMERA_APPROACH")
 			var t       : float = clamp(_elapsed / approach_duration, 0.0, 1.0)
 			var et      : float = _smoothstep(t)
 			var back    : float = _avatar.global_rotation.y
 			var front   : float = _avatar.global_rotation.y + PI
 			var angle   : float = lerp_angle(back, front, et)
+			print("[DEBUG-CINEMATICA] t=", t, ", et=", et, ", back=", back, ", front=", front, ", angle=", angle)
 			_place_cam(angle, avatar_pos, look_target)
 
 			if t >= 1.0:
@@ -186,33 +207,42 @@ func _process(delta: float) -> void:
 				_orbit_start_angle = _avatar.global_rotation.y + PI
 				_phase   = Phase.CAMERA_ORBIT
 				_elapsed = 0.0
+				print("[DEBUG-CINEMATICA] Cambiando a fase CAMERA_ORBIT")
 
 		# ── FASE 3: Órbita 360° ─────────────────────────────────────────────────
 		Phase.CAMERA_ORBIT:
+			print("[DEBUG-CINEMATICA] Fase CAMERA_ORBIT")
 			var t     : float = clamp(_elapsed / orbit_duration, 0.0, 1.0)
 			var et    : float = _ease_in_out_quad(t)
 			var angle : float = _orbit_start_angle - (et * TAU)   # TAU = 2π
+			print("[DEBUG-CINEMATICA] t=", t, ", et=", et, ", angle=", angle)
 			_place_cam(angle, avatar_pos, look_target)
 			# FOV cinemático
 			_cam.fov = lerp(_cam.fov, cinematic_fov, delta * 2.5)
+			print("[DEBUG-CINEMATICA] FOV ajustado: ", _cam.fov)
 
 			if t >= 1.0:
 				print("[CinematicIntro] Fase 4: asentamiento en espalda TPV.")
 				_phase   = Phase.CAMERA_SETTLE
 				_elapsed = 0.0
+				print("[DEBUG-CINEMATICA] Cambiando a fase CAMERA_SETTLE")
 
 		# ── FASE 4: Enfrente → Espalda (TPV normal) ─────────────────────────────
 		Phase.CAMERA_SETTLE:
+			print("[DEBUG-CINEMATICA] Fase CAMERA_SETTLE")
 			var t     : float = clamp(_elapsed / settle_duration, 0.0, 1.0)
 			var et    : float = _ease_out_cubic(t)
 			var front : float = _orbit_start_angle
 			var back  : float = _avatar.global_rotation.y
 			var angle : float = lerp_angle(front, back, et)
+			print("[DEBUG-CINEMATICA] t=", t, ", et=", et, ", front=", front, ", back=", back, ", angle=", angle)
 			_place_cam(angle, avatar_pos, look_target)
 			# Restaurar FOV normal
 			_cam.fov = lerpf(_cam.fov, _normal_fov, et)
+			print("[DEBUG-CINEMATICA] FOV restaurado: ", _cam.fov)
 
 			if t >= 1.0:
+				print("[DEBUG-CINEMATICA] Fase CAMERA_SETTLE completada, llamando a _sync_cam_ctrl() y _finish()")
 				_sync_cam_ctrl()
 				_finish()
 
@@ -243,13 +273,16 @@ func _find_camera(ctrl: Node) -> Camera3D:
 	return null
 
 func _finish() -> void:
+	print("[DEBUG-CINEMATICA] _finish() llamado")
 	_phase = Phase.DONE
 	set_process(false)
 	if is_instance_valid(_cam):
 		_cam.fov = _normal_fov
+		print("[DEBUG-CINEMATICA] FOV restaurado a _normal_fov: ", _normal_fov)
 	if is_instance_valid(_cam_ctrl):
 		_cam_ctrl.set_physics_process(true)
 		_cam_ctrl.set_process_input(true)
+		print("[DEBUG-CINEMATICA] CameraController reactivado")
 	intro_completed.emit()
 	print("[CinematicIntro] Secuencia completada. Control devuelto al jugador.")
 

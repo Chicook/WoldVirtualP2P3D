@@ -170,10 +170,13 @@ func _on_network_updated(state: Dictionary):
 
 	# ── Detectar isla local recién creada y lanzar cinemática ────────────────────
 	var local_key = "%d_%d" % [int(_local_island_data.get("x", 0)), int(_local_island_data.get("z", 0))]
+	print("[DEBUG-CINEMATICA] Verificando cinemática. _cinematic_played=", _cinematic_played, ", local_key=", local_key, ", world.active_islands.has(local_key)=", world.active_islands.has(local_key))
 	if !_cinematic_played and world.active_islands.has(local_key):
 		var island_node = world.active_islands[local_key]
+		print("[DEBUG-CINEMATICA] Island node encontrado: ", island_node, ", is_instance_valid=", is_instance_valid(island_node), ", island_node != _local_island_node=", (island_node != _local_island_node))
 		if is_instance_valid(island_node) and island_node != _local_island_node:
 			_local_island_node = island_node
+			print("[DEBUG-CINEMATICA] Llamando a _launch_cinematic()")
 			_launch_cinematic(island_node)
 
 	if is_instance_valid(avatar_ctrl.my_avatar):
@@ -195,28 +198,35 @@ func _setup_camera_controller(av: Node3D):
 
 # ─── Cinemática de introducción ───────────────────────────────────────────────
 func _launch_cinematic(island_node: Node3D) -> void:
+	print("[DEBUG-CINEMATICA] _launch_cinematic() llamado con island_node=", island_node)
 	_cinematic_played = true  # Marcar como reproducida aunque algo falle
 
 	var av       = avatar_ctrl.my_avatar if avatar_ctrl else null
 	var cam_ctrl = get_node_or_null("CameraController")
+	print("[DEBUG-CINEMATICA] Avatar: ", av, ", CameraController: ", cam_ctrl)
 
 	if !is_instance_valid(av) or !is_instance_valid(cam_ctrl):
 		# Avatar o cámara aún no listos: aplicar solo el rise sin cinemática de cámara
+		print("[DEBUG-CINEMATICA] Avatar o CameraController no válidos. Llamando a _play_island_rise_only()")
 		_play_island_rise_only(island_node)
 		return
 
 	# 1) Crear el CinematicIntroController
+	print("[DEBUG-CINEMATICA] Creando CinematicIntroController...")
 	_cinematic_ctrl = load("res://woldvirtual/gdscrip/CinematicIntroController.gd").new()
 	_cinematic_ctrl.name = "CinematicIntroController"
 	add_child(_cinematic_ctrl)
 
 	# 2) Iniciar secuencia completa
+	print("[DEBUG-CINEMATICA] Llamando a begin()...")
 	_cinematic_ctrl.begin(island_node, av, cam_ctrl)
 	print("[ChunkManager] Cinemática de introducción iniciada.")
 
 func _play_island_rise_only(island_node: Node3D) -> void:
 	# Fallback: solo anima el ascenso de la isla sin secuencia de cámara
+	print("[DEBUG-CINEMATICA] _play_island_rise_only() llamado")
 	var target_y  = island_node.global_position.y
+	print("[DEBUG-CINEMATICA] target_y=", target_y)
 	var rise_anim = load("res://woldvirtual/gdscrip/IslandRiseAnimation.gd").new()
 	island_node.add_child(rise_anim)
 	rise_anim.play(target_y)
