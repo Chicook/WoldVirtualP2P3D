@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using VisorSingularity.Interop;
 
 namespace VisorSingularity
 {
@@ -20,7 +21,7 @@ namespace VisorSingularity
         {
             // Create a local child window container on the WPF UI thread using the standard "static" window class.
             // This avoids cross-thread and cross-process Win32 handle exceptions from WPF.
-            _hostHwnd = CreateWindowEx(
+            _hostHwnd = NativeMethods.CreateWindowEx(
                 0,
                 "static",
                 "",
@@ -40,24 +41,24 @@ namespace VisorSingularity
             }
 
             // Set parent of the Godot process window to our local container
-            SetParent(_childHwnd, _hostHwnd);
+            NativeMethods.SetParent(_childHwnd, _hostHwnd);
 
             // Modify styles of the Godot window to make it a borderless child window
-            int style = GetWindowLong(_childHwnd, GWL_STYLE);
+            int style = NativeMethods.GetWindowLong(_childHwnd, GWL_STYLE);
             style = style & ~WS_CAPTION & ~WS_BORDER & ~WS_POPUP & ~WS_THICKFRAME;
             style = style | WS_CHILD;
-            SetWindowLong(_childHwnd, GWL_STYLE, style);
+            NativeMethods.SetWindowLong(_childHwnd, GWL_STYLE, style);
 
             // Modify extended styles to remove borders
-            int exStyle = GetWindowLong(_childHwnd, GWL_EXSTYLE);
+            int exStyle = NativeMethods.GetWindowLong(_childHwnd, GWL_EXSTYLE);
             exStyle = exStyle & ~WS_EX_DLGMODALFRAME & ~WS_EX_CLIENTEDGE & ~WS_EX_STATICEDGE & ~WS_EX_WINDOWEDGE;
-            SetWindowLong(_childHwnd, GWL_EXSTYLE, exStyle);
+            NativeMethods.SetWindowLong(_childHwnd, GWL_EXSTYLE, exStyle);
 
             // Update window styles and flush the frame cache to remove title bar and borders completely
-            SetWindowPos(_childHwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            NativeMethods.SetWindowPos(_childHwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 
             // Force showing the Godot child window inside the container
-            ShowWindow(_childHwnd, SW_SHOW);
+            NativeMethods.ShowWindow(_childHwnd, SW_SHOW);
 
             // Force initial resize using system DPI
             ResizeToActualPixels();
@@ -69,7 +70,7 @@ namespace VisorSingularity
         {
             if (_hostHwnd != IntPtr.Zero)
             {
-                DestroyWindow(_hostHwnd);
+                NativeMethods.DestroyWindow(_hostHwnd);
                 _hostHwnd = IntPtr.Zero;
             }
         }
@@ -94,10 +95,10 @@ namespace VisorSingularity
             int height = (int)Math.Max(1, this.ActualHeight * dpiY);
 
             // Resize the host window
-            MoveWindow(_hostHwnd, 0, 0, width, height, true);
+            NativeMethods.MoveWindow(_hostHwnd, 0, 0, width, height, true);
 
             // Resize the Godot child window to fit perfectly inside
-            MoveWindow(_childHwnd, 0, 0, width, height, true);
+            NativeMethods.MoveWindow(_childHwnd, 0, 0, width, height, true);
         }
 
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -106,40 +107,7 @@ namespace VisorSingularity
             ResizeToActualPixels();
         }
 
-        // Win32 API Imports
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "CreateWindowExW")]
-        private static extern IntPtr CreateWindowEx(
-           int dwExStyle,
-           string lpClassName,
-           string lpWindowName,
-           int dwStyle,
-           int x, int y,
-           int nWidth, int nHeight,
-           IntPtr hWndParent,
-           IntPtr hMenu,
-           IntPtr hInstance,
-           IntPtr lpParam);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool DestroyWindow(IntPtr hwnd);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        // Win32 API Constants and configurations
 
         private const int GWL_STYLE = -16;
         private const int GWL_EXSTYLE = -20;

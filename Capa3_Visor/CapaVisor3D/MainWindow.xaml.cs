@@ -18,6 +18,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using NAudio.Wave;
+using VisorSingularity.Interop;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 using System.Drawing.Imaging;
@@ -72,41 +73,7 @@ namespace VisorSingularity
         private Image? _webcamImageControl;
         private TextBlock? _webcamStatusControl;
 
-        // Win32 API Imports
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "GetClassNameW")]
-        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetFocus(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool IsWindowVisible(IntPtr hWnd);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
-        private static readonly IntPtr HWND_TOP = new IntPtr(0);
-        private const uint SWP_NOMOVE = 0x0002;
-        private const uint SWP_NOSIZE = 0x0001;
-        private const uint SWP_NOACTIVATE = 0x0010;
+        // Win32 API Constants and configurations
         private const int WS_CHILD = 0x40000000;
         private const int WS_VISIBLE = 0x10000000;
         private const int WS_CLIPSIBLINGS = 0x04000000;
@@ -645,7 +612,7 @@ namespace VisorSingularity
 
             var userInfo = GetSavedUserInfo();
 
-            // Arrancar el servidor HTTP puente en modo login (puerto 8080)
+            // Arrancar el servidor HTTP puente en modo login (puerto 8088)
             _session.LoginConfirmed += (confirm) => Dispatcher.Invoke(() => _OnLoginConfirmed(confirm.User, confirm.Wallet, confirm.Island, confirm.Signature));
             _session.BridgeError += (msg) => Dispatcher.Invoke(() => {
                 MessageBox.Show($"ERROR al iniciar HTTP Bridge: {msg}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -949,7 +916,7 @@ namespace VisorSingularity
             // Activar visualización de carga MetaMask en el Paso 2
             GridMetaMaskOverlay.Visibility = Visibility.Visible;
 
-            // Iniciar el Servidor HTTP puente local en el puerto 8080
+            // Iniciar el servidor HTTP puente local en el puerto 8088
             _session.LoginConfirmed -= OnSessionLoginConfirmed; // evitar subscripcion doble
             _session.LoginConfirmed += OnSessionLoginConfirmed;
             _session.BridgeError -= OnSessionBridgeError;
@@ -1707,7 +1674,7 @@ namespace VisorSingularity
                 {
                     if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP || msg.message == WM_CHAR || msg.message == WM_SYSKEYDOWN || msg.message == WM_SYSKEYUP)
                     {
-                        PostMessage(_godotHwnd, (uint)msg.message, msg.wParam, msg.lParam);
+                        NativeMethods.PostMessage(_godotHwnd, (uint)msg.message, msg.wParam, msg.lParam);
 
                         // Consumir controles del avatar para evitar comportamientos extraños en WPF
                         int key = (int)msg.wParam;
@@ -1786,7 +1753,7 @@ namespace VisorSingularity
                 System.Windows.Input.Keyboard.ClearFocus();
                 if (_godotHwnd != IntPtr.Zero)
                 {
-                    SetFocus(_godotHwnd);
+                    NativeMethods.SetFocus(_godotHwnd);
                 }
                 if (_godotHost != null)
                 {
@@ -2149,7 +2116,7 @@ namespace VisorSingularity
             if (!_voiceEnabled)
             {
                 // Estado inactivo - estilo por defecto
-                BtnVoiceChat.Content = "🎤 VOZ";
+                BtnVoiceChat.Content = "VOZ";
                 BtnVoiceChat.ClearValue(BackgroundProperty);
                 BtnVoiceChat.ClearValue(ForegroundProperty);
                 BtnVoiceChat.ToolTip = "Activar chat de voz";
@@ -2157,7 +2124,7 @@ namespace VisorSingularity
             else if (_isSpeaking)
             {
                 // Hablando - verde cyberpunk brillante
-                BtnVoiceChat.Content = "🔴 VOZ ON";
+                BtnVoiceChat.Content = "VOZ ON";
                 BtnVoiceChat.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#00FF8C"));
                 BtnVoiceChat.Foreground = new SolidColorBrush(
@@ -2167,7 +2134,7 @@ namespace VisorSingularity
             else
             {
                 // Activo pero en silencio - teal suave
-                BtnVoiceChat.Content = "🎤 ...";
+                BtnVoiceChat.Content = "VOZ ...";
                 BtnVoiceChat.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#1A3040"));
                 BtnVoiceChat.Foreground = new SolidColorBrush(
@@ -2414,7 +2381,7 @@ namespace VisorSingularity
             _webcamHwndSource.RootVisual = border;
 
             // Poner encima de los hermanos (el visor 3D de Godot)
-            SetWindowPos(_webcamHwndSource.Handle, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            NativeMethods.SetWindowPos(_webcamHwndSource.Handle, NativeMethods.HWND_TOP, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
         }
 
         private void DestroyWebcamWindow()
@@ -2476,7 +2443,7 @@ namespace VisorSingularity
                         targetTop = (int)(GodotPlaceholder.ActualHeight * dpiY) - height;
                     }
 
-                    MoveWindow(_webcamHwndSource.Handle, targetLeft, targetTop, width, height, true);
+                    NativeMethods.MoveWindow(_webcamHwndSource.Handle, targetLeft, targetTop, width, height, true);
                 }
                 catch (Exception ex)
                 {
@@ -2491,13 +2458,13 @@ namespace VisorSingularity
 
             if (!_webcamEnabled)
             {
-                BtnWebcam.Content = "\U0001F4F7 CAM";
+                BtnWebcam.Content = "WEBCAM";
                 BtnWebcam.ClearValue(BackgroundProperty);
                 BtnWebcam.ClearValue(ForegroundProperty);
             }
             else
             {
-                BtnWebcam.Content = "\U0001F534 CAM ON";
+                BtnWebcam.Content = "WEBCAM ON";
                 BtnWebcam.Background = new SolidColorBrush(
                     (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#00FF8C"));
                 BtnWebcam.Foreground = new SolidColorBrush(
@@ -2506,5 +2473,4 @@ namespace VisorSingularity
         }
     }
 }
-
 
