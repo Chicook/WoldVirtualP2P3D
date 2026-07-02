@@ -291,7 +291,7 @@ namespace VisorSingularity.Services
         {
             _isClosing = true;
             StopHttpBridge();
-            _peerSync?.Stop();
+            _peerSync?.Dispose();
             _peerSync = null;
 
             // Eliminar el archivo de descubrimiento de puerto para que Godot no

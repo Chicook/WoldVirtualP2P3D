@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
+using VisorSingularity.Interop;
+
 namespace VisorSingularity.Services
 {
     /// <summary>
@@ -14,33 +16,7 @@ namespace VisorSingularity.Services
     public static class GodotLauncherService
     {
         private static Process? _godotProcess;
-        [DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
-        private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
-        [DllImport("user32.dll")]
-        private static extern bool IsWindowVisible(IntPtr hwnd);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
-
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "GetClassNameW")]
-        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
 
         private class WindowCandidate
         {
@@ -154,24 +130,24 @@ namespace VisorSingularity.Services
             {
                 var candidates = new List<WindowCandidate>();
 
-                EnumWindows((hwnd, lParam) =>
+                NativeMethods.EnumWindows((hwnd, lParam) =>
                 {
                     if (hwnd == wpfHwnd) return true; // Ignorar la ventana principal de WPF
 
-                    if (!IsWindowVisible(hwnd)) return true;
+                    if (!NativeMethods.IsWindowVisible(hwnd)) return true;
 
-                    GetWindowThreadProcessId(hwnd, out uint processId);
+                    NativeMethods.GetWindowThreadProcessId(hwnd, out uint processId);
                     if (processId != targetProcessId) return true; // No es el proceso de Godot, ignorar
 
                     StringBuilder classNameSb = new StringBuilder(256);
-                    GetClassName(hwnd, classNameSb, classNameSb.Capacity);
+                    NativeMethods.GetClassName(hwnd, classNameSb, classNameSb.Capacity);
                     string cls = classNameSb.ToString();
 
                     StringBuilder titleSb = new StringBuilder(256);
-                    GetWindowText(hwnd, titleSb, titleSb.Capacity);
+                    NativeMethods.GetWindowText(hwnd, titleSb, titleSb.Capacity);
                     string title = titleSb.ToString();
 
-                    GetWindowRect(hwnd, out RECT rect);
+                    NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT rect);
                     long width = rect.Right - rect.Left;
                     long height = rect.Bottom - rect.Top;
                     long area = width * height;
