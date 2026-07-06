@@ -1,3 +1,5 @@
+using System;
+using System.Text.Json;
 using Xunit;
 using VisorSingularity.Services;
 

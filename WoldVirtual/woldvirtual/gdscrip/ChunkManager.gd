@@ -182,12 +182,8 @@ func _on_network_updated(state: Dictionary):
 		print("[DEBUG-CINEMATICA] Island node encontrado: ", island_node, ", is_instance_valid=", is_instance_valid(island_node), ", island_node != _local_island_node=", (island_node != _local_island_node))
 		if is_instance_valid(island_node) and island_node != _local_island_node:
 			_local_island_node = island_node
-<<<<<<< HEAD
-			print("[DEBUG-CINEMATICA] Llamando a _launch_cinematic()")
-			_launch_cinematic(island_node)
-=======
+			print("[DEBUG-CINEMATICA] Guardando isla pendiente para cinemática")
 			_pending_cinematic_island = island_node
->>>>>>> DevCodexIA
 
 	if is_instance_valid(avatar_ctrl.my_avatar):
 		var entity = avatar_ctrl.my_avatar.get_node_or_null("ECSEntity")
@@ -208,27 +204,16 @@ func _setup_camera_controller(av: Node3D):
 
 # ─── Cinemática de introducción ───────────────────────────────────────────────
 func _launch_cinematic(island_node: Node3D) -> void:
-<<<<<<< HEAD
 	print("[DEBUG-CINEMATICA] _launch_cinematic() llamado con island_node=", island_node)
-	_cinematic_played = true  # Marcar como reproducida aunque algo falle
-
-=======
->>>>>>> DevCodexIA
 	var av       = avatar_ctrl.my_avatar if avatar_ctrl else null
 	var cam_ctrl = get_node_or_null("CameraController")
 	print("[DEBUG-CINEMATICA] Avatar: ", av, ", CameraController: ", cam_ctrl)
 
 	if !is_instance_valid(av) or !is_instance_valid(cam_ctrl):
-<<<<<<< HEAD
-		# Avatar o cámara aún no listos: aplicar solo el rise sin cinemática de cámara
-		print("[DEBUG-CINEMATICA] Avatar o CameraController no válidos. Llamando a _play_island_rise_only()")
-		_play_island_rise_only(island_node)
-=======
 		# Todavía no están listos: reintentar en el siguiente update en vez de saltar
 		_cinematic_played = false
 		_local_island_node = null
 		print("[ChunkManager] Cinemática aplazada: avatar/cámara aún no listos.")
->>>>>>> DevCodexIA
 		return
 
 	# 1) Crear el CinematicIntroController
