@@ -245,6 +245,11 @@ namespace VisorSingularity
                         {
                             wallet = walletProp.GetString() ?? "0x0000";
                         }
+                        // Read stored islandId if present in user json
+                        if (root.TryGetProperty("islandId", out var islandProp))
+                        {
+                            islandId = islandProp.GetString() ?? islandId;
+                        }
                     }
                 }
 
@@ -260,9 +265,12 @@ namespace VisorSingularity
                         foreach (var file in files)
                         {
                             var lastWriteTime = File.GetLastWriteTime(file);
-                            if ((DateTime.Now - lastWriteTime).TotalSeconds < 25)
+                            // Use configurable freshness window
+                            if ((DateTime.Now - lastWriteTime).TotalSeconds < IslandConfig.ISLAND_PEER_MAX_AGE_SECONDS)
                             {
-                                islandId = "1 : 0.0.0";
+                                // TODO: parse islandId from peer file if needed
+                                islandId = "1 : 0.0.0"; // fallback default
+                                System.Diagnostics.Debug.WriteLine($"[IslandLoad] Using peer file {Path.GetFileName(file)} with age {(DateTime.Now - lastWriteTime).TotalSeconds}s");
                                 break;
                             }
                         }

@@ -141,6 +141,8 @@ func _emit_aggregated_state():
 	for pid in _known_pids:
 		if _peer_cache.has(pid):
 			_merge_peer(res, _peer_cache[pid], pid)
+	if _peer_cache.has(local_id):
+		_merge_peer(res, _peer_cache[local_id], local_id)
 	
 	if res.u.is_empty(): return
 	_first_load_done = true
@@ -179,6 +181,11 @@ func _io(data: Dictionary = {}) -> Dictionary:
 			
 		data["ts"] = Time.get_datetime_string_from_system()
 		data["v"] = "1.0"
+		
+		# Guardar estado local en cache
+		_peer_cache[local_id] = data
+		_peer_last_seen[local_id] = Time.get_unix_time_from_system()
+
 		var tmp = final_path + ".tmp"
 		var f = FileAccess.open(tmp, FileAccess.WRITE)
 		if f:
@@ -203,6 +210,8 @@ func _io(data: Dictionary = {}) -> Dictionary:
 		var res = {"u": {}, "i": {}, "e": {}, "_pids": _known_pids.duplicate()}
 		for pid in _known_pids:
 			if _peer_cache.has(pid): _merge_peer(res, _peer_cache[pid], pid)
+		if _peer_cache.has(local_id):
+			_merge_peer(res, _peer_cache[local_id], local_id)
 		if res.u.is_empty(): return _last_good_state
 		_first_load_done = true
 		_last_good_state = res
@@ -218,7 +227,9 @@ func _io(data: Dictionary = {}) -> Dictionary:
 			var fn = dir.get_next()
 			while fn != "":
 				if fn.ends_with(".json"):
-					found_now.append(fn.replace("peer_", "").replace(".json", ""))
+					var pid = fn.replace("peer_", "").replace(".json", "")
+					if pid != local_id:
+						found_now.append(pid)
 				fn = dir.get_next()
 		
 		var to_remove = []
@@ -247,8 +258,11 @@ func _io(data: Dictionary = {}) -> Dictionary:
 					_peer_last_seen[pid] = Time.get_unix_time_from_system()
 		if _peer_cache.has(pid): _merge_peer(res, _peer_cache[pid], pid)
 
+	if _peer_cache.has(local_id):
+		_merge_peer(res, _peer_cache[local_id], local_id)
+
 	for pcid in _peer_cache.keys():
-		if !_known_pids.has(pcid):
+		if pcid != local_id and !_known_pids.has(pcid):
 			_peer_cache.erase(pcid)
 			_peer_last_seen.erase(pcid)
 
