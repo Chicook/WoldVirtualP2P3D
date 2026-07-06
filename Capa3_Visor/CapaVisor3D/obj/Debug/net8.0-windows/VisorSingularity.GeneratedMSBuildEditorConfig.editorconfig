@@ -24,5 +24,5 @@ build_property.ProjectDir = d:\WCVcoinMTB\Capa3_Visor\CapaVisor3D\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false
-build_property.EffectiveAnalysisLevelStyle = 8.0
+build_property.EffectiveAnalysisLevelStyle = 10.0
 build_property.EnableCodeStyleSeverity = 
