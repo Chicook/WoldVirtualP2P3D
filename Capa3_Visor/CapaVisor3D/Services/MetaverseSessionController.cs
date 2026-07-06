@@ -15,7 +15,7 @@ namespace VisorSingularity.Services
 
     /// <summary>
     /// Orquesta el ciclo de vida de los subsistemas de metaverso:
-    ///  - Puentes HTTP locales (login y registro) en el puerto 8080
+    ///  - Puentes HTTP locales (login y registro) en el puerto 8088
     ///  - Inicio del nodo P2P
     ///  - Inicio de la sincronizacion LAN de peers
     /// Notifica a la capa WPF via eventos para mantener la separacion UI/logica.
