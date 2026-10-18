@@ -1,0 +1,23 @@
+# Binarios grandes (>50MB) — mantener el repo bajo 1GB y dentro del límite de GitHub (100MB/archivo)
+*.onnx
+**/tts_models/**
+**/ipfs.exe
+**/.ipfs/**/ipfs.exe
+**/STMIPFSCOMFIG/ipfs.exe
+
+# Cachés y entornos
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.env
+.env.*
+!.env.example
+
+# IDE / SO
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
