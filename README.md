@@ -8,6 +8,62 @@
 [![IPFS](https://img.shields.io/badge/IPFS-Kubo-65c2cb?logo=ipfs)](https://docs.ipfs.tech)
 [![Tamaño](https://img.shields.io/badge/tama%C3%B1o-752%20MB-lightgrey)](#)
 
+---
+
+## 🎮 Cómo Ejecutar y Jugar la DEMO (`DEMO_Wold_Virtual_P2P_3D__actualizacion_b5592aff`)
+
+### 1. Requisitos Previos y Descarga
+- **Motor:** [Godot Engine 4.7.2](https://godotengine.org) (Forward+, Jolt Physics, D3D12/Vulkan).
+- **Descarga de la Demo:** Disponible como asset adjunto en [GitHub Releases v0.0.01_actualizacion_b5592aff](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v0.0.01_actualizacion_b5592aff) (`DEMO_Wold_Virtual_P2P_3D__actualizacion_b5592aff.zip`, ~237 MB) o directamente en la carpeta local `F:\WoldVirtualP2P3D\DEMO_Wold_Virtual_P2P_3D__actualizacion_b5592aff`.
+
+### 2. Arranque Rápido
+* **Vía Script Automatizado (Recomendado):**  
+  Haz doble clic en `Iniciar_Demo_Godot.bat`. Abre el proyecto en Godot y, al cerrarlo, ejecuta automáticamente la purga de cachés huérfanas (`limpiar_cache_godot.ps1`) para que el proyecto se mantenga ligero (< 260 MB).
+* **Vía Editor de Godot:**  
+  1. Abre Godot 4.7.2.
+  2. Haz clic en **Importar** y selecciona el archivo `project.godot` de la carpeta de la demo.
+  3. Pulsa **F5** (o el botón de reproducción ▶ arriba a la derecha).
+
+### 3. Fases de la Experiencia Jugable
+La demo funciona como una máquina de estados secuencial orquestada por `Boot.gd`:
+
+#### Fase 1 — Selector de Avatares (Carrusel 3D)
+![Fase 1 - Selector de Avatares](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_b5592aff/src/STM_DOC/docs/img/01_carrusel_avatares.png)
+- Entorno circular bajo cúpula cyberpunk procedural.
+- Navega con los botones en pantalla `<` y `>` entre los 8 avatares animados disponibles (4 femeninos `AVMJ1..4` y 4 masculinos `AVH1..4`).
+- Haz clic en **SELECCIONAR** para elegir el personaje deseado.
+
+#### Fase 2 — Registro de Identidad
+<p align="center">
+  <img src="VersionDe_sesion/Sistema_Principal/PRY/actualizacion_b5592aff/src/STM_DOC/docs/img/02_registro_jugador.png" alt="Fase 2 - Registro de Jugador" width="450" />
+</p>
+
+- Previsualización frontal del avatar seleccionado mediante un `SubViewport` 3D en tiempo real sobre pedestal.
+- Escribe tu **Nick de usuario** en el campo inferior (mínimo 3 caracteres) y pulsa el botón **Confirmar** (o tecla <kbd>Enter</kbd>). La identidad se guardará en `user://registro.cfg`.
+
+#### Fase 3 — Hangar Espacial y Portal Dimensional
+![Fase 3 - Hangar Espacial y Portal](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_b5592aff/src/STM_DOC/docs/img/03_hangar_portal.png)
+- Apareces en la estación espacial procedural de ciencia ficción con suelo de rejilla cibernética.
+- Desplázate hacia adelante hacia el **Portal Dimensional de energía**. Al atravesar el anillo luminoso, se activa automáticamente la conexión hacia la red del metaverso.
+
+#### Fase 4 — Isla Procedural P2P y Multijugador
+![Fase 4 - Metaverso Isla P2P](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_b5592aff/src/STM_DOC/docs/img/04_metaverso_isla_p2p.png)
+- La pantalla muestra *"Conectando a la red P2P..."* mientras se negocia la conexión local ENet (puerto `8910`) y se reclama tu isla propia en la rejilla serpentina (199,5 m de chunk).
+- Apareces sobre tu isla con vista orbital en tercera persona, cielo atmosférico interactivo, mar procedural y cartel flotante superior con el nombre de tu isla y UUID.
+
+---
+
+### 4. Controles y Teclas en el Metaverso
+| Acción | Teclas / Controles |
+|---|---|
+| **Moverse / Caminar** | **Teclas de flechas** (<kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd>) o <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> |
+| **Correr (Sprint)** | <kbd>AltGr</kbd> + **Flecha Arriba** (<kbd>↑</kbd>) |
+| **Girar Cámara** | Movimiento del ratón / Cámara orbital con retardo |
+| **Panel de Islas (Teletransporte)** | Tecla <kbd>T</kbd> o botón **Islas [T]** en la esquina superior izquierda |
+| **Viajar a otra Isla** | Abrir el panel con <kbd>T</kbd>, seleccionar una isla de la lista (ej. `> Isla {nick} ({uuid})`) y hacer clic para teletransportarse instantáneamente |
+
+
+
 ## Sesión 2026-10-16 — metaverso WoldVirtualP2P3D (verificado en ejecución Godot 4.7.2)
 
 Rama principal: `WoldVirtualP2P3Dv0001LCV1`. Release: `v0.0.02_1_actualizacion_86bea3a9`

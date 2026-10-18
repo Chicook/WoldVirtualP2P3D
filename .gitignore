@@ -21,3 +21,11 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Godot 4 caches y temporales (mantener repo bajo 1GB)
+.godot/
+*.tmp
+*.blend1
+*.bak
+DEMO_Wold_Virtual_P2P_3D__actualizacion_b5592aff/.godot/
+
