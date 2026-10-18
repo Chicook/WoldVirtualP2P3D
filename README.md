@@ -7,7 +7,7 @@
 [![Godot 4.7.2](https://img.shields.io/badge/Godot-4.7.2-478cbf?logo=godot-engine&logoColor=white)](https://godotengine.org)
 [![Network](https://img.shields.io/badge/Network-ENet%20Local-blue.svg)](#arquitectura-de-red-y-estado-del-proyecto)
 [![IPFS](https://img.shields.io/badge/IPFS-Kubo%20(En%20Desarrollo)-65c2cb?logo=ipfs)](https://docs.ipfs.tech)
-[![Version](https://img.shields.io/badge/release-v0.0.01__actualizacion__b5592aff-green)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/release-v0.0.01__actualizacion__b5592aff-green)](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v0.0.01_actualizacion_b5592aff)
 
 ---
 
