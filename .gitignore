@@ -43,5 +43,11 @@ obj/
 *.deps.json
 *.runtimeconfig.json
 *.runtimeconfig.dev.json
-VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/Visor3D.exe
+
+# Ejecutables grandes que superan el límite de GitHub (100MB)
+**/Godot_v*
+**/Servidor3D/Godot*
+*.exe
+**/publish_out/
+
 
