@@ -1,0 +1,117 @@
+<Window x:Class="Visor3D.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Wold Virtual p2p 3D"
+        Width="1120" Height="630"
+        WindowStartupLocation="CenterScreen"
+        Background="#0B0C10"
+        Topmost="False"
+        WindowStyle="ThreeDBorderWindow"
+        AllowsTransparency="False"
+        ResizeMode="CanResize">
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- Sin menú superior: Archivo/Editar/Ayuda/Advanced eliminados.
+                 Fila superior reservada (vacía). -->
+            <RowDefinition Height="Auto"/>
+            <!-- Área 3D central (placeholder negro; motor 3D en fase posterior). -->
+            <RowDefinition Height="*"/>
+            <!-- Barra inferior reducida (~40 px): solo Usuario + Contraseña centrados. -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Área 3D central -->
+        <Border Grid.Row="1"
+                Background="#000000"
+                BorderBrush="#163B67"
+                BorderThickness="0,1,0,1">
+            <Viewbox HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="[ MOTOR 3D — WOLD VIRTUAL P2P 3D ]"
+                           Foreground="#163B67"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Opacity="0.5"/>
+            </Viewbox>
+        </Border>
+
+        <!-- Barra inferior reducida: Usuario + Contraseña + botón, centrados -->
+        <Border Grid.Row="2"
+                Height="40"
+                Background="#0D1117"
+                BorderBrush="#163B67"
+                BorderThickness="0,1.5,0,0">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+
+                <!-- Label Usuario -->
+                <TextBlock Text="Usuario:"
+                           Foreground="#9AA0B2"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,6,0"/>
+
+                <!-- Campo Usuario -->
+                <TextBox x:Name="TxtLoginUser"
+                         Width="130" Height="24"
+                         FontSize="12"
+                         Padding="4,2"
+                         Background="#161B26"
+                         Foreground="#E2E2E2"
+                         BorderBrush="#163B67"
+                         BorderThickness="1"
+                         CaretBrush="#00D9FF"
+                         VerticalContentAlignment="Center"/>
+
+                <!-- Spacer -->
+                <TextBlock Width="14"/>
+
+                <!-- Label Contraseña -->
+                <TextBlock Text="Contrase&#xF1;o:"
+                           Foreground="#9AA0B2"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,6,0"/>
+
+                <!-- Campo Contraseña -->
+                <PasswordBox x:Name="TxtLoginPass"
+                             Width="130" Height="24"
+                             FontSize="12"
+                             Padding="4,2"
+                             Background="#161B26"
+                             Foreground="#E2E2E2"
+                             BorderBrush="#163B67"
+                             BorderThickness="1"
+                             VerticalContentAlignment="Center"/>
+
+                <!-- Spacer -->
+                <TextBlock Width="14"/>
+
+                <!-- Botón Iniciar Sesión -->
+                <Button x:Name="BtnLogin"
+                        Content="Iniciar Ses&#xF3;n"
+                        Width="100" Height="28"
+                        FontSize="11.5"
+                        FontWeight="Bold"
+                        Foreground="#FFFFFF"
+                        Background="#0F3460"
+                        BorderBrush="#163B67"
+                        BorderThickness="1"
+                        Cursor="Hand"
+                        Panel.ZIndex="1"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Leyenda minimal -->
+        <TextBlock Grid.Row="2"
+                    x:Name="TxtStatus"
+                    Text="Wold Virtual p2p 3D — visor base (Fase 0)"
+                    Foreground="#576070"
+                    FontSize="10"
+                    VerticalAlignment="Bottom"
+                    HorizontalAlignment="Left"
+                    Margin="12,0,0,6"/>
+    </Grid>
+</Window>
