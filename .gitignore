@@ -44,11 +44,13 @@ obj/
 *.runtimeconfig.json
 *.runtimeconfig.dev.json
 
-# Ejecutables grandes que superan el límite de GitHub (100MB)
+# Ejecutables y librerías grandes que superan el límite de GitHub (100MB)
 **/Godot_v*
 **/Servidor3D/Godot*
 *.exe
+*.dll
 *.zip
+**/publish*/
 **/publish_out/
 **/publish_standalone/
 
