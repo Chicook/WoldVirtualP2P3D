@@ -1,10 +1,13 @@
 extends Node3D
 ## Arranque del metaverso:
-## 1. CARRUSEL: se elige el avatar (3 chicas / 3 chicos).
-## 2. REGISTRO con ese avatar (nick).
-## 3. ZONA DEL PORTAL: el avatar camina y lo atraviesa.
+## 1. CARRUSEL: se elige el avatar (3 chicas / 3 chicos).   [solo primera vez]
+## 2. REGISTRO con ese avatar (nick).                        [solo primera vez]
+## 3. ZONA DEL PORTAL: el avatar camina y lo atraviesa.      [solo primera vez]
 ## 4. Ventana de carga hasta que la red P2P conecta y aparece MI isla.
-## 5. Se cierra la carga y queda el mundo jugable.
+## 5. Se cierra la carga y queda el mundo jugable en su isla.
+##
+## Si el jugador ya tiene registro (user://registro.cfg con avatar_scene y nick),
+## entra directamente a su isla con el avatar elegido sin pasar por carrusel ni registro.
 
 const CARRUSEL_SCENE: PackedScene = preload("res://SLCAV/AVATARESCONANIMACION/SLAV.tscn")
 const REGISTRO_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/scenesconstr/registro.tscn")
@@ -14,27 +17,33 @@ const MUNDO_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor/ch
 var _carrusel: Node3D
 var _registro: Control
 var _zona_portal: Node3D
-var _avatar_scene := ""
-var _nick := ""
 var _carga: CanvasLayer
 var _carga_label: Label
-var _puntos := 0
-var _tiempo := 0.0
+var _avatar_scene := ""
+var _nick := ""
 var _cargando := false
 
 
 func _ready() -> void:
+	# Si el usuario ya tiene avatar y nick guardados, entrar directo a su isla
+	var cfg := ConfigFile.new()
+	if cfg.load("user://registro.cfg") == OK:
+		var saved_avatar: String = str(cfg.get_value("jugador", "avatar_scene", ""))
+		var saved_nick: String   = str(cfg.get_value("jugador", "nick", ""))
+		if not saved_avatar.is_empty() and not saved_nick.is_empty():
+			_avatar_scene = saved_avatar
+			_nick         = saved_nick
+			_entrar_a_isla()
+			return
+	# Primera vez: carrusel -> registro -> portal -> isla
 	_mostrar_carrusel()
 
 
 func _process(delta: float) -> void:
 	if not _cargando or _carga_label == null:
 		return
-	_tiempo += delta
-	if _tiempo >= 0.5:
-		_tiempo = 0.0
-		_puntos = (_puntos + 1) % 4
-		_carga_label.text = "Conectando a la red P2P" + ".".repeat(_puntos)
+	var puntos := int(Time.get_ticks_msec() / 400) % 4
+	_carga_label.text = "Conectando a la red P2P" + ".".repeat(puntos)
 
 
 func _mostrar_carrusel() -> void:
@@ -80,13 +89,17 @@ func _on_portal_cruzado() -> void:
 	if _zona_portal:
 		_zona_portal.queue_free()
 		_zona_portal = null
+	_entrar_a_isla()
+
+
+func _entrar_a_isla() -> void:
 	_mostrar_carga()
 	var mundo: Node3D = MUNDO_SCENE.instantiate() as Node3D
 	mundo.name = "ISLA3Dblock"
+	mundo.connect("mi_isla_lista", _on_mi_isla_lista)
 	if _avatar_scene != "" and mundo.has_method("set_player_avatar"):
 		mundo.call("set_player_avatar", _avatar_scene)
 	add_child(mundo)
-	mundo.connect("mi_isla_lista", _on_mi_isla_lista)
 
 
 func _mostrar_carga() -> void:
@@ -121,6 +134,7 @@ func _mostrar_bienvenida() -> void:
 	capa.layer = 100
 	add_child(capa)
 	var caja := VBoxContainer.new()
+	caja.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caja.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	caja.offset_left = -520.0
 	caja.offset_right = 520.0
@@ -129,9 +143,17 @@ func _mostrar_bienvenida() -> void:
 	caja.add_theme_constant_override("separation", 10)
 	capa.add_child(caja)
 
-	caja.add_child(_etiqueta_bienvenida("GRACIAS POR ENTRAR A WOLD VIRTUAL 3D", 20, Color(0.55, 0.8, 0.96, 1.0), 6))
-	caja.add_child(_etiqueta_bienvenida("FELICIDADES, CREASTE TU ISLA", 30, Color(0.72, 0.94, 1.0, 1.0), 7))
-	caja.add_child(_etiqueta_bienvenida(_texto_bienvenida(), 24, Color(0.62, 0.9, 1.0, 1.0), 6))
+	var l1 := _etiqueta_bienvenida("GRACIAS POR ENTRAR A WOLD VIRTUAL 3D", 20, Color(0.55, 0.8, 0.96, 1.0), 6)
+	l1.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caja.add_child(l1)
+
+	var l2 := _etiqueta_bienvenida("BIENVENIDO A TU ISLA!", 30, Color(0.72, 0.94, 1.0, 1.0), 7)
+	l2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caja.add_child(l2)
+
+	var l3 := _etiqueta_bienvenida(_texto_bienvenida(), 24, Color(0.62, 0.9, 1.0, 1.0), 6)
+	l3.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caja.add_child(l3)
 
 	var tween := create_tween()
 	tween.tween_interval(4.5)
@@ -157,7 +179,7 @@ func _texto_bienvenida() -> String:
 	return texto
 
 
-## Saludo según el avatar elegido en el carrusel (AVMJ = mujer, AVH = hombre).
+## Saludo segun el avatar elegido en el carrusel (AVMJ = mujer, AVH = hombre).
 func _saludo() -> String:
 	if _avatar_scene.contains("AVMJ"):
 		return "BIENVENIDA"

@@ -223,6 +223,7 @@ namespace Visor3D
             {
                 AttachGodotThreadInput();
                 SetFocus(_childHwnd);
+                SetActiveWindow(_childHwnd);
             }
             catch { }
         }
@@ -241,11 +242,13 @@ namespace Visor3D
         {
             if (_childHwnd != IntPtr.Zero)
             {
-                // Si es un mensaje de tecla (KEYDOWN, KEYUP, CHAR), enviarlo a la ventana de Godot
+                // Si es un mensaje de tecla (KEYDOWN, KEYUP, CHAR, SYSKEYDOWN, SYSKEYUP),
+                // enviarlo tanto por SendMessage como por PostMessage para garantizar que
+                // el bucle de mensajes de Godot reciba los eventos de input y movimiento.
                 if (msg.message == WM_KEYDOWN || msg.message == WM_KEYUP ||
                     msg.message == WM_CHAR || msg.message == WM_SYSKEYDOWN || msg.message == WM_SYSKEYUP)
                 {
-                    SendMessage(_childHwnd, msg.message, msg.wParam, msg.lParam);
+                    PostMessage(_childHwnd, msg.message, msg.wParam, msg.lParam);
                     return true;
                 }
             }
@@ -373,8 +376,15 @@ namespace Visor3D
         [DllImport("user32.dll")]
         private static extern IntPtr SetFocus(IntPtr hWnd);
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr SetActiveWindow(IntPtr hWnd);
+
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool PostMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 
         private const int GWL_STYLE   = -16;
         private const int GWL_EXSTYLE = -20;

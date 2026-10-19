@@ -44,6 +44,13 @@ func set_player_avatar(scene_path: String) -> void:
 	old.free()
 	parent.add_child(nueva)
 	parent.move_child(nueva, idx)
+	userbase = nueva
+	var tp = get_node_or_null("TeleportManager")
+	if tp and "_userbase" in tp:
+		tp._userbase = nueva
+	var ps = get_node_or_null("PlayerSync")
+	if ps and "_userbase" in ps:
+		ps._userbase = nueva
 
 func _ready():
 	# Garantizar entorno con cielo y nubes si la escena se ejecuta de forma aislada
@@ -349,8 +356,8 @@ func _obtener_peer_target() -> Dictionary:
 	# 2. Revisar archivos de sesión p2p_session.json
 	var posibles_rutas := [
 		"user://p2p_session.json",
-		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/publish_out/test_user_data/user/p2p_session.json",
-		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/test_user_data/user/p2p_session.json"
+		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_8d6b09d4/src/VSC#/publish_out/test_user_data/user/p2p_session.json",
+		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_8d6b09d4/src/VSC#/test_user_data/user/p2p_session.json"
 	]
 	
 	for ruta in posibles_rutas:

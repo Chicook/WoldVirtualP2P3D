@@ -81,8 +81,8 @@ func _guardar_hash_usuario(nick: String, avatar_hash: String) -> void:
 	
 	# Rutas destino donde se requiere guardar el hash final
 	var targets := [
-		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/publish_out/test_user_data/user",
-		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/test_user_data/user"
+		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_8d6b09d4/src/VSC#/publish_out/test_user_data/user",
+		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_8d6b09d4/src/VSC#/test_user_data/user"
 	]
 	
 	for dir_path in targets:
