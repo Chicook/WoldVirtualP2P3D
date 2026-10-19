@@ -9,22 +9,60 @@ namespace Visor3D
 {
     public partial class MainWindow : Window
     {
-        private static readonly string AppDataDir =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WoldVirtual");
+        // Carpeta local para datos de usuario y pruebas de flujo
+        private static readonly string TestUserDataDir =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_user_data");
 
         private static readonly string CredentialsPath =
-            Path.Combine(AppDataDir, "credentials.json");
+            Path.Combine(TestUserDataDir, "credentials.json");
 
         public MainWindow()
         {
             InitializeComponent();
             this.Loaded += OnLoaded;
+
+            // Navegación de bienvenida
+            BtnCrearCuenta.Click += OnCrearCuentaClicked;
+            BtnAcceder.Click += OnAccederClicked;
+            BtnVolverBienvenida.Click += OnVolverBienvenidaClicked;
+
+            // Login
             BtnLogin.Click += OnLoginClicked;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            MostrarPantallaBienvenida();
+        }
+
+        private void MostrarPantallaBienvenida()
+        {
+            PanelBienvenida.Visibility = Visibility.Visible;
+            PanelMundo3D.Visibility = Visibility.Collapsed;
+            BarraInferiorLogin.Visibility = Visibility.Collapsed;
+        }
+
+        private void OnCrearCuentaClicked(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(
+                "Módulo de registro en preparación.\nPronto se desplegará el formulario para crear tu cuenta en Wold Virtual P2P.",
+                "Crear Cuenta",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        private void OnAccederClicked(object sender, RoutedEventArgs e)
+        {
+            // Oculta bienvenida y muestra el viewport 3D junto con la barra de inicio de sesión
+            PanelBienvenida.Visibility = Visibility.Collapsed;
+            PanelMundo3D.Visibility = Visibility.Visible;
+            BarraInferiorLogin.Visibility = Visibility.Visible;
             TxtLoginUser.Focus();
+        }
+
+        private void OnVolverBienvenidaClicked(object sender, RoutedEventArgs e)
+        {
+            MostrarPantallaBienvenida();
         }
 
         private void OnLoginClicked(object sender, RoutedEventArgs e)
@@ -52,6 +90,10 @@ namespace Visor3D
             {
                 CrearCredenciales(user, pass);
             }
+
+            // Ocultar barra de login tras ingreso exitoso
+            BarraInferiorLogin.Visibility = Visibility.Collapsed;
+            MessageBox.Show($"Bienvenido a Wold Virtual: {user}", "Sesión Iniciada", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private bool ValidarCredenciales(string user, string pass)
@@ -81,7 +123,7 @@ namespace Visor3D
         {
             try
             {
-                Directory.CreateDirectory(AppDataDir);
+                Directory.CreateDirectory(TestUserDataDir);
                 string hash = ComputeSha256(pass);
                 var data = new { username = user, passwordHash = hash };
                 string json = JsonSerializer.Serialize(data);
