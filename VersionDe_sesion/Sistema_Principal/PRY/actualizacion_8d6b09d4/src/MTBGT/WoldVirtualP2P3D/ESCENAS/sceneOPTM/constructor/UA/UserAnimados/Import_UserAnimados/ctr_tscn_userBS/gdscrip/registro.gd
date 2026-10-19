@@ -79,27 +79,27 @@ func _guardar_hash_usuario(nick: String, avatar_hash: String) -> void:
 	}
 	var json_str := JSON.stringify(dict_data, "\t")
 	
-	# Rutas destino donde se requiere guardar el hash final
-	var targets := [
-		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_8d6b09d4/src/VSC#/publish_out/test_user_data/user",
-		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_8d6b09d4/src/VSC#/test_user_data/user"
-	]
+	# Guardar siempre en el almacenamiento local seguro del visor (user://)
+	var file_json := FileAccess.open("user://avatar_hash.json", FileAccess.WRITE)
+	if file_json:
+		file_json.store_string(json_str)
+		file_json.close()
 	
-	for dir_path in targets:
-		if not DirAccess.dir_exists_absolute(dir_path):
-			DirAccess.make_dir_recursive_absolute(dir_path)
-		
-		# Guardar avatar_hash.json
-		var file_json := FileAccess.open(dir_path + "/avatar_hash.json", FileAccess.WRITE)
-		if file_json:
-			file_json.store_string(json_str)
-			file_json.close()
-		
-		# Guardar también el hash sha256 en texto plano
-		var file_sha := FileAccess.open(dir_path + "/avatar.sha256", FileAccess.WRITE)
-		if file_sha:
-			file_sha.store_string(avatar_hash)
-			file_sha.close()
+	var file_sha := FileAccess.open("user://avatar.sha256", FileAccess.WRITE)
+	if file_sha:
+		file_sha.store_string(avatar_hash)
+		file_sha.close()
+	
+	# Guardar también en test_user_data/user si la carpeta existe localmente
+	if DirAccess.dir_exists_absolute("test_user_data/user"):
+		var f1 := FileAccess.open("test_user_data/user/avatar_hash.json", FileAccess.WRITE)
+		if f1:
+			f1.store_string(json_str)
+			f1.close()
+		var f2 := FileAccess.open("test_user_data/user/avatar.sha256", FileAccess.WRITE)
+		if f2:
+			f2.store_string(avatar_hash)
+			f2.close()
 
 func _on_nick_text_submitted(_new_text: String) -> void:
 	_on_confirmar_pressed()

@@ -52,4 +52,12 @@ obj/
 **/publish_out/
 **/publish_standalone/
 
+# Datos de usuario locales / sesiones de prueba
+test_user_data/
+**/test_user_data/
+registro.cfg
+**/registro.cfg
+p2p_session.json
+**/p2p_session.json
+
 
