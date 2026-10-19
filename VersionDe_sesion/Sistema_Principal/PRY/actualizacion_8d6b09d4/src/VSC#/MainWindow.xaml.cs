@@ -39,6 +39,15 @@ namespace Visor3D
             BtnCrearCuenta.Click += OnCrearCuentaClicked;
             BtnAcceder.Click += OnAccederClicked;
             BtnVolverBienvenida.Click += OnVolverBienvenidaClicked;
+            BtnExplorar3D.Click += (s, e) =>
+            {
+                BarraInferiorLogin.Visibility = Visibility.Collapsed;
+                PanelBienvenida.Visibility = Visibility.Collapsed;
+                PanelMundo3D.Visibility = Visibility.Visible;
+                TxtSesionUsuario.Text = "Usuario: Explorador 3D";
+                TxtSesionLlave.Text = "Modo Demo / Directo";
+                IniciarGodotMain();
+            };
 
             // Login
             BtnLogin.Click += OnLoginClicked;

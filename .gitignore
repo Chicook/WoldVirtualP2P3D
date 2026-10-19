@@ -48,6 +48,8 @@ obj/
 **/Godot_v*
 **/Servidor3D/Godot*
 *.exe
+*.zip
 **/publish_out/
+**/publish_standalone/
 
 

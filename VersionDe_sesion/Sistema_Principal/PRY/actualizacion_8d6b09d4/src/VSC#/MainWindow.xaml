@@ -125,6 +125,25 @@
                             </Style>
                         </Button.Resources>
                     </Button>
+
+                    <!-- Botón Explorar Mundo 3D Directo -->
+                    <Button x:Name="BtnExplorar3D"
+                            Content="🎮 Entrar al Mundo 3D"
+                            Width="260" Height="42"
+                            FontSize="14"
+                            FontWeight="Bold"
+                            Foreground="#00D9FF"
+                            Background="#0E2A47"
+                            BorderBrush="#00D9FF"
+                            BorderThickness="1"
+                            Cursor="Hand"
+                            Margin="0,14,0,0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                 </StackPanel>
             </Border>
         </Grid>

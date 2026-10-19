@@ -14,7 +14,7 @@
     <SelfContained>true</SelfContained>
 
     <PublishTrimmed>false</PublishTrimmed>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
@@ -51,6 +51,12 @@
     <None Update="Assets\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <!-- Recursos embebidos para distribución standalone en un único .exe -->
+  <ItemGroup>
+    <EmbeddedResource Include="godot_exe.zip" />
+    <EmbeddedResource Include="godot_project.zip" />
   </ItemGroup>
 
 </Project>
