@@ -25,6 +25,16 @@ var _cargando := false
 
 
 func _ready() -> void:
+	# ── RESET DE SESIÓN (flag escrito por el visor C# al arrancar) ──────────────
+	# Si el visor detectó un reset limpio, borramos el registro para que
+	# Godot arranque siempre como primera vez (carrusel + registro de nick).
+	var reset_flag_path := OS.get_user_data_dir().path_join("reset_flag.txt")
+	if FileAccess.file_exists(reset_flag_path):
+		if FileAccess.file_exists("user://registro.cfg"):
+			DirAccess.remove_absolute(
+				OS.get_user_data_dir().path_join("registro.cfg"))
+		DirAccess.remove_absolute(reset_flag_path)
+
 	# Si el usuario ya tiene avatar y nick guardados, entrar directo a su isla
 	var cfg := ConfigFile.new()
 	if cfg.load("user://registro.cfg") == OK:
@@ -37,6 +47,7 @@ func _ready() -> void:
 			return
 	# Primera vez: carrusel -> registro -> portal -> isla
 	_mostrar_carrusel()
+
 
 
 func _process(delta: float) -> void:

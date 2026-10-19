@@ -23,7 +23,7 @@ namespace Visor3D
             if (File.Exists(nextToExe)) return nextToExe;
 
             // 3. Ruta absoluta del repositorio (modo desarrollo)
-            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_8d6b09d4\src\VSC#\Servidor3D\" + godotName;
+            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_2069d33a\src\VSC#\Servidor3D\" + godotName;
             if (File.Exists(repoPath)) return repoPath;
 
             // 4. Busqueda relativa subiendo carpetas
@@ -51,7 +51,7 @@ namespace Visor3D
                 return nextToExe;
 
             // 3. Ruta absoluta del repositorio
-            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_8d6b09d4\src\MTBGT\WoldVirtualP2P3D";
+            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_2069d33a\src\MTBGT\WoldVirtualP2P3D";
             if (Directory.Exists(repoPath)) return repoPath;
 
             // 4. Busqueda relativa

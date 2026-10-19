@@ -24,18 +24,26 @@
     <AssemblyName>Visor3D</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>0.1.0</Version>
-    <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <FileVersion>0.1.0.0</FileVersion>
+    <Version>0.0.11</Version>
+    <AssemblyVersion>0.0.11.0</AssemblyVersion>
+    <FileVersion>0.0.11.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — estructura base (Fase 0)</Description>
+    <Description>Visor 3D — actualizacion_2069d33a (reset usuario + WebNodo fix)</Description>
   </PropertyGroup>
 
   <!--
     Fase 0: solo estructura WPF + login.
     El motor 3D (Godot incrustado / Silk.NET) y la red P2P se añaden en fases posteriores.
   -->
+
+  <!-- Excluir subcarpetas que son proyectos hermanos (evita duplicados de clases) -->
+  <ItemGroup>
+    <Compile Remove="version_prueba\**" />
+    <EmbeddedResource Remove="version_prueba\**" />
+    <None Remove="version_prueba\**" />
+    <Page Remove="version_prueba\**" />
+  </ItemGroup>
 
   <!-- Dependencias -->
   <ItemGroup>

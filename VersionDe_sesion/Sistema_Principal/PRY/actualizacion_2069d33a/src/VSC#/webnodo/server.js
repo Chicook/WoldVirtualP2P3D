@@ -5,16 +5,39 @@
  *  1. Sirve una pagina de descarga publica del .exe mas actualizado.
  *  2. Provee endpoint /descargar para que el usuario descargue el .exe directamente.
  *  3. Muestra estado de la red P2P (si hay sesion activa).
+ *  4. Endpoint /health para diagnostico de conectividad.
  *
  * Uso:
  *   npm install
  *   npm start
  *   Accede a: http://localhost:3030
+ *
+ * SOLUCION DE PROBLEMAS:
+ *   Si el servidor no arranca, ejecuta primero: npm install
+ *   Si el puerto 3030 esta ocupado, cambia la variable PORT abajo.
  */
 
-const express = require('express');
-const path    = require('path');
-const fs      = require('fs');
+// ── Comprobacion de dependencias ───────────────────────────────────────────────
+let express;
+try {
+    express = require('express');
+} catch (e) {
+    console.error('');
+    console.error('╔══════════════════════════════════════════════════════╗');
+    console.error('║  ERROR: Dependencias no instaladas.                  ║');
+    console.error('║  Ejecuta el siguiente comando en esta carpeta:       ║');
+    console.error('║                                                      ║');
+    console.error('║     npm install                                      ║');
+    console.error('║                                                      ║');
+    console.error('║  Luego vuelve a ejecutar: npm start                  ║');
+    console.error('╚══════════════════════════════════════════════════════╝');
+    console.error('');
+    process.exit(1);
+}
+
+const path = require('path');
+const fs   = require('fs');
+const http = require('http');
 
 const app  = express();
 const PORT = process.env.PORT || 3030;
@@ -22,26 +45,57 @@ const PORT = process.env.PORT || 3030;
 // Carpeta donde esta el .exe publicado (ruta relativa al server.js)
 const DESCARGAS_DIR = path.join(__dirname, 'descargas');
 
+// Auto-crear la carpeta descargas/ si no existe
+if (!fs.existsSync(DESCARGAS_DIR)) {
+    fs.mkdirSync(DESCARGAS_DIR, { recursive: true });
+    console.log('[WebNodo] Carpeta "descargas/" creada automaticamente.');
+}
+
 // ─── Middleware ────────────────────────────────────────────────────────────────
+// CORS: permite que cualquier origen acceda al nodo (necesario para P2P)
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+
+// ─── Health check (para diagnostico de conectividad) ─────────────────────────
+app.get('/health', (req, res) => {
+    res.json({
+        ok:        true,
+        servicio:  'WoldVirtualP2P3D-WebNodo',
+        version:   '0.0.011',
+        timestamp: new Date().toISOString(),
+        puerto:    PORT
+    });
+});
 
 // ─── API: info del exe disponible ─────────────────────────────────────────────
 app.get('/api/info', (req, res) => {
     const exeName = obtenerExeMasReciente();
     if (!exeName) {
-        return res.json({ disponible: false, mensaje: 'No hay .exe disponible todavia' });
+        return res.json({
+            disponible: false,
+            mensaje: 'No hay .exe disponible todavia. Coloca el instalador en la carpeta descargas/'
+        });
     }
 
     const exePath = path.join(DESCARGAS_DIR, exeName);
-    const stat    = fs.statSync(exePath);
-    const sizeMB  = (stat.size / (1024 * 1024)).toFixed(1);
+    let sizeMB = '?';
+    try {
+        const stat = fs.statSync(exePath);
+        sizeMB = (stat.size / (1024 * 1024)).toFixed(1);
+    } catch (_) {}
 
     res.json({
         disponible:   true,
         nombre:       exeName,
         tamano_mb:    sizeMB,
-        modificado:   stat.mtime.toISOString(),
         url_descarga: `/descargar/${encodeURIComponent(exeName)}`
     });
 });
@@ -49,15 +103,22 @@ app.get('/api/info', (req, res) => {
 // ─── Descarga directa del .exe ─────────────────────────────────────────────────
 app.get('/descargar', (req, res) => {
     const exeName = obtenerExeMasReciente();
-    if (!exeName) return res.status(404).json({ error: 'No hay .exe disponible todavía' });
-    res.download(path.join(DESCARGAS_DIR, exeName), exeName);
+    if (!exeName) {
+        return res.status(404).json({
+            error: 'No hay .exe disponible. Coloca el instalador en la carpeta descargas/'
+        });
+    }
+    res.download(path.join(DESCARGAS_DIR, exeName), exeName, (err) => {
+        if (err && !res.headersSent) {
+            res.status(500).json({ error: 'Error al enviar el archivo' });
+        }
+    });
 });
 
 app.get('/descargar/:nombre', (req, res) => {
-    const nombre   = decodeURIComponent(req.params.nombre);
-    // Sanitizar: solo permite nombre de archivo, sin rutas
-    const limpio   = path.basename(nombre);
-    const exePath  = path.join(DESCARGAS_DIR, limpio);
+    const nombre  = decodeURIComponent(req.params.nombre);
+    const limpio  = path.basename(nombre);
+    const exePath = path.join(DESCARGAS_DIR, limpio);
 
     if (!fs.existsSync(exePath)) {
         return res.status(404).json({ error: 'Archivo no encontrado' });
@@ -76,15 +137,31 @@ app.get('/api/p2p-status', (req, res) => {
         process.env.APPDATA || '',
         'WoldVirtualP2P3D', 'usuario', 'p2p_session.json'
     );
+
+    // Tambien buscar en la ruta alternativa que escribe el visor C#
+    const sessionFileAlt = path.join(
+        process.env.LOCALAPPDATA || '',
+        'WoldVirtualP2P3D', 'runtime'
+    );
+
     if (!fs.existsSync(sessionFile)) {
-        return res.json({ online: false });
+        return res.json({ online: false, mensaje: 'Sin sesion P2P activa' });
     }
     try {
         const data = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
-        res.json({ online: true, tunnel_url: data.myTunnelUrl || '', timestamp: data.timestamp });
+        res.json({
+            online:      true,
+            tunnel_url:  data.myTunnelUrl || data.peerUrl || '',
+            timestamp:   data.timestamp
+        });
     } catch {
-        res.json({ online: false });
+        res.json({ online: false, error: 'No se pudo leer p2p_session.json' });
     }
+});
+
+// ─── Ruta raiz: redirigir al index.html ───────────────────────────────────────
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ─── Helper: encontrar el .exe mas reciente en descargas/ ─────────────────────
@@ -97,10 +174,35 @@ function obtenerExeMasReciente() {
     return archivos.length > 0 ? archivos[0].nombre : null;
 }
 
-// ─── Iniciar servidor ─────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-    console.log(`[WebNodo] Wold Virtual P2P 3D`);
-    console.log(`[WebNodo] Escuchando en http://localhost:${PORT}`);
-    console.log(`[WebNodo] Carpeta de descargas: ${DESCARGAS_DIR}`);
-    console.log(`[WebNodo] Coloca el .exe en la carpeta 'descargas/' para que los usuarios puedan descargarlo.`);
+// ─── Manejo de errores globales ────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+    console.error('[WebNodo] Error:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
 });
+
+// ─── Iniciar servidor ─────────────────────────────────────────────────────────
+const server = http.createServer(app);
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`[WebNodo] ERROR: El puerto ${PORT} ya esta en uso.`);
+        console.error(`[WebNodo] Cierra otro proceso que use ese puerto, o cambia PORT en server.js`);
+    } else {
+        console.error('[WebNodo] Error de red:', err.message);
+    }
+    process.exit(1);
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+    const exeInfo = obtenerExeMasReciente();
+    console.log('');
+    console.log('╔══════════════════════════════════════════════════════════╗');
+    console.log('║         Wold Virtual P2P 3D — WebNodo Online             ║');
+    console.log('╠══════════════════════════════════════════════════════════╣');
+    console.log(`║  URL local:    http://localhost:${PORT}                    ║`);
+    console.log(`║  Diagnostico:  http://localhost:${PORT}/health             ║`);
+    console.log(`║  .exe activo:  ${exeInfo ? exeInfo : '(ninguno — coloca .exe en descargas/)'}  ║`);
+    console.log('╚══════════════════════════════════════════════════════════╝');
+    console.log('');
+});
+
