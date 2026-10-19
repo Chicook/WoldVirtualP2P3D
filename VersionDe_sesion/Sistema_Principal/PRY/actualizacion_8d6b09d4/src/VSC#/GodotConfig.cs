@@ -1,62 +1,98 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace Visor3D
 {
     public static class GodotConfig
     {
+        /// <summary>
+        /// Directorio donde reside el .exe real (funciona tanto en desarrollo como en single-file publish).
+        /// AppDomain.CurrentDomain.BaseDirectory devuelve un directorio temporal en single-file;
+        /// Process.MainModule.FileName apunta siempre al .exe original.
+        /// </summary>
+        private static string ExeDir =>
+            Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName
+                ?? AppDomain.CurrentDomain.BaseDirectory)
+            ?? AppDomain.CurrentDomain.BaseDirectory;
+
         public static string GetGodotExePath()
         {
-            // 1. Ruta absoluta directa solicitada por el usuario
-            string direct = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\CONTRRF\TLLDCD\src\VSC#\Servidor3D\Godot_v4.7.2-stable_win64.exe";
-            if (File.Exists(direct)) return direct;
+            const string godotName = "Godot_v4.7.2-stable_win64.exe";
 
-            // Alternativa consola si existiera
-            string directConsole = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\CONTRRF\TLLDCD\src\VSC#\Servidor3D\Godot_v4.7.2-stable_win64_console.exe";
-            if (File.Exists(directConsole)) return directConsole;
+            // 1. Junto al .exe publicado (Servidor3D/ copiado al lado del exe)
+            string nextToExe = Path.Combine(ExeDir, "Servidor3D", godotName);
+            if (File.Exists(nextToExe)) return nextToExe;
 
-            // 2. Búsqueda relativa desde AppDomain
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string rel = Path.Combine(baseDir, "Servidor3D", "Godot_v4.7.2-stable_win64.exe");
-            if (File.Exists(rel)) return rel;
+            // 2. Ruta absoluta correcta del repositorio actual
+            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_8d6b09d4\src\VSC#\Servidor3D\" + godotName;
+            if (File.Exists(repoPath)) return repoPath;
 
-            string? current = baseDir;
-            for (int i = 0; i < 6 && current != null; i++)
+            // 3. Búsqueda relativa subiendo desde el directorio del exe
+            string? current = ExeDir;
+            for (int i = 0; i < 8 && current != null; i++)
             {
-                string c1 = Path.Combine(current, "Servidor3D", "Godot_v4.7.2-stable_win64.exe");
+                string c1 = Path.Combine(current, "Servidor3D", godotName);
                 if (File.Exists(c1)) return c1;
-                string c2 = Path.Combine(current, "src", "VSC#", "Servidor3D", "Godot_v4.7.2-stable_win64.exe");
+                string c2 = Path.Combine(current, "src", "VSC#", "Servidor3D", godotName);
                 if (File.Exists(c2)) return c2;
                 current = Directory.GetParent(current)?.FullName;
             }
 
-            return direct;
+            // 4. Búsqueda desde AppDomain (modo debug / dotnet run)
+            string? cur2 = AppDomain.CurrentDomain.BaseDirectory;
+            for (int i = 0; i < 8 && cur2 != null; i++)
+            {
+                string c1 = Path.Combine(cur2, "Servidor3D", godotName);
+                if (File.Exists(c1)) return c1;
+                string c2 = Path.Combine(cur2, "src", "VSC#", "Servidor3D", godotName);
+                if (File.Exists(c2)) return c2;
+                cur2 = Directory.GetParent(cur2)?.FullName;
+            }
+
+            // Fallback: ruta repo (mostrará aviso claro si no existe)
+            return repoPath;
         }
 
         public static string GetProjectPath()
         {
-            // 1. Ruta absoluta directa del proyecto Godot solicitada
-            string direct = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\CONTRRF\TLLDCD\src\MTBGT\WoldVirtualP2P3D";
-            if (Directory.Exists(direct)) return direct;
+            const string projectSubPath = "WoldVirtualP2P3D";
 
-            // 2. Búsqueda relativa
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string? current = baseDir;
-            for (int i = 0; i < 6 && current != null; i++)
+            // 1. Junto al .exe publicado (MTBGT/ copiado al lado del exe)
+            string nextToExe = Path.Combine(ExeDir, "MTBGT", projectSubPath);
+            if (Directory.Exists(nextToExe)) return nextToExe;
+
+            // 2. Ruta absoluta correcta del repositorio actual
+            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_8d6b09d4\src\MTBGT\WoldVirtualP2P3D";
+            if (Directory.Exists(repoPath)) return repoPath;
+
+            // 3. Búsqueda relativa subiendo desde el directorio del exe
+            string? current = ExeDir;
+            for (int i = 0; i < 8 && current != null; i++)
             {
-                string c1 = Path.Combine(current, "MTBGT", "WoldVirtualP2P3D");
+                string c1 = Path.Combine(current, "MTBGT", projectSubPath);
                 if (Directory.Exists(c1)) return c1;
-                string c2 = Path.Combine(current, "src", "MTBGT", "WoldVirtualP2P3D");
+                string c2 = Path.Combine(current, "src", "MTBGT", projectSubPath);
                 if (Directory.Exists(c2)) return c2;
                 current = Directory.GetParent(current)?.FullName;
             }
 
-            return direct;
+            // 4. Búsqueda desde AppDomain (modo debug)
+            string? cur2 = AppDomain.CurrentDomain.BaseDirectory;
+            for (int i = 0; i < 8 && cur2 != null; i++)
+            {
+                string c1 = Path.Combine(cur2, "MTBGT", projectSubPath);
+                if (Directory.Exists(c1)) return c1;
+                string c2 = Path.Combine(cur2, "src", "MTBGT", projectSubPath);
+                if (Directory.Exists(c2)) return c2;
+                cur2 = Directory.GetParent(cur2)?.FullName;
+            }
+
+            return repoPath;
         }
 
         public static string GetScenePath()
         {
-            // La escena solicitada WoldVirtual3DP2P.tscn
             return "res://WoldVirtual3DP2P.tscn";
         }
     }
