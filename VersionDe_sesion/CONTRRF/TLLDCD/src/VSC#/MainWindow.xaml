@@ -104,14 +104,5 @@
             </StackPanel>
         </Border>
 
-        <!-- Leyenda minimal -->
-        <TextBlock Grid.Row="2"
-                    x:Name="TxtStatus"
-                    Text="Wold Virtual p2p 3D — visor base (Fase 0)"
-                    Foreground="#576070"
-                    FontSize="10"
-                    VerticalAlignment="Bottom"
-                    HorizontalAlignment="Left"
-                    Margin="12,0,0,6"/>
     </Grid>
 </Window>

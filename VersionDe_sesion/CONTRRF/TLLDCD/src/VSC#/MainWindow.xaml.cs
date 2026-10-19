@@ -25,9 +25,6 @@ namespace Visor3D
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             TxtLoginUser.Focus();
-            TxtStatus.Text = File.Exists(CredentialsPath)
-                ? "Wold Virtual p2p 3D — visor base (Fase 0). Credenciales detectadas."
-                : "Wold Virtual p2p 3D — visor base (Fase 0). Primer ingreso: se crearán credenciales.";
         }
 
         private void OnLoginClicked(object sender, RoutedEventArgs e)
@@ -55,9 +52,6 @@ namespace Visor3D
             {
                 CrearCredenciales(user, pass);
             }
-
-            // Login exitoso: el área 3D (placeholder) ya es visible.
-            TxtStatus.Text = $"Conectado como: {user} \u2014 [ MOTOR 3D ]";
         }
 
         private bool ValidarCredenciales(string user, string pass)
