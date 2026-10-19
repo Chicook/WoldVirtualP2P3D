@@ -1,0 +1,66 @@
+[
+  {
+    "carpeta": "src",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_b5592aff\\src",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 885,
+    "estado": "OK refactorizar",
+    "fecha": "2026-10-19T12:11:35"
+  },
+  {
+    "carpeta": "src",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+    "ficheros": 885,
+    "estado": "OK",
+    "fecha": "2026-10-19T12:12:18"
+  },
+  {
+    "carpeta": "src",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 2043,
+    "estado": "OK",
+    "fecha": "2026-10-19T17:41:20"
+  },
+  {
+    "carpeta": "RFC",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_8d6b09d4",
+    "ficheros": 2043,
+    "estado": "OK actualizar",
+    "fecha": "2026-10-19T17:42:00"
+  },
+  {
+    "carpeta": "src",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_8d6b09d4\\src",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 2063,
+    "estado": "OK refactorizar",
+    "fecha": "2026-10-19T21:33:39"
+  },
+  {
+    "carpeta": "src",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+    "ficheros": 2063,
+    "estado": "OK",
+    "fecha": "2026-10-19T21:35:07"
+  },
+  {
+    "carpeta": "src",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 2605,
+    "estado": "OK",
+    "fecha": "2026-10-19T22:53:15"
+  },
+  {
+    "carpeta": "RFC",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_2069d33a",
+    "ficheros": 2605,
+    "estado": "OK actualizar",
+    "fecha": "2026-10-19T22:55:19"
+  }
+]

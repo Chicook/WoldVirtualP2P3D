@@ -1,0 +1,65 @@
+# Binarios grandes (>50MB) — mantener el repo bajo 1GB y dentro del límite de GitHub (100MB/archivo)
+*.onnx
+**/tts_models/**
+**/ipfs.exe
+**/.ipfs/**/ipfs.exe
+**/STMIPFSCOMFIG/ipfs.exe
+
+# Cachés y entornos
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.env
+.env.*
+!.env.example
+
+# IDE / SO
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Godot 4 caches y temporales (mantener repo bajo 1GB)
+.godot/
+*.tmp
+*.blend1
+*.bak
+DEMO_Wold_Virtual_P2P_3D__actualizacion_b5592aff/.godot/
+
+VersionDe_sesion/Sistema_Principal/PRY/actualizacion_b5592aff/src/MTBGT/WoldVirtualP2P3D/ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/importblend/hm1.blend.import
+
+# .NET / C# compilaciones y binarios generados
+bin/
+obj/
+*.user
+*.suo
+**/bin/
+**/obj/
+**/dist/
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.runtimeconfig.dev.json
+
+# Ejecutables grandes que superan el límite de GitHub (100MB)
+**/Godot_v*
+**/Servidor3D/Godot*
+*.exe
+*.zip
+**/publish_out/
+**/publish_standalone/
+
+# Datos de usuario locales / sesiones de prueba
+test_user_data/
+**/test_user_data/
+registro.cfg
+**/registro.cfg
+p2p_session.json
+**/p2p_session.json
+
+# Carpeta de versión de prueba (excluida del repo)
+VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_prueba/
+
