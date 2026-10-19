@@ -70,13 +70,9 @@ namespace Visor3D
             PanelMundo3D.Visibility = Visibility.Collapsed;
             BarraInferiorLogin.Visibility = Visibility.Collapsed;
 
-            // Si el usuario ya está registrado, solo mostrar Acceder
-            string godotCfg = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "Godot", "app_userdata", "WoldVirtualP2P3D", "registro.cfg");
-            bool estaRegistrado = File.Exists(UserProfilePath) || File.Exists(CredentialsPath) ||
-                File.Exists(Path.Combine(TestUserDataDir, "user", "llave_acceso.json")) ||
-                File.Exists(godotCfg);
+            // Si el usuario ya tiene cuenta local creada y llave, solo mostrar Acceder
+            bool estaRegistrado = (File.Exists(UserProfilePath) || File.Exists(CredentialsPath)) &&
+                File.Exists(Path.Combine(TestUserDataDir, "user", "llave_acceso.json"));
             BtnCrearCuenta.Visibility = estaRegistrado ? Visibility.Collapsed : Visibility.Visible;
         }
 

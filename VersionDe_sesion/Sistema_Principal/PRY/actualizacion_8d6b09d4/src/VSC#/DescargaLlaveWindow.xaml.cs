@@ -146,7 +146,10 @@ namespace Visor3D
 
         private void OnFinalizarClicked(object sender, RoutedEventArgs e)
         {
-            // Cierra esta ventana y activa el modo login en la MainWindow para ingresar credenciales y llave
+            if (Application.Current.MainWindow is MainWindow main)
+            {
+                main.ActivarModoLogin(_username);
+            }
             this.Close();
         }
 

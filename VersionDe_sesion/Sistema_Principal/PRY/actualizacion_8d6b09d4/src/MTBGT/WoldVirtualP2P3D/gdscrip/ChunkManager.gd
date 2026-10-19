@@ -20,6 +20,8 @@ var spawned_indices := {} # indices ya instanciados en esta maquina (anti-duplic
 var my_own_index := -1 # indice de MI isla (-1 = aun sin asignar)
 var pending_claims := {} # peer_id -> indice reclamado al reconectar
 var _mi_nick := ""
+var _save_pos_timer := 0.0
+var _last_saved_pos := Vector3.ZERO
 
 ## Sustituye el avatar por defecto (userbaseh1) por el avatar elegido en el
 ## carrusel. Debe llamarse ANTES de add_child() para que "@onready userbase"
@@ -294,15 +296,64 @@ func _spawn_island_for_player(id: int, index: int, nick: String = ""):
 	new_ocean.position.x += pos_x
 	new_ocean.position.z += pos_z
 	
-	# Si esta isla es para MÍ, muevo MI avatar al centro de esta isla
+	# Si esta isla es para MÍ, muevo MI avatar al centro de esta isla o a su última posición guardada
 	if id == multiplayer.get_unique_id():
 		my_own_index = index
-		userbase.position.x = pos_x
-		userbase.position.z = pos_z
+		var cfg := ConfigFile.new()
+		var pos_cargada := false
+		if cfg.load("user://registro.cfg") == OK:
+			if cfg.has_section_key("posicion", "has_saved_pos") and bool(cfg.get_value("posicion", "has_saved_pos", false)):
+				var sx: float = float(cfg.get_value("posicion", "x", pos_x))
+				var sy: float = float(cfg.get_value("posicion", "y", 42.0))
+				var sz: float = float(cfg.get_value("posicion", "z", pos_z))
+				var srot: float = float(cfg.get_value("posicion", "rot_y", 0.0))
+				if sy > -5.0:
+					userbase.position = Vector3(sx, sy, sz)
+					userbase.rotation.y = srot
+					_last_saved_pos = userbase.position
+					pos_cargada = true
+		if not pos_cargada:
+			userbase.position.x = pos_x
+			userbase.position.z = pos_z
+			_last_saved_pos = userbase.position
 		# La cámara orbital queda lejos tras el salto: recolocarla al instante.
 		if userbase.has_method("snap_camera"):
 			userbase.call("snap_camera")
 		mi_isla_lista.emit()
+
+
+func _process(delta: float) -> void:
+	_save_pos_timer += delta
+	if _save_pos_timer >= 1.0:
+		_save_pos_timer = 0.0
+		_guardar_posicion_jugador()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+		_guardar_posicion_jugador()
+
+
+func _guardar_posicion_jugador() -> void:
+	if userbase == null or not is_instance_valid(userbase):
+		return
+	if my_own_index < 0:
+		return
+	if userbase.position.y < -5.0:
+		return
+	var pos: Vector3 = userbase.position
+	var rot_y: float = userbase.rotation.y
+	if pos.distance_to(_last_saved_pos) < 0.05:
+		return
+	_last_saved_pos = pos
+	var cfg := ConfigFile.new()
+	var _err = cfg.load("user://registro.cfg")
+	cfg.set_value("posicion", "has_saved_pos", true)
+	cfg.set_value("posicion", "x", pos.x)
+	cfg.set_value("posicion", "y", pos.y)
+	cfg.set_value("posicion", "z", pos.z)
+	cfg.set_value("posicion", "rot_y", rot_y)
+	cfg.save("user://registro.cfg")
 
 
 ## Nick guardado en el registro (user://registro.cfg).
