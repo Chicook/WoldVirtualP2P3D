@@ -241,6 +241,10 @@ def encontrar_raiz(ruta: str | Path) -> str:
             return str(candidato)
         if (candidato / "VersionDe_sesion" / "CONTRRF" / "RFC").is_dir() and (candidato / "VersionDe_sesion" / "Sistema_Principal" / "PRY").is_dir():
             return str(candidato / "VersionDe_sesion")
+        if (candidato / "CONTRRF" / "STM_RFC").is_dir() and (candidato / "Sistema_Principal" / "PRY").is_dir():
+            return str(candidato)
+        if (candidato / "VersionDe_sesion" / "CONTRRF" / "STM_RFC").is_dir() and (candidato / "VersionDe_sesion" / "Sistema_Principal" / "PRY").is_dir():
+            return str(candidato / "VersionDe_sesion")
         if (candidato / "Construccion" / "CPRZ" / "PRY").is_dir():
             return str(candidato)
     raise RaizProyectoNoEncontrada("No se encontró la raíz del proyecto.")

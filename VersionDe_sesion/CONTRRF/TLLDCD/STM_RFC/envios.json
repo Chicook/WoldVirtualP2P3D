@@ -1,0 +1,18 @@
+[
+  {
+    "carpeta": "src",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_b5592aff\\src",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 885,
+    "estado": "OK refactorizar",
+    "fecha": "2026-10-19T12:11:35"
+  },
+  {
+    "carpeta": "src",
+    "origen": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "destino": "C:\\Users\\User\\Desktop\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+    "ficheros": 885,
+    "estado": "OK",
+    "fecha": "2026-10-19T12:12:18"
+  }
+]
