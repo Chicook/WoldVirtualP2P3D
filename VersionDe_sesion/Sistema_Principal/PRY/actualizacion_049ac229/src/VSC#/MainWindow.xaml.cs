@@ -163,6 +163,14 @@ namespace Visor3D
                 else
                 {
                     Log("No se encontraron actualizaciones o ya está al día.");
+                    Dispatcher.Invoke(() =>
+                    {
+                        BtnActualizarVisual.Opacity = 0.5;
+                        BtnActualizar.ToolTip = $"Sistemas al día (Versión actual: {CurrentVersion})";
+                        // Detener cualquier animación si estaba activa
+                        GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, null);
+                        BtnActualizarVisual.Background.BeginAnimation(SolidColorBrush.ColorProperty, null);
+                    });
                 }
             }
             catch (Exception ex)

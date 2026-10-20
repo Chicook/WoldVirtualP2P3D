@@ -25,10 +25,12 @@ namespace Visor3D.Update
         {
             try
             {
-                // Primero intentar con 'latest'
-                var url = $"https://api.github.com/repos/{Repo}/releases/latest";
+                // Bypassing cache adding a timestamp
+                var url = $"https://api.github.com/repos/{Repo}/releases/latest?t={DateTime.Now.Ticks}";
                 Console.WriteLine($"[UpdateChecker] Consultando GitHub: {url}");
-                var response = await Client.GetAsync(url);
+                
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                var response = await Client.SendAsync(request);
                 
                 string json;
                 if (response.IsSuccessStatusCode)
@@ -37,46 +39,40 @@ namespace Visor3D.Update
                 }
                 else
                 {
-                    // Si 'latest' falla, intentar obtener la lista completa de releases
-                    Console.WriteLine("[UpdateChecker] 'latest' no encontrado o error. Consultando lista de releases...");
-                    url = $"https://api.github.com/repos/{Repo}/releases";
+                    Console.WriteLine($"[UpdateChecker] Error al consultar 'latest' (Status: {response.StatusCode}). Intentando lista completa...");
+                    url = $"https://api.github.com/repos/{Repo}/releases?t={DateTime.Now.Ticks}";
                     json = await Client.GetStringAsync(url);
                     using var listDoc = JsonDocument.Parse(json);
                     if (listDoc.RootElement.ValueKind == JsonValueKind.Array && listDoc.RootElement.GetArrayLength() > 0)
                     {
-                        // Tomar la primera release de la lista (suele ser la más reciente)
                         json = listDoc.RootElement[0].GetRawText();
                     }
                     else
                     {
-                        Console.WriteLine("[UpdateChecker] No se encontraron releases en el repositorio.");
+                        Console.WriteLine("[UpdateChecker] No se encontraron releases.");
                         return null;
                     }
                 }
 
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                
-                // Loguear el JSON para debug (solo los primeros 500 caracteres)
-                string preview = json.Length > 500 ? json.Substring(0, 500) : json;
-                Console.WriteLine($"[UpdateChecker] JSON Recibido: {preview}");
-
                 var tag = root.GetProperty("tag_name").GetString() ?? "";
-                Console.WriteLine($"[UpdateChecker] Tag detectado en GitHub: {tag}");
+                
+                Console.WriteLine($"[UpdateChecker] Tag detectado: {tag} | Local: {currentVersion}");
 
-                // Si la versión actual ya es igual o mayor a la de la release, no actualizar.
                 if (IsUpToDate(tag, currentVersion))
                 {
-                    Console.WriteLine("[UpdateChecker] La versión local ya está al día.");
+                    Console.WriteLine("[UpdateChecker] Resultado: La versión local ya está al día.");
                     return null;
                 }
+
+                Console.WriteLine("[UpdateChecker] Resultado: ¡Actualización detectada!");
 
                 foreach (var asset in root.GetProperty("assets").EnumerateArray())
                 {
                     var name = asset.GetProperty("name").GetString() ?? "";
                     if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                     {
-                        Console.WriteLine($"[UpdateChecker] Asset encontrado: {name}");
                         return new ReleaseInfo
                         {
                             TagName = tag,
@@ -91,7 +87,7 @@ namespace Visor3D.Update
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[UpdateChecker] Error crítico: {ex.Message}");
+                Console.WriteLine($"[UpdateChecker] Error en CheckForUpdateAsync: {ex.Message}");
             }
             return null;
         }
