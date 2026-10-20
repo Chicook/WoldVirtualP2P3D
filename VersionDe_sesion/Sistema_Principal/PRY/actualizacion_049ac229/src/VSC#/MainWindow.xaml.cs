@@ -92,7 +92,10 @@ namespace Visor3D
         {
             try
             {
-                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_debug.log");
+                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WoldVirtualP2P3D");
+                if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
+                string logPath = Path.Combine(logDir, "update_debug.log");
+                
                 File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
                 Console.WriteLine($"[Updater] {message}");
             }
@@ -102,14 +105,26 @@ namespace Visor3D
         private async Task CheckUpdatesAsync()
         {
             Log("Iniciando CheckUpdatesAsync...");
-            await Task.Delay(3000); // Dar tiempo a que cargue todo
+            
+            // Iniciar una animación de "buscando" sutil inmediatamente
+            Dispatcher.Invoke(() =>
+            {
+                var searchAnim = new DoubleAnimation(0.3, 0.6, TimeSpan.FromSeconds(1.5))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever
+                };
+                GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, searchAnim);
+                BtnActualizar.ToolTip = "Buscando actualizaciones...";
+            });
+
+            await Task.Delay(2000); 
             
             try
             {
-                Log($"Versión local configurada: {CurrentVersion}");
+                Log($"Versión local: {CurrentVersion}");
                 var checker = new UpdateChecker();
                 
-                Log("Consultando GitHub...");
                 _updateInfo = await checker.CheckForUpdateAsync(CurrentVersion);
 
                 if (_updateInfo != null)
@@ -119,23 +134,15 @@ namespace Visor3D
                     {
                         try 
                         {
-                            Log("Iniciando animación en UI...");
-                            // Forzar visibilidad del componente de actualización
-                            // Nota: BtnActualizar está dentro de PanelMundo3D, que puede estar oculto.
-                            BtnActualizar.Visibility = Visibility.Visible;
                             BtnActualizarVisual.Opacity = 1.0;
-                            BtnActualizar.ToolTip = $"Nueva versión disponible: {_updateInfo.TagName}";
+                            BtnActualizar.ToolTip = $"¡Nueva versión disponible!: {_updateInfo.TagName}\nHaz clic para actualizar ahora.";
                             
-                            // Detener animaciones previas
-                            BtnActualizarVisual.Background.BeginAnimation(SolidColorBrush.ColorProperty, null);
-                            GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, null);
-
-                            // Animación de color de fondo pulsante
+                            // Animación de color de fondo pulsante (Azul Intenso)
                             var colorAnim = new ColorAnimation
                             {
                                 From = System.Windows.Media.Color.FromRgb(30, 41, 59),
-                                To = System.Windows.Media.Color.FromRgb(0, 119, 182), // Azul metaverso
-                                Duration = TimeSpan.FromSeconds(1.0),
+                                To = System.Windows.Media.Color.FromRgb(0, 180, 216), 
+                                Duration = TimeSpan.FromSeconds(0.8),
                                 AutoReverse = true,
                                 RepeatBehavior = RepeatBehavior.Forever
                             };
@@ -144,38 +151,39 @@ namespace Visor3D
                             BtnActualizarVisual.Background = brush;
                             brush.BeginAnimation(SolidColorBrush.ColorProperty, colorAnim);
 
-                            // Animación de brillo (glow)
-                            var glowAnim = new DoubleAnimation(0.2, 1.0, TimeSpan.FromSeconds(1.0))
+                            // Animación de brillo (glow) más fuerte
+                            var glowAnim = new DoubleAnimation(0.4, 1.0, TimeSpan.FromSeconds(0.8))
                             {
                                 AutoReverse = true,
                                 RepeatBehavior = RepeatBehavior.Forever
                             };
                             GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, glowAnim);
+                            GlowActualizar.BlurRadius = 25;
                             
-                            Log("Animación configurada y ejecutándose.");
+                            Log("Animación de alerta activada.");
                         }
                         catch (Exception ex)
                         {
-                            Log($"Error en la UI de actualización: {ex.Message}");
+                            Log($"Error UI: {ex.Message}");
                         }
                     });
                 }
                 else
                 {
-                    Log("No se encontraron actualizaciones o ya está al día.");
+                    Log("Sistema al día.");
                     Dispatcher.Invoke(() =>
                     {
                         BtnActualizarVisual.Opacity = 0.5;
-                        BtnActualizar.ToolTip = $"Sistemas al día (Versión actual: {CurrentVersion})";
-                        // Detener cualquier animación si estaba activa
+                        BtnActualizar.ToolTip = "Sistemas al día";
                         GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, null);
+                        GlowActualizar.Opacity = 0.1;
                         BtnActualizarVisual.Background.BeginAnimation(SolidColorBrush.ColorProperty, null);
                     });
                 }
             }
             catch (Exception ex)
             {
-                Log($"Error crítico en CheckUpdatesAsync: {ex.Message}");
+                Log($"Error crítico: {ex.Message}");
             }
         }
 

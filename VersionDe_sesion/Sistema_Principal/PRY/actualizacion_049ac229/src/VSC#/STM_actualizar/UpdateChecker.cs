@@ -145,7 +145,10 @@ namespace Visor3D.Update
         {
             try
             {
-                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_debug.log");
+                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WoldVirtualP2P3D");
+                if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
+                string logPath = Path.Combine(logDir, "update_debug.log");
+                
                 File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] [Checker] {message}{Environment.NewLine}");
                 Console.WriteLine($"[UpdateChecker] {message}");
             }
