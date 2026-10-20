@@ -120,17 +120,22 @@ namespace Visor3D
                         try 
                         {
                             Log("Iniciando animación en UI...");
-                            // Forzar opacidad y visibilidad
-                            BtnActualizarVisual.Opacity = 1.0;
+                            // Forzar visibilidad del componente de actualización
+                            // Nota: BtnActualizar está dentro de PanelMundo3D, que puede estar oculto.
                             BtnActualizar.Visibility = Visibility.Visible;
+                            BtnActualizarVisual.Opacity = 1.0;
                             BtnActualizar.ToolTip = $"Nueva versión disponible: {_updateInfo.TagName}";
                             
-                            // Animación de color de borde para que sea MUY visible
+                            // Detener animaciones previas
+                            BtnActualizarVisual.Background.BeginAnimation(SolidColorBrush.ColorProperty, null);
+                            GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, null);
+
+                            // Animación de color de fondo pulsante
                             var colorAnim = new ColorAnimation
                             {
-                                From = System.Windows.Media.Color.FromRgb(30, 41, 59), // Color original oscuro
-                                To = System.Windows.Media.Color.FromRgb(56, 189, 248),   // Color azul brillante
-                                Duration = TimeSpan.FromSeconds(0.8),
+                                From = System.Windows.Media.Color.FromRgb(30, 41, 59),
+                                To = System.Windows.Media.Color.FromRgb(0, 119, 182), // Azul metaverso
+                                Duration = TimeSpan.FromSeconds(1.0),
                                 AutoReverse = true,
                                 RepeatBehavior = RepeatBehavior.Forever
                             };
@@ -139,19 +144,19 @@ namespace Visor3D
                             BtnActualizarVisual.Background = brush;
                             brush.BeginAnimation(SolidColorBrush.ColorProperty, colorAnim);
 
-                            // También el brillo por si acaso
-                            var glowAnim = new DoubleAnimation(0.3, 1.0, TimeSpan.FromSeconds(0.8))
+                            // Animación de brillo (glow)
+                            var glowAnim = new DoubleAnimation(0.2, 1.0, TimeSpan.FromSeconds(1.0))
                             {
                                 AutoReverse = true,
                                 RepeatBehavior = RepeatBehavior.Forever
                             };
                             GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, glowAnim);
                             
-                            Log("Animación iniciada con éxito.");
+                            Log("Animación configurada y ejecutándose.");
                         }
                         catch (Exception ex)
                         {
-                            Log($"Error en Dispatcher.Invoke: {ex.Message}");
+                            Log($"Error en la UI de actualización: {ex.Message}");
                         }
                     });
                 }

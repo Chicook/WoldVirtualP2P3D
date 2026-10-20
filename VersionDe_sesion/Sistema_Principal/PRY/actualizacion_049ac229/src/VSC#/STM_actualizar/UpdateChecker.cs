@@ -56,6 +56,11 @@ namespace Visor3D.Update
 
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
+                
+                // Loguear el JSON para debug (solo los primeros 500 caracteres)
+                string preview = json.Length > 500 ? json.Substring(0, 500) : json;
+                Console.WriteLine($"[UpdateChecker] JSON Recibido: {preview}");
+
                 var tag = root.GetProperty("tag_name").GetString() ?? "";
                 Console.WriteLine($"[UpdateChecker] Tag detectado en GitHub: {tag}");
 
