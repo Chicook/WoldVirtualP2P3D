@@ -52,6 +52,7 @@ namespace Visor3D
             TxtUrlP2P.MouseLeftButtonDown += (s, e) => OnCopiarUrlP2PClicked(s, e);
             BtnConectarAmigo.Click += OnConectarAmigoClicked;
             BtnWebNodo.Click += OnWebNodoClicked;
+            BtnWebNodoBienvenida.Click += OnWebNodoClicked;
 
             // WebNodo embebido (sin Node.js)
             _webNodo = new WebNodoService();
