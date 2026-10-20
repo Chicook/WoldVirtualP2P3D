@@ -1,0 +1,176 @@
+<Window x:Class="Visor3D.FormularioUsuarioWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Wold Virtual p2p 3D — Crear Usuario"
+        Width="520" Height="480"
+        WindowStartupLocation="CenterScreen"
+        Background="#0A0C12"
+        WindowStyle="ThreeDBorderWindow"
+        ResizeMode="CanMinimize">
+
+    <Grid Margin="36,28,36,28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Título -->
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="Auto"/>  <!-- Panel formulario -->
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="Auto"/>  <!-- UUID generado -->
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="Auto"/>  <!-- Botón Crear -->
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="Auto"/>  <!-- Indicador OK -->
+        </Grid.RowDefinitions>
+
+        <!-- ── Título ── -->
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Crear Usuario"
+                       Foreground="#00D9FF"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Paso 2 de 2 — Define tu nombre de usuario y contraseña"
+                       Foreground="#576070"
+                       FontSize="11"
+                       TextAlignment="Center"
+                       HorizontalAlignment="Center"
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- ── Formulario ── -->
+        <Border Grid.Row="2"
+                Background="#0F1420"
+                BorderBrush="#1D3557"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="24,20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Nombre de usuario -->
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="Nombre de usuario"
+                           Foreground="#8892B0" FontSize="12" FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <TextBox x:Name="TxtNombre"
+                         Grid.Row="0" Grid.Column="1"
+                         Height="30" FontSize="12"
+                         Padding="8,4"
+                         Background="#161B26"
+                         Foreground="#E2E8F0"
+                         BorderBrush="#2A4365"
+                         BorderThickness="1"
+                         CaretBrush="#00D9FF"
+                         VerticalContentAlignment="Center"/>
+
+                <!-- Contraseña -->
+                <TextBlock Grid.Row="2" Grid.Column="0"
+                           Text="Contraseña"
+                           Foreground="#8892B0" FontSize="12" FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <PasswordBox x:Name="TxtPassword"
+                             Grid.Row="2" Grid.Column="1"
+                             Height="30" FontSize="12"
+                             Padding="8,4"
+                             Background="#161B26"
+                             Foreground="#E2E8F0"
+                             BorderBrush="#2A4365"
+                             BorderThickness="1"
+                             VerticalContentAlignment="Center"/>
+
+                <!-- Repetir contraseña -->
+                <TextBlock Grid.Row="4" Grid.Column="0"
+                           Text="Repetir contraseña"
+                           Foreground="#8892B0" FontSize="12" FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <PasswordBox x:Name="TxtPasswordRepetir"
+                             Grid.Row="4" Grid.Column="1"
+                             Height="30" FontSize="12"
+                             Padding="8,4"
+                             Background="#161B26"
+                             Foreground="#E2E8F0"
+                             BorderBrush="#2A4365"
+                             BorderThickness="1"
+                             VerticalContentAlignment="Center"/>
+
+                <!-- Mensaje de error inline -->
+                <TextBlock x:Name="TxtError"
+                           Grid.Row="6" Grid.ColumnSpan="2"
+                           Foreground="#F87171"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"/>
+            </Grid>
+        </Border>
+
+        <!-- ── UUID generado (oculto al inicio) ── -->
+        <Border x:Name="PanelUUID"
+                Grid.Row="4"
+                Background="#091220"
+                BorderBrush="#163B67"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="14,10"
+                Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="Tu identificador único (UUID)"
+                           Foreground="#8892B0"
+                           FontSize="10"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,4"/>
+                <TextBlock x:Name="TxtUUID"
+                           Foreground="#00D9FF"
+                           FontFamily="Consolas"
+                           FontSize="11"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="Este UUID queda vinculado a tu dispositivo. Guárdalo junto al .zip."
+                           Foreground="#576070"
+                           FontSize="10"
+                           Margin="0,5,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ── Botón Crear usuario ── -->
+        <Button x:Name="BtnCrearUsuario"
+                Grid.Row="6"
+                Content="Crear usuario y continuar  →"
+                Height="42"
+                FontSize="14"
+                FontWeight="Bold"
+                Foreground="#FFFFFF"
+                Background="#0077B6"
+                BorderBrush="#0096C7"
+                BorderThickness="1"
+                Cursor="Hand">
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="6"/>
+                </Style>
+            </Button.Resources>
+        </Button>
+
+        <!-- ── Confirmación final ── -->
+        <TextBlock x:Name="TxtOK"
+                   Grid.Row="8"
+                   Text="✔ Usuario creado correctamente. ¡Bienvenido a Wold Virtual!"
+                   Foreground="#22C55E"
+                   FontSize="11"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   Visibility="Collapsed"/>
+    </Grid>
+</Window>
