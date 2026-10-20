@@ -22,8 +22,14 @@ namespace Visor3D
             string nextToExe = Path.Combine(ExeDir, "Servidor3D", godotName);
             if (File.Exists(nextToExe)) return nextToExe;
 
-            // 3. Ruta absoluta del repositorio (modo desarrollo)
-            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_2069d33a\src\VSC#\Servidor3D\" + godotName;
+            // 3. Ruta absoluta del repositorio (modo desarrollo E: y C:)
+            string ePath = @"E:\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_049ac229\src\VSC#\Servidor3D\" + godotName;
+            if (File.Exists(ePath)) return ePath;
+
+            string desktopGodot = @"C:\Users\User\Desktop\" + godotName;
+            if (File.Exists(desktopGodot)) return desktopGodot;
+
+            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_049ac229\src\VSC#\Servidor3D\" + godotName;
             if (File.Exists(repoPath)) return repoPath;
 
             // 4. Busqueda relativa subiendo carpetas
@@ -50,8 +56,11 @@ namespace Visor3D
             if (Directory.Exists(nextToExe) && File.Exists(Path.Combine(nextToExe, "project.godot")))
                 return nextToExe;
 
-            // 3. Ruta absoluta del repositorio
-            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_2069d33a\src\MTBGT\WoldVirtualP2P3D";
+            // 3. Ruta absoluta del repositorio (E: y C:)
+            string ePath = @"E:\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_049ac229\src\MTBGT\WoldVirtualP2P3D";
+            if (Directory.Exists(ePath)) return ePath;
+
+            string repoPath = @"C:\Users\User\Desktop\WoldVirtualP2P3D\VersionDe_sesion\Sistema_Principal\PRY\actualizacion_049ac229\src\MTBGT\WoldVirtualP2P3D";
             if (Directory.Exists(repoPath)) return repoPath;
 
             // 4. Busqueda relativa
