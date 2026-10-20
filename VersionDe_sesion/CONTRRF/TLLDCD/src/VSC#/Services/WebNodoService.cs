@@ -23,8 +23,11 @@ namespace Visor3D.Services
         private Thread? _thread;
         private bool _disposed;
         private string? _publicTunnelUrl;
+        private string? _startError;
 
         public bool IsRunning => _listener.IsListening;
+
+        public string? StartError => _startError;
 
         // Seteado desde MainWindow cuando el tunel P2P esta activo
         public string? PublicTunnelUrl
@@ -33,7 +36,7 @@ namespace Visor3D.Services
             set => _publicTunnelUrl = value;
         }
 
-        private static readonly int Port = 3030;
+        public static readonly int Port = 3030;
         private static readonly string ExeName = "DMWoldVirtualp2pCNX_v0.0.011actualizacion_2069d33a.exe";
         private static readonly string ExeUrl =
             "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v0.0.111_actualizacion_2069d33a/DMWoldVirtualp2pCNX_v0.0.011actualizacion_2069d33a.exe";
@@ -142,16 +145,18 @@ namespace Visor3D.Services
         public void Start()
         {
             if (_disposed) return;
+            _startError = null;
             try
             {
-                _listener.Prefixes.Add($"http://+:{Port}/");
+                // localhost (no '+') para no requerir privilegios de administrador en Windows
+                _listener.Prefixes.Add($"http://localhost:{Port}/");
                 _listener.Start();
                 _thread = new Thread(ListenerLoop) { IsBackground = true };
                 _thread.Start(_cts.Token);
             }
             catch (Exception ex)
             {
-                // Puerto en uso o sin permisos: WebNodo no es crítico para el visor.
+                _startError = ex.Message;
                 System.Diagnostics.Debug.WriteLine($"[WebNodo] No se pudo iniciar: {ex.Message}");
             }
         }

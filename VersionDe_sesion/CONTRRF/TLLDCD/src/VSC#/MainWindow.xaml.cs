@@ -390,11 +390,19 @@ namespace Visor3D
                 // Arrancar el servidor WebNodo embebido si no está corriendo
                 _webNodo?.Start();
 
+                // Si el servidor no pudo iniciar (puerto, permisos), avisar al usuario
+                if (_webNodo?.StartError is string err && !string.IsNullOrWhiteSpace(err))
+                {
+                    MessageBox.Show($"WebNodo no pudo iniciarse en el puerto {WebNodoService.Port}:\n{err}",
+                                    "WebNodo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 // Abrir el túnel público efímero (SSH/Cloudflare) mientras dure la sesión,
                 // no el modo local localhost:3030.
                 var url = !string.IsNullOrWhiteSpace(_webNodo?.PublicTunnelUrl)
                     ? _webNodo.PublicTunnelUrl
-                    : "http://localhost:3030/";
+                    : $"http://localhost:{WebNodoService.Port}/";
 
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
             }
