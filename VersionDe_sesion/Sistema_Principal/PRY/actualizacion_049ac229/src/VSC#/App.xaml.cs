@@ -12,9 +12,8 @@ namespace Visor3D
         private void OnStartup(object sender, StartupEventArgs e)
         {
             // ── RESET COMPLETO DE SESIÓN ─────────────────────────────────────────
-            // Borra datos de usuario locales para que GitHub siempre arranque limpio.
-            // El usuario deberá registrarse de nuevo como si fuera la primera vez.
-            LimpiarDatosDeUsuario();
+            // Comentado para preservar la cuenta del usuario entre sesiones y actualizaciones.
+            // LimpiarDatosDeUsuario();
 
             // ── Procesar argumentos de conexión remota (CLI / Enlace de Invitado) ──
             string? initialConnectionUrl = ParseCommandLineArgs(e.Args);

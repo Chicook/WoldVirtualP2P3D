@@ -11,13 +11,16 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media.Animation;
 using Microsoft.Win32;
 using Visor3D.RedP2P;
+using Visor3D.Update;
 
 namespace Visor3D
 {
     public partial class MainWindow : Window
     {
+        private const string CurrentVersion = "0.0.1"; // Versión forzada baja para asegurar que detecte la v0.0.12
         // Carpeta local para datos de usuario y pruebas de flujo
         private static readonly string TestUserDataDir =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_user_data");
@@ -33,6 +36,7 @@ namespace Visor3D
         private Process? _tunnelProcess;
         private string _urlAmigoPendiente = "";
         private bool _esAnfitrion;
+        private ReleaseInfo? _updateInfo;
 
         public MainWindow(string? initialConnectionUrl = null)
         {
@@ -78,6 +82,127 @@ namespace Visor3D
             {
                 TxtUrlAmigo.Text = _urlAmigoPendiente;
                 TxtEstadoP2P.Text = $"🔗 Destino amigo fijado: {_urlAmigoPendiente}";
+            }
+
+            // Iniciar búsqueda de actualizaciones en segundo plano
+            _ = Task.Run(CheckUpdatesAsync);
+        }
+
+        private void Log(string message)
+        {
+            try
+            {
+                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_debug.log");
+                File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+                Console.WriteLine($"[Updater] {message}");
+            }
+            catch { }
+        }
+
+        private async Task CheckUpdatesAsync()
+        {
+            Log("Iniciando CheckUpdatesAsync...");
+            await Task.Delay(3000); // Dar tiempo a que cargue todo
+            
+            try
+            {
+                Log($"Versión local configurada: {CurrentVersion}");
+                var checker = new UpdateChecker();
+                
+                Log("Consultando GitHub...");
+                _updateInfo = await checker.CheckForUpdateAsync(CurrentVersion);
+
+                if (_updateInfo != null)
+                {
+                    Log($"¡Actualización encontrada!: {_updateInfo.TagName}");
+                    Dispatcher.Invoke(() =>
+                    {
+                        try 
+                        {
+                            Log("Iniciando animación en UI...");
+                            // Forzar opacidad y visibilidad
+                            BtnActualizarVisual.Opacity = 1.0;
+                            BtnActualizar.Visibility = Visibility.Visible;
+                            BtnActualizar.ToolTip = $"Nueva versión disponible: {_updateInfo.TagName}";
+                            
+                            // Animación de color de borde para que sea MUY visible
+                            var colorAnim = new ColorAnimation
+                            {
+                                From = System.Windows.Media.Color.FromRgb(30, 41, 59), // Color original oscuro
+                                To = System.Windows.Media.Color.FromRgb(56, 189, 248),   // Color azul brillante
+                                Duration = TimeSpan.FromSeconds(0.8),
+                                AutoReverse = true,
+                                RepeatBehavior = RepeatBehavior.Forever
+                            };
+                            
+                            var brush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59));
+                            BtnActualizarVisual.Background = brush;
+                            brush.BeginAnimation(SolidColorBrush.ColorProperty, colorAnim);
+
+                            // También el brillo por si acaso
+                            var glowAnim = new DoubleAnimation(0.3, 1.0, TimeSpan.FromSeconds(0.8))
+                            {
+                                AutoReverse = true,
+                                RepeatBehavior = RepeatBehavior.Forever
+                            };
+                            GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, glowAnim);
+                            
+                            Log("Animación iniciada con éxito.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"Error en Dispatcher.Invoke: {ex.Message}");
+                        }
+                    });
+                }
+                else
+                {
+                    Log("No se encontraron actualizaciones o ya está al día.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Error crítico en CheckUpdatesAsync: {ex.Message}");
+            }
+        }
+
+        private async void OnActualizarClicked(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_updateInfo == null) return;
+
+            try
+            {
+                BtnActualizar.IsEnabled = false;
+                BtnActualizar.Cursor = System.Windows.Input.Cursors.Wait;
+                TxtEstadoP2P.Text = "⬇️ Descargando actualización...";
+
+                var downloader = new UpdateDownloader();
+                bool success = await downloader.DownloadAsync(_updateInfo);
+
+                if (success)
+                {
+                    TxtEstadoP2P.Text = "🚀 Reiniciando para aplicar actualización...";
+                    
+                    // Aplicar y reiniciar
+                    UpdateApplier.ApplyPendingUpdate(Process.GetCurrentProcess().MainModule?.FileName ?? "");
+                    
+                    // Cerrar la aplicación actual para que el .bat pueda hacer el reemplazo
+                    Application.Current.Shutdown();
+                }
+                else
+                {
+                    MessageBox.Show("Error al descargar la actualización. Inténtalo de nuevo más tarde.", 
+                                    "Error de Actualización", MessageBoxButton.OK, MessageBoxImage.Error);
+                    BtnActualizar.IsEnabled = true;
+                    PanelActualizar.Cursor = System.Windows.Input.Cursors.Hand;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error durante la actualización: {ex.Message}", 
+                                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                BtnActualizar.IsEnabled = true;
+                PanelActualizar.Cursor = System.Windows.Input.Cursors.Hand;
             }
         }
 
@@ -526,9 +651,9 @@ namespace Visor3D
                     {
                         if (_esAnfitrion)
                         {
-                            // El anfitrión conserva visible su IP directa: es lo que hay que
-                            // pegar en el equipo invitado para conectar por ENet.
-                            TxtUrlP2P.ToolTip = $"Portal WebNodo (descarga): {url}";
+                            // Actualizar p2p_session.json para que Godot conozca su propia URL de túnel
+                            GuardarP2PSessionConfig();
+                            TxtUrlP2P.ToolTip = $"Portal WebNodo y P2P Tunnel: {url}";
                         }
                         else
                         {
@@ -779,6 +904,7 @@ namespace Visor3D
                         {
                             TxtEstadoP2P.Text = "🌍 Túnel público activo";
                             App.WebNodo.PublicTunnelUrl = pubUrl;
+                            GuardarP2PSessionConfig(); // Refrescar config con la URL del túnel
                             BtnWebNodo.Content = "🌐 WebNodo (Online)";
                             BtnWebNodo.ToolTip = $"WebNodo público activo:\n{pubUrl}\nHaz clic para abrir en el navegador y copiar.";
                             BtnWebNodo.Background = new System.Windows.Media.SolidColorBrush(
@@ -813,6 +939,7 @@ namespace Visor3D
                         {
                             TxtEstadoP2P.Text = $"🌍 Túnel público ({c.Name})";
                             App.WebNodo.PublicTunnelUrl = pubUrl;
+                            GuardarP2PSessionConfig(); // Refrescar config con la URL del túnel
                             BtnWebNodo.Content = "🌐 WebNodo (Online)";
                             BtnWebNodo.ToolTip = $"WebNodo público ({c.Name}):\n{pubUrl}\nHaz clic para abrir en el navegador y copiar.";
                             BtnWebNodo.Background = new System.Windows.Media.SolidColorBrush(

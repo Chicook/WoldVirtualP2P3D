@@ -12,6 +12,8 @@ signal mi_isla_lista
 @onready var userbase = $USERBASE
 
 var peer = ENetMultiplayerPeer.new()
+var ws_peer = WebSocketMultiplayerPeer.new()
+var using_ws := false
 var next_island_index = 0
 var active_islands = {} # Diccionario: player_id -> island_index
 var owner_names = {} # Diccionario: player_id -> nick del dueño
@@ -125,17 +127,28 @@ func _ready():
 		print("[ChunkManager/ENet] Iniciando explícitamente como Anfitrión (Servidor)...")
 		_iniciar_como_servidor()
 	elif _is_explicit_client:
-		# Conexión remota explícita: conectar obligatoriamente como cliente a la IP remota.
-		# Si falla el handshake, NO se degrada a servidor local silenciosamente.
-		print("[ChunkManager/ENet] Conectando como CLIENTE hacia el anfitrión remoto: ", target_host, ":", target_port, "...")
-		var err := peer.create_client(target_host, target_port)
-		if err != OK:
-			printerr("[ChunkManager/ENet] ERROR inmediato al crear cliente ENet hacia ", target_host, ":", target_port, " (Código: ", err, ")")
-			print("[ChunkManager/ENet] Handshake remoto fallido. Revisar firewall/puerto UDP 8910 y que el anfitrión esté escuchando.")
-			return
+		# Conexión remota explícita: conectar obligatoriamente como cliente a la IP remota o túnel WS.
+		if target_host.contains("trycloudflare.com") or target_host.contains("lhr.life") or target_host.contains("serveo.net"):
+			print("[ChunkManager/WS] Detectado túnel HTTP. Conectando vía WEBSOCKETS a: ", target_host)
+			using_ws = true
+			var ws_url = "wss://" + target_host if not target_host.begins_with("ws") else target_host
+			# Si es localhost.run o serveo, el puerto suele ser 80/443 implícito en la URL
+			var err = ws_peer.create_client(ws_url)
+			if err != OK:
+				printerr("[ChunkManager/WS] ERROR al crear cliente WebSocket hacia ", ws_url, " (", err, ")")
+				return
+			multiplayer.multiplayer_peer = ws_peer
+			print("[ChunkManager/WS] Intentando handshake WebSocket con ", ws_url, "...")
 		else:
-			multiplayer.multiplayer_peer = peer
-			print("[ChunkManager/ENet] Socket cliente ENet abierto. Esperando handshake con ", target_host, ":", target_port, "...")
+			print("[ChunkManager/ENet] Conectando como CLIENTE hacia el anfitrión remoto: ", target_host, ":", target_port, "...")
+			var err := peer.create_client(target_host, target_port)
+			if err != OK:
+				printerr("[ChunkManager/ENet] ERROR inmediato al crear cliente ENet hacia ", target_host, ":", target_port, " (Código: ", err, ")")
+				print("[ChunkManager/ENet] Handshake remoto fallido. Revisar firewall/puerto UDP 8910 y que el anfitrión esté escuchando.")
+				return
+			else:
+				multiplayer.multiplayer_peer = peer
+				print("[ChunkManager/ENet] Socket cliente ENet abierto. Esperando handshake con ", target_host, ":", target_port, "...")
 	else:
 		# Modo autónomo / pruebas locales (loopback 127.0.0.1)
 		print("[ChunkManager/ENet] Buscando red P2P en ", target_host, ":", target_port, "...")
@@ -158,8 +171,12 @@ func _iniciar_como_servidor():
 	var err := peer.create_server(8910, 32)
 	if err != OK:
 		printerr("[ChunkManager/ENet] ERROR al crear servidor ENet en puerto 8910: ", err)
-		return
-	multiplayer.multiplayer_peer = peer
+	else:
+		multiplayer.multiplayer_peer = peer
+		
+	# Iniciar servidor WebSocket paralelo para túneles efímeros (puerto 8911)
+	_iniciar_como_servidor_ws()
+
 	var mis_ips := IP.get_local_addresses()
 	var ips_txt: String = ""
 	for ip in mis_ips:
@@ -174,6 +191,20 @@ func _iniciar_como_servidor():
 	# El servidor registra su propia isla
 	owner_names[multiplayer.get_unique_id()] = _nick_unico(_mi_nick, multiplayer.get_unique_id())
 	_register_player(multiplayer.get_unique_id())
+
+func _iniciar_como_servidor_ws():
+	print("[ChunkManager/WS] Creando Servidor WebSocket en puerto 8911...")
+	var err = ws_peer.create_server(8911)
+	if err != OK:
+		printerr("[ChunkManager/WS] ERROR al crear servidor WebSocket en puerto 8911: ", err)
+	else:
+		# Si ENet falló, usamos WS como principal. Si no, ambos corren pero ENet manda en 'multiplayer'.
+		# Nota: Godot 4 solo permite un multiplayer_peer a la vez en el SceneTree por defecto.
+		# Para túneles remotos, el Visor C# forzará el uso de WS si detecta la URL del túnel.
+		if multiplayer.multiplayer_peer == null or not multiplayer.multiplayer_peer.is_active():
+			multiplayer.multiplayer_peer = ws_peer
+			using_ws = true
+		print("[ChunkManager/WS] ✔ Servidor WebSocket activo en puerto 8911.")
 
 func _on_connected_fail():
 	printerr("[ChunkManager/ENet] ❌ Falló la conexión con el nodo objetivo en ", _last_target_host, ":", _last_target_port)

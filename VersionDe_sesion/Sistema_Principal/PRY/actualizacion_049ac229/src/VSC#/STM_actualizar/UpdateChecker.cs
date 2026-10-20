@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -8,13 +8,14 @@ namespace Visor3D.Update
     public class UpdateChecker
     {
         private const string Repo = "Chicook/WoldVirtualP2P3D";
-        // Release objetivo: https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v0.0.111_actualizacion_2069d33a
-        private const string ReleaseTag = "v0.0.111_actualizacion_2069d33a";
         private static readonly HttpClient Client = new HttpClient();
 
         static UpdateChecker()
         {
-            Client.DefaultRequestHeaders.Add("User-Agent", "WoldVirtualP2P3D-Visor3D-Updater");
+            // Usar un User-Agent de navegador real para evitar bloqueos de GitHub API
+            Client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            Client.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+            
             var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
             if (!string.IsNullOrWhiteSpace(token))
                 Client.DefaultRequestHeaders.Add("Authorization", "token " + token);
@@ -24,20 +25,53 @@ namespace Visor3D.Update
         {
             try
             {
-                var url = $"https://api.github.com/repos/{Repo}/releases/tags/{ReleaseTag}";
-                var json = await Client.GetStringAsync(url);
+                // Primero intentar con 'latest'
+                var url = $"https://api.github.com/repos/{Repo}/releases/latest";
+                Console.WriteLine($"[UpdateChecker] Consultando GitHub: {url}");
+                var response = await Client.GetAsync(url);
+                
+                string json;
+                if (response.IsSuccessStatusCode)
+                {
+                    json = await response.Content.ReadAsStringAsync();
+                }
+                else
+                {
+                    // Si 'latest' falla, intentar obtener la lista completa de releases
+                    Console.WriteLine("[UpdateChecker] 'latest' no encontrado o error. Consultando lista de releases...");
+                    url = $"https://api.github.com/repos/{Repo}/releases";
+                    json = await Client.GetStringAsync(url);
+                    using var listDoc = JsonDocument.Parse(json);
+                    if (listDoc.RootElement.ValueKind == JsonValueKind.Array && listDoc.RootElement.GetArrayLength() > 0)
+                    {
+                        // Tomar la primera release de la lista (suele ser la más reciente)
+                        json = listDoc.RootElement[0].GetRawText();
+                    }
+                    else
+                    {
+                        Console.WriteLine("[UpdateChecker] No se encontraron releases en el repositorio.");
+                        return null;
+                    }
+                }
+
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
                 var tag = root.GetProperty("tag_name").GetString() ?? "";
+                Console.WriteLine($"[UpdateChecker] Tag detectado en GitHub: {tag}");
 
-                // Si la release ya coincide con la versi├│n instalada, no hay nada que hacer.
-                if (VersionMatches(tag, currentVersion)) return null;
+                // Si la versión actual ya es igual o mayor a la de la release, no actualizar.
+                if (IsUpToDate(tag, currentVersion))
+                {
+                    Console.WriteLine("[UpdateChecker] La versión local ya está al día.");
+                    return null;
+                }
 
                 foreach (var asset in root.GetProperty("assets").EnumerateArray())
                 {
                     var name = asset.GetProperty("name").GetString() ?? "";
                     if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                     {
+                        Console.WriteLine($"[UpdateChecker] Asset encontrado: {name}");
                         return new ReleaseInfo
                         {
                             TagName = tag,
@@ -50,35 +84,64 @@ namespace Visor3D.Update
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Sin red o GitHub no disponible: continuar sin actualizar.
+                Console.WriteLine($"[UpdateChecker] Error crítico: {ex.Message}");
             }
             return null;
         }
 
-        private static bool VersionMatches(string tag, string currentVersion)
+        private static bool IsUpToDate(string tag, string currentVersion)
         {
-            if (string.IsNullOrWhiteSpace(tag) || string.IsNullOrWhiteSpace(currentVersion))
-                return false;
+            if (string.IsNullOrWhiteSpace(tag)) return true;
+            
+            // Si el tag contiene la versión actual exactamente, estamos al día
+            if (tag.Contains(currentVersion, StringComparison.OrdinalIgnoreCase))
+                return true;
+
             try
             {
-                var tagNum = ExtractVersion(tag);
-                var curNum = new Version(currentVersion);
-                if (tagNum != null && curNum != null)
-                    return tagNum.Major == curNum.Major && tagNum.Minor == curNum.Minor && tagNum.Build == curNum.Build;
+                var latestVer = ExtractVersion(tag);
+                var currentVer = ExtractVersion(currentVersion);
+
+                if (latestVer != null && currentVer != null)
+                {
+                    Console.WriteLine($"[UpdateChecker] Comparación: Local {currentVer} vs Remoto {latestVer}");
+                    return currentVer >= latestVer;
+                }
             }
             catch { }
-            return tag.Contains(currentVersion, StringComparison.OrdinalIgnoreCase);
+
+            // Si no podemos parsear las versiones, pero son diferentes, asumimos que hay actualización
+            return tag.Trim().Equals(currentVersion.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 
         private static Version? ExtractVersion(string tag)
         {
-            var digits = System.Text.RegularExpressions.Regex.Match(tag, @"(\d+)\.(\d+)\.(\d+)");
-            if (!digits.Success) return null;
-            return new Version(int.Parse(digits.Groups[1].Value),
-                               int.Parse(digits.Groups[2].Value),
-                               int.Parse(digits.Groups[3].Value));
+            if (string.IsNullOrWhiteSpace(tag)) return null;
+            
+            try 
+            {
+                // Limpiar caracteres y buscar números (ej: 0.0.12 o 0.0.012)
+                var match = System.Text.RegularExpressions.Regex.Match(tag, @"(\d+\.\d+(\.\d+)?(\.\d+)?)");
+                if (match.Success)
+                {
+                    string vStr = match.Value;
+                    // Normalizar versiones como 0.0.012 a 0.0.12 para que Version.TryParse funcione
+                    string[] parts = vStr.Split('.');
+                    for (int i = 0; i < parts.Length; i++)
+                    {
+                        if (int.TryParse(parts[i], out int n))
+                            parts[i] = n.ToString();
+                    }
+                    vStr = string.Join(".", parts);
+
+                    if (Version.TryParse(vStr, out var v))
+                        return v;
+                }
+            }
+            catch { }
+            return null;
         }
     }
 }

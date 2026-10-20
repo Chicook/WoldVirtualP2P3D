@@ -495,6 +495,12 @@ namespace Visor3D.Services
                     res.ContentLength64 = bytes.Length;
                     await res.OutputStream.WriteAsync(bytes, 0, bytes.Length);
                 }
+                else if (req.IsWebSocketRequest)
+                {
+                    // PROXY WEBSOCKET para P2P (Godot -> localhost:8911)
+                    await ProxyWebSocketAsync(ctx);
+                    return;
+                }
                 else if (path == "/metaverso.jpg")
                 {
                     var bytes = ObtenMetaversoJpg();
@@ -561,6 +567,50 @@ namespace Visor3D.Services
             finally
             {
                 try { ctx.Response.OutputStream.Close(); } catch { }
+            }
+        }
+
+        private async Task ProxyWebSocketAsync(HttpListenerContext ctx)
+        {
+            try
+            {
+                var wsContext = await ctx.AcceptWebSocketAsync(null);
+                var clientWs = wsContext.WebSocket;
+
+                using var serverWs = new System.Net.WebSockets.ClientWebSocket();
+                await serverWs.ConnectAsync(new Uri("ws://localhost:8911"), CancellationToken.None);
+
+                var clientToRemote = Task.Run(async () =>
+                {
+                    byte[] buffer = new byte[8192];
+                    while (clientWs.State == System.Net.WebSockets.WebSocketState.Open && serverWs.State == System.Net.WebSockets.WebSocketState.Open)
+                    {
+                        var res = await clientWs.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                        if (res.MessageType == System.Net.WebSockets.WebSocketMessageType.Close) break;
+                        await serverWs.SendAsync(new ArraySegment<byte>(buffer, 0, res.Count), res.MessageType, res.EndOfMessage, CancellationToken.None);
+                    }
+                });
+
+                var remoteToClient = Task.Run(async () =>
+                {
+                    byte[] buffer = new byte[8192];
+                    while (clientWs.State == System.Net.WebSockets.WebSocketState.Open && serverWs.State == System.Net.WebSockets.WebSocketState.Open)
+                    {
+                        var res = await serverWs.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                        if (res.MessageType == System.Net.WebSockets.WebSocketMessageType.Close) break;
+                        await clientWs.SendAsync(new ArraySegment<byte>(buffer, 0, res.Count), res.MessageType, res.EndOfMessage, CancellationToken.None);
+                    }
+                });
+
+                await Task.WhenAny(clientToRemote, remoteToClient);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[WebNodo-WSProxy] Error: {ex.Message}");
+            }
+            finally
+            {
+                ctx.Response.Close();
             }
         }
 

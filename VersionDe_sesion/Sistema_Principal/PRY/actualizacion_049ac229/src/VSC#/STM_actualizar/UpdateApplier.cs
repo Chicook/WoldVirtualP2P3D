@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 
@@ -30,18 +30,28 @@ namespace Visor3D.Update
 
                 if (pendingExe == null || !File.Exists(pendingExe)) return;
 
-                // No se puede reemplazar el .exe mientras est├í en ejecuci├│n.
+                // No se puede reemplazar el .exe mientras está en ejecución.
                 // Escribe un .bat desatendido que espera a que el visor cierre,
-                // hace el reemplazo at├│mico y relanza el visor actualizado.
+                // hace el reemplazo atómico y relanza el visor actualizado.
                 var bat = Path.Combine(baseDir, "apply-pending.bat");
+                var exeName = Path.GetFileName(currentExePath);
+                
                 File.WriteAllText(bat,
                     $"@echo off{Environment.NewLine}" +
+                    $"echo Aplicando actualizacion de Wold Virtual P2P 3D...{Environment.NewLine}" +
                     $"timeout /t 2 /nobreak >nul{Environment.NewLine}" +
+                    $":wait_exit{Environment.NewLine}" +
+                    $"tasklist /FI \"IMAGENAME eq {exeName}\" 2>NUL | find /I /N \"{exeName}\">NUL{Environment.NewLine}" +
+                    $"if \"%ERRORLEVEL%\"==\"0\" ({Environment.NewLine}" +
+                    $"  timeout /t 1 /nobreak >nul{Environment.NewLine}" +
+                    $"  goto wait_exit{Environment.NewLine}" +
+                    $"){Environment.NewLine}" +
                     $"if exist \"{currentExePath}.old\" del /f /q \"{currentExePath}.old\"{Environment.NewLine}" +
-                    $"ren \"{currentExePath}\" \"{currentExePath}.old\"{Environment.NewLine}" +
+                    $"ren \"{currentExePath}\" \"{exeName}.old\"{Environment.NewLine}" +
                     $"move /Y \"{pendingExe}\" \"{currentExePath}\"{Environment.NewLine}" +
                     $"del /f /q \"{stateFile}\"{Environment.NewLine}" +
                     $"rd /s /q \"{pendingDir}\" 2>nul{Environment.NewLine}" +
+                    $"echo Actualizacion completada. Reiniciando...{Environment.NewLine}" +
                     $"start \"\" \"{currentExePath}\"{Environment.NewLine}");
 
                 var psi = new ProcessStartInfo(bat)
