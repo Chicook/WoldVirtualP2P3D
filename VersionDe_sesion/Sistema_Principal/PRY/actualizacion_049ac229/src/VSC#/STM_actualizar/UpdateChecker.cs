@@ -100,10 +100,6 @@ namespace Visor3D.Update
         {
             if (string.IsNullOrWhiteSpace(tag)) return true;
             
-            // Si el tag contiene la versión actual exactamente, estamos al día
-            if (tag.Contains(currentVersion, StringComparison.OrdinalIgnoreCase))
-                return true;
-
             try
             {
                 var latestVer = ExtractVersion(tag);
@@ -112,12 +108,13 @@ namespace Visor3D.Update
                 if (latestVer != null && currentVer != null)
                 {
                     Console.WriteLine($"[UpdateChecker] Comparación: Local {currentVer} vs Remoto {latestVer}");
+                    // Si la versión remota es estrictamente mayor, hay actualización
                     return currentVer >= latestVer;
                 }
             }
             catch { }
 
-            // Si no podemos parsear las versiones, pero son diferentes, asumimos que hay actualización
+            // Si no podemos parsear, solo comparamos si son idénticos
             return tag.Trim().Equals(currentVersion.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 

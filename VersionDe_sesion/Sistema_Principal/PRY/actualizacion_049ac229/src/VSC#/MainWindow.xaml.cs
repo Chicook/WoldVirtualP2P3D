@@ -20,7 +20,7 @@ namespace Visor3D
 {
     public partial class MainWindow : Window
     {
-        private const string CurrentVersion = "0.0.1"; // Versión forzada baja para asegurar que detecte la v0.0.12
+        private const string CurrentVersion = "0.0.0"; // Versión forzada a cero para detectar cualquier release en GitHub
         // Carpeta local para datos de usuario y pruebas de flujo
         private static readonly string TestUserDataDir =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_user_data");
