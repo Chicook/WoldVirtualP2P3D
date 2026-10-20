@@ -62,5 +62,21 @@
     "ficheros": 2605,
     "estado": "OK actualizar",
     "fecha": "2026-10-19T22:55:19"
+  },
+  {
+    "carpeta": "src",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_2069d33a\\src",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 3291,
+    "estado": "OK refactorizar",
+    "fecha": "2026-10-20T10:29:03"
+  },
+  {
+    "carpeta": "src",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+    "ficheros": 3291,
+    "estado": "OK",
+    "fecha": "2026-10-20T10:30:33"
   }
 ]

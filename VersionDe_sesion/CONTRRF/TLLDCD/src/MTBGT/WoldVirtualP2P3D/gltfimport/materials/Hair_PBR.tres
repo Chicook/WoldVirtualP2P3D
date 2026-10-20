@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://c2uodsjgaf7aj"]
+
+[resource]
+resource_name = "Hair_PBR"
+cull_mode = 2
+albedo_color = Color(0.36556464, 0.29337206, 0.2347951, 1)
+roughness = 0.6
