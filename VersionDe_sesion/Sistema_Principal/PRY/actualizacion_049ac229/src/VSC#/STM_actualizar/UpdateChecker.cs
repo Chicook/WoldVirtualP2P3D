@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -25,9 +27,10 @@ namespace Visor3D.Update
         {
             try
             {
+                LogDebug($"Iniciando consulta a GitHub para versión: {currentVersion}");
                 // Consultar la lista completa de releases para incluir prereleases y evitar cache de GitHub
                 var url = $"https://api.github.com/repos/{Repo}/releases?t={DateTime.Now.Ticks}";
-                Console.WriteLine($"[UpdateChecker] Consultando GitHub (Full List): {url}");
+                LogDebug($"URL: {url}");
                 
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 var response = await Client.SendAsync(request);
@@ -48,18 +51,21 @@ namespace Visor3D.Update
                 }
 
                 // La primera release de la lista suele ser la más reciente cronológicamente
-                var root = doc.RootElement[0];
+                var releases = doc.RootElement.EnumerateArray().ToList();
+                LogDebug($"Total releases encontradas: {releases.Count}");
+                
+                var root = releases[0];
                 var tag = root.GetProperty("tag_name").GetString() ?? "";
                 
-                Console.WriteLine($"[UpdateChecker] Tag detectado: {tag} | Local: {currentVersion}");
+                LogDebug($"Tag más reciente: {tag} | Local: {currentVersion}");
 
                 if (IsUpToDate(tag, currentVersion))
                 {
-                    Console.WriteLine("[UpdateChecker] Resultado: La versión local ya está al día.");
+                    LogDebug("La versión local ya está al día.");
                     return null;
                 }
 
-                Console.WriteLine("[UpdateChecker] Resultado: ¡Actualización detectada!");
+                LogDebug("¡Actualización detectada! Buscando asset .exe...");
 
                 foreach (var asset in root.GetProperty("assets").EnumerateArray())
                 {
@@ -133,6 +139,17 @@ namespace Visor3D.Update
             }
             catch { }
             return null;
+        }
+
+        private static void LogDebug(string message)
+        {
+            try
+            {
+                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_debug.log");
+                File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] [Checker] {message}{Environment.NewLine}");
+                Console.WriteLine($"[UpdateChecker] {message}");
+            }
+            catch { }
         }
     }
 }
