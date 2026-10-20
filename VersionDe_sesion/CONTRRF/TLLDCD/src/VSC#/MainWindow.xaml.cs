@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -25,6 +27,7 @@ namespace Visor3D
         private GodotHwndHost? _godotHostMain;
         private RedP2PServicio? _p2pServicio;
         private WebNodoService? _webNodo;
+        private Process? _tunnelProcess;
         private string _urlAmigoPendiente = "";
 
         public MainWindow()
@@ -55,6 +58,7 @@ namespace Visor3D
 
             // WebNodo embebido (sin Node.js)
             _webNodo = new WebNodoService();
+            _webNodo.Start();
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -350,6 +354,9 @@ namespace Visor3D
 
                 await _p2pServicio.IniciarAsync();
 
+                // Levantar túnel público efímero para WebNodo (cloudflared / SSH)
+                _ = EstablecerTunelEfimeroAsync();
+
                 // Si había URL de amigo ingresada en el login, conectarse automáticamente
                 if (!string.IsNullOrWhiteSpace(_urlAmigoPendiente))
                 {
@@ -497,6 +504,136 @@ namespace Visor3D
             var sb = new StringBuilder();
             foreach (byte b in bytes) sb.Append(b.ToString("x2"));
             return sb.ToString();
+        }
+
+        // ═════════════════════════════════════════════════════════════════
+        // TÚNEL PÚBLICO EFÍMERO para WebNodo (cloudflared → SSH reverso)
+        // ══════════════════════════════════════════════════════════════════
+        private async Task EstablecerTunelEfimeroAsync()
+        {
+            try
+            {
+                // Opción 1: cloudflared (HTTPS sin advertencia de seguridad)
+                string? cfExe = await BuscarODescargarCloudflaredAsync(CancellationToken.None);
+                if (cfExe != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[Tunel] Probando cloudflared...");
+                    string? url = await TryRunProcessTunnelAsync(
+                        cfExe,
+                        $"tunnel --url http://localhost:{WebNodoService.Port} --no-autoupdate",
+                        @"https://[\w\-]+\.trycloudflare\.com",
+                        35000,
+                        CancellationToken.None);
+                    if (!string.IsNullOrEmpty(url))
+                    {
+                        _tunnelProcess = await ObtenerProcesoTunel(cfExe, url);
+                        Dispatcher.Invoke(() =>
+                        {
+                            TxtEstadoP2P.Text = "🌍 Túnel público activo";
+                            _webNodo!.PublicTunnelUrl = url;
+                        });
+                        return;
+                    }
+                }
+
+                // Opción 2: SSH reverso (serveo.net / localhost.run)
+                string sshExe = @"C:\Windows\System32\OpenSSH\ssh.exe";
+                if (!File.Exists(sshExe)) sshExe = "ssh";
+
+                var candidates = new[]
+                {
+                    new { Name = "serveo.net", Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:localhost:{WebNodoService.Port} serveo.net", Pat = @"https://[\w\-]+\.serveo\.net" },
+                    new { Name = "localhost.run", Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:localhost:{WebNodoService.Port} nokey@localhost.run", Pat = @"https://[\w\-]+\.lhr\.life" }
+                };
+
+                foreach (var c in candidates)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Tunel] Probando {c.Name}...");
+                    string? url = await TryRunProcessTunnelAsync(sshExe, c.Args, c.Pat, 23000, CancellationToken.None);
+                    if (!string.IsNullOrEmpty(url))
+                    {
+                        _tunnelProcess = await ObtenerProcesoTunel(sshExe, url);
+                        Dispatcher.Invoke(() =>
+                        {
+                            TxtEstadoP2P.Text = $"🌍 Túnel público ({c.Name})";
+                            _webNodo!.PublicTunnelUrl = url;
+                        });
+                        return;
+                    }
+                }
+
+                Dispatcher.Invoke(() =>
+                {
+                    TxtEstadoP2P.Text = "🟢 WebNodo local (sin túnel público)";
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Tunel] Error: {ex.Message}");
+            }
+        }
+
+        private async Task<string?> TryRunProcessTunnelAsync(string exe, string args, string urlPattern, int timeoutMs, CancellationToken token)
+        {
+            var result = await Visor3D.Services.P2PIPFS.EphemeralTunnelRunner.StartAsync(exe, args, urlPattern, timeoutMs, token);
+            return result?.Url;
+        }
+
+        private async Task<Process?> ObtenerProcesoTunel(string exe, string url)
+        {
+            // EphemeralTunnelRunner ya devuelve el proceso; aquí lo envolvemos para mantener referencia.
+            var result = await Visor3D.Services.P2PIPFS.EphemeralTunnelRunner.StartAsync(exe, "", @"https://", 1000, CancellationToken.None);
+            return result?.Process;
+        }
+
+        private async Task<string?> BuscarODescargarCloudflaredAsync(CancellationToken token)
+        {
+            string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string appBase = AppDomain.CurrentDomain.BaseDirectory;
+            string localCf = Path.Combine(appBase, "cloudflared.exe");
+
+            string[] locations = { "cloudflared", localCf,
+                Path.Combine(localApp, "Programs", "cloudflared", "cloudflared.exe"),
+                Path.Combine(progFiles, "Cloudflare", "cloudflared.exe"),
+                @"C:\ProgramData\chocolatey\bin\cloudflared.exe",
+                Path.Combine(localApp, "Microsoft", "WinGet", "Links", "cloudflared.exe") };
+
+            foreach (var loc in locations)
+            {
+                try
+                {
+                    using var test = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = loc,
+                        Arguments = "--version",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    });
+                    if (test != null && test.WaitForExit(3000) && test.ExitCode == 0)
+                        return loc;
+                }
+                catch { }
+            }
+
+            // Descargar cloudflared si no está instalado
+            try
+            {
+                const string cfUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe";
+                using var dl = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
+                dl.DefaultRequestHeaders.UserAgent.ParseAdd("WoldVirtualP2P/1.0");
+                using var resp = await dl.GetAsync(cfUrl, token);
+                if (resp.IsSuccessStatusCode)
+                {
+                    await using var fs = File.Create(localCf);
+                    await resp.Content.CopyToAsync(fs, token);
+                    return localCf;
+                }
+            }
+            catch { }
+            return null;
         }
     }
 }
