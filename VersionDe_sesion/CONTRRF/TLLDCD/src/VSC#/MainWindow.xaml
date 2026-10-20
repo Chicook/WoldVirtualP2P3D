@@ -187,6 +187,23 @@
                                 </Button>
                             </StackPanel>
                         </Border>
+
+                        <!-- WebNodo: portal de descarga del visor para amigos -->
+                        <Button x:Name="BtnWebNodo"
+                                Content="🌐 WebNodo"
+                                Height="24" Padding="8,1"
+                                FontSize="10" FontWeight="SemiBold"
+                                Foreground="#00D9FF" Background="#0F2744"
+                                BorderBrush="#00D9FF" BorderThickness="1"
+                                Cursor="Hand"
+                                Margin="10,0,0,0"
+                                ToolTip="Abre el portal de descarga del visor (WebNodo) para compartirlo con tus amigos">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="3"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
                     </StackPanel>
 
                     <!-- Derecha: llave y cerrar sesión -->

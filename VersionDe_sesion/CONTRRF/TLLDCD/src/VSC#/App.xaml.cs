@@ -1,12 +1,14 @@
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace Visor3D
 {
     public partial class App : Application
     {
-        private void OnStartup(object sender, StartupEventArgs e)
+        private async void OnStartup(object sender, StartupEventArgs e)
         {
             // ── RESET COMPLETO DE SESIÓN ─────────────────────────────────────────
             // Borra datos de usuario locales para que GitHub siempre arranque limpio.
@@ -20,8 +22,44 @@ namespace Visor3D
                 // (intentara buscar Godot por rutas alternativas)
             }
 
+            // Auto-actualización: consultar GitHub Release y descargar versión nueva
+            _ = CheckForUpdateAsync();
+
             var mainWindow = new MainWindow();
             mainWindow.Show();
+        }
+
+        private static async Task CheckForUpdateAsync()
+        {
+            try
+            {
+                var checker = new Visor3D.Update.UpdateChecker();
+                var current = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+                var release = await checker.CheckForUpdateAsync(current);
+                if (release == null) return;
+
+                var downloader = new Visor3D.Update.UpdateDownloader();
+                await downloader.DownloadAsync(release);
+            }
+            catch
+            {
+                // Sin red o release no disponible: el visor arranca con la versión actual.
+            }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            try
+            {
+                var exe = Process.GetCurrentProcess().MainModule?.FileName
+                    ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Visor3D.exe");
+                Visor3D.Update.UpdateApplier.ApplyPendingUpdate(exe);
+            }
+            catch
+            {
+                // Si falla el reemplazo, el visor sigue con la versión actual.
+            }
+            base.OnExit(e);
         }
 
         /// <summary>

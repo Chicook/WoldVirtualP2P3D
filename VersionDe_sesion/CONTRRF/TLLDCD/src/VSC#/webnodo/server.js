@@ -42,6 +42,9 @@ const http = require('http');
 const app  = express();
 const PORT = process.env.PORT || 3030;
 
+// WebNodo apunta al release publicado en GitHub (no guarda exes en descargas/).
+const GITHUB_EXE_URL = 'https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v0.0.111_actualizacion_2069d33a/DMWoldVirtualp2pCNX_v0.0.011actualizacion_2069d33a.exe';
+
 // Carpeta donde esta el .exe publicado (ruta relativa al server.js)
 const DESCARGAS_DIR = path.join(__dirname, 'descargas');
 
@@ -77,58 +80,21 @@ app.get('/health', (req, res) => {
 
 // ─── API: info del exe disponible ─────────────────────────────────────────────
 app.get('/api/info', (req, res) => {
-    const exeName = obtenerExeMasReciente();
-    if (!exeName) {
-        return res.json({
-            disponible: false,
-            mensaje: 'No hay .exe disponible todavia. Coloca el instalador en la carpeta descargas/'
-        });
-    }
-
-    const exePath = path.join(DESCARGAS_DIR, exeName);
-    let sizeMB = '?';
-    try {
-        const stat = fs.statSync(exePath);
-        sizeMB = (stat.size / (1024 * 1024)).toFixed(1);
-    } catch (_) {}
-
     res.json({
         disponible:   true,
-        nombre:       exeName,
-        tamano_mb:    sizeMB,
-        url_descarga: `/descargar/${encodeURIComponent(exeName)}`
+        nombre:       'DMWoldVirtualp2pCNX_v0.0.011actualizacion_2069d33a.exe',
+        tamano_mb:    '675.5',
+        url_descarga: GITHUB_EXE_URL
     });
 });
 
 // ─── Descarga directa del .exe ─────────────────────────────────────────────────
 app.get('/descargar', (req, res) => {
-    const exeName = obtenerExeMasReciente();
-    if (!exeName) {
-        return res.status(404).json({
-            error: 'No hay .exe disponible. Coloca el instalador en la carpeta descargas/'
-        });
-    }
-    res.download(path.join(DESCARGAS_DIR, exeName), exeName, (err) => {
-        if (err && !res.headersSent) {
-            res.status(500).json({ error: 'Error al enviar el archivo' });
-        }
-    });
+    res.redirect(GITHUB_EXE_URL);
 });
 
 app.get('/descargar/:nombre', (req, res) => {
-    const nombre  = decodeURIComponent(req.params.nombre);
-    const limpio  = path.basename(nombre);
-    const exePath = path.join(DESCARGAS_DIR, limpio);
-
-    if (!fs.existsSync(exePath)) {
-        return res.status(404).json({ error: 'Archivo no encontrado' });
-    }
-
-    res.download(exePath, limpio, (err) => {
-        if (err && !res.headersSent) {
-            res.status(500).json({ error: 'Error al enviar el archivo' });
-        }
-    });
+    res.redirect(GITHUB_EXE_URL);
 });
 
 // ─── API: estado P2P (lee p2p_session.json si existe) ─────────────────────────

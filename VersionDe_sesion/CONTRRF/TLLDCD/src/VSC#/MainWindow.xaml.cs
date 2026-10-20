@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Windows;
 using Microsoft.Win32;
 using Visor3D.RedP2P;
+using Visor3D.Services;
 
 namespace Visor3D
 {
@@ -23,6 +24,7 @@ namespace Visor3D
 
         private GodotHwndHost? _godotHostMain;
         private RedP2PServicio? _p2pServicio;
+        private WebNodoService? _webNodo;
         private string _urlAmigoPendiente = "";
 
         public MainWindow()
@@ -33,6 +35,7 @@ namespace Visor3D
             {
                 _godotHostMain?.StopGodot();
                 _p2pServicio?.Dispose();
+                _webNodo?.Dispose();
             };
 
             // Navegación de bienvenida
@@ -48,6 +51,10 @@ namespace Visor3D
             BtnCopiarUrlP2P.Click += OnCopiarUrlP2PClicked;
             TxtUrlP2P.MouseLeftButtonDown += (s, e) => OnCopiarUrlP2PClicked(s, e);
             BtnConectarAmigo.Click += OnConectarAmigoClicked;
+            BtnWebNodo.Click += OnWebNodoClicked;
+
+            // WebNodo embebido (sin Node.js)
+            _webNodo = new WebNodoService();
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -328,6 +335,8 @@ namespace Visor3D
                         TxtEstadoP2P.Text = "🟢 Red P2P Online";
                         BordeEstadoP2P.Background = new System.Windows.Media.SolidColorBrush(
                             System.Windows.Media.Color.FromRgb(6, 78, 59));
+                        _webNodo?.Start();
+                        if (_webNodo != null) _webNodo.PublicTunnelUrl = url;
                     });
                 };
 
@@ -371,6 +380,23 @@ namespace Visor3D
                     "Enlace P2P Copiado",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
+            }
+        }
+
+        private void OnWebNodoClicked(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Arrancar el servidor WebNodo embebido si no está corriendo
+                _webNodo?.Start();
+
+                // Abrir el portal de descarga local (sin Node.js, servido por el visor mismo)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("http://localhost:3030/") { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo abrir el portal WebNodo:\n{ex.Message}",
+                                "WebNodo", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

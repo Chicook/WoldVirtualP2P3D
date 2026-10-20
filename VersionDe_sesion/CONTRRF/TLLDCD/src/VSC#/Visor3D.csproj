@@ -32,19 +32,6 @@
     <Description>Visor 3D — actualizacion_2069d33a (reset usuario + WebNodo fix)</Description>
   </PropertyGroup>
 
-  <!--
-    Fase 0: solo estructura WPF + login.
-    El motor 3D (Godot incrustado / Silk.NET) y la red P2P se añaden en fases posteriores.
-  -->
-
-  <!-- Excluir subcarpetas que son proyectos hermanos (evita duplicados de clases) -->
-  <ItemGroup>
-    <Compile Remove="version_prueba\**" />
-    <EmbeddedResource Remove="version_prueba\**" />
-    <None Remove="version_prueba\**" />
-    <Page Remove="version_prueba\**" />
-  </ItemGroup>
-
   <!-- Dependencias -->
   <ItemGroup>
     <!-- WMI: lectura de hardware (CPU, placa base, SO) -->

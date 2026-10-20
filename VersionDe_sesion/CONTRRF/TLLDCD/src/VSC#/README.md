@@ -255,21 +255,22 @@ Si cualquier otro usuario o desarrollador clona el proyecto en otra ruta o máqu
 
 | Archivo / Carpeta | Tamaño | Estado | Motivo / Diagnóstico |
 |---|---|---|---|
-| `version_prueba/` | > 180 MB | **Código Zombi** | Copia duplicada entera del proyecto. No se compila ni se usa. Debe eliminarse. |
-| `publish_2069d33a/` | > 708 MB | **Artefacto Huérfano** | Salida de compilación vieja subida por error al repositorio. |
-| `publish_release/` | > 708 MB | **Artefacto Huérfano** | Salida de compilación vieja de actualización anterior (`8d6b09d4`). |
-| `publish_out/` | > 70 MB | **Artefacto Huérfano** | Salida temporal de compilación de pruebas. |
-| `publish_standalone/` | > 708 MB | **Artefacto Huérfano** | Salida de publicación single-file. |
-| `webnodo/descargas/` | > 870 MB | **Artefacto Huérfano** | Binarios empaquetados dentro del módulo web. |
-| `webnodo/node_modules/` | Variable | **Dependencias** | Debe gestionarse por `.gitignore` y no commitearse. |
-| `D3DCompiler_47_cor3.dll` | ~4.7 MB | **DLL en Raíz** | Archivo de runtime generado por dotnet publish, no pertenece a `src/`. |
-| `PenImc_cor3.dll` | ~158 KB | **DLL en Raíz** | Archivo de runtime generado por dotnet publish, no pertenece a `src/`. |
-| `PresentationNative_cor3.dll` | ~1.2 MB | **DLL en Raíz** | Archivo de runtime generado por dotnet publish, no pertenece a `src/`. |
-| `vcruntime140_cor3.dll` | ~124 KB | **DLL en Raíz** | Archivo de runtime generado por dotnet publish, no pertenece a `src/`. |
-| `wpfgfx_cor3.dll` | ~1.9 MB | **DLL en Raíz** | Archivo de runtime generado por dotnet publish, no pertenece a `src/`. |
-| `Visor3D.exe` (raíz) | ~68 MB | **Binario en Raíz** | Ejecutable precompilado que bloquea git. |
-| `godot_exe.zip` | ~86 MB | **Zip en Raíz** | Debe descargarse por script o alojarse en GitHub Releases LFS. |
-| `godot_project.zip` | ~460 MB | **Zip en Raíz** | Proyecto Godot comprimido duplicado; ya existe en `src/MTBGT`. |
+| `bin/` / `obj/` | 0 MB | **Eliminado** | Caché .NET regenerable con `dotnet build` (ignorado por `.gitignore`). |
+| `version_prueba/` | ~2,4 MB | **Código fuente** | Solo fuentes; exes eliminados en purga. Excluido de compilación en `Visor3D.csproj:41-46`. |
+| `publish_2069d33a/` | 0 MB | **Eliminado** | Publicación huérfana (binario en GitHub Releases `v0.0.111_actualizacion_2069d33a`). |
+| `publish_release/` | 0 MB | **Eliminado** | Publicación huérfana (`8d6b09d4`). |
+| `publish_out/` | 0 MB | **Eliminado** | Salida temporal de pruebas (exes eliminados; DLLs de runtime ya no se copian). |
+| `publish_standalone/` | 0 MB | **Eliminado** | Publicación single-file. |
+| `webnodo/descargas/` | 0 MB | **Eliminado** | Exes de WebNodo eliminados; `server.js:49-52` recrea la carpeta. |
+| `webnodo/node_modules/` | ~2,7 MB | **Dependencias** | `.gitignored`, no commitearse. |
+| `D3DCompiler_47_cor3.dll` | ~4,5 MB | **DLL en Raíz** | Runtime de dotnet publish. |
+| `PenImc_cor3.dll` | ~0,2 MB | **DLL en Raíz** | Runtime de dotnet publish. |
+| `PresentationNative_cor3.dll` | ~1,2 MB | **DLL en Raíz** | Runtime de dotnet publish. |
+| `vcruntime140_cor3.dll` | ~0,1 MB | **DLL en Raíz** | Runtime de dotnet publish. |
+| `wpfgfx_cor3.dll` | ~1,9 MB | **DLL en Raíz** | Runtime de dotnet publish. |
+| `Visor3D.exe` (raíz) | 0 MB | **Eliminado** | Ejecutable precompilado. |
+| `godot_exe.zip` | ~82,2 MB | **Conservado** | Recurso embebido del motor Godot (`Visor3D.csproj:66`). |
+| `godot_project.zip` | ~438,8 MB | **Conservado** | Recurso embebido del proyecto Godot (`Visor3D.csproj:67`). |
 
 ---
 
@@ -373,4 +374,22 @@ flowchart TD
    - Compilación con `dotnet publish -c Release -r win-x64 --self-contained false` (o self-contained optimizado con trim si aplica).
    - Separar el motor Godot y el proyecto 3D en assets de descarga inicial bajo demanda en lugar de meter 460 MB de un zip dentro del ensamblado C#.
 2. **Verificación de Calidad Pre-Release:**
-   - Comprobación automática de que no existen archivos `credentials.json`, `llave_acceso.json` ni `registro.cfg` en las carpetas a distribuir.
+    - Comprobación automática de que no existen archivos `credentials.json`, `llave_acceso.json` ni `registro.cfg` en las carpetas a distribuir.
+
+---
+
+### Fase 6: Sistema de Auto-Actualización (`src/VSC#/STM_actualizar/`)
+**Objetivo:** que el visor se actualice solo contra GitHub Releases sin intervención manual.
+
+1. **`UpdateChecker.cs`** — consulta `https://api.github.com/repos/Chicook/WoldVirtualP2P3D/releases/tags/v0.0.111_actualizacion_2069d33a` y compara contra la versión instalada (`Visor3D.csproj:27`).
+2. **`UpdateDownloader.cs`** — descarga el `.exe` del release a `STM_actualizar/update-pending/` y escribe `state.json` con `apply: true`.
+3. **`UpdateApplier.cs`** — al cerrar el visor (`App.xaml.cs:OnExit`), lanza un `.bat` desatendido que reemplaza el `.exe` en uso por el nuevo y relanza el visor actualizado.
+4. **`App.xaml.cs`** — `OnStartup` lanza la comprobación (no bloqueante); `OnExit` aplica la descarga pendiente.
+
+**Flujo de liberación (antes de generar otro `.exe` local):**
+1. Reorganizar `src/VSC#` + crear `STM_actualizar` (hecho en esta purga).
+2. `dotnet publish -c Release -r win-x64` → genera el `.exe` standalone.
+3. Subir/reemplazar el asset en el release `v0.0.111_actualizacion_2069d33a` de GitHub (ej. `gh release upload v0.0.111_actualizacion_2069d33a <exe>`).
+4. **Solo entonces** el sistema local puede descargar ese exe para actualizar instalaciones existentes.
+5. Para la siguiente versión: incrementar `<Version>` en `Visor3D.csproj:27`, crear nuevo tag/release, subir asset.
+
