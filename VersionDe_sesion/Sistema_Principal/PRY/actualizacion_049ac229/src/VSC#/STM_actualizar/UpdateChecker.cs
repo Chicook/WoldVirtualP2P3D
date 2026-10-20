@@ -25,37 +25,30 @@ namespace Visor3D.Update
         {
             try
             {
-                // Bypassing cache adding a timestamp
-                var url = $"https://api.github.com/repos/{Repo}/releases/latest?t={DateTime.Now.Ticks}";
-                Console.WriteLine($"[UpdateChecker] Consultando GitHub: {url}");
+                // Consultar la lista completa de releases para incluir prereleases y evitar cache de GitHub
+                var url = $"https://api.github.com/repos/{Repo}/releases?t={DateTime.Now.Ticks}";
+                Console.WriteLine($"[UpdateChecker] Consultando GitHub (Full List): {url}");
                 
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 var response = await Client.SendAsync(request);
                 
-                string json;
-                if (response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
-                    json = await response.Content.ReadAsStringAsync();
-                }
-                else
-                {
-                    Console.WriteLine($"[UpdateChecker] Error al consultar 'latest' (Status: {response.StatusCode}). Intentando lista completa...");
-                    url = $"https://api.github.com/repos/{Repo}/releases?t={DateTime.Now.Ticks}";
-                    json = await Client.GetStringAsync(url);
-                    using var listDoc = JsonDocument.Parse(json);
-                    if (listDoc.RootElement.ValueKind == JsonValueKind.Array && listDoc.RootElement.GetArrayLength() > 0)
-                    {
-                        json = listDoc.RootElement[0].GetRawText();
-                    }
-                    else
-                    {
-                        Console.WriteLine("[UpdateChecker] No se encontraron releases.");
-                        return null;
-                    }
+                    Console.WriteLine($"[UpdateChecker] Error al consultar releases (Status: {response.StatusCode})");
+                    return null;
                 }
 
+                string json = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
+                
+                if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.GetArrayLength() == 0)
+                {
+                    Console.WriteLine("[UpdateChecker] No se encontraron releases en el repositorio.");
+                    return null;
+                }
+
+                // La primera release de la lista suele ser la más reciente cronológicamente
+                var root = doc.RootElement[0];
                 var tag = root.GetProperty("tag_name").GetString() ?? "";
                 
                 Console.WriteLine($"[UpdateChecker] Tag detectado: {tag} | Local: {currentVersion}");

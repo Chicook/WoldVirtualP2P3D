@@ -205,24 +205,6 @@
 
                     <!-- Derecha: actualización, llave y cerrar sesión -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- Botón de Actualización (Redondo con icono y texto abajo) -->
-                        <Grid x:Name="BtnActualizar" Margin="0,0,15,0" Cursor="Hand" VerticalAlignment="Center" MouseLeftButtonDown="OnActualizarClicked">
-                            <StackPanel VerticalAlignment="Center">
-                                <Border x:Name="BtnActualizarVisual" Width="28" Height="28" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1.5" Opacity="0.5" CornerRadius="14">
-                                    <Border.Effect>
-                                        <DropShadowEffect x:Name="GlowActualizar" Color="#38BDF8" BlurRadius="20" ShadowDepth="0" Opacity="0"/>
-                                    </Border.Effect>
-                                    <Grid>
-                                        <!-- Icono: Flecha hacia abajo y raya -->
-                                        <Path Data="M12,2V13M12,13L7,8M12,13L17,8M5,18H19" 
-                                              Stroke="#38BDF8" StrokeThickness="2" 
-                                              Stretch="Uniform" Margin="5"/>
-                                    </Grid>
-                                </Border>
-                                <TextBlock Text="Actualizar" Foreground="#38BDF8" FontSize="8.5" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Grid>
-
                         <TextBlock x:Name="TxtSesionLlave" Text="Llave: ---" Foreground="#8892B0" FontSize="10.5" FontFamily="Consolas" VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <Button x:Name="BtnCerrarSesion"
                                 Content="Cerrar Sesión"
@@ -387,5 +369,23 @@
             </StackPanel>
         </Border>
 
+        <!-- Botón de Actualización (Flotante y siempre visible) -->
+        <Grid x:Name="BtnActualizar" HorizontalAlignment="Right" VerticalAlignment="Top" 
+              Margin="0,10,20,0" Cursor="Hand" MouseLeftButtonDown="OnActualizarClicked" Panel.ZIndex="999">
+            <StackPanel VerticalAlignment="Center">
+                <Border x:Name="BtnActualizarVisual" Width="30" Height="30" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1.5" Opacity="0.5" CornerRadius="15">
+                    <Border.Effect>
+                        <DropShadowEffect x:Name="GlowActualizar" Color="#38BDF8" BlurRadius="20" ShadowDepth="0" Opacity="0"/>
+                    </Border.Effect>
+                    <Grid>
+                        <!-- Icono: Flecha hacia abajo y raya -->
+                        <Path Data="M12,2V13M12,13L7,8M12,13L17,8M5,18H19" 
+                              Stroke="#38BDF8" StrokeThickness="2" 
+                              Stretch="Uniform" Margin="6"/>
+                    </Grid>
+                </Border>
+                <TextBlock Text="Actualizar" Foreground="#38BDF8" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
