@@ -52,7 +52,6 @@ namespace Visor3D
             TxtUrlP2P.MouseLeftButtonDown += (s, e) => OnCopiarUrlP2PClicked(s, e);
             BtnConectarAmigo.Click += OnConectarAmigoClicked;
             BtnWebNodo.Click += OnWebNodoClicked;
-            BtnWebNodoBienvenida.Click += OnWebNodoClicked;
 
             // WebNodo embebido (sin Node.js)
             _webNodo = new WebNodoService();
@@ -391,8 +390,13 @@ namespace Visor3D
                 // Arrancar el servidor WebNodo embebido si no está corriendo
                 _webNodo?.Start();
 
-                // Abrir el portal de descarga local (sin Node.js, servido por el visor mismo)
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("http://localhost:3030/") { UseShellExecute = true });
+                // Abrir el túnel público efímero (SSH/Cloudflare) mientras dure la sesión,
+                // no el modo local localhost:3030.
+                var url = !string.IsNullOrWhiteSpace(_webNodo?.PublicTunnelUrl)
+                    ? _webNodo.PublicTunnelUrl
+                    : "http://localhost:3030/";
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
             }
             catch (Exception ex)
             {

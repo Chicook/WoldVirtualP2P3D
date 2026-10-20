@@ -111,8 +111,8 @@ namespace Visor3D.Services
           <div class=""val"" id=""val-host"">P2P Host</div>
         </div>
         <div class=""info-box"">
-          <div class=""label"">🔗 Enlace P2P de Conexión</div>
-          <div class=""val"" id=""link-p2p"">http://localhost:{Port}/</div>
+          <div class=""label"">🔗 Enlace P2P de Conexión (túnel efímero)</div>
+          <div class=""val"" id=""link-p2p"">{{TUNNEL_URL}}</div>
         </div>
       </div>
     </div>
@@ -191,7 +191,11 @@ namespace Visor3D.Services
                 if (path == "/")
                 {
                     res.ContentType = "text/html; charset=utf-8";
-                    var bytes = Encoding.UTF8.GetBytes(IndexHtml);
+                    var tunnel = string.IsNullOrWhiteSpace(_publicTunnelUrl)
+                        ? $"http://localhost:{Port}/"
+                        : _publicTunnelUrl;
+                    var html = IndexHtml.Replace("{TUNNEL_URL}", tunnel);
+                    var bytes = Encoding.UTF8.GetBytes(html);
                     res.ContentLength64 = bytes.Length;
                     await res.OutputStream.WriteAsync(bytes, 0, bytes.Length);
                 }
