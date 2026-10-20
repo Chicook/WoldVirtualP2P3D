@@ -16,6 +16,14 @@ namespace Visor3D
             // El usuario deberá registrarse de nuevo como si fuera la primera vez.
             LimpiarDatosDeUsuario();
 
+            // ── Procesar argumentos de conexión remota (CLI / Enlace de Invitado) ──
+            string? initialConnectionUrl = ParseCommandLineArgs(e.Args);
+            if (!string.IsNullOrWhiteSpace(initialConnectionUrl))
+            {
+                Console.WriteLine($"[App] Parámetro de conexión remota detectado: {initialConnectionUrl}");
+                System.Diagnostics.Debug.WriteLine($"[App] Parámetro de conexión remota detectado: {initialConnectionUrl}");
+            }
+
             // ── WebNodo embebido (puerto 3030 o fallback dinámico) ─────────────────
             WebNodo.Start();
             if (WebNodo.IsRunning)
@@ -32,8 +40,53 @@ namespace Visor3D
                 // (intentara buscar Godot por rutas alternativas)
             }
 
-            var mainWindow = new MainWindow();
+            var mainWindow = new MainWindow(initialConnectionUrl);
             mainWindow.Show();
+        }
+
+        private static string? ParseCommandLineArgs(string[]? args)
+        {
+            if (args == null || args.Length == 0) return null;
+
+            string? connectionUrl = null;
+            for (int i = 0; i < args.Length; i++)
+            {
+                string arg = args[i].Trim();
+                if (arg.StartsWith("--peer-url=", StringComparison.OrdinalIgnoreCase))
+                {
+                    connectionUrl = arg.Substring("--peer-url=".Length).Trim('"', '\'');
+                }
+                else if (arg.StartsWith("--ip=", StringComparison.OrdinalIgnoreCase))
+                {
+                    connectionUrl = arg.Substring("--ip=".Length).Trim('"', '\'');
+                }
+                else if (arg.StartsWith("--host=", StringComparison.OrdinalIgnoreCase))
+                {
+                    connectionUrl = arg.Substring("--host=".Length).Trim('"', '\'');
+                }
+                else if (arg.Equals("--ip", StringComparison.OrdinalIgnoreCase) ||
+                         arg.Equals("-ip", StringComparison.OrdinalIgnoreCase) ||
+                         arg.Equals("--host", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (i + 1 < args.Length && !args[i + 1].StartsWith("-"))
+                    {
+                        connectionUrl = args[++i].Trim('"', '\'');
+                    }
+                }
+                else if (arg.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                         arg.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                         arg.StartsWith("woldvirtual://", StringComparison.OrdinalIgnoreCase))
+                {
+                    connectionUrl = arg.Trim('"', '\'');
+                }
+                else if (!arg.StartsWith("-") && (arg.Contains(".") || arg.Contains(":")) &&
+                         !arg.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                         !arg.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                {
+                    connectionUrl = arg.Trim('"', '\'');
+                }
+            }
+            return connectionUrl;
         }
 
         /// <summary>

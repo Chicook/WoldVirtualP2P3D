@@ -98,9 +98,14 @@ namespace Visor3D
             {
                 try
                 {
+                    // Godot 4 NO tiene el flag "--scene": la escena se pasa como
+                    // argumento POSICIONAL (o se deja que use run/main_scene de
+                    // project.godot). Un "--scene" desconocido hace que el motor
+                    // avise del error y puede abortar el arranque antes de leer los
+                    // argumentos de usuario (--client / --ip), cayendo al modo local.
                     string args = $"--path \"{_projectPath}\"";
                     if (!string.IsNullOrEmpty(_scenePath))
-                        args += $" --scene \"{_scenePath}\"";
+                        args += $" \"{_scenePath}\"";
                     if (!string.IsNullOrEmpty(_userArgs))
                         args += $" -- {_userArgs}";
 
@@ -112,8 +117,17 @@ namespace Visor3D
                         CreateNoWindow   = false
                     };
 
+                    Console.WriteLine($"[GodotHwndHost] Lanzando proceso Godot: {_godotExePath}");
+                    Console.WriteLine($"[GodotHwndHost] Argumentos completos pasados al motor: {args}");
+                    Console.WriteLine($"[GodotHwndHost] Args de red (tras '--'): {(string.IsNullOrEmpty(_userArgs) ? "(ninguno -> SERVIDOR_LOCAL por defecto)" : _userArgs)}");
+                    Debug.WriteLine($"[GodotHwndHost] Lanzando proceso Godot: {_godotExePath} {args}");
+
                     _godotProcess = Process.Start(psi);
-                    if (_godotProcess == null) return;
+                    if (_godotProcess == null)
+                    {
+                        Console.WriteLine("[GodotHwndHost] ERROR: No se pudo iniciar el proceso de Godot.");
+                        return;
+                    }
 
                     // Polling: esperar hasta 12 s a que Godot cree su ventana
                     IntPtr hwnd = IntPtr.Zero;

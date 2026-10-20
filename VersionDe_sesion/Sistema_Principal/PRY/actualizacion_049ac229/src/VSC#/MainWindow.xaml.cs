@@ -1,7 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -29,10 +32,18 @@ namespace Visor3D
         private RedP2PServicio? _p2pServicio;
         private Process? _tunnelProcess;
         private string _urlAmigoPendiente = "";
+        private bool _esAnfitrion;
 
-        public MainWindow()
+        public MainWindow(string? initialConnectionUrl = null)
         {
             InitializeComponent();
+            if (!string.IsNullOrWhiteSpace(initialConnectionUrl))
+            {
+                _urlAmigoPendiente = initialConnectionUrl.Trim();
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] URL de conexión inicial establecida: {_urlAmigoPendiente}");
+                Console.WriteLine($"[MainWindow] URL de conexión inicial establecida: {_urlAmigoPendiente}");
+            }
+
             this.Loaded += OnLoaded;
             this.Closing += (s, e) =>
             {
@@ -63,6 +74,11 @@ namespace Visor3D
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             MostrarPantallaBienvenida();
+            if (!string.IsNullOrWhiteSpace(_urlAmigoPendiente))
+            {
+                TxtUrlAmigo.Text = _urlAmigoPendiente;
+                TxtEstadoP2P.Text = $"🔗 Destino amigo fijado: {_urlAmigoPendiente}";
+            }
         }
 
         public void MostrarPantallaBienvenida()
@@ -137,6 +153,14 @@ namespace Visor3D
         {
             string user = TxtLoginUser.Text.Trim();
             string pass = TxtLoginPass.Password;
+
+            // Si el usuario introdujo o pegó una URL en TxtUrlAmigo y no había pulsado "Conectar", capturarla
+            if (string.IsNullOrWhiteSpace(_urlAmigoPendiente) && !string.IsNullOrWhiteSpace(TxtUrlAmigo.Text))
+            {
+                _urlAmigoPendiente = TxtUrlAmigo.Text.Trim();
+                Console.WriteLine($"[MainWindow] URL de conexión tomada de TxtUrlAmigo: {_urlAmigoPendiente}");
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] URL de conexión tomada de TxtUrlAmigo: {_urlAmigoPendiente}");
+            }
 
             if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(pass))
             {
@@ -287,10 +311,45 @@ namespace Visor3D
                     GuardarP2PSessionConfig();
 
                     string userArgs = "";
+                    string rolLog = "";
                     if (!string.IsNullOrWhiteSpace(_urlAmigoPendiente))
                     {
-                        userArgs = $"--peer-url=\"{_urlAmigoPendiente}\"";
+                        if (TryParseConnectionTarget(_urlAmigoPendiente, out string targetHost, out int targetPort))
+                        {
+                            // Inyectar rol explícito de cliente hacia el destino remoto
+                            userArgs = $"--client --ip={targetHost} --port={targetPort} --peer-url=\"{_urlAmigoPendiente}\"";
+                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO -> {targetHost}:{targetPort} (peer-url={_urlAmigoPendiente})";
+                            Console.WriteLine($"[Visor3D -> Godot] Parámetros inyectados: {userArgs}");
+                            System.Diagnostics.Debug.WriteLine($"[Visor3D -> Godot] Parámetros inyectados: {userArgs}");
+
+                            if (!EsIpLiteral(targetHost))
+                            {
+                                Console.WriteLine($"[Visor3D -> Godot] AVISO: '{targetHost}' es un nombre de host (túnel HTTP), no una IP literal.");
+                                Console.WriteLine("[Visor3D -> Godot]   Los túneles solo reenvían TCP/HTTP; ENet (UDP 8910) NO los atraviesa.");
+                                Console.WriteLine("[Visor3D -> Godot]   Para conexión remota real usa la IP directa del anfitrión (LAN, o IP pública con UDP 8910 reenviado).");
+                                System.Diagnostics.Debug.WriteLine($"[Visor3D -> Godot] AVISO: '{targetHost}' no es IP literal; ENet UDP 8910 podría no ser alcanzable.");
+                            }
+                        }
+                        else
+                        {
+                            userArgs = $"--peer-url=\"{_urlAmigoPendiente}\"";
+                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO (URL sin parsear: {_urlAmigoPendiente})";
+                            Console.WriteLine($"[Visor3D -> Godot] Parámetros inyectados (URL sin parsear): {userArgs}");
+                            System.Diagnostics.Debug.WriteLine($"[Visor3D -> Godot] Parámetros inyectados (URL sin parsear): {userArgs}");
+                        }
                     }
+                    else
+                    {
+                        rolLog = "[Visor3D -> Godot] Rol: SERVIDOR_LOCAL / modo local por defecto (sin destino remoto).";
+                        Console.WriteLine("[Visor3D -> Godot] Sin destino remoto previo. Modo autónomo/local por defecto.");
+                        System.Diagnostics.Debug.WriteLine("[Visor3D -> Godot] Sin destino remoto previo. Modo autónomo/local por defecto.");
+
+                        // Somos el anfitrión: mostrar la dirección directa (IP LAN + UDP 8910)
+                        // que hay que compartir para que otro equipo se conecte por ENet.
+                        MostrarDireccionAnfitrion();
+                    }
+                    Console.WriteLine(rolLog);
+                    System.Diagnostics.Debug.WriteLine(rolLog);
 
                     _godotHostMain = new GodotHwndHost(godotExe, projectDir, scenePath, userArgs);
                     ContenedorGodotMain.Children.Clear();
@@ -304,17 +363,122 @@ namespace Visor3D
             }, System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
+        public static bool TryParseConnectionTarget(string input, out string host, out int port)
+        {
+            host = "";
+            port = 8910;
+            if (string.IsNullOrWhiteSpace(input)) return false;
+
+            string s = input.Trim().Trim('"', '\'');
+            if (s.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) s = s.Substring(7);
+            else if (s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) s = s.Substring(8);
+            else if (s.StartsWith("woldvirtual://", StringComparison.OrdinalIgnoreCase)) s = s.Substring(14);
+
+            int slashIdx = s.IndexOf('/');
+            if (slashIdx >= 0) s = s.Substring(0, slashIdx);
+
+            int colonIdx = s.LastIndexOf(':');
+            if (colonIdx >= 0 && colonIdx < s.Length - 1)
+            {
+                string portPart = s.Substring(colonIdx + 1);
+                if (int.TryParse(portPart, out int parsedPort))
+                {
+                    // Si el puerto recibido es el del WebNodo HTTP (3030-3040) o de la API P2P (7890),
+                    // el tráfico del motor Godot (ENet UDP) debe ir al puerto 8910 del anfitrión.
+                    if ((parsedPort >= 3030 && parsedPort <= 3040) || parsedPort == 7890 || parsedPort == 80 || parsedPort == 443)
+                    {
+                        port = 8910;
+                    }
+                    else
+                    {
+                        port = parsedPort;
+                    }
+                }
+                s = s.Substring(0, colonIdx);
+            }
+
+            host = s.Trim();
+            return !string.IsNullOrEmpty(host);
+        }
+
+        /// <summary>
+        /// True si el texto es una dirección IPv4 literal (p. ej. 192.168.1.10).
+        /// Permite distinguir una IP directa de un nombre de host de túnel HTTP.
+        /// </summary>
+        public static bool EsIpLiteral(string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto)) return false;
+            string[] partes = texto.Trim().Split('.');
+            if (partes.Length != 4) return false;
+            foreach (string p in partes)
+            {
+                if (!byte.TryParse(p, out _)) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Muestra en el banner la dirección directa (IP LAN + UDP 8910) que el anfitrión
+        /// debe compartir para que otro equipo se conecte por ENet sin pasar por el túnel HTTP.
+        /// </summary>
+        private void MostrarDireccionAnfitrion()
+        {
+            _esAnfitrion = true;
+            var ips = IpsLanCompartibles();
+            if (ips.Count == 0)
+            {
+                Console.WriteLine("[Visor3D] ANFITRIÓN: sin IPs LAN no-loopback. Comparte tu IP pública con UDP 8910 reenviado en el router.");
+                return;
+            }
+            string lista = string.Join(", ", ips.Select(ip => ip + ":8910"));
+            Console.WriteLine($"[Visor3D] ANFITRIÓN — dirección directa para invitar (ENet UDP 8910): {lista}");
+            TxtUrlP2P.Text = lista;
+            TxtUrlP2P.ToolTip = $"Comparte esta dirección con el otro equipo: {lista}";
+            BtnCopiarUrlP2P.Content = "📋 Copiar IP";
+            BannerP2P.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>IPv4 de la máquina excluyendo loopback (127.) y APIPA (169.254.).</summary>
+        private static System.Collections.Generic.List<string> IpsLanCompartibles()
+        {
+            var resultado = new System.Collections.Generic.List<string>();
+            try
+            {
+                foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+                    foreach (var ua in ni.GetIPProperties().UnicastAddresses)
+                    {
+                        if (ua.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                        string ip = ua.Address.ToString();
+                        if (ip.StartsWith("127.") || ip.StartsWith("169.254.")) continue;
+                        if (!resultado.Contains(ip)) resultado.Add(ip);
+                    }
+                }
+            }
+            catch { }
+            return resultado;
+        }
+
         private void GuardarP2PSessionConfig()
         {
             try
             {
+                bool hasTarget = TryParseConnectionTarget(_urlAmigoPendiente, out string targetHost, out int targetPort);
+                bool esClienteRemoto = hasTarget && targetHost != "127.0.0.1" && targetHost != "localhost" && !string.IsNullOrEmpty(targetHost);
                 var sessionData = new
                 {
                     peerUrl = _urlAmigoPendiente ?? "",
+                    remoteIp = hasTarget ? targetHost : "",
+                    remotePort = hasTarget ? targetPort : 8910,
+                    esCliente = esClienteRemoto,
+                    rolEfectivo = esClienteRemoto ? "cliente_remoto" : "servidor_local",
+                    hostResuelto = esClienteRemoto ? targetHost : "127.0.0.1",
                     myTunnelUrl = _p2pServicio?.UrlPublicaPropia ?? "",
                     puertoLocal = 7890,
                     puertoGodot = 8910,
-                    esPrimerUsuario = string.IsNullOrWhiteSpace(_urlAmigoPendiente),
+                    esPrimerUsuario = !hasTarget,
                     timestamp = DateTime.UtcNow.ToString("o")
                 };
 
@@ -329,8 +493,25 @@ namespace Visor3D
                     "Godot", "app_userdata", "WoldVirtualP2P3D");
                 if (!Directory.Exists(godotUserDir)) Directory.CreateDirectory(godotUserDir);
                 File.WriteAllText(Path.Combine(godotUserDir, "p2p_session.json"), json, Encoding.UTF8);
+
+                // También en la raíz del proyecto para redundancia
+                try
+                {
+                    string pDir = GodotConfig.GetProjectPath();
+                    if (Directory.Exists(pDir))
+                    {
+                        File.WriteAllText(Path.Combine(pDir, "p2p_session.json"), json, Encoding.UTF8);
+                    }
+                }
+                catch { }
+
+                Console.WriteLine($"[Visor3D] p2p_session.json generado: target={targetHost}:{targetPort}, esCliente={sessionData.esCliente}");
+                System.Diagnostics.Debug.WriteLine($"[Visor3D] p2p_session.json generado: target={targetHost}:{targetPort}, esCliente={sessionData.esCliente}");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Visor3D] Error guardando p2p_session.json: {ex.Message}");
+            }
         }
 
         private async void IniciarP2P(string user)
@@ -343,8 +524,17 @@ namespace Visor3D
                 {
                     Dispatcher.Invoke(() =>
                     {
-                        TxtUrlP2P.Text = url;
-                        BannerP2P.Visibility = Visibility.Visible;
+                        if (_esAnfitrion)
+                        {
+                            // El anfitrión conserva visible su IP directa: es lo que hay que
+                            // pegar en el equipo invitado para conectar por ENet.
+                            TxtUrlP2P.ToolTip = $"Portal WebNodo (descarga): {url}";
+                        }
+                        else
+                        {
+                            TxtUrlP2P.Text = url;
+                            BannerP2P.Visibility = Visibility.Visible;
+                        }
                         TxtEstadoP2P.Text = "🟢 Red P2P Online";
                         BordeEstadoP2P.Background = new System.Windows.Media.SolidColorBrush(
                             System.Windows.Media.Color.FromRgb(6, 78, 59));

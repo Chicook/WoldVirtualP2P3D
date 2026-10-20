@@ -22,6 +22,11 @@ var pending_claims := {} # peer_id -> indice reclamado al reconectar
 var _mi_nick := ""
 var _save_pos_timer := 0.0
 var _last_saved_pos := Vector3.ZERO
+var _last_target_host := "127.0.0.1"
+var _last_target_port := 8910
+var _is_explicit_client := false
+var _beacon_udp: PacketPeerUDP = null
+var _beacon_timer := 0.0
 
 ## Sustituye el avatar por defecto (userbaseh1) por el avatar elegido en el
 ## carrusel. Debe llamarse ANTES de add_child() para que "@onready userbase"
@@ -81,46 +86,103 @@ func _ready():
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	
-	# Leer configuración de red P2P (vía argumentos de usuario o archivo p2p_session.json)
+	# Leer configuración de red P2P (vía argumentos CLI, p2p_session.json o auto-descubrimiento LAN)
 	var peer_target := _obtener_peer_target()
 	var target_host: String = peer_target.get("host", "127.0.0.1")
 	var target_port: int = int(peer_target.get("port", 8910))
 	var force_host: bool = bool(peer_target.get("force_host", false))
+	var is_client: bool = bool(peer_target.get("is_client", false))
+	var fuente: String = str(peer_target.get("source", "desconocida"))
+
+	_last_target_host = target_host
+	_last_target_port = target_port
+	_is_explicit_client = is_client or (target_host != "127.0.0.1" and target_host != "localhost")
+
+	print("================================================================")
+	print("[ChunkManager/ENet] Configuración de Red P2P Resuelta:")
+	print("[ChunkManager/ENet]   Origen/Fuente: ", fuente)
+	print("[ChunkManager/ENet]   Rol asignado: ", "CLIENTE FORZADO" if is_client else ("SERVIDOR FORZADO" if force_host else "AUTO (Cliente/Local)"))
+	print("[ChunkManager/ENet]   Host Objetivo: ", target_host)
+	print("[ChunkManager/ENet]   Puerto Objetivo (ENet UDP): ", target_port)
+
+	# Validación: si el rol es cliente explícito, el host no debe ser loopback.
+	if _is_explicit_client and (target_host == "127.0.0.1" or target_host == "localhost" or target_host.is_empty()):
+		printerr("[ChunkManager/ENet] ❌ INCONSISTENCIA: Rol cliente forzado pero host objetivo es loopback o vacío ('", target_host, "'). No se iniciará como cliente remoto.")
+		_is_explicit_client = false
+
+	print("[ChunkManager/ENet]   Rol EFECTIVO: ", "CLIENTE_REMOTO -> " + target_host + ":" + str(target_port) if _is_explicit_client else ("SERVIDOR_LOCAL -> 0.0.0.0:" + str(target_port) if force_host else "AUTO (intentará cliente en " + target_host + ":" + str(target_port) + ", fallback a servidor si falla)"))
+	print("================================================================")
+
+	# Diagnóstico: distinguir IP literal de nombre de host (típico de túnel HTTP).
+	# Un túnel HTTP (cloudflared / serveo / localhost.run) solo reenvía TCP/HTTP y
+	# NO puede transportar ENet (UDP 8910), por lo que el handshake nunca completará.
+	if _is_explicit_client and not _es_ip_literal(target_host):
+		printerr("[ChunkManager/ENet] ⚠ AVISO: el destino '", target_host, "' es un NOMBRE DE HOST, no una IP.")
+		printerr("[ChunkManager/ENet]   Los túneles HTTP no transportan ENet (UDP). Para conexión remota usa la")
+		printerr("[ChunkManager/ENet]   IP directa del anfitrión (IP LAN, o IP pública + UDP 8910 reenviado en el router).")
 
 	if force_host:
-		print("Iniciando como Anfitrión de la red P2P...")
+		print("[ChunkManager/ENet] Iniciando explícitamente como Anfitrión (Servidor)...")
 		_iniciar_como_servidor()
-	else:
-		# Intentar conectarse como cliente
-		print("Buscando red P2P en ", target_host, ":", target_port, "...")
+	elif _is_explicit_client:
+		# Conexión remota explícita: conectar obligatoriamente como cliente a la IP remota.
+		# Si falla el handshake, NO se degrada a servidor local silenciosamente.
+		print("[ChunkManager/ENet] Conectando como CLIENTE hacia el anfitrión remoto: ", target_host, ":", target_port, "...")
 		var err := peer.create_client(target_host, target_port)
 		if err != OK:
-			print("Error al iniciar cliente (", err, "). Creando servidor local P2P...")
+			printerr("[ChunkManager/ENet] ERROR inmediato al crear cliente ENet hacia ", target_host, ":", target_port, " (Código: ", err, ")")
+			print("[ChunkManager/ENet] Handshake remoto fallido. Revisar firewall/puerto UDP 8910 y que el anfitrión esté escuchando.")
+			return
+		else:
+			multiplayer.multiplayer_peer = peer
+			print("[ChunkManager/ENet] Socket cliente ENet abierto. Esperando handshake con ", target_host, ":", target_port, "...")
+	else:
+		# Modo autónomo / pruebas locales (loopback 127.0.0.1)
+		print("[ChunkManager/ENet] Buscando red P2P en ", target_host, ":", target_port, "...")
+		var err := peer.create_client(target_host, target_port)
+		if err != OK:
+			print("[ChunkManager/ENet] Sin servidor local activo (", err, "). Creando servidor local P2P...")
 			_iniciar_como_servidor()
 		else:
 			multiplayer.multiplayer_peer = peer
 
 func _on_connected_ok():
-	print("Conectado al mundo P2P exitosamente.")
+	print("[ChunkManager/ENet] ✔ CONECTADO EXITOSAMENTE al mundo P2P! ID único asignado: ", multiplayer.get_unique_id())
 	# Anunciar mi isla por si es una reconexion tras migracion de anfitrion:
 	# el servidor me reconocera y NO me creara isla nueva.
 	rpc_id(1, "_claim_island", my_own_index, _mi_nick)
 
 func _iniciar_como_servidor():
+	print("[ChunkManager/ENet] Creando Servidor ENet en puerto 8910...")
 	peer = ENetMultiplayerPeer.new()
 	var err := peer.create_server(8910, 32)
 	if err != OK:
-		print("Error al crear servidor ENet: ", err)
+		printerr("[ChunkManager/ENet] ERROR al crear servidor ENet en puerto 8910: ", err)
 		return
 	multiplayer.multiplayer_peer = peer
-	
+	var mis_ips := IP.get_local_addresses()
+	var ips_txt: String = ""
+	for ip in mis_ips:
+		if ip != "127.0.0.1":
+			ips_txt += ip + " "
+	print("[ChunkManager/ENet] ✔ Servidor ENet activo en 0.0.0.0:8910. ID del servidor: ", multiplayer.get_unique_id())
+	print("[ChunkManager/ENet]   IPs locales para compartir (anfitrión): ", ips_txt.strip_edges() if not ips_txt.is_empty() else "(ninguna no-loopback detectada)")
+
+	# Activar beacon LAN de auto-descubrimiento para que otros equipos en la misma red puedan unirse sin enlace
+	_iniciar_lan_beacon()
+
 	# El servidor registra su propia isla
 	owner_names[multiplayer.get_unique_id()] = _nick_unico(_mi_nick, multiplayer.get_unique_id())
 	_register_player(multiplayer.get_unique_id())
 
 func _on_connected_fail():
-	print("Nadie alojando en el par objetivo. Creando servidor local P2P...")
-	_iniciar_como_servidor()
+	printerr("[ChunkManager/ENet] ❌ Falló la conexión con el nodo objetivo en ", _last_target_host, ":", _last_target_port)
+	if _is_explicit_client:
+		printerr("[ChunkManager/ENet] ADVERTENCIA: El host remoto ", _last_target_host, " no respondió al handshake ENet (puerto UDP 8910 no alcanzable o cerrado).")
+		print("[ChunkManager/ENet] Rol cliente explícito: NO se degrada a servidor local. Revisar conexión remota.")
+	else:
+		print("[ChunkManager/ENet] Nadie alojando en el par objetivo. Creando servidor local P2P...")
+		_iniciar_como_servidor()
 
 func _on_peer_connected(id):
 	if multiplayer.is_server():
@@ -215,7 +277,7 @@ func _on_server_disconnected():
 		print("Puerto ocupado, otro peer es el nuevo anfitrion. Reconectando...")
 		await get_tree().create_timer(1.0).timeout
 		peer = ENetMultiplayerPeer.new()
-		peer.create_client("127.0.0.1", 8910)
+		peer.create_client(_last_target_host, _last_target_port)
 		multiplayer.multiplayer_peer = peer
 		return
 	multiplayer.multiplayer_peer = peer
@@ -323,6 +385,11 @@ func _spawn_island_for_player(id: int, index: int, nick: String = ""):
 
 
 func _process(delta: float) -> void:
+	if multiplayer.is_server():
+		_beacon_timer += delta
+		if _beacon_timer >= 2.0:
+			_beacon_timer = 0.0
+			_emitir_beacon_lan()
 	_save_pos_timer += delta
 	if _save_pos_timer >= 1.0:
 		_save_pos_timer = 0.0
@@ -381,34 +448,81 @@ func _nick_unico(nick: String, id: int) -> String:
 	return "%s#%d" % [base, n]
 
 
-## Obtiene la dirección del nodo objetivo a partir de argumentos CLI o p2p_session.json
+## Obtiene la dirección del nodo objetivo a partir de argumentos CLI, p2p_session.json o auto-descubrimiento LAN
 func _obtener_peer_target() -> Dictionary:
 	var res := {
 		"host": "127.0.0.1",
 		"port": 8910,
-		"force_host": false
+		"force_host": false,
+		"is_client": false,
+		"source": "predeterminado (loopback local)"
 	}
 	
-	# 1. Revisar argumentos de línea de comandos pasados por Visor3D
-	var user_args := OS.get_cmdline_user_args()
-	for arg in user_args:
-		if arg.begins_with("--peer-url="):
-			var url := arg.get_slice("=", 1).strip_edges().replace("\"", "")
+	# 1. Revisar argumentos de línea de comandos (tanto de usuario como generales del motor)
+	var all_args: Array = OS.get_cmdline_args()
+	all_args.append_array(OS.get_cmdline_user_args())
+	print("[ChunkManager/ENet] Args evaluados para resolver rol/host: ", all_args)
+	
+	var cli_ip := ""
+	var cli_port := 0
+	var cli_is_client := false
+	var cli_force_host := false
+	
+	for i in range(all_args.size()):
+		var arg: String = str(all_args[i]).strip_edges()
+		if arg == "--client":
+			cli_is_client = true
+		elif arg == "--force-host" or arg == "--server":
+			cli_force_host = true
+		elif arg.begins_with("--ip="):
+			cli_ip = arg.get_slice("=", 1).strip_edges().replace("\"", "").replace("'", "")
+		elif arg.begins_with("--host="):
+			cli_ip = arg.get_slice("=", 1).strip_edges().replace("\"", "").replace("'", "")
+		elif arg.begins_with("--port="):
+			cli_port = int(arg.get_slice("=", 1).strip_edges())
+		elif arg == "--ip" or arg == "-ip" or arg == "--host":
+			if i + 1 < all_args.size() and not str(all_args[i + 1]).begins_with("-"):
+				cli_ip = str(all_args[i + 1]).strip_edges().replace("\"", "").replace("'", "")
+		elif arg == "--port":
+			if i + 1 < all_args.size() and not str(all_args[i + 1]).begins_with("-"):
+				cli_port = int(str(all_args[i + 1]).strip_edges())
+		elif arg.begins_with("--peer-url="):
+			var url := arg.get_slice("=", 1).strip_edges().replace("\"", "").replace("'", "")
 			if not url.is_empty():
 				var parsed := _parse_url_host_port(url)
 				if not parsed.get("host", "").is_empty():
-					res["host"] = parsed["host"]
-					res["port"] = parsed["port"]
-					return res
-		elif arg == "--force-host":
-			res["force_host"] = true
-			return res
+					cli_ip = parsed["host"]
+					if cli_port == 0:
+						cli_port = parsed["port"]
+		elif arg.begins_with("http://") or arg.begins_with("https://") or arg.begins_with("woldvirtual://"):
+			var parsed := _parse_url_host_port(arg)
+			if not parsed.get("host", "").is_empty():
+				cli_ip = parsed["host"]
+				if cli_port == 0:
+					cli_port = parsed["port"]
 
-	# 2. Revisar archivos de sesión p2p_session.json
+	if cli_force_host:
+		res["force_host"] = true
+		res["source"] = "Línea de comandos (--force-host / --server)"
+		return res
+
+	if not cli_ip.is_empty():
+		var final_port := cli_port if cli_port > 0 else 8910
+		res["host"] = cli_ip
+		res["port"] = final_port
+		res["is_client"] = true
+		res["source"] = "Línea de comandos (--client / --ip / --peer-url)"
+		return res
+
+	if cli_is_client:
+		res["is_client"] = true
+
+	# 2. Revisar archivos de sesión p2p_session.json generados por el Visor C#
 	var posibles_rutas := [
 		"user://p2p_session.json",
-		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_8d6b09d4/src/VSC#/publish_out/test_user_data/user/p2p_session.json",
-		"C:/Users/User/Desktop/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_8d6b09d4/src/VSC#/test_user_data/user/p2p_session.json"
+		"res://p2p_session.json",
+		OS.get_executable_path().get_base_dir().path_join("test_user_data/user/p2p_session.json"),
+		OS.get_executable_path().get_base_dir().path_join("p2p_session.json")
 	]
 	
 	for ruta in posibles_rutas:
@@ -419,34 +533,115 @@ func _obtener_peer_target() -> Dictionary:
 				fa.close()
 				var j = JSON.parse_string(txt)
 				if j is Dictionary:
-					var p_url: String = str(j.get("peerUrl", "")).strip_edges()
+					var remote_ip: String = str(j.get("remoteIp", "")).strip_edges()
+					var remote_port: int = int(j.get("remotePort", 8910))
+					var es_cliente: bool = bool(j.get("esCliente", false))
 					var es_primero: bool = bool(j.get("esPrimerUsuario", false))
+					var p_url: String = str(j.get("peerUrl", "")).strip_edges()
+					
+					if not remote_ip.is_empty() and remote_ip != "127.0.0.1" and remote_ip != "localhost":
+						res["host"] = remote_ip
+						res["port"] = remote_port if remote_port > 0 else 8910
+						res["is_client"] = true
+						res["source"] = "p2p_session.json (remoteIp explícito: " + ruta + ")"
+						return res
+
 					if not p_url.is_empty():
 						var parsed := _parse_url_host_port(p_url)
-						if not parsed.get("host", "").is_empty():
+						if not parsed.get("host", "").is_empty() and parsed["host"] != "127.0.0.1" and parsed["host"] != "localhost":
 							res["host"] = parsed["host"]
 							res["port"] = parsed["port"]
+							res["is_client"] = true
+							res["source"] = "p2p_session.json (peerUrl: " + ruta + ")"
 							return res
-					# Usuario conectando sin enlace de invitación explícito:
-					# Conecta automáticamente al host P2P activo (127.0.0.1:8910).
-					# Al conectarse, el host le enviará su isla y spawneará la nueva isla en ambos visores.
-					res["host"] = "127.0.0.1"
-					res["port"] = 8910
-					res["force_host"] = false
-					return res
+
+					if es_primero:
+						res["force_host"] = true
+						res["source"] = "p2p_session.json (esPrimerUsuario=true)"
+						return res
+
+	# 3. Auto-descubrimiento en red local (LAN Beacon)
+	# Si no se pasó enlace ni parámetro y no está forzado el anfitrión,
+	# buscar brevemente si ya hay otro equipo emitiendo en la misma red LAN.
+	var lan_host := _buscar_host_en_lan(350)
+	if not lan_host.is_empty():
+		res["host"] = lan_host["host"]
+		res["port"] = int(lan_host.get("port", 8910))
+		res["is_client"] = true
+		res["source"] = "Auto-descubrimiento en red local (Beacon UDP LAN)"
+		return res
 
 	return res
 
 
+## True si el texto es una dirección IPv4 literal (p. ej. 192.168.1.10).
+func _es_ip_literal(texto: String) -> bool:
+	var partes := texto.strip_edges().split(".")
+	if partes.size() != 4:
+		return false
+	for p in partes:
+		if not p.is_valid_int():
+			return false
+		var n := int(p)
+		if n < 0 or n > 255:
+			return false
+	return true
+
+
 func _parse_url_host_port(url_str: String) -> Dictionary:
-	var clean := url_str.replace("https://", "").replace("http://", "").strip_edges()
+	var clean := url_str.strip_edges().replace("\"", "").replace("'", "")
+	clean = clean.replace("https://", "").replace("http://", "").replace("woldvirtual://", "").strip_edges()
 	if clean.contains("/"):
 		clean = clean.split("/")[0]
 	var host := clean
 	var port := 8910
 	if clean.contains(":"):
 		var partes := clean.split(":")
-		host = partes[0]
-		port = int(partes[1])
+		host = partes[0].strip_edges()
+		var p := int(partes[1].strip_edges())
+		# Si el puerto en la URL es el de WebNodo HTTP (3030..3040), de la API P2P (7890), o HTTP/HTTPS (80/443),
+		# redirigir al puerto ENet UDP estándar del motor (8910)
+		if (p >= 3030 and p <= 3040) or p == 7890 or p == 80 or p == 443:
+			port = 8910
+		elif p > 0 and p <= 65535:
+			port = p
 	return {"host": host, "port": port}
+
+
+func _iniciar_lan_beacon() -> void:
+	if _beacon_udp == null:
+		_beacon_udp = PacketPeerUDP.new()
+		_beacon_udp.set_broadcast_enabled(true)
+		_beacon_udp.set_dest_address("255.255.255.255", 8912)
+		print("[ChunkManager/ENet] Beacon LAN activo en puerto UDP 8912 para auto-descubrimiento.")
+
+
+func _emitir_beacon_lan() -> void:
+	if _beacon_udp and multiplayer.is_server():
+		var msg := "WOLDVIRTUAL_HOST_8910".to_utf8_buffer()
+		_beacon_udp.put_packet(msg)
+
+
+func _buscar_host_en_lan(timeout_ms: int = 350) -> Dictionary:
+	var listener := PacketPeerUDP.new()
+	var bind_err := listener.bind(8912)
+	if bind_err != OK:
+		return {}
+
+	var start_time := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - start_time < timeout_ms:
+		OS.delay_msec(25)
+		if listener.get_available_packet_count() > 0:
+			var pkt := listener.get_packet()
+			var msg := pkt.get_string_from_utf8()
+			var sender_ip := listener.get_packet_ip()
+			if msg.begins_with("WOLDVIRTUAL_HOST") and not sender_ip.is_empty():
+				# Descartar paquetes propios si provienen de esta misma máquina
+				var mis_ips := IP.get_local_addresses()
+				if not mis_ips.has(sender_ip) and sender_ip != "127.0.0.1":
+					listener.close()
+					print("[ChunkManager/ENet] Par anfitrión detectado en LAN: ", sender_ip, ":8910")
+					return {"host": sender_ip, "port": 8910}
+	listener.close()
+	return {}
 

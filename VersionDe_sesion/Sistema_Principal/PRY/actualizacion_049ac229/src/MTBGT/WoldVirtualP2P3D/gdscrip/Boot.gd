@@ -25,6 +25,20 @@ var _cargando := false
 
 
 func _ready() -> void:
+	print("================================================================")
+	print("[Boot.gd] Arranque WoldVirtualP2P3D iniciado (Godot 4.7.2)")
+	print("[Boot.gd] Argumentos motor (get_cmdline_args): ", OS.get_cmdline_args())
+	print("[Boot.gd] Argumentos usuario (get_cmdline_user_args): ", OS.get_cmdline_user_args())
+
+	# IMPORTANTE: Boot.gd NO decide el rol de red. El único responsable de resolver
+	# y aplicar la topología (Servidor/Cliente + IP/puerto objetivo) es ChunkManager.gd,
+	# que lee los mismos argumentos. Aquí solo se registra lo recibido para depurar.
+	var _args_net: Array = OS.get_cmdline_args()
+	_args_net.append_array(OS.get_cmdline_user_args())
+	print("[Boot.gd] Argumentos totales vistos por el motor: ", _args_net)
+	print("[Boot.gd] El rol de red (Servidor/Cliente) y la IP objetivo los resuelve ChunkManager.gd.")
+	print("================================================================")
+
 	# ── RESET DE SESIÓN (flag escrito por el visor C# al arrancar) ──────────────
 	# Si el visor detectó un reset limpio, borramos el registro para que
 	# Godot arranque siempre como primera vez (carrusel + registro de nick).
