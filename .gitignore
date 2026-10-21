@@ -50,6 +50,7 @@ obj/
 *.exe
 *.dll
 *.zip
+*.pck
 **/publish*/
 **/publish_out/
 **/publish_standalone/
@@ -64,4 +65,38 @@ p2p_session.json
 
 # Carpeta de versión de prueba (excluida del repo)
 VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_prueba/
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ZONA SENSIBLE — añadido 2026-10-21 (taller aislado)
+# Nada de lo siguiente debe subirse al repositorio al ejecutar la actualización.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# 1) Taller: snapshots, builds, logs, temporales y LOCALAPPDATA redirigido
+**/_taller/
+*.log
+
+# 2) Identidad y credenciales del usuario (llave, semilla, hardware, sesión)
+**/datos_usuario/
+**/llave_acceso.json
+**/credentials.json
+**/user_profile.json
+**/semilla_wallet*
+**/wold_hardware_id*
+**/avatares_usados.json
+**/*.cid
+
+# 3) Actualizador OTA: descargas a medias y estado
+**/STM_actualizar/update-pending/
+**/STM_actualizar/state.json
+**/apply-pending.bat
+
+# 4) Portal WebNodo: binarios servidos
+**/webnodo/descargas/
+
+# 5) IPFS local (miles de blobs .ldb) y certificados/secretos
+**/.ipfs/
+**/*.pfx
+**/*.pem
+**/*.key
+**/*.token
 
