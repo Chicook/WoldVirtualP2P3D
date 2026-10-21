@@ -102,5 +102,21 @@
     "ficheros": 909,
     "estado": "OK actualizar",
     "fecha": "2026-10-20T16:03:18"
+  },
+  {
+    "carpeta": "src",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_049ac229\\src",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 919,
+    "estado": "OK refactorizar",
+    "fecha": "2026-10-21T13:40:54"
+  },
+  {
+    "carpeta": "src",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_049ac229\\src",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 919,
+    "estado": "OK refactorizar",
+    "fecha": "2026-10-21T13:42:14"
   }
 ]
