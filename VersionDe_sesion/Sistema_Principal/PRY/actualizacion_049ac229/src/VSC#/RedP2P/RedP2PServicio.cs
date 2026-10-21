@@ -23,6 +23,12 @@ namespace Visor3D.RedP2P
         /// <summary>Disparado cuando se descubre / conecta un nuevo par.</summary>
         public event Action<string>? NuevoPar;
 
+        /// <summary>Disparado cuando el túnel se ha caído y va a reconectarse (host afectado).</summary>
+        public event Action<string>? TunelCaido;
+
+        /// <summary>Disparado antes de cada reintento de reconexión (intento, segundos de espera).</summary>
+        public event Action<int, int>? TunelReintentando;
+
         public RedP2PServicio(string nombreUsuario, int puertoLocal = 7890)
         {
             Nodo  = new P2PNodo(puertoLocal, nombreUsuario);
@@ -32,6 +38,9 @@ namespace Visor3D.RedP2P
             {
                 UrlTunnelLista?.Invoke(url);
             };
+
+            Tunel.TunnelMuerto += host => TunelCaido?.Invoke(host);
+            Tunel.Reintentando += (intento, espera) => TunelReintentando?.Invoke(intento, espera);
 
             Nodo.NuevoPar += url => NuevoPar?.Invoke(url);
         }

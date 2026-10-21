@@ -477,6 +477,16 @@ namespace Visor3D.Services
                 var res = ctx.Response;
                 var path = req.Url?.AbsolutePath ?? "/";
 
+                // IMPORTANTE: el handshake WebSocket del metaverso (Godot -> ws://localhost:8911)
+                // llega a la ruta raíz. Debe comprobarse ANTES que el HTML del portal; de lo
+                // contrario el upgrade se responde con HTML y el cliente nunca conecta.
+                if (req.IsWebSocketRequest)
+                {
+                    // PROXY WEBSOCKET para P2P (Godot -> localhost:8911)
+                    await ProxyWebSocketAsync(ctx);
+                    return;
+                }
+
                 if (path == "/" || path == "/index.html")
                 {
                     res.ContentType = "text/html; charset=utf-8";
@@ -494,12 +504,6 @@ namespace Visor3D.Services
                     var bytes = Encoding.UTF8.GetBytes(html);
                     res.ContentLength64 = bytes.Length;
                     await res.OutputStream.WriteAsync(bytes, 0, bytes.Length);
-                }
-                else if (req.IsWebSocketRequest)
-                {
-                    // PROXY WEBSOCKET para P2P (Godot -> localhost:8911)
-                    await ProxyWebSocketAsync(ctx);
-                    return;
                 }
                 else if (path == "/metaverso.jpg")
                 {

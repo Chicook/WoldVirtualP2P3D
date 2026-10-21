@@ -10,8 +10,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Reflection;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using Microsoft.Win32;
 using Visor3D.RedP2P;
 using Visor3D.Update;
@@ -20,7 +23,9 @@ namespace Visor3D
 {
     public partial class MainWindow : Window
     {
-        private const string CurrentVersion = "0.0.0"; // Versión forzada a cero para detectar cualquier release en GitHub
+        // Versión local, leída del propio ensamblado (definida en Visor3D.csproj <Version>).
+        private static readonly string CurrentVersion = ObtenerVersionLocal();
+
         // Carpeta local para datos de usuario y pruebas de flujo
         private static readonly string TestUserDataDir =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_user_data");
@@ -35,8 +40,9 @@ namespace Visor3D
         private RedP2PServicio? _p2pServicio;
         private Process? _tunnelProcess;
         private string _urlAmigoPendiente = "";
-        private bool _esAnfitrion;
+        private string _ipsLanFallback = "";
         private ReleaseInfo? _updateInfo;
+        private bool _descargandoActualizacion;
 
         public MainWindow(string? initialConnectionUrl = null)
         {
@@ -53,7 +59,7 @@ namespace Visor3D
             {
                 _godotHostMain?.StopGodot();
                 _p2pServicio?.Dispose();
-                try { _tunnelProcess?.Kill(); } catch { }
+                try { _tunnelProcess?.Kill(entireProcessTree: true); } catch { }
                 _tunnelProcess = null;
             };
 
@@ -100,6 +106,30 @@ namespace Visor3D
                 Console.WriteLine($"[Updater] {message}");
             }
             catch { }
+        }
+
+        /// <summary>
+        /// Lee la versión local del propio ensamblado (definida en el .csproj).
+        /// Se usa <c>AssemblyInformationalVersion</c> porque respeta el formato
+        /// del tag de GitHub (p. ej. "0.0.013").
+        /// </summary>
+        private static string ObtenerVersionLocal()
+        {
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+                if (!string.IsNullOrWhiteSpace(info))
+                {
+                    int plus = info.IndexOf('+');       // descarta metadatos "+<sha>"
+                    return plus >= 0 ? info.Substring(0, plus) : info;
+                }
+
+                var v = asm.GetName().Version;
+                if (v != null) return $"{v.Major}.{v.Minor}.{v.Build}";
+            }
+            catch { }
+            return "0.0.0";
         }
 
         private async Task CheckUpdatesAsync()
@@ -189,41 +219,90 @@ namespace Visor3D
 
         private async void OnActualizarClicked(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (_updateInfo == null) return;
+            if (_updateInfo == null || _descargandoActualizacion) return;
 
             try
             {
+                _descargandoActualizacion = true;
                 BtnActualizar.IsEnabled = false;
                 BtnActualizar.Cursor = System.Windows.Input.Cursors.Wait;
                 TxtEstadoP2P.Text = "⬇️ Descargando actualización...";
 
+                // Detener la animación de alerta y preparar la barra de progreso
+                GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, null);
+                if (BtnActualizarVisual.Background is SolidColorBrush fondoActual)
+                    fondoActual.BeginAnimation(SolidColorBrush.ColorProperty, null);
+                BtnActualizarVisual.Background = new SolidColorBrush(Color.FromRgb(30, 41, 59));
+
+                PanelProgreso.Visibility = Visibility.Visible;
+                BarProgreso.Value = 0;
+                TxtProgresoPorcentaje.Text = "0 %";
+                TxtProgresoEstado.Text = "Descargando actualización...";
+
+                // Reporte de progreso que actualiza la barra en el hilo de UI
+                var progreso = new Progress<DownloadProgress>(p =>
+                {
+                    BarProgreso.Value = p.Percentage;
+                    TxtProgresoPorcentaje.Text = $"{p.Percentage:0} %";
+                });
+
                 var downloader = new UpdateDownloader();
-                bool success = await downloader.DownloadAsync(_updateInfo);
+                bool success = await downloader.DownloadAsync(_updateInfo, progreso);
 
                 if (success)
                 {
+                    BarProgreso.Value = 100;
+                    TxtProgresoPorcentaje.Text = "100 %";
+                    TxtProgresoEstado.Text = "Descarga completa. Reiniciando...";
                     TxtEstadoP2P.Text = "🚀 Reiniciando para aplicar actualización...";
                     
-                    // Aplicar y reiniciar
-                    UpdateApplier.ApplyPendingUpdate(Process.GetCurrentProcess().MainModule?.FileName ?? "");
+                    // Delegar el reemplazo del .exe en el script externo y cerrar limpiamente
+                    string exeActual = Environment.ProcessPath
+                                       ?? Process.GetCurrentProcess().MainModule?.FileName
+                                       ?? "";
+                    bool lanzado = UpdateApplier.ApplyPendingUpdate(exeActual);
+                    if (!lanzado)
+                    {
+                        MostrarErrorActualizacion("La actualización se descargó pero no pudo aplicarse automáticamente.");
+                        return;
+                    }
                     
                     // Cerrar la aplicación actual para que el .bat pueda hacer el reemplazo
                     Application.Current.Shutdown();
                 }
                 else
                 {
-                    MessageBox.Show("Error al descargar la actualización. Inténtalo de nuevo más tarde.", 
-                                    "Error de Actualización", MessageBoxButton.OK, MessageBoxImage.Error);
-                    BtnActualizar.IsEnabled = true;
-                    PanelActualizar.Cursor = System.Windows.Input.Cursors.Hand;
+                    MostrarErrorActualizacion("No se pudo descargar la actualización. Inténtalo de nuevo más tarde.");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error durante la actualización: {ex.Message}", 
-                                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                BtnActualizar.IsEnabled = true;
-                PanelActualizar.Cursor = System.Windows.Input.Cursors.Hand;
+                MostrarErrorActualizacion($"Error durante la actualización: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Restaura la interfaz tras un fallo y reactiva el aviso de actualización.
+        /// </summary>
+        private void MostrarErrorActualizacion(string mensaje)
+        {
+            MessageBox.Show(mensaje, "Error de Actualización", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            PanelProgreso.Visibility = Visibility.Collapsed;
+            _descargandoActualizacion = false;
+            BtnActualizar.IsEnabled = true;
+            BtnActualizar.Cursor = System.Windows.Input.Cursors.Hand;
+
+            // Reavivar el parpadeo del botón si sigue habiendo versión nueva.
+            if (_updateInfo != null)
+            {
+                BtnActualizarVisual.Opacity = 1.0;
+                var glowAnim = new DoubleAnimation(0.4, 1.0, TimeSpan.FromSeconds(0.8))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever
+                };
+                GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, glowAnim);
             }
         }
 
@@ -512,7 +591,7 @@ namespace Visor3D
         public static bool TryParseConnectionTarget(string input, out string host, out int port)
         {
             host = "";
-            port = 8910;
+            port = 8911; // WebSocket del motor Godot (TCP)
             if (string.IsNullOrWhiteSpace(input)) return false;
 
             string s = input.Trim().Trim('"', '\'');
@@ -530,10 +609,10 @@ namespace Visor3D
                 if (int.TryParse(portPart, out int parsedPort))
                 {
                     // Si el puerto recibido es el del WebNodo HTTP (3030-3040) o de la API P2P (7890),
-                    // el tráfico del motor Godot (ENet UDP) debe ir al puerto 8910 del anfitrión.
+                    // el tráfico del motor Godot viaja por WebSocket (TCP 8911) del anfitrión.
                     if ((parsedPort >= 3030 && parsedPort <= 3040) || parsedPort == 7890 || parsedPort == 80 || parsedPort == 443)
                     {
-                        port = 8910;
+                        port = 8911;
                     }
                     else
                     {
@@ -564,23 +643,41 @@ namespace Visor3D
         }
 
         /// <summary>
-        /// Muestra en el banner la dirección directa (IP LAN + UDP 8910) que el anfitrión
-        /// debe compartir para que otro equipo se conecte por ENet sin pasar por el túnel HTTP.
+        /// Al entrar como anfitrión, el banner queda a la espera del endpoint público del
+        /// túnel efímero (SSH/Cloudflare), que se genera de forma asíncrona tras el login.
+        /// La IP LAN privada (192.168.x.x) NO se muestra como enlace principal porque no es
+        /// accesible desde fuera de la red local: queda solo como alternativa en el tooltip.
         /// </summary>
         private void MostrarDireccionAnfitrion()
         {
-            _esAnfitrion = true;
             var ips = IpsLanCompartibles();
-            if (ips.Count == 0)
-            {
-                Console.WriteLine("[Visor3D] ANFITRIÓN: sin IPs LAN no-loopback. Comparte tu IP pública con UDP 8910 reenviado en el router.");
-                return;
-            }
-            string lista = string.Join(", ", ips.Select(ip => ip + ":8910"));
-            Console.WriteLine($"[Visor3D] ANFITRIÓN — dirección directa para invitar (ENet UDP 8910): {lista}");
-            TxtUrlP2P.Text = lista;
-            TxtUrlP2P.ToolTip = $"Comparte esta dirección con el otro equipo: {lista}";
-            BtnCopiarUrlP2P.Content = "📋 Copiar IP";
+            _ipsLanFallback = string.Join(", ", ips.Select(ip => ip + ":8911"));
+
+            TxtUrlP2P.Text = "⏳ Generando enlace público…";
+            TxtUrlP2P.ToolTip = string.IsNullOrEmpty(_ipsLanFallback)
+                ? "El enlace público efímero se está generando…"
+                : $"Enlace público en preparación…\n(Alternativa en la misma red local: {_ipsLanFallback})";
+            BtnCopiarUrlP2P.Content = "📋 Copiar enlace";
+            BannerP2P.Visibility = Visibility.Visible;
+
+            Console.WriteLine(string.IsNullOrEmpty(_ipsLanFallback)
+                ? "[Visor3D] ANFITRIÓN: generando túnel público (sin IPs LAN alternativas)."
+                : $"[Visor3D] ANFITRIÓN: túnel público en preparación. Fallback LAN: {_ipsLanFallback}");
+        }
+
+        /// <summary>
+        /// Refleja en el banner el endpoint público/efímero del túnel activo (en lugar de la
+        /// IP privada LAN). El botón «Copiar enlace» pasa a copiar la URL completa del túnel.
+        /// </summary>
+        private void MostrarEnlacePublico(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return;
+
+            TxtUrlP2P.Text = url;
+            TxtUrlP2P.ToolTip = string.IsNullOrEmpty(_ipsLanFallback)
+                ? $"Enlace público de tu mundo:\n{url}\nHaz clic para copiar y compartirlo con un amigo."
+                : $"Enlace público de tu mundo:\n{url}\n\n(Alternativa en la misma red local: {_ipsLanFallback})";
+            BtnCopiarUrlP2P.Content = "📋 Copiar enlace";
             BannerP2P.Visibility = Visibility.Visible;
         }
 
@@ -617,13 +714,13 @@ namespace Visor3D
                 {
                     peerUrl = _urlAmigoPendiente ?? "",
                     remoteIp = hasTarget ? targetHost : "",
-                    remotePort = hasTarget ? targetPort : 8910,
+                    remotePort = hasTarget ? targetPort : 8911,
                     esCliente = esClienteRemoto,
                     rolEfectivo = esClienteRemoto ? "cliente_remoto" : "servidor_local",
                     hostResuelto = esClienteRemoto ? targetHost : "127.0.0.1",
                     myTunnelUrl = _p2pServicio?.UrlPublicaPropia ?? "",
                     puertoLocal = 7890,
-                    puertoGodot = 8910,
+                    puertoGodot = 8911,
                     esPrimerUsuario = !hasTarget,
                     timestamp = DateTime.UtcNow.ToString("o")
                 };
@@ -668,22 +765,34 @@ namespace Visor3D
 
                 _p2pServicio.UrlTunnelLista += url =>
                 {
+                    // Este es el túnel de la API P2P local (puerto 7890). El enlace público que
+                    // se comparte con los amigos es el del túnel WebNodo (ver EstablecerTunelEfimeroAsync),
+                    // que es el que transporta el tráfico del metaverso por WebSocket.
                     Dispatcher.Invoke(() =>
                     {
-                        if (_esAnfitrion)
-                        {
-                            // Actualizar p2p_session.json para que Godot conozca su propia URL de túnel
-                            GuardarP2PSessionConfig();
-                            TxtUrlP2P.ToolTip = $"Portal WebNodo y P2P Tunnel: {url}";
-                        }
-                        else
-                        {
-                            TxtUrlP2P.Text = url;
-                            BannerP2P.Visibility = Visibility.Visible;
-                        }
+                        GuardarP2PSessionConfig();
                         TxtEstadoP2P.Text = "🟢 Red P2P Online";
                         BordeEstadoP2P.Background = new System.Windows.Media.SolidColorBrush(
                             System.Windows.Media.Color.FromRgb(6, 78, 59));
+                    });
+                };
+
+                // Reconexión automática del túnel: informar en la barra de estado.
+                _p2pServicio.TunelCaido += host =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        TxtEstadoP2P.Text = $"🔄 Túnel SSH ({host}) caído, reconectando…";
+                        BordeEstadoP2P.Background = new System.Windows.Media.SolidColorBrush(
+                            System.Windows.Media.Color.FromRgb(120, 53, 15));
+                    });
+                };
+
+                _p2pServicio.TunelReintentando += (intento, espera) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        TxtEstadoP2P.Text = $"🔄 Reconectando túnel… (intento {intento}, en {espera}s)";
                     });
                 };
 
@@ -721,16 +830,27 @@ namespace Visor3D
 
         private void OnCopiarUrlP2PClicked(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrWhiteSpace(TxtUrlP2P.Text))
+            string enlace = TxtUrlP2P.Text.Trim();
+            if (string.IsNullOrWhiteSpace(enlace)) return;
+
+            // Evitar copiar el texto de estado mientras el túnel aún no está listo.
+            if (!enlace.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                Clipboard.SetText(TxtUrlP2P.Text);
                 MessageBox.Show(
-                    $"¡Enlace P2P copiado al portapapeles!\n\n{TxtUrlP2P.Text}\n\n" +
-                    "Compártelo con tu amigo (por WhatsApp u otro medio) para que pueda conectarse a tu mundo.",
-                    "Enlace P2P Copiado",
+                    "El enlace público aún se está generando. Espera unos segundos e inténtalo de nuevo.",
+                    "Enlace en preparación",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
+                return;
             }
+
+            Clipboard.SetText(enlace);
+            MessageBox.Show(
+                $"¡Enlace público copiado al portapapeles!\n\n{enlace}\n\n" +
+                "Compártelo con tu amigo (por WhatsApp u otro medio) para que pueda unirse a tu mundo desde cualquier red.",
+                "Enlace P2P Copiado",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         private async void OnConectarAmigoClicked(object sender, RoutedEventArgs e)
@@ -926,6 +1046,7 @@ namespace Visor3D
                             TxtEstadoP2P.Text = "🌍 Túnel público activo";
                             App.WebNodo.PublicTunnelUrl = pubUrl;
                             GuardarP2PSessionConfig(); // Refrescar config con la URL del túnel
+                            MostrarEnlacePublico(pubUrl);
                             BtnWebNodo.Content = "🌐 WebNodo (Online)";
                             BtnWebNodo.ToolTip = $"WebNodo público activo:\n{pubUrl}\nHaz clic para abrir en el navegador y copiar.";
                             BtnWebNodo.Background = new System.Windows.Media.SolidColorBrush(
@@ -961,6 +1082,7 @@ namespace Visor3D
                             TxtEstadoP2P.Text = $"🌍 Túnel público ({c.Name})";
                             App.WebNodo.PublicTunnelUrl = pubUrl;
                             GuardarP2PSessionConfig(); // Refrescar config con la URL del túnel
+                            MostrarEnlacePublico(pubUrl);
                             BtnWebNodo.Content = "🌐 WebNodo (Online)";
                             BtnWebNodo.ToolTip = $"WebNodo público ({c.Name}):\n{pubUrl}\nHaz clic para abrir en el navegador y copiar.";
                             BtnWebNodo.Background = new System.Windows.Media.SolidColorBrush(

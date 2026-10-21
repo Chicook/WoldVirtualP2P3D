@@ -11,9 +11,12 @@ signal mi_isla_lista
 @onready var original_ocean = $Oceano3D
 @onready var userbase = $USERBASE
 
-var peer = ENetMultiplayerPeer.new()
+## Transporte de red único: WebSocket (TCP). Es el único canal que atraviesa los
+## túneles efímeros (cloudflared / serveo / localhost.run) que levanta el Visor C#,
+## y también funciona en LAN. ENet (UDP 8910) queda descartado porque ningún
+## túnel HTTP transporta UDP, por lo que los clientes remotos nunca conectarían.
+const PUERTO_WS := 8911
 var ws_peer = WebSocketMultiplayerPeer.new()
-var using_ws := false
 var next_island_index = 0
 var active_islands = {} # Diccionario: player_id -> island_index
 var owner_names = {} # Diccionario: player_id -> nick del dueño
@@ -25,7 +28,7 @@ var _mi_nick := ""
 var _save_pos_timer := 0.0
 var _last_saved_pos := Vector3.ZERO
 var _last_target_host := "127.0.0.1"
-var _last_target_port := 8910
+var _last_target_port := PUERTO_WS
 var _is_explicit_client := false
 var _beacon_udp: PacketPeerUDP = null
 var _beacon_timer := 0.0
@@ -91,7 +94,7 @@ func _ready():
 	# Leer configuración de red P2P (vía argumentos CLI, p2p_session.json o auto-descubrimiento LAN)
 	var peer_target := _obtener_peer_target()
 	var target_host: String = peer_target.get("host", "127.0.0.1")
-	var target_port: int = int(peer_target.get("port", 8910))
+	var target_port: int = int(peer_target.get("port", PUERTO_WS))
 	var force_host: bool = bool(peer_target.get("force_host", false))
 	var is_client: bool = bool(peer_target.get("is_client", false))
 	var fuente: String = str(peer_target.get("source", "desconocida"))
@@ -101,89 +104,73 @@ func _ready():
 	_is_explicit_client = is_client or (target_host != "127.0.0.1" and target_host != "localhost")
 
 	print("================================================================")
-	print("[ChunkManager/ENet] Configuración de Red P2P Resuelta:")
-	print("[ChunkManager/ENet]   Origen/Fuente: ", fuente)
-	print("[ChunkManager/ENet]   Rol asignado: ", "CLIENTE FORZADO" if is_client else ("SERVIDOR FORZADO" if force_host else "AUTO (Cliente/Local)"))
-	print("[ChunkManager/ENet]   Host Objetivo: ", target_host)
-	print("[ChunkManager/ENet]   Puerto Objetivo (ENet UDP): ", target_port)
+	print("[ChunkManager/WS] Configuración de Red P2P Resuelta:")
+	print("[ChunkManager/WS]   Origen/Fuente: ", fuente)
+	print("[ChunkManager/WS]   Rol asignado: ", "CLIENTE FORZADO" if is_client else ("SERVIDOR FORZADO" if force_host else "AUTO (Cliente/Local)"))
+	print("[ChunkManager/WS]   Host Objetivo: ", target_host)
+	print("[ChunkManager/WS]   Puerto WebSocket (TCP): ", PUERTO_WS)
 
 	# Validación: si el rol es cliente explícito, el host no debe ser loopback.
 	if _is_explicit_client and (target_host == "127.0.0.1" or target_host == "localhost" or target_host.is_empty()):
-		printerr("[ChunkManager/ENet] ❌ INCONSISTENCIA: Rol cliente forzado pero host objetivo es loopback o vacío ('", target_host, "'). No se iniciará como cliente remoto.")
+		printerr("[ChunkManager/WS] ❌ INCONSISTENCIA: Rol cliente forzado pero host objetivo es loopback o vacío ('", target_host, "'). No se iniciará como cliente remoto.")
 		_is_explicit_client = false
 
-	print("[ChunkManager/ENet]   Rol EFECTIVO: ", "CLIENTE_REMOTO -> " + target_host + ":" + str(target_port) if _is_explicit_client else ("SERVIDOR_LOCAL -> 0.0.0.0:" + str(target_port) if force_host else "AUTO (intentará cliente en " + target_host + ":" + str(target_port) + ", fallback a servidor si falla)"))
+	print("[ChunkManager/WS]   Rol EFECTIVO: ", "CLIENTE_REMOTO -> " + target_host if _is_explicit_client else ("SERVIDOR_LOCAL (WS 0.0.0.0:" + str(PUERTO_WS) + ")" if force_host else "AUTO (intentará unirse a un anfitrión local, fallback a servidor)"))
 	print("================================================================")
 
-	# Diagnóstico: distinguir IP literal de nombre de host (típico de túnel HTTP).
-	# Un túnel HTTP (cloudflared / serveo / localhost.run) solo reenvía TCP/HTTP y
-	# NO puede transportar ENet (UDP 8910), por lo que el handshake nunca completará.
-	if _is_explicit_client and not _es_ip_literal(target_host):
-		printerr("[ChunkManager/ENet] ⚠ AVISO: el destino '", target_host, "' es un NOMBRE DE HOST, no una IP.")
-		printerr("[ChunkManager/ENet]   Los túneles HTTP no transportan ENet (UDP). Para conexión remota usa la")
-		printerr("[ChunkManager/ENet]   IP directa del anfitrión (IP LAN, o IP pública + UDP 8910 reenviado en el router).")
-
 	if force_host:
-		print("[ChunkManager/ENet] Iniciando explícitamente como Anfitrión (Servidor)...")
+		print("[ChunkManager/WS] Iniciando explícitamente como Anfitrión (servidor WebSocket)...")
 		_iniciar_como_servidor()
 	elif _is_explicit_client:
-		# Conexión remota explícita: conectar obligatoriamente como cliente a la IP remota o túnel WS.
-		if target_host.contains("trycloudflare.com") or target_host.contains("lhr.life") or target_host.contains("serveo.net"):
-			print("[ChunkManager/WS] Detectado túnel HTTP. Conectando vía WEBSOCKETS a: ", target_host)
-			using_ws = true
-			var ws_url = "wss://" + target_host if not target_host.begins_with("ws") else target_host
-			# Si es localhost.run o serveo, el puerto suele ser 80/443 implícito en la URL
-			var err = ws_peer.create_client(ws_url)
-			if err != OK:
-				printerr("[ChunkManager/WS] ERROR al crear cliente WebSocket hacia ", ws_url, " (", err, ")")
-				return
-			multiplayer.multiplayer_peer = ws_peer
-			print("[ChunkManager/WS] Intentando handshake WebSocket con ", ws_url, "...")
-		else:
-			print("[ChunkManager/ENet] Conectando como CLIENTE hacia el anfitrión remoto: ", target_host, ":", target_port, "...")
-			var err := peer.create_client(target_host, target_port)
-			if err != OK:
-				printerr("[ChunkManager/ENet] ERROR inmediato al crear cliente ENet hacia ", target_host, ":", target_port, " (Código: ", err, ")")
-				print("[ChunkManager/ENet] Handshake remoto fallido. Revisar firewall/puerto UDP 8910 y que el anfitrión esté escuchando.")
-				return
-			else:
-				multiplayer.multiplayer_peer = peer
-				print("[ChunkManager/ENet] Socket cliente ENet abierto. Esperando handshake con ", target_host, ":", target_port, "...")
-	else:
-		# Modo autónomo / pruebas locales (loopback 127.0.0.1)
-		print("[ChunkManager/ENet] Buscando red P2P en ", target_host, ":", target_port, "...")
-		var err := peer.create_client(target_host, target_port)
+		# Conexión remota explícita: un único transporte WebSocket sirve tanto para
+		# túneles HTTP (wss://...) como para IP de LAN (ws://ip:8911).
+		var ws_url := _resolver_url_ws(target_host, target_port)
+		print("[ChunkManager/WS] Conectando como CLIENTE WebSocket a: ", ws_url)
+		ws_peer = WebSocketMultiplayerPeer.new()
+		var err := ws_peer.create_client(ws_url)
 		if err != OK:
-			print("[ChunkManager/ENet] Sin servidor local activo (", err, "). Creando servidor local P2P...")
+			printerr("[ChunkManager/WS] ERROR al crear cliente WebSocket hacia ", ws_url, " (", err, ")")
+			return
+		multiplayer.multiplayer_peer = ws_peer
+		print("[ChunkManager/WS] Socket cliente abierto. Esperando handshake con ", ws_url, "...")
+	else:
+		# Modo autónomo: intentar unirnos a un anfitrión WebSocket local; si nadie
+		# aloja, creamos el mundo (el Visor C# publicará el enlace público del túnel).
+		print("[ChunkManager/WS] Buscando anfitrión P2P local en ws://127.0.0.1:", PUERTO_WS, " ...")
+		ws_peer = WebSocketMultiplayerPeer.new()
+		var err := ws_peer.create_client("ws://127.0.0.1:%d" % PUERTO_WS)
+		if err != OK:
+			print("[ChunkManager/WS] Sin servidor local activo (", err, "). Creando mundo local P2P...")
 			_iniciar_como_servidor()
 		else:
-			multiplayer.multiplayer_peer = peer
+			multiplayer.multiplayer_peer = ws_peer
 
 func _on_connected_ok():
-	print("[ChunkManager/ENet] ✔ CONECTADO EXITOSAMENTE al mundo P2P! ID único asignado: ", multiplayer.get_unique_id())
+	print("[ChunkManager/WS] ✔ CONECTADO EXITOSAMENTE al mundo P2P! ID único asignado: ", multiplayer.get_unique_id())
 	# Anunciar mi isla por si es una reconexion tras migracion de anfitrion:
 	# el servidor me reconocera y NO me creara isla nueva.
 	rpc_id(1, "_claim_island", my_own_index, _mi_nick)
 
 func _iniciar_como_servidor():
-	print("[ChunkManager/ENet] Creando Servidor ENet en puerto 8910...")
-	peer = ENetMultiplayerPeer.new()
-	var err := peer.create_server(8910, 32)
+	# El anfitrión sirve el mundo por WebSocket (TCP 8911). Este es el puerto que el
+	# Visor C# reenvía a través del túnel efímero (cloudflared/serveo/localhost.run),
+	# por lo que los clientes remotos SÍ pueden alcanzarlo. Si se usase ENet (UDP)
+	# como peer principal, los clientes del túnel nunca completarían el handshake.
+	print("[ChunkManager/WS] Creando Servidor WebSocket en puerto ", PUERTO_WS, "...")
+	ws_peer = WebSocketMultiplayerPeer.new()
+	var err := ws_peer.create_server(PUERTO_WS)
 	if err != OK:
-		printerr("[ChunkManager/ENet] ERROR al crear servidor ENet en puerto 8910: ", err)
-	else:
-		multiplayer.multiplayer_peer = peer
-		
-	# Iniciar servidor WebSocket paralelo para túneles efímeros (puerto 8911)
-	_iniciar_como_servidor_ws()
+		printerr("[ChunkManager/WS] ERROR al crear servidor WebSocket en ", PUERTO_WS, ": ", err)
+		return
+	multiplayer.multiplayer_peer = ws_peer
 
 	var mis_ips := IP.get_local_addresses()
 	var ips_txt: String = ""
 	for ip in mis_ips:
 		if ip != "127.0.0.1":
 			ips_txt += ip + " "
-	print("[ChunkManager/ENet] ✔ Servidor ENet activo en 0.0.0.0:8910. ID del servidor: ", multiplayer.get_unique_id())
-	print("[ChunkManager/ENet]   IPs locales para compartir (anfitrión): ", ips_txt.strip_edges() if not ips_txt.is_empty() else "(ninguna no-loopback detectada)")
+	print("[ChunkManager/WS] ✔ Servidor WebSocket activo en 0.0.0.0:", PUERTO_WS, ". ID del servidor: ", multiplayer.get_unique_id())
+	print("[ChunkManager/WS]   IPs locales para compartir (anfitrión): ", ips_txt.strip_edges() if not ips_txt.is_empty() else "(ninguna no-loopback detectada)")
 
 	# Activar beacon LAN de auto-descubrimiento para que otros equipos en la misma red puedan unirse sin enlace
 	_iniciar_lan_beacon()
@@ -192,27 +179,12 @@ func _iniciar_como_servidor():
 	owner_names[multiplayer.get_unique_id()] = _nick_unico(_mi_nick, multiplayer.get_unique_id())
 	_register_player(multiplayer.get_unique_id())
 
-func _iniciar_como_servidor_ws():
-	print("[ChunkManager/WS] Creando Servidor WebSocket en puerto 8911...")
-	var err = ws_peer.create_server(8911)
-	if err != OK:
-		printerr("[ChunkManager/WS] ERROR al crear servidor WebSocket en puerto 8911: ", err)
-	else:
-		# Si ENet falló, usamos WS como principal. Si no, ambos corren pero ENet manda en 'multiplayer'.
-		# Nota: Godot 4 solo permite un multiplayer_peer a la vez en el SceneTree por defecto.
-		# Para túneles remotos, el Visor C# forzará el uso de WS si detecta la URL del túnel.
-		if multiplayer.multiplayer_peer == null or not multiplayer.multiplayer_peer.is_active():
-			multiplayer.multiplayer_peer = ws_peer
-			using_ws = true
-		print("[ChunkManager/WS] ✔ Servidor WebSocket activo en puerto 8911.")
-
 func _on_connected_fail():
-	printerr("[ChunkManager/ENet] ❌ Falló la conexión con el nodo objetivo en ", _last_target_host, ":", _last_target_port)
+	printerr("[ChunkManager/WS] ❌ Falló la conexión WebSocket con ", _last_target_host, ":", _last_target_port)
 	if _is_explicit_client:
-		printerr("[ChunkManager/ENet] ADVERTENCIA: El host remoto ", _last_target_host, " no respondió al handshake ENet (puerto UDP 8910 no alcanzable o cerrado).")
-		print("[ChunkManager/ENet] Rol cliente explícito: NO se degrada a servidor local. Revisar conexión remota.")
+		printerr("[ChunkManager/WS] Rol cliente explícito: NO se degrada a servidor local. Revisar el enlace/túnel y que el anfitrión siga online.")
 	else:
-		print("[ChunkManager/ENet] Nadie alojando en el par objetivo. Creando servidor local P2P...")
+		print("[ChunkManager/WS] Nadie alojando en el par objetivo. Creando mundo local P2P...")
 		_iniciar_como_servidor()
 
 func _on_peer_connected(id):
@@ -298,20 +270,20 @@ func _on_peer_disconnected(id):
 # que las nuevas instancias tengan a quien conectarse. Reconstruye el estado a
 # partir del historial persistente de TeleportManager (islas ya generadas).
 func _on_server_disconnected():
-	print("Servidor caido. Intentando asumir el rol de anfitrion...")
+	print("Servidor WebSocket caido. Intentando asumir el rol de anfitrion...")
 	multiplayer.multiplayer_peer = null
 	await get_tree().create_timer(1.0).timeout
-	peer = ENetMultiplayerPeer.new()
-	var err = peer.create_server(8910, 32)
+	ws_peer = WebSocketMultiplayerPeer.new()
+	var err = ws_peer.create_server(PUERTO_WS)
 	if err != OK:
 		# Otro peer asumio el rol antes: reintentar como cliente
 		print("Puerto ocupado, otro peer es el nuevo anfitrion. Reconectando...")
 		await get_tree().create_timer(1.0).timeout
-		peer = ENetMultiplayerPeer.new()
-		peer.create_client(_last_target_host, _last_target_port)
-		multiplayer.multiplayer_peer = peer
+		ws_peer = WebSocketMultiplayerPeer.new()
+		ws_peer.create_client(_resolver_url_ws(_last_target_host, _last_target_port))
+		multiplayer.multiplayer_peer = ws_peer
 		return
-	multiplayer.multiplayer_peer = peer
+	multiplayer.multiplayer_peer = ws_peer
 	# Reconstruir registro sin duplicar islas: conservar mi isla y reservar indices usados
 	var tm2 = get_node_or_null("TeleportManager")
 	var used_max := -1
@@ -483,7 +455,7 @@ func _nick_unico(nick: String, id: int) -> String:
 func _obtener_peer_target() -> Dictionary:
 	var res := {
 		"host": "127.0.0.1",
-		"port": 8910,
+		"port": PUERTO_WS,
 		"force_host": false,
 		"is_client": false,
 		"source": "predeterminado (loopback local)"
@@ -492,7 +464,7 @@ func _obtener_peer_target() -> Dictionary:
 	# 1. Revisar argumentos de línea de comandos (tanto de usuario como generales del motor)
 	var all_args: Array = OS.get_cmdline_args()
 	all_args.append_array(OS.get_cmdline_user_args())
-	print("[ChunkManager/ENet] Args evaluados para resolver rol/host: ", all_args)
+	print("[ChunkManager/WS] Args evaluados para resolver rol/host: ", all_args)
 	
 	var cli_ip := ""
 	var cli_port := 0
@@ -538,7 +510,7 @@ func _obtener_peer_target() -> Dictionary:
 		return res
 
 	if not cli_ip.is_empty():
-		var final_port := cli_port if cli_port > 0 else 8910
+		var final_port := cli_port if cli_port > 0 else PUERTO_WS
 		res["host"] = cli_ip
 		res["port"] = final_port
 		res["is_client"] = true
@@ -565,14 +537,14 @@ func _obtener_peer_target() -> Dictionary:
 				var j = JSON.parse_string(txt)
 				if j is Dictionary:
 					var remote_ip: String = str(j.get("remoteIp", "")).strip_edges()
-					var remote_port: int = int(j.get("remotePort", 8910))
+					var remote_port: int = int(j.get("remotePort", PUERTO_WS))
 					var es_cliente: bool = bool(j.get("esCliente", false))
 					var es_primero: bool = bool(j.get("esPrimerUsuario", false))
 					var p_url: String = str(j.get("peerUrl", "")).strip_edges()
 					
 					if not remote_ip.is_empty() and remote_ip != "127.0.0.1" and remote_ip != "localhost":
 						res["host"] = remote_ip
-						res["port"] = remote_port if remote_port > 0 else 8910
+						res["port"] = remote_port if remote_port > 0 else PUERTO_WS
 						res["is_client"] = true
 						res["source"] = "p2p_session.json (remoteIp explícito: " + ruta + ")"
 						return res
@@ -597,7 +569,7 @@ func _obtener_peer_target() -> Dictionary:
 	var lan_host := _buscar_host_en_lan(350)
 	if not lan_host.is_empty():
 		res["host"] = lan_host["host"]
-		res["port"] = int(lan_host.get("port", 8910))
+		res["port"] = int(lan_host.get("port", PUERTO_WS))
 		res["is_client"] = true
 		res["source"] = "Auto-descubrimiento en red local (Beacon UDP LAN)"
 		return res
@@ -605,18 +577,16 @@ func _obtener_peer_target() -> Dictionary:
 	return res
 
 
-## True si el texto es una dirección IPv4 literal (p. ej. 192.168.1.10).
-func _es_ip_literal(texto: String) -> bool:
-	var partes := texto.strip_edges().split(".")
-	if partes.size() != 4:
-		return false
-	for p in partes:
-		if not p.is_valid_int():
-			return false
-		var n := int(p)
-		if n < 0 or n > 255:
-			return false
-	return true
+## Construye la URL WebSocket del anfitrión a partir del host/puerto resueltos.
+## - Túneles HTTP (cloudflared / serveo / localhost.run) -> wss://<host> (TLS del túnel)
+## - IP o nombre LAN -> ws://<host>:8911 (servidor WebSocket del motor)
+func _resolver_url_ws(host: String, _port: int) -> String:
+	var h := host.strip_edges()
+	if h.begins_with("ws://") or h.begins_with("wss://"):
+		return h
+	if h.contains("trycloudflare.com") or h.contains("lhr.life") or h.contains("serveo.net") or h.contains("ngrok"):
+		return "wss://%s" % h
+	return "ws://%s:%d" % [h, PUERTO_WS]
 
 
 func _parse_url_host_port(url_str: String) -> Dictionary:
@@ -625,15 +595,15 @@ func _parse_url_host_port(url_str: String) -> Dictionary:
 	if clean.contains("/"):
 		clean = clean.split("/")[0]
 	var host := clean
-	var port := 8910
+	var port := PUERTO_WS
 	if clean.contains(":"):
 		var partes := clean.split(":")
 		host = partes[0].strip_edges()
 		var p := int(partes[1].strip_edges())
-		# Si el puerto en la URL es el de WebNodo HTTP (3030..3040), de la API P2P (7890), o HTTP/HTTPS (80/443),
-		# redirigir al puerto ENet UDP estándar del motor (8910)
+		# Si el puerto en la URL es el de WebNodo HTTP (3030..3040), el de la API P2P (7890),
+		# o HTTP/HTTPS (80/443), el canal del metaverso es el WebSocket del motor (8911).
 		if (p >= 3030 and p <= 3040) or p == 7890 or p == 80 or p == 443:
-			port = 8910
+			port = PUERTO_WS
 		elif p > 0 and p <= 65535:
 			port = p
 	return {"host": host, "port": port}
@@ -644,12 +614,12 @@ func _iniciar_lan_beacon() -> void:
 		_beacon_udp = PacketPeerUDP.new()
 		_beacon_udp.set_broadcast_enabled(true)
 		_beacon_udp.set_dest_address("255.255.255.255", 8912)
-		print("[ChunkManager/ENet] Beacon LAN activo en puerto UDP 8912 para auto-descubrimiento.")
+		print("[ChunkManager/WS] Beacon LAN activo en puerto UDP 8912 para auto-descubrimiento.")
 
 
 func _emitir_beacon_lan() -> void:
 	if _beacon_udp and multiplayer.is_server():
-		var msg := "WOLDVIRTUAL_HOST_8910".to_utf8_buffer()
+		var msg := ("WOLDVIRTUAL_HOST_WS_%d" % PUERTO_WS).to_utf8_buffer()
 		_beacon_udp.put_packet(msg)
 
 
@@ -671,8 +641,8 @@ func _buscar_host_en_lan(timeout_ms: int = 350) -> Dictionary:
 				var mis_ips := IP.get_local_addresses()
 				if not mis_ips.has(sender_ip) and sender_ip != "127.0.0.1":
 					listener.close()
-					print("[ChunkManager/ENet] Par anfitrión detectado en LAN: ", sender_ip, ":8910")
-					return {"host": sender_ip, "port": 8910}
+					print("[ChunkManager/WS] Par anfitrión detectado en LAN: ", sender_ip, ":", PUERTO_WS)
+					return {"host": sender_ip, "port": PUERTO_WS}
 	listener.close()
 	return {}
 

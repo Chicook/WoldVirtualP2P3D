@@ -385,6 +385,21 @@
                     </Grid>
                 </Border>
                 <TextBlock Text="Actualizar" Foreground="#38BDF8" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+
+                <!-- Panel de progreso de descarga (oculto hasta iniciar la descarga) -->
+                <Border x:Name="PanelProgreso" Visibility="Collapsed"
+                        Background="#0D1520" BorderBrush="#38BDF8" BorderThickness="1"
+                        CornerRadius="6" Padding="8,6" Margin="0,6,0,0"
+                        HorizontalAlignment="Right">
+                    <StackPanel Width="150">
+                        <TextBlock x:Name="TxtProgresoEstado" Text="Descargando..."
+                                   Foreground="#38BDF8" FontSize="9.5" FontWeight="Bold"/>
+                        <ProgressBar x:Name="BarProgreso" Height="6" Minimum="0" Maximum="100" Value="0"
+                                     Margin="0,4,0,0" Foreground="#00D9FF" Background="#1E293B" BorderThickness="0"/>
+                        <TextBlock x:Name="TxtProgresoPorcentaje" Text="0 %"
+                                   Foreground="#8892B0" FontSize="9" HorizontalAlignment="Right" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Grid>
     </Grid>

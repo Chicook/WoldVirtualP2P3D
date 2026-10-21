@@ -1,158 +1,245 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Visor3D.Update
 {
+    /// <summary>
+    /// Consulta la API pública de GitHub Releases y determina si existe una
+    /// versión más reciente que la instalada localmente (comparación SemVer).
+    /// </summary>
     public class UpdateChecker
     {
         private const string Repo = "Chicook/WoldVirtualP2P3D";
-        private static readonly HttpClient Client = new HttpClient();
+
+        // Una única instancia de HttpClient reutilizada (evita agotar sockets).
+        private static readonly HttpClient Client = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(25)
+        };
 
         static UpdateChecker()
         {
-            // Usar un User-Agent de navegador real para evitar bloqueos de GitHub API
-            Client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            Client.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
-            
+            // GitHub EXIGE un User-Agent. Usamos uno de navegador real para
+            // evitar bloqueos/rechazos de la API (403) en IPs compartidas.
+            Client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            Client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+
+            // Token opcional: sube el límite de 60 a 5000 peticiones/hora.
             var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
             if (!string.IsNullOrWhiteSpace(token))
-                Client.DefaultRequestHeaders.Add("Authorization", "token " + token);
+                Client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         }
 
+        /// <summary>
+        /// Devuelve la mejor actualización disponible, o null si ya estamos al día.
+        /// </summary>
+        /// <param name="currentVersion">Versión local (p. ej. "0.0.13").</param>
         public async Task<ReleaseInfo?> CheckForUpdateAsync(string currentVersion)
         {
             try
             {
-                LogDebug($"Iniciando consulta a GitHub para versión: {currentVersion}");
-                // Consultar la lista completa de releases para incluir prereleases y evitar cache de GitHub
-                var url = $"https://api.github.com/repos/{Repo}/releases?t={DateTime.Now.Ticks}";
-                LogDebug($"URL: {url}");
-                
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var response = await Client.SendAsync(request);
-                
-                if (!response.IsSuccessStatusCode)
+                var local = ParseVersion(currentVersion) ?? new Version(0, 0, 0, 0);
+                Log($"Versión local normalizada: {local}");
+                Log($"Consultando: {currentVersion}");
+
+                var releases = await FetchReleasesAsync();
+                if (releases.Count == 0)
                 {
-                    Console.WriteLine($"[UpdateChecker] Error al consultar releases (Status: {response.StatusCode})");
+                    Log("No se encontraron releases publicadas.");
                     return null;
                 }
 
-                string json = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                
-                if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.GetArrayLength() == 0)
+                // Elegimos, por separado, la mejor versión ESTABLE y la mejor
+                // PRERELEASE, y damos prioridad a la estable. Así, si sólo existen
+                // betas publicadas, también se detectan.
+                ReleaseInfo? mejorEstable = null;
+                Version? mejorEstableVer = null;
+                ReleaseInfo? mejorPre = null;
+                Version? mejorPreVer = null;
+
+                foreach (var rel in releases)
                 {
-                    Console.WriteLine("[UpdateChecker] No se encontraron releases en el repositorio.");
-                    return null;
-                }
+                    if (rel.Draft) continue;                     // los borradores no son públicos
 
-                // La primera release de la lista suele ser la más reciente cronológicamente
-                var releases = doc.RootElement.EnumerateArray().ToList();
-                LogDebug($"Total releases encontradas: {releases.Count}");
-                
-                var root = releases[0];
-                var tag = root.GetProperty("tag_name").GetString() ?? "";
-                
-                LogDebug($"Tag más reciente: {tag} | Local: {currentVersion}");
+                    var v = ParseVersion(rel.TagName);
+                    if (v == null || v <= local) continue;       // no es más nueva que la local
 
-                if (IsUpToDate(tag, currentVersion))
-                {
-                    LogDebug("La versión local ya está al día.");
-                    return null;
-                }
+                    var asset = ElegirAsset(rel.Assets);
+                    if (asset == null || string.IsNullOrWhiteSpace(asset.Url)) continue;  // sin binario
 
-                LogDebug("¡Actualización detectada! Buscando asset .exe...");
-
-                foreach (var asset in root.GetProperty("assets").EnumerateArray())
-                {
-                    var name = asset.GetProperty("name").GetString() ?? "";
-                    if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    var info = new ReleaseInfo
                     {
-                        return new ReleaseInfo
-                        {
-                            TagName = tag,
-                            Version = tag,
-                            AssetUrl = asset.GetProperty("browser_download_url").GetString() ?? "",
-                            AssetName = name,
-                            AssetSize = asset.GetProperty("size").GetInt64(),
-                            Prerelease = root.GetProperty("prerelease").GetBoolean()
-                        };
+                        TagName = rel.TagName,
+                        Version = v.ToString(),
+                        AssetUrl = asset.Url,
+                        AssetName = asset.Name,
+                        AssetSize = asset.Size,
+                        Prerelease = rel.Prerelease
+                    };
+
+                    if (rel.Prerelease)
+                    {
+                        if (mejorPre == null || v > mejorPreVer!) { mejorPre = info; mejorPreVer = v; }
+                    }
+                    else
+                    {
+                        if (mejorEstable == null || v > mejorEstableVer!) { mejorEstable = info; mejorEstableVer = v; }
                     }
                 }
+
+                var elegido = mejorEstable ?? mejorPre;
+                Log(elegido == null
+                    ? "El sistema ya está al día."
+                    : $"Actualización disponible: {elegido.TagName} ({elegido.AssetName})");
+                return elegido;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[UpdateChecker] Error en CheckForUpdateAsync: {ex.Message}");
+                Log($"Error consultando GitHub: {ex.Message}");
+                return null;
             }
-            return null;
         }
 
-        private static bool IsUpToDate(string tag, string currentVersion)
+        // ─────────────────────────────────────────────────────────────────
+        //  Llamada HTTP a la API de GitHub
+        // ─────────────────────────────────────────────────────────────────
+        private static async Task<List<GhRelease>> FetchReleasesAsync()
         {
-            if (string.IsNullOrWhiteSpace(tag)) return true;
-            
-            try
+            // 'per_page' limita el payload; el parámetro 't' rompe la caché de GitHub.
+            var url = $"https://api.github.com/repos/{Repo}/releases?per_page=30&t={DateTime.UtcNow.Ticks}";
+
+            using var resp = await Client.GetAsync(url);
+            if (!resp.IsSuccessStatusCode)
             {
-                var latestVer = ExtractVersion(tag);
-                var currentVer = ExtractVersion(currentVersion);
-
-                if (latestVer != null && currentVer != null)
-                {
-                    Console.WriteLine($"[UpdateChecker] Comparación: Local {currentVer} vs Remoto {latestVer}");
-                    // Si la versión remota es estrictamente mayor, hay actualización
-                    return currentVer >= latestVer;
-                }
+                Log($"GitHub respondió {(int)resp.StatusCode} {resp.ReasonPhrase}");
+                return new List<GhRelease>();
             }
-            catch { }
 
-            // Si no podemos parsear, solo comparamos si son idénticos
-            return tag.Trim().Equals(currentVersion.Trim(), StringComparison.OrdinalIgnoreCase);
+            await using var stream = await resp.Content.ReadAsStreamAsync();
+            using var doc = await JsonDocument.ParseAsync(stream);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                return new List<GhRelease>();
+
+            var lista = new List<GhRelease>();
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                var rel = new GhRelease
+                {
+                    TagName = el.TryGetProperty("tag_name", out var t) ? t.GetString() ?? "" : "",
+                    Draft = el.TryGetProperty("draft", out var d) && d.GetBoolean(),
+                    Prerelease = el.TryGetProperty("prerelease", out var p) && p.GetBoolean()
+                };
+
+                if (el.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var a in assets.EnumerateArray())
+                    {
+                        rel.Assets.Add(new GhAsset
+                        {
+                            Name = a.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "",
+                            Url = a.TryGetProperty("browser_download_url", out var u) ? u.GetString() ?? "" : "",
+                            Size = a.TryGetProperty("size", out var s) ? s.GetInt64() : 0
+                        });
+                    }
+                }
+                lista.Add(rel);
+            }
+
+            Log($"Releases recibidas: {lista.Count}");
+            return lista;
         }
 
-        private static Version? ExtractVersion(string tag)
+        // ─────────────────────────────────────────────────────────────────
+        //  Selección del binario a descargar
+        // ─────────────────────────────────────────────────────────────────
+        private static GhAsset? ElegirAsset(List<GhAsset> assets)
+        {
+            // 1) .exe cuyo nombre recuerde al visor (criterio preferente).
+            var exe = assets.FirstOrDefault(a =>
+                a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                (a.Name.Contains("Wold", StringComparison.OrdinalIgnoreCase) ||
+                 a.Name.Contains("Visor", StringComparison.OrdinalIgnoreCase) ||
+                 a.Name.Contains("DMWold", StringComparison.OrdinalIgnoreCase)));
+            if (exe != null) return exe;
+
+            // 2) Cualquier .exe.
+            exe = assets.FirstOrDefault(a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            if (exe != null) return exe;
+
+            // 3) Fallback: paquete .zip.
+            return assets.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        //  Normalización / comparación de versiones (tolerante a "v0.0.012")
+        // ─────────────────────────────────────────────────────────────────
+        /// <summary>
+        /// Extrae una <see cref="Version"/> de un tag tipo "v1.2.0", "0.0.012",
+        /// "1.2.3-beta.1", etc. Normaliza ceros a la izquierda y rellena a 4
+        /// componentes para que la comparación sea homogénea.
+        /// </summary>
+        public static Version? ParseVersion(string? tag)
         {
             if (string.IsNullOrWhiteSpace(tag)) return null;
-            
-            try 
-            {
-                // Limpiar caracteres y buscar números (ej: 0.0.12 o 0.0.012)
-                var match = System.Text.RegularExpressions.Regex.Match(tag, @"(\d+\.\d+(\.\d+)?(\.\d+)?)");
-                if (match.Success)
-                {
-                    string vStr = match.Value;
-                    // Normalizar versiones como 0.0.012 a 0.0.12 para que Version.TryParse funcione
-                    string[] parts = vStr.Split('.');
-                    for (int i = 0; i < parts.Length; i++)
-                    {
-                        if (int.TryParse(parts[i], out int n))
-                            parts[i] = n.ToString();
-                    }
-                    vStr = string.Join(".", parts);
 
-                    if (Version.TryParse(vStr, out var v))
-                        return v;
-                }
-            }
-            catch { }
-            return null;
+            var m = Regex.Match(tag, @"\d+(?:\.\d+){0,3}");
+            if (!m.Success) return null;
+
+            var nums = m.Value.Split('.')
+                              .Select(s => int.TryParse(s, out var n) ? n : 0)
+                              .ToArray();
+
+            int a = nums.Length > 0 ? nums[0] : 0;
+            int b = nums.Length > 1 ? nums[1] : 0;
+            int c = nums.Length > 2 ? nums[2] : 0;
+            int d = nums.Length > 3 ? nums[3] : 0;
+            return new Version(a, b, c, d);
         }
 
-        private static void LogDebug(string message)
+        // ─────────────────────────────────────────────────────────────────
+        //  Log de depuración (LocalAppData\WoldVirtualP2P3D\update_debug.log)
+        // ─────────────────────────────────────────────────────────────────
+        private static void Log(string message)
         {
             try
             {
-                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WoldVirtualP2P3D");
-                if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
-                string logPath = Path.Combine(logDir, "update_debug.log");
-                
-                File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] [Checker] {message}{Environment.NewLine}");
+                string dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "WoldVirtualP2P3D");
+                Directory.CreateDirectory(dir);
+
+                File.AppendAllText(
+                    Path.Combine(dir, "update_debug.log"),
+                    $"[{DateTime.Now:HH:mm:ss}] [Checker] {message}{Environment.NewLine}");
+
                 Console.WriteLine($"[UpdateChecker] {message}");
             }
-            catch { }
+            catch { /* el log nunca debe romper la app */ }
+        }
+
+        // DTOs mínimos para deserializar la respuesta de GitHub.
+        private sealed class GhRelease
+        {
+            public string TagName { get; set; } = "";
+            public bool Draft { get; set; }
+            public bool Prerelease { get; set; }
+            public List<GhAsset> Assets { get; } = new List<GhAsset>();
+        }
+
+        private sealed class GhAsset
+        {
+            public string Name { get; set; } = "";
+            public string Url { get; set; } = "";
+            public long Size { get; set; }
         }
     }
 }
