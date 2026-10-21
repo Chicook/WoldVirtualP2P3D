@@ -24,6 +24,7 @@ namespace Visor3D.RedP2P
     {
         private const int TimeoutUrlMs = 25_000;   // tiempo máximo esperando la URL pública
         private const int BackoffMaxSeg = 30;      // tope del backoff entre reconexiones
+        private const string Slot = "p2p";         // identificador del PID persistido en disco
 
         /// <summary>Hosts públicos de túnel SSH, en orden de preferencia.</summary>
         private static readonly (string Nombre, string Args, string Patron)[] Candidatos =
@@ -88,7 +89,7 @@ namespace Visor3D.RedP2P
                 if (_disposeado) return Task.CompletedTask;
 
                 // Barrido de restos de una ejecución previa que no pudo limpiarse (crash).
-                LimpiarHuerfanosAnteriores();
+                TunnelProcessRegistry.BarrerHuerfano(Slot);
 
                 if (_bucle != null) return Task.CompletedTask;
 
@@ -183,7 +184,7 @@ namespace Visor3D.RedP2P
                 if (!proc.Start()) return false;
 
                 lock (_sync) _proceso = proc;
-                RegistrarPid(proc.Id);
+                TunnelProcessRegistry.Persistir(Slot, proc.Id);
 
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
@@ -216,7 +217,7 @@ namespace Visor3D.RedP2P
                 {
                     if (ReferenceEquals(_proceso, proc)) _proceso = null;
                 }
-                OlvidarPid();
+                TunnelProcessRegistry.Olvidar(Slot);
             }
         }
 
@@ -257,7 +258,7 @@ namespace Visor3D.RedP2P
             try { cts?.Cancel(); } catch { }
             MatarProceso(proc);
             try { cts?.Dispose(); } catch { }
-            OlvidarPid();
+            TunnelProcessRegistry.Olvidar(Slot);
         }
 
         public void Dispose()
@@ -268,84 +269,6 @@ namespace Visor3D.RedP2P
                 _disposeado = true;
             }
             Detener();
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  Control de procesos huérfanos (Windows)
-        //  Un .exe single-file no siempre puede limpiar a sus hijos si el usuario
-        //  lo mata desde el Administrador de tareas. Persistimos el PID y lo
-        //  barremos al arrancar la siguiente vez.
-        // ════════════════════════════════════════════════════════════════════
-
-        private static string RutaPid
-        {
-            get
-            {
-                string dir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "WoldVirtualP2P3D");
-                try { Directory.CreateDirectory(dir); } catch { }
-                return Path.Combine(dir, "tunnel.pid");
-            }
-        }
-
-        private static void RegistrarPid(int pid)
-        {
-            try
-            {
-                long ticks = 0;
-                try { ticks = Process.GetProcessById(pid).StartTime.ToUniversalTime().Ticks; } catch { }
-                File.WriteAllText(RutaPid, $"{pid}|{ticks}");
-            }
-            catch { }
-        }
-
-        private static void OlvidarPid()
-        {
-            try
-            {
-                string ruta = RutaPid;
-                if (File.Exists(ruta)) File.Delete(ruta);
-            }
-            catch { }
-        }
-
-        /// <summary>
-        /// Elimina el proceso de túnel dejado por una ejecución anterior que no pudo limpiarse.
-        /// Valida nombre de proceso y hora de arranque para no matar un proceso ajeno que
-        /// hubiera reciclado el mismo PID.
-        /// </summary>
-        private static void LimpiarHuerfanosAnteriores()
-        {
-            try
-            {
-                string ruta = RutaPid;
-                if (!File.Exists(ruta)) return;
-
-                string txt = File.ReadAllText(ruta).Trim();
-                OlvidarPid();
-
-                var partes = txt.Split('|');
-                if (partes.Length < 1 || !int.TryParse(partes[0], out int pid)) return;
-
-                Process viejo;
-                try { viejo = Process.GetProcessById(pid); }
-                catch { return; }   // el proceso ya no existe
-
-                string nombreProceso = viejo.ProcessName.ToLowerInvariant();
-                bool esTunel = nombreProceso.Contains("ssh") || nombreProceso.Contains("cloudflared");
-                if (!esTunel) return;
-
-                if (partes.Length >= 2 && long.TryParse(partes[1], out long ticks) && ticks > 0)
-                {
-                    long real = viejo.StartTime.ToUniversalTime().Ticks;
-                    if (Math.Abs(real - ticks) > TimeSpan.FromSeconds(5).Ticks) return; // PID reciclado
-                }
-
-                viejo.Kill(entireProcessTree: true);
-                Debug.WriteLine($"[P2PTunnel] Proceso huérfano '{nombreProceso}' (PID {pid}) eliminado al arrancar.");
-            }
-            catch { }
         }
     }
 }

@@ -39,6 +39,7 @@ namespace Visor3D
         private GodotHwndHost? _godotHostMain;
         private RedP2PServicio? _p2pServicio;
         private Process? _tunnelProcess;
+        private const string TunelWebNodoSlot = "webnodo";   // slot del PID persistido para el túnel del portal
         private string _urlAmigoPendiente = "";
         private string _ipsLanFallback = "";
         private ReleaseInfo? _updateInfo;
@@ -59,8 +60,7 @@ namespace Visor3D
             {
                 _godotHostMain?.StopGodot();
                 _p2pServicio?.Dispose();
-                try { _tunnelProcess?.Kill(entireProcessTree: true); } catch { }
-                _tunnelProcess = null;
+                DetenerTunelWebNodo();
             };
 
             // Navegación de bienvenida
@@ -332,8 +332,7 @@ namespace Visor3D
 
             _p2pServicio?.Dispose();
             _p2pServicio = null;
-            try { _tunnelProcess?.Kill(); } catch { }
-            _tunnelProcess = null;
+            DetenerTunelWebNodo();
             BannerP2P.Visibility = Visibility.Collapsed;
             TxtUrlP2P.Text = "";
 
@@ -862,13 +861,44 @@ namespace Visor3D
                 return;
             }
 
-            Clipboard.SetText(enlace);
+            if (!CopiarAlPortapapeles(enlace))
+            {
+                MessageBox.Show(
+                    $"El portapapeles está ocupado por otra aplicación. Copia el enlace manualmente:\n\n{enlace}",
+                    "Portapapeles ocupado",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             MessageBox.Show(
                 $"¡Enlace público copiado al portapapeles!\n\n{enlace}\n\n" +
                 "Compártelo con tu amigo (por WhatsApp u otro medio) para que pueda unirse a tu mundo desde cualquier red.",
                 "Enlace P2P Copiado",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// Copia texto al portapapeles con reintentos. En Windows el portapapeles puede estar
+        /// bloqueado momentáneamente por otra aplicación (COMException / ExternalException),
+        /// por lo que un único intento puede fallar de forma espuria.
+        /// </summary>
+        private static bool CopiarAlPortapapeles(string texto)
+        {
+            for (int intento = 0; intento < 5; intento++)
+            {
+                try
+                {
+                    Clipboard.SetText(texto);
+                    return true;
+                }
+                catch
+                {
+                    Thread.Sleep(60);
+                }
+            }
+            return false;
         }
 
         private async void OnConectarAmigoClicked(object sender, RoutedEventArgs e)
@@ -1036,6 +1066,11 @@ namespace Visor3D
 
             try
             {
+                // Barrido defensivo: si una ejecución anterior murió sin limpiar (p. ej. el
+                // usuario "finalizó la tarea" desde el Administrador de tareas), aquí matamos
+                // el cloudflared/ssh huérfano antes de crear uno nuevo.
+                TunnelProcessRegistry.BarrerHuerfano(TunelWebNodoSlot);
+
                 // Asegurar que WebNodo está activo antes de levantar el túnel
                 if (!App.WebNodo.IsRunning)
                 {
@@ -1058,6 +1093,7 @@ namespace Visor3D
                     if (res != null && !string.IsNullOrEmpty(res.Url))
                     {
                         _tunnelProcess = res.Process;
+                        TunnelProcessRegistry.Persistir(TunelWebNodoSlot, res.Process.Id);
                         string pubUrl = res.Url;
                         Dispatcher.Invoke(() =>
                         {
@@ -1094,6 +1130,7 @@ namespace Visor3D
                     if (res != null && !string.IsNullOrEmpty(res.Url))
                     {
                         _tunnelProcess = res.Process;
+                        TunnelProcessRegistry.Persistir(TunelWebNodoSlot, res.Process.Id);
                         string pubUrl = res.Url;
                         Dispatcher.Invoke(() =>
                         {
@@ -1122,6 +1159,16 @@ namespace Visor3D
             {
                 System.Diagnostics.Debug.WriteLine($"[Tunel] Error: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Detiene de forma forzosa y limpia el proceso del túnel del portal (cloudflared/ssh):
+        /// mata todo su árbol de procesos y olvida su PID persistido. Idempotente.
+        /// </summary>
+        private void DetenerTunelWebNodo()
+        {
+            TunnelProcessRegistry.MatarYOlvidar(TunelWebNodoSlot, _tunnelProcess);
+            _tunnelProcess = null;
         }
 
         private async Task<Visor3D.Services.P2PIPFS.EphemeralTunnelResult?> TryRunProcessTunnelAsync(string exe, string args, string urlPattern, int timeoutMs, CancellationToken token)
