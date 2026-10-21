@@ -102,5 +102,45 @@
     "ficheros": 909,
     "estado": "OK actualizar",
     "fecha": "2026-10-20T16:03:18"
+  },
+  {
+    "carpeta": "src",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_049ac229\\src",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 919,
+    "estado": "OK refactorizar",
+    "fecha": "2026-10-21T13:40:54"
+  },
+  {
+    "carpeta": "src",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_049ac229\\src",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 919,
+    "estado": "OK refactorizar",
+    "fecha": "2026-10-21T13:42:14"
+  },
+  {
+    "carpeta": "src",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+    "ficheros": 919,
+    "estado": "OK",
+    "fecha": "2026-10-21T13:44:44"
+  },
+  {
+    "carpeta": "src",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC\\src",
+    "ficheros": 7951,
+    "estado": "OK",
+    "fecha": "2026-10-21T15:48:03"
+  },
+  {
+    "carpeta": "RFC",
+    "origen": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\RFC",
+    "destino": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\Sistema_Principal\\PRY\\actualizacion_f7bfd9ba",
+    "ficheros": 7951,
+    "estado": "OK actualizar",
+    "fecha": "2026-10-21T15:54:00"
   }
 ]
