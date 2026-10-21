@@ -53,9 +53,9 @@ namespace Visor3D.Services
         }
 
         public static readonly int Port = 3030;
-        private static readonly string ExeName = "DMWoldVirtualp2pCNXv0.0.013_actualizacion_049ac229.exe";
+        private static readonly string ExeName = "DMWoldVirtualp2pCNXv0.0.20_p2p.exe";
         private static readonly string ExeUrl =
-            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v0.0.012_actualizacion_049ac229/DMWoldVirtualp2pCNXv0.0.013_actualizacion_049ac229.exe";
+            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v0.0.2/DMWoldVirtualp2pCNXv0.0.20_p2p.exe";
 
         private static string IndexHtml =>
             $@"<html lang=""es"">

@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualp2pCNXv0.0.013_actualizacion_049ac229</AssemblyName>
+    <AssemblyName>DMWoldVirtualp2pCNXv0.0.20_p2p</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>0.0.013</Version>
-    <AssemblyVersion>0.0.13.0</AssemblyVersion>
-    <FileVersion>0.0.13.0</FileVersion>
+    <Version>0.0.20</Version>
+    <AssemblyVersion>0.0.20.0</AssemblyVersion>
+    <FileVersion>0.0.20.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — actualizacion_049ac229 (DMWoldVirtualp2pCNX v0.0.012)</Description>
+    <Description>Visor 3D — DMWoldVirtualp2pCNX v0.0.20 (unifica red P2P por túnel + WebSocket, OTA y UI)</Description>
   </PropertyGroup>
 
   <!--

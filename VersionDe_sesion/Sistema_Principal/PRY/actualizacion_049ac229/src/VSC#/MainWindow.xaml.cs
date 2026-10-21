@@ -146,6 +146,7 @@ namespace Visor3D
                 };
                 GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, searchAnim);
                 BtnActualizar.ToolTip = "Buscando actualizaciones...";
+                TxtEtiquetaActualizar.Text = "Buscando…";
             });
 
             await Task.Delay(2000); 
@@ -189,7 +190,13 @@ namespace Visor3D
                             };
                             GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, glowAnim);
                             GlowActualizar.BlurRadius = 25;
-                            
+
+                            // Icono y etiqueta: hay actualización disponible
+                            IconoDescarga.Visibility = Visibility.Visible;
+                            IconoAlDia.Visibility = Visibility.Collapsed;
+                            TxtEtiquetaActualizar.Text = "Actualizar";
+                            TxtEtiquetaActualizar.Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248));
+
                             Log("Animación de alerta activada.");
                         }
                         catch (Exception ex)
@@ -208,6 +215,12 @@ namespace Visor3D
                         GlowActualizar.BeginAnimation(DropShadowEffect.OpacityProperty, null);
                         GlowActualizar.Opacity = 0.1;
                         BtnActualizarVisual.Background.BeginAnimation(SolidColorBrush.ColorProperty, null);
+
+                        // Icono y etiqueta: sistema al día
+                        IconoDescarga.Visibility = Visibility.Collapsed;
+                        IconoAlDia.Visibility = Visibility.Visible;
+                        TxtEtiquetaActualizar.Text = "Al día";
+                        TxtEtiquetaActualizar.Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184));
                     });
                 }
             }
@@ -226,6 +239,7 @@ namespace Visor3D
                 _descargandoActualizacion = true;
                 BtnActualizar.IsEnabled = false;
                 BtnActualizar.Cursor = System.Windows.Input.Cursors.Wait;
+                TxtEtiquetaActualizar.Text = "Descargando…";
                 TxtEstadoP2P.Text = "⬇️ Descargando actualización...";
 
                 // Detener la animación de alerta y preparar la barra de progreso
@@ -297,6 +311,10 @@ namespace Visor3D
             if (_updateInfo != null)
             {
                 BtnActualizarVisual.Opacity = 1.0;
+                IconoDescarga.Visibility = Visibility.Visible;
+                IconoAlDia.Visibility = Visibility.Collapsed;
+                TxtEtiquetaActualizar.Text = "Actualizar";
+                TxtEtiquetaActualizar.Foreground = new SolidColorBrush(Color.FromRgb(56, 189, 248));
                 var glowAnim = new DoubleAnimation(0.4, 1.0, TimeSpan.FromSeconds(0.8))
                 {
                     AutoReverse = true,

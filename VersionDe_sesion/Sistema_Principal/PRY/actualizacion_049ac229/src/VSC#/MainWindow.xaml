@@ -378,13 +378,17 @@
                         <DropShadowEffect x:Name="GlowActualizar" Color="#38BDF8" BlurRadius="15" ShadowDepth="0" Opacity="0.3"/>
                     </Border.Effect>
                     <Grid>
-                        <!-- Icono: Flecha hacia abajo y raya -->
-                        <Path Data="M12,2V13M12,13L7,8M12,13L17,8M5,18H19" 
+                        <!-- Icono 1: flecha de descarga (hay una actualización disponible) -->
+                        <Path x:Name="IconoDescarga" Data="M12,2V13M12,13L7,8M12,13L17,8M5,18H19" 
                               Stroke="#38BDF8" StrokeThickness="2" 
                               Stretch="Uniform" Margin="6"/>
+                        <!-- Icono 2: marca de verificación (el sistema ya está al día) -->
+                        <Path x:Name="IconoAlDia" Data="M4,12L9,17L20,6" 
+                              Stroke="#22C55E" StrokeThickness="2" 
+                              Stretch="Uniform" Margin="6" Visibility="Collapsed"/>
                     </Grid>
                 </Border>
-                <TextBlock Text="Actualizar" Foreground="#38BDF8" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                <TextBlock x:Name="TxtEtiquetaActualizar" Text="Actualizar" Foreground="#38BDF8" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
 
                 <!-- Panel de progreso de descarga (oculto hasta iniciar la descarga) -->
                 <Border x:Name="PanelProgreso" Visibility="Collapsed"

@@ -7,14 +7,14 @@ using System.Windows;
 namespace Visor3D
 {
     /// <summary>
-    /// Extrae los recursos embebidos (Godot exe + proyecto 3D) a %LOCALAPPDATA%\WoldVirtualP2P3D\runtime\0.0.013\
+    /// Extrae los recursos embebidos (Godot exe + proyecto 3D) a %LOCALAPPDATA%\WoldVirtualP2P3D\runtime\0.0.20\
     /// Solo lo hace la primera vez o cuando la version cambia.
     /// </summary>
     public static class AppExtractor
     {
-        // v0.0.013: se cambia el identificador de runtime para forzar la re-extracción
-        // del proyecto Godot (transporte WebSocket sobre túnel) en instalaciones previas.
-        private const string AppVersion = "0.0.013";
+        // v0.0.20: identificador de runtime propio para forzar la re-extracción del
+        // proyecto Godot (transporte WebSocket sobre túnel) en instalaciones previas.
+        private const string AppVersion = "0.0.20";
         public static readonly string RuntimeDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WoldVirtualP2P3D", "runtime", AppVersion);
