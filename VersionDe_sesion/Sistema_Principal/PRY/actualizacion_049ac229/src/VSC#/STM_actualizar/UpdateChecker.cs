@@ -70,11 +70,18 @@ namespace Visor3D.Update
                 {
                     if (rel.Draft) continue;                     // los borradores no son públicos
 
-                    var v = ParseVersion(rel.TagName);
-                    if (v == null || v <= local) continue;       // no es más nueva que la local
-
                     var asset = ElegirAsset(rel.Assets);
                     if (asset == null || string.IsNullOrWhiteSpace(asset.Url)) continue;  // sin binario
+
+                    // Este proyecto reutiliza la MISMA release (mismo tag) y sólo
+                    // sustituye el binario, por lo que la versión real puede estar en
+                    // el NOMBRE del fichero (p. ej. DMWold...v0.0.013....exe). Tomamos
+                    // la mayor entre la del tag y la del binario para no perder updates.
+                    var tagVer = ParseVersion(rel.TagName);
+                    var assetVer = ParseAssetVersion(asset.Name);
+                    var v = MaxVersion(tagVer, assetVer);
+                    Log($"Release '{rel.TagName}' | tag={tagVer} | asset='{asset.Name}' ({assetVer}) | efectiva={v} | local={local}");
+                    if (v == null || v <= local) continue;       // no es más nueva que la local
 
                     var info = new ReleaseInfo
                     {
@@ -164,19 +171,23 @@ namespace Visor3D.Update
         private static GhAsset? ElegirAsset(List<GhAsset> assets)
         {
             // 1) .exe cuyo nombre recuerde al visor (criterio preferente).
-            var exe = assets.FirstOrDefault(a =>
+            var exes = assets.Where(a =>
                 a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
                 (a.Name.Contains("Wold", StringComparison.OrdinalIgnoreCase) ||
                  a.Name.Contains("Visor", StringComparison.OrdinalIgnoreCase) ||
-                 a.Name.Contains("DMWold", StringComparison.OrdinalIgnoreCase)));
-            if (exe != null) return exe;
+                 a.Name.Contains("DMWold", StringComparison.OrdinalIgnoreCase))).ToList();
 
-            // 2) Cualquier .exe.
-            exe = assets.FirstOrDefault(a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
-            if (exe != null) return exe;
+            // 2) Si no hubiera ninguno "del visor", cualquier .exe.
+            if (exes.Count == 0)
+                exes = assets.Where(a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            // 3) Fallback: paquete .zip.
-            return assets.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+            if (exes.Count == 0)
+                return assets.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+
+            // De todos los binarios, nos quedamos con el de MAYOR versión en el nombre
+            // (la release acumula varias versiones del .exe y sólo una es la actual).
+            return exes.OrderByDescending(a => ParseAssetVersion(a.Name) ?? new Version(0, 0, 0, 0))
+                       .First();
         }
 
         // ─────────────────────────────────────────────────────────────────
@@ -203,6 +214,34 @@ namespace Visor3D.Update
             int c = nums.Length > 2 ? nums[2] : 0;
             int d = nums.Length > 3 ? nums[3] : 0;
             return new Version(a, b, c, d);
+        }
+
+        /// <summary>
+        /// Extrae la versión del NOMBRE de un binario, p. ej.
+        /// "DMWoldVirtualp2pCNXv0.0.013_actualizacion_049ac229.exe" -> 0.0.13.
+        /// Exige al menos "mayor.menor" para no confundir hashes ("b5592aff")
+        /// ni textos como "3D" con números de versión.
+        /// </summary>
+        public static Version? ParseAssetVersion(string? fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName)) return null;
+
+            var m = Regex.Match(fileName, @"(?<!\d)(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?(?!\d)");
+            if (!m.Success) return null;
+
+            if (!int.TryParse(m.Groups[1].Value, out int a)) return null;
+            if (!int.TryParse(m.Groups[2].Value, out int b)) return null;
+            int c = m.Groups[3].Success && int.TryParse(m.Groups[3].Value, out var cv) ? cv : 0;
+            int d = m.Groups[4].Success && int.TryParse(m.Groups[4].Value, out var dv) ? dv : 0;
+            return new Version(a, b, c, d);
+        }
+
+        /// <summary>Devuelve la mayor de dos versiones (tolerante a null).</summary>
+        private static Version? MaxVersion(Version? a, Version? b)
+        {
+            if (a == null) return b;
+            if (b == null) return a;
+            return a >= b ? a : b;
         }
 
         // ─────────────────────────────────────────────────────────────────
