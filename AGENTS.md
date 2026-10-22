@@ -33,6 +33,13 @@ Este archivo define las directivas y configuraciones del entorno para el asisten
 - **Proyecto Godot:** Ubicado en la versión activa: `VersionDe_sesion/Sistema_Principal/PRY/<version_actual>/src/MTBGT/WoldVirtualP2P3D`.
 - **Proyecto Visor C#:** Ubicado en `VersionDe_sesion/Sistema_Principal/PRY/<version_actual>/src/VSC#`.
 - **Empaquetado Standalone:**
-  - El visor standalone incrusta `godot_exe.zip` y `godot_project.zip` generados localmente.
+  - El visor standalone incrusta `godot_exe.zip` (motor) y `wvp3d.pck` (mundo exportado), generados localmente.
   - La extracción del runtime en ejecución se realiza en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<version_actual>\`.
   - La publicación se genera mediante `dotnet publish -c Release -r win-x64 --self-contained true`.
+
+---
+
+## 4. Actualizaciones: el flujo de Godot es obligatorio
+- **Leer `REGLAS_DE_ACTUALIZACION.md` (raíz del repo) antes de cualquier cambio que acabe en un binario publicado** — mundo Godot, motor, PCK, C#, portal WebNodo o metadatos de release.
+- Sus reglas mandan sobre las secciones anteriores cuando haya conflicto puntual, porque están citadas a fichero y línea.
+- Ninguna actualización se considera terminada sin el checklist de §7 de ese documento.
