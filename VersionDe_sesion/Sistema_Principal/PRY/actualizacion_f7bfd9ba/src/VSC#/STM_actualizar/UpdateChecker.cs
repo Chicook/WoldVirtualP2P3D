@@ -58,53 +58,7 @@ namespace Visor3D.Update
                     return null;
                 }
 
-                // Elegimos, por separado, la mejor versión ESTABLE y la mejor
-                // PRERELEASE, y damos prioridad a la estable. Así, si sólo existen
-                // betas publicadas, también se detectan.
-                ReleaseInfo? mejorEstable = null;
-                Version? mejorEstableVer = null;
-                ReleaseInfo? mejorPre = null;
-                Version? mejorPreVer = null;
-
-                foreach (var rel in releases)
-                {
-                    if (rel.Draft) continue;                     // los borradores no son públicos
-
-                    var asset = ElegirAsset(rel.Assets);
-                    if (asset == null || string.IsNullOrWhiteSpace(asset.Url)) continue;  // sin binario
-
-                    // Este proyecto reutiliza la MISMA release (mismo tag) y sólo
-                    // sustituye el binario, por lo que la versión real puede estar en
-                    // el NOMBRE del fichero (p. ej. DMWold...v0.0.013....exe). Tomamos
-                    // la mayor entre la del tag y la del binario para no perder updates.
-                    var tagVer = ParseVersion(rel.TagName);
-                    var assetVer = ParseAssetVersion(asset.Name);
-                    var v = MaxVersion(tagVer, assetVer);
-                    Log($"Release '{rel.TagName}' | tag={tagVer} | asset='{asset.Name}' ({assetVer}) | efectiva={v} | local={local}");
-                    if (v == null || v <= local) continue;       // no es más nueva que la local
-
-                    var info = new ReleaseInfo
-                    {
-                        TagName = rel.TagName,
-                        Version = v.ToString(),
-                        AssetUrl = asset.Url,
-                        AssetName = asset.Name,
-                        AssetSize = asset.Size,
-                        Digest = asset.Digest,
-                        Prerelease = rel.Prerelease
-                    };
-
-                    if (rel.Prerelease)
-                    {
-                        if (mejorPre == null || v > mejorPreVer!) { mejorPre = info; mejorPreVer = v; }
-                    }
-                    else
-                    {
-                        if (mejorEstable == null || v > mejorEstableVer!) { mejorEstable = info; mejorEstableVer = v; }
-                    }
-                }
-
-                var elegido = mejorEstable ?? mejorPre;
+                var elegido = SeleccionarMejorRelease(releases, local);
                 Log(elegido == null
                     ? "El sistema ya está al día."
                     : $"Actualización disponible: {elegido.TagName} ({elegido.AssetName})");
@@ -115,6 +69,83 @@ namespace Visor3D.Update
                 Log($"Error consultando GitHub: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Devuelve la release vigente (la de mayor versión publicada), sin comparar
+        /// con la local. La usa el portal WebNodo para anunciar exactamente el mismo
+        /// binario que el botón de actualización instalaría.
+        /// </summary>
+        public async Task<ReleaseInfo?> GetLatestReleaseAsync()
+        {
+            try
+            {
+                var releases = await FetchReleasesAsync();
+                var elegido = SeleccionarMejorRelease(releases, umbral: null);
+                Log(elegido == null
+                    ? "No hay ninguna release publicada."
+                    : $"Release vigente: {elegido.TagName} ({elegido.AssetName})");
+                return elegido;
+            }
+            catch (Exception ex)
+            {
+                Log($"Error consultando GitHub: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Elige, por separado, la mejor versión ESTABLE y la mejor PRERELEASE, y da
+        /// prioridad a la estable. Así, si sólo existen betas publicadas, también se
+        /// detectan. Con <paramref name="umbral"/> en null se ignora el filtro de edad.
+        /// </summary>
+        private static ReleaseInfo? SeleccionarMejorRelease(List<GhRelease> releases, Version? umbral)
+        {
+            ReleaseInfo? mejorEstable = null;
+            Version? mejorEstableVer = null;
+            ReleaseInfo? mejorPre = null;
+            Version? mejorPreVer = null;
+
+            foreach (var rel in releases)
+            {
+                if (rel.Draft) continue;                     // los borradores no son públicos
+
+                var asset = ElegirAsset(rel.Assets);
+                if (asset == null || string.IsNullOrWhiteSpace(asset.Url)) continue;  // sin binario
+
+                // Este proyecto reutiliza la MISMA release (mismo tag) y sólo
+                // sustituye el binario, por lo que la versión real puede estar en
+                // el NOMBRE del fichero (p. ej. DMWold...v0.0.013....exe). Tomamos
+                // la mayor entre la del tag y la del binario para no perder updates.
+                var tagVer = ParseVersion(rel.TagName);
+                var assetVer = ParseAssetVersion(asset.Name);
+                var v = MaxVersion(tagVer, assetVer);
+                Log($"Release '{rel.TagName}' | tag={tagVer} | asset='{asset.Name}' ({assetVer}) | efectiva={v} | umbral={umbral?.ToString() ?? "-"}");
+                if (v == null) continue;
+                if (umbral != null && v <= umbral) continue;   // no es más nueva que la local
+
+                var info = new ReleaseInfo
+                {
+                    TagName = rel.TagName,
+                    Version = v.ToString(),
+                    AssetUrl = asset.Url,
+                    AssetName = asset.Name,
+                    AssetSize = asset.Size,
+                    Digest = asset.Digest,
+                    Prerelease = rel.Prerelease
+                };
+
+                if (rel.Prerelease)
+                {
+                    if (mejorPre == null || v > mejorPreVer!) { mejorPre = info; mejorPreVer = v; }
+                }
+                else
+                {
+                    if (mejorEstable == null || v > mejorEstableVer!) { mejorEstable = info; mejorEstableVer = v; }
+                }
+            }
+
+            return mejorEstable ?? mejorPre;
         }
 
         // ─────────────────────────────────────────────────────────────────
