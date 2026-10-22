@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Visor3D.Update;
 
 namespace Visor3D.Services
 {
@@ -55,15 +56,51 @@ namespace Visor3D.Services
         }
 
         public static readonly int Port = 3030;
-        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv0.1.0_p2p.exe";
+        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.2__actualizacion_f7bfd9ba.exe";
         private const string ExeUrlFallback =
-            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v.0.1.0/DMWoldVirtualp2pCNXv0.1.0_p2p.exe";
+            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.2/DMWoldVirtualp2pCNXv2.5.2__actualizacion_f7bfd9ba.exe";
 
-        // El nombre, la URL y el tamaño salen de release.json (junto al .exe) cuando existe.
-        private static readonly (string Name, string Url, string SizeMb) Release = LeerRelease();
-        private static string ExeName => Release.Name;
-        private static string ExeUrl => Release.Url;
-        private static string ExeSizeMb => Release.SizeMb;
+        // Nombre, URL y tamaño del .exe que anuncia el portal. Se inicializan desde
+        // release.json (junto al .exe) y se sincronizan en caliente con la última
+        // release publicada — ver ActualizarReleasePortal(), invocado desde MainWindow
+        // al mismo tiempo que el botón de actualización consulta GitHub.
+        private string _exeName;
+        private string _exeUrl;
+        private string _exeSizeMb;
+
+        private string ExeName   => _exeName;
+        private string ExeUrl    => _exeUrl;
+        private string ExeSizeMb => _exeSizeMb;
+
+        public WebNodoService()
+        {
+            var release = LeerRelease();
+            _exeName   = release.Name;
+            _exeUrl    = release.Url;
+            _exeSizeMb = release.SizeMb;
+        }
+
+        /// <summary>
+        /// Sincroniza el binario que ofrece el portal con la última release
+        /// publicada — la MISMA que vigila el botón de actualización. De este modo,
+        /// cuando el visor se actualiza, WebNodo apunta a la nueva versión.
+        /// </summary>
+        public void ActualizarReleasePortal(ReleaseInfo? info)
+        {
+            if (info == null ||
+                string.IsNullOrWhiteSpace(info.AssetName) ||
+                string.IsNullOrWhiteSpace(info.AssetUrl))
+                return;
+
+            lock (_lock)
+            {
+                _exeName = info.AssetName!;
+                _exeUrl  = info.AssetUrl!;
+                if (info.AssetSize > 0)
+                    _exeSizeMb = (info.AssetSize / 1048576.0).ToString("0.0");
+            }
+            VisorLog.Info($"WebNodo: portal sincronizado con la última versión ({_exeName}).");
+        }
 
         // Token por sesión para /api/*: la página lo recibe embebido y lo envía en cada llamada.
         private static readonly string _apiToken =
@@ -95,7 +132,7 @@ namespace Visor3D.Services
             return (ExeNameFallback, ExeUrlFallback, "—");
         }
 
-        private static string IndexHtml =>
+        private string IndexHtml =>
             $@"<html lang=""es"">
 <head>
   <meta charset=""UTF-8""/>
@@ -452,7 +489,7 @@ namespace Visor3D.Services
             }
         }
 
-        private static string ObtenIndexHtml()
+        private string ObtenIndexHtml()
         {
             // 1. Probar desde disco
             var pathOnDisk = Path.Combine(AppContext.BaseDirectory, "webnodo", "public", "index.html");

@@ -39,6 +39,11 @@ namespace Visor3D.Update
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         }
 
+        // Caché de releases por instancia: si se pide la mejor actualización y, acto
+        // seguido, la última publicada (para el portal WebNodo), sólo se hace UNA
+        // llamada a la API de GitHub.
+        private List<GhRelease>? _releasesCache;
+
         /// <summary>
         /// Devuelve la mejor actualización disponible, o null si ya estamos al día.
         /// </summary>
@@ -51,60 +56,14 @@ namespace Visor3D.Update
                 Log($"Versión local normalizada: {local}");
                 Log($"Consultando: {currentVersion}");
 
-                var releases = await FetchReleasesAsync();
+                var releases = await GetReleasesAsync();
                 if (releases.Count == 0)
                 {
                     Log("No se encontraron releases publicadas.");
                     return null;
                 }
 
-                // Elegimos, por separado, la mejor versión ESTABLE y la mejor
-                // PRERELEASE, y damos prioridad a la estable. Así, si sólo existen
-                // betas publicadas, también se detectan.
-                ReleaseInfo? mejorEstable = null;
-                Version? mejorEstableVer = null;
-                ReleaseInfo? mejorPre = null;
-                Version? mejorPreVer = null;
-
-                foreach (var rel in releases)
-                {
-                    if (rel.Draft) continue;                     // los borradores no son públicos
-
-                    var asset = ElegirAsset(rel.Assets);
-                    if (asset == null || string.IsNullOrWhiteSpace(asset.Url)) continue;  // sin binario
-
-                    // Este proyecto reutiliza la MISMA release (mismo tag) y sólo
-                    // sustituye el binario, por lo que la versión real puede estar en
-                    // el NOMBRE del fichero (p. ej. DMWold...v0.0.013....exe). Tomamos
-                    // la mayor entre la del tag y la del binario para no perder updates.
-                    var tagVer = ParseVersion(rel.TagName);
-                    var assetVer = ParseAssetVersion(asset.Name);
-                    var v = MaxVersion(tagVer, assetVer);
-                    Log($"Release '{rel.TagName}' | tag={tagVer} | asset='{asset.Name}' ({assetVer}) | efectiva={v} | local={local}");
-                    if (v == null || v <= local) continue;       // no es más nueva que la local
-
-                    var info = new ReleaseInfo
-                    {
-                        TagName = rel.TagName,
-                        Version = v.ToString(),
-                        AssetUrl = asset.Url,
-                        AssetName = asset.Name,
-                        AssetSize = asset.Size,
-                        Digest = asset.Digest,
-                        Prerelease = rel.Prerelease
-                    };
-
-                    if (rel.Prerelease)
-                    {
-                        if (mejorPre == null || v > mejorPreVer!) { mejorPre = info; mejorPreVer = v; }
-                    }
-                    else
-                    {
-                        if (mejorEstable == null || v > mejorEstableVer!) { mejorEstable = info; mejorEstableVer = v; }
-                    }
-                }
-
-                var elegido = mejorEstable ?? mejorPre;
+                var elegido = ElegirMejor(releases, local, $"local={local}");
                 Log(elegido == null
                     ? "El sistema ya está al día."
                     : $"Actualización disponible: {elegido.TagName} ({elegido.AssetName})");
@@ -115,6 +74,93 @@ namespace Visor3D.Update
                 Log($"Error consultando GitHub: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Devuelve SIEMPRE la última release publicada con binario, sin compararla
+        /// con la versión local. La usa el portal WebNodo para anunciar el MISMO
+        /// binario que vigila el botón de actualización, incluso si ya estamos al día.
+        /// </summary>
+        public async Task<ReleaseInfo?> ObtenerUltimaReleaseAsync()
+        {
+            try
+            {
+                var releases = await GetReleasesAsync();
+                if (releases.Count == 0) return null;
+
+                var ultima = ElegirMejor(releases, null, "última publicada");
+                Log(ultima == null
+                    ? "No hay ninguna release con binario."
+                    : $"Última release publicada: {ultima.TagName} ({ultima.AssetName})");
+                return ultima;
+            }
+            catch (Exception ex)
+            {
+                Log($"Error consultando la última release: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>Devuelve las releases consultadas (con caché por instancia).</summary>
+        private async Task<List<GhRelease>> GetReleasesAsync()
+        {
+            return _releasesCache ??= await FetchReleasesAsync();
+        }
+
+        /// <summary>
+        /// Elige, por separado, la mejor versión ESTABLE y la mejor PRERELEASE
+        /// (con prioridad a la estable) y devuelve la ganadora. Si
+        /// <paramref name="minExclusivo"/> no es null, descarta las releases que no
+        /// sean ESTRICTAMENTE más nuevas que esa versión.
+        /// </summary>
+        private static ReleaseInfo? ElegirMejor(
+            List<GhRelease> releases, Version? minExclusivo, string contextoLog)
+        {
+            ReleaseInfo? mejorEstable = null;
+            Version? mejorEstableVer = null;
+            ReleaseInfo? mejorPre = null;
+            Version? mejorPreVer = null;
+
+            foreach (var rel in releases)
+            {
+                if (rel.Draft) continue;                     // los borradores no son públicos
+
+                var asset = ElegirAsset(rel.Assets);
+                if (asset == null || string.IsNullOrWhiteSpace(asset.Url)) continue;  // sin binario
+
+                // Este proyecto reutiliza la MISMA release (mismo tag) y sólo
+                // sustituye el binario, por lo que la versión real puede estar en
+                // el NOMBRE del fichero (p. ej. DMWold...v0.0.013....exe). Tomamos
+                // la mayor entre la del tag y la del binario para no perder updates.
+                var tagVer   = ParseVersion(rel.TagName);
+                var assetVer = ParseAssetVersion(asset.Name);
+                var v        = MaxVersion(tagVer, assetVer);
+                Log($"Release '{rel.TagName}' | tag={tagVer} | asset='{asset.Name}' ({assetVer}) | efectiva={v} | {contextoLog}");
+                if (v == null) continue;
+                if (minExclusivo != null && v <= minExclusivo) continue;   // no es más nueva
+
+                var info = new ReleaseInfo
+                {
+                    TagName    = rel.TagName,
+                    Version    = v.ToString(),
+                    AssetUrl   = asset.Url,
+                    AssetName  = asset.Name,
+                    AssetSize  = asset.Size,
+                    Digest     = asset.Digest,
+                    Prerelease = rel.Prerelease
+                };
+
+                if (rel.Prerelease)
+                {
+                    if (mejorPre == null || v > mejorPreVer!) { mejorPre = info; mejorPreVer = v; }
+                }
+                else
+                {
+                    if (mejorEstable == null || v > mejorEstableVer!) { mejorEstable = info; mejorEstableVer = v; }
+                }
+            }
+
+            return mejorEstable ?? mejorPre;
         }
 
         // ─────────────────────────────────────────────────────────────────

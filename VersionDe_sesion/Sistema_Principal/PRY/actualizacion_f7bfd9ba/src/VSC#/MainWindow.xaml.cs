@@ -177,6 +177,11 @@ namespace Visor3D
                 var checker = new UpdateChecker();
                 _updateInfo = await checker.CheckForUpdateAsync(CurrentVersion);
 
+                // El portal WebNodo anuncia el MISMO binario que vigila el botón:
+                // se sincroniza aquí, en la misma comprobación (con la caché de
+                // releases, sin una segunda llamada a GitHub).
+                App.WebNodo.ActualizarReleasePortal(await checker.ObtenerUltimaReleaseAsync());
+
                 var info = _updateInfo;
                 if (info != null)
                 {
