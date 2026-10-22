@@ -81,7 +81,7 @@ flowchart TB
 - Es un prototipo alpha, no un producto. Los binarios van firmados con un **certificado de desarrollo autofirmado** (Windows SmartScreen mostrará un aviso).
 - Solo funciona en **Windows x64**.
 - La red es **P2P solo en el transporte**: cada sesión tiene un **anfitrión con autoridad** (host-authority) y el resto de nodos se conectan a él por WebSocket. No hay replicación descentralizada sin servidor de confianza.
-- La "billetera DeFi" del visor es **simulada**: genera una semilla BIP-39 de 12 palabras y derivaciones hash, pero no se conecta a ninguna blockchain ni gestiona fondos.
+- La "billetera DeFi" del visor está **en construcción**: la semilla BIP-39 de 12 palabras y sus derivaciones hash son reales, pero aún no se conecta a ninguna blockchain ni gestiona fondos.
 - El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/VSC%23/Visor3D.csproj) versionado quedó en `0.1.0`, mientras que el binario publicado vigente es **v2.5.2** (construido a partir del mismo árbol con el número de versión de la sesión de publicación). Ambos datos se documentan tal cual son.
 
 ### Estado de las capacidades
@@ -215,7 +215,7 @@ flowchart TD
 
 1. **Huella de hardware** (`RegistroWindow`): el visor consulta WMI (`Win32_OperatingSystem`, `Win32_BaseBoard`, `Win32_Processor`) y calcula un hash SHA-256 que identifica la máquina.
 2. **Usuario y contraseña** (`FormularioUsuarioWindow`): la contraseña se procesa con **PBKDF2-SHA256, 210.000 iteraciones** y sal aleatoria de 16 bytes (`PasswordHasher.cs`, comparación en tiempo constante). Se guardan `user_profile.json` y `credentials.json` en la carpeta de datos del usuario (en desarrollo, `test_user_data/user/`).
-3. **Frase semilla** (`SemillaWalletWindow`): se generan **12 palabras BIP-39 reales** (lista oficial de 2.048 palabras embebida como recurso del ejecutable, con checksum). **Apúntalas y guárdalas**: es tu única vía de respaldo. Es una cartera simulada: no gestiona fondos ni se conecta a ninguna blockchain.
+3. **Frase semilla** (`SemillaWalletWindow`): se generan **12 palabras BIP-39 reales** (lista oficial de 2.048 palabras embebida como recurso del ejecutable, con checksum). **Apúntalas y guárdalas**: es tu única vía de respaldo. La cartera está en construcción: aún no gestiona fondos ni se conecta a ninguna blockchain.
 4. **Verificación** (`VerificarSemillaWindow`): el visor pide 3 palabras aleatorias de la semilla para confirmar que la respaldaste.
 5. **La llave** (`DescargaLlaveWindow`): se genera `llave_acceso.json`, el fichero maestro de acceso. Cada vez que inicies sesión, el visor valida la llave y **rota su hash** (SHA-256 sobre hash anterior + GUID + marca de tiempo), lo que impide usar copias duplicadas de la misma llave.
 6. Las credenciales heredadas en SHA-256 plano se **migran de forma transparente** a PBKDF2 al iniciar sesión (formato versionado `hashVersion: 2`).
