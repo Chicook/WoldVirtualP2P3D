@@ -176,23 +176,23 @@ WoldVirtualP2P3D/
 
 ### Descarga
 
-- **Release vigente**: [v2.5.2](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.2) (publicada el 18-10-2026).
-- **Ejecutable recomendado**: [`DMWoldVirtualp2pCNXv2.5.2__actualizacion_f7bfd9ba.exe`](https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.2/DMWoldVirtualp2pCNXv2.5.2__actualizacion_f7bfd9ba.exe) — **561.988.913 bytes (≈562 MB)**, portable, autocontenido.
-- La release incluye también un ZIP demo del mundo 3D, el descriptor `release.json` y el fichero `SHA256SUMS`, además de ejecutables históricos de versiones anteriores.
+- **Release vigente**: [v2.5.3](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.3) — marcada como *Latest*. Nació del renombrado del tag `v2.5.2`, así que la ruta `.../download/v2.5.2/…` responde **404** y todo binario debe referenciarse bajo `.../download/v2.5.3/…`.
+- **Ejecutable recomendado**: [`DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba.exe`](https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.3/DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba.exe) — **561.984.817 bytes (≈536 MiB)**, portable, autocontenido. SHA-256 `9953720dde5a67a5520c109baed5df517a4f24396c7d1c1a94cdc02cbc2cdbbe` (verificado el 2026-10-22 contra el digest que publica GitHub).
+- La release incluye también un ZIP demo del mundo 3D, el descriptor `release.json` y el fichero `SHA256SUMS`, además de ejecutables históricos de versiones anteriores —entre ellos el de `v2.5.2`, que sigue publicado bajo esta misma etiqueta.
 
 **Requisitos**: Windows 10/11 x64. El ejecutable es autocontenido (incluye el runtime de .NET 8, el motor Godot y el mundo 3D): no hay nada que instalar, no necesita permisos de administrador y no escribe en el registro.
 
 **Aviso de SmartScreen**: el binario lleva una firma de desarrollo autofirmada, no un certificado de distribución. Al ejecutarlo por primera vez, Windows puede mostrar "Windows protegió tu equipo" → *Más información* → *Ejecutar de todas formas*.
 
-**Verificación**: descarga `SHA256SUMS` de la misma release y comprueba el digest. Nota honesta: el `SHA256SUMS` publicado actualmente contiene el digest del binario `v0.3` que referencia `release.json` (ver [§8](#8-actualizador-ota)); el digest del ejecutable v2.5.2 puede contrastarse con el que muestra la interfaz de GitHub en los detalles del asset.
+**Verificación**: descarga `SHA256SUMS` de la misma release y comprueba el digest. Desde el 2026-10-22 `SHA256SUMS` y `release.json` están alineados con el binario v2.5.3; históricamente estuvieron desalineados (apuntaban al binario `v0.3`, ver [§8](#8-actualizador-ota)), así que conviene comprobar que el `exe` declarado en `release.json` coincide con la primera línea de `SHA256SUMS`.
 
 ### Qué ocurre al arrancarlo
 
 1. El visor se valida a sí mismo y muestra el flujo de identidad (ver [§4](#4-registro-e-identidad)).
-2. En el primer arranque extrae sus recursos embebidos en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\` (medido: **≈470 MiB** en disco por versión). La variable de entorno `WOLD_RUNTIME_DIR` permite redirigir la extracción.
+2. En el primer arranque extrae sus recursos embebidos en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\` (medido: **≈470 MiB** en disco por versión). El marcador que decide si hay que re-extraer es la **versión del ensamblado** (`AssemblyInformationalVersion`), no una constante a mano: así un OTA que cambia el `wvp3d.pck` embebido fuerza la re-extracción del mundo. La variable de entorno `WOLD_RUNTIME_DIR` permite redirigir la extracción.
 3. Lanza el motor Godot incrustado y activa en segundo plano la API P2P local y el WebNodo.
 
-**Limitaciones conocidas**: cada versión publicada extrae su propia carpeta de runtime (no hay limpieza automática de versiones antiguas); el primer arranque tarda unos segundos por la extracción.
+**Limitaciones conocidas**: cada versión publicada extrae su propia carpeta de runtime (no hay limpieza automática de versiones antiguas); el primer arranque tarda unos segundos por la extracción, y **el primer arranque tras un OTA también vuelve a extraer ~470 MiB**. Antes de esta corrección el marcador estaba congelado en `0.1.0`, de modo que todas las versiones compartían `runtime\0.1.0\` y el mundo actualizado por OTA no llegaba a disco.
 
 ---
 
@@ -359,13 +359,15 @@ Implementado en `MainWindow.xaml.cs` (`ComprobarHostMigrado`) y `ChunkManager.gd
 
 El visor incorpora un actualizador contra las Releases de GitHub, repartido en tres clases de [`src/VSC#/STM_actualizar/`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/VSC%23/STM_actualizar/UpdateChecker.cs):
 
-- **`UpdateChecker`**: consulta la API de GitHub (`/repos/{repo}/releases`), localiza el asset `release.json` y compara versiones.
+- **`UpdateChecker`**: consulta la API de GitHub (`/repos/{repo}/releases`), elige de cada release el `.exe` de mayor versión (la versión real puede estar en el nombre del fichero, no sólo en el tag) y compara SemVer con la local. Prioriza estables sobre *prereleases*. Expone `GetLatestReleaseAsync()` (la release vigente sin filtrar por la versión local), que es la que consume el portal WebNodo.
 - **`UpdateDownloader`**: descarga el binario por rangos HTTP (**reanudación** con fichero `.part`), **verifica el SHA-256** contra el digest de la API antes de aplicar y comprueba permisos de escritura de la carpeta con antelación.
 - **`UpdateApplier`**: aplica la actualización con `apply-pending.bat` y mantiene el estado en `state.json` con **escritura atómica**.
 
 El botón de la barra superior muestra los estados `Buscando · Al día · Actualizar vX.Y.Z · Descargando % · Reiniciando · Error/Reintentar`, con una barra de progreso de 2 px en el borde inferior (nunca sobre el viewport 3D).
 
-**Situación actual del canal**: el `release.json` publicado en v2.5.2 apunta al binario **v0.3** (`0.3.0`, ~536 MiB). Un visor anterior a esa versión recibirá v0.3.0 como actualización; un visor v2.5.2 la considerará anterior y se mostrará "al día". Publicar una nueva versión consiste en subir el exe, actualizar `release.json` y `SHA256SUMS` en la release correspondiente.
+**El portal WebNodo ya no depende de un `release.json` empaquetado.** Antes leía ese fichero del disco, junto al `.exe`, y como el OTA sólo reemplaza el binario, el portal seguía anunciando la versión antigua —y su URL, obsoleta, cortaba en un 404. Ahora, al arrancar el nodo, `WebNodoService.RefrescarReleaseVigente()` consulta GitHub con el **mismo** `UpdateChecker` que el botón, de modo que ambos anuncian exactamente el mismo binario; si la consulta falla, se queda con el `release.json` local o el *fallback* cableado. En `/descargar`, si el `.exe` en ejecución es la release vigente se sirve directamente ése, en vez de una copia empaquetada que queda obsoleta al actualizar.
+
+**Situación actual del canal**: el OTA está **verificado en funcionamiento** — el registro de `%LOCALAPPDATA%\WoldVirtualP2P3D\update_debug.log` muestra un ciclo real `0.3.0 → 2.5.2` detectado, descargado, aplicado y relanzado. Lo que estuvo roto era el descriptor publicado: el `release.json` de la release apuntaba al binario `v0.3` bajo una ruta que no existe en esa release (404). El 2026-10-22 se subió el binario v2.5.3 y se regeneraron `release.json` y `SHA256SUMS` alineados con él.
 
 **Pendiente** (fase F3 de la hoja de ruta): canal estable/beta, *changelog* en el tooltip y la espera controlada del `apply-pending.bat`.
 
