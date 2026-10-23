@@ -48,20 +48,32 @@ graph TD
 
 ### 1. Núcleo de Arranque y Orquestación (`res://gdscrip/Boot.gd`)
 - Gestiona el flujo continuo del jugador sin recargas de escena completas (`queue_free()` de fases anteriores e instanciación dinámica):
-  1. **Carrusel:** Selección visual de avatar.
+  0. **Consulta de sesión:** `gdscrip/Sonda.gd` pregunta al anfitrión (si hay uno alcanzable) qué avatares están reservados. La sonda vive en todos los peers y usa una conexión WebSocket corta que se cierra antes de crear el mundo; si no hay sesión devuelve una lista vacía.
+  1. **Carrusel:** Selección visual de avatar, abriendo en el primer hueco libre.
   2. **Registro:** Captura y persistencia de identidad.
   3. **Zona Portal:** Entrada inmersiva al portal.
   4. **Carga P2P:** Overlay 2D mientras se negocia la conexión y se genera la isla.
   5. **Metaverso:** Aparición en la isla con bienvenida personalizada según género del avatar (`BIENVENIDO/A`) y nick.
 
 ### 2. Selector 3D de Avatares (`res://SLCAV/AVATARESCONANIMACION/SLAV.tscn` / `SLAV.gd`)
-- Carrusel circular 3D giratorio con **8 avatares animados** (4 mujeres `AVMJ1..4` y 4 hombres `AVH1..4`).
+- Carrusel circular 3D giratorio con **24 avatares animados en 3 turnos de 8** (4 hombres y 4 mujeres por turno).
+- Alternancia estricta chico/chica en los 24 puestos, también al saltar de turno (`probar_carrusel.gd`).
 - Cúpula cyberpunk procedural (`CUPULA.tscn`) con shader de rejilla emisiva (`cupula_panel.gdshader`).
 - Rotación suavizada con `lerp_angle`, escalado dinámico del seleccionado (`1.14` vs `0.86`) y desincronización aleatoria de animaciones idle (`seek(randf())`).
+- Carga perezosa: sólo se instancian los 8 avatares del turno visible (`SLAV.gd:130`).
+- **Reserva exclusiva por turnos** (`gdscrip/Turnos.gd`): el anfitrión asigna cada avatar a un solo jugador; el turno es la página del carrusel (1–8 → 1, 9–16 → 2, 17–24 → 3). Si el avatar pedido está ocupado se sustituye por el más cercano del mismo género (su turno y luego los demás); los huecos liberados se reutilizan y, con los 24 ocupados, el jugador 25 entra en turno 4 con un avatar reciclado. En el cliente, el avatar definitivo se guarda en `registro.cfg` y se anuncia con `avatar_asignado` (aviso en pantalla).
+- **Ocupación visible (Fase B):** con las plazas que devuelve la sonda, el carrusel abre en el primer hueco (`abrir_en_primer_hueco`), añade una etiqueta `OCUPADO` sobre cada avatar reservado del turno montado, las flechas saltan esas plazas y no se puede confirmar una de ellas. Si las 24 están ocupadas activa el modo reciclaje (contador `reciclando`) y permite elegir cualquier avatar.
 
 ### 3. Registro y Vista Previa (`registro.tscn` / `registro.gd`)
-- Interfaz gráfica con `SubViewport` 3D que proyecta de frente el avatar elegido.
+- Interfaz gráfica con `SubViewport` 3D que proyecta el avatar de cuerpo entero sobre una cúpula de energía; entorno oscuro con rejilla emisiva, anillos de luz, pedestal emisivo y fondo degradado (`registro_fondo.gdshader`).
 - Validación de nick (mínimo 3 caracteres), guardado local en `user://registro.cfg` y emisión de señal `registro_completado`.
+- **Personalización del aspecto** (`gdscrip/Personalizacion.gd`), con vista previa en vivo y tres pestañas:
+  - **Colores:** piel, pelo, camiseta, pantalón y zapatillas por tinte del material de cada malla.
+  - **Cuerpo:** altura hasta **+30 cm** (por encima de la estatura base de cada avatar), complexión, cabeza, hombros, torso, brazos y piernas (80–125 % por zona).
+  - **Cara:** nariz, labios, orejas y ojos de 0 % (original) a 100 %.
+- Los modelos **no tienen morph targets**: la deformación se calcula en GDScript sobre los vértices de la malla del cuerpo, conservando UV, huesos y pesos de skin (las animaciones siguen intactas). La altura escala el nodo visual del modelo, nunca la cápsula de colisión; las mallas de ropa se deforman con las mismas máscaras para no abrir costuras.
+- La estatura base se mide en **espacio de mundo** desde el hueso `HeadTop_End` del esqueleto, no desde la malla: las unidades de los GLB no son metros en todos los avatares. El valor se cachea en el primer aplicado (`pers_altura_base`) para que reaplicar ajustes no acumule deriva.
+- El aspecto se guarda en `[personalizacion]` de `user://registro.cfg`, se replica a los demás jugadores en el texto compacto de `PlayerSync` (10 Hz) y la etiqueta del nick se coloca según la altura resultante.
 
 ### 4. Hangar Espacial y Portal Holográfico (`entornodeprueba.tscn`)
 - **Estación procedural (`estacion.gd`):** Construye la estructura completa del hangar (costillas, vigas, zócalos emisivos y compuerta) mediante código y materiales shader (`hangar_panel.gdshader`), logrando un entorno de ciencia ficción que pesa solo **9 KB** en disco.
@@ -70,14 +82,18 @@ graph TD
 
 ### 5. Metaverso P2P y Gestión de Chunks (`ChunkManager.gd` / `ISLA3Dblock.tscn`)
 - Cuadrícula procedural de islas en serpenteo (`chunk_size = 199.5m`, 10 islas por fila).
-- Multijugador sobre `ENetMultiplayerPeer` (puerto 8910) sin necesidad de servidor dedicado central: el primer peer asume el rol de host; los siguientes entran como clientes.
+- Multijugador sobre `WebSocketMultiplayerPeer` (TCP 8911) sin necesidad de servidor dedicado central: el primer peer asume el rol de host; los siguientes entran como clientes (`ChunkManager.gd:356`).
 - Replicación remota de terreno (`_spawn_island_for_player`), control anti-duplicados y recolocación orbital instantánea de cámara (`snap_camera`).
-- **Migración dinámica de anfitrión:** Si el jugador host se desconecta, uno de los clientes asume automáticamente el servidor en el puerto 8910 reconstruyendo el estado del mundo desde el historial de islas.
+- **Migración dinámica de anfitrión:** Si el jugador host se desconecta, uno de los clientes asume automáticamente el servidor en el puerto 8911 reconstruyendo el estado del mundo desde el historial de islas.
+- **Reserva de avatares:** sólo el anfitrión decide las plazas (`_declarar_avatar` → `_avatar_asignado` + `_sync_turnos`); al desconectarse un peer su plaza se libera. El cierre de la pantalla de carga espera como máximo 2 s a que llegue la confirmación, para no entrar con un avatar que va a cambiar.
+- **Sondas de sesión:** `marcar_sonda(id)` (`ChunkManager.gd:230`) aparta a un peer que sólo consultó plazas: no se le crea isla, se cancela su reclamación pendiente y se retira del roster. `turnos_snapshot()` (`ChunkManager.gd:224`) entrega una copia de la tabla de plazas a la sonda del anfitrión.
+- **Descubrimiento compartido:** la resolución de host/puerto y URL WebSocket (argumentos, `p2p_session.json`, beacon LAN y túneles) vive en `gdscrip/Red.gd`; tanto el mundo (`ChunkManager.gd:864`) como la sonda (`Sonda.gd:21`) usan la misma lógica, de modo que el flujo de túneles no cambia.
 
 ### 6. Sincronización de Jugadores en Red (`PlayerSync.gd`)
 - Bucle de sincronización de 10 Hz (`SYNC_INTERVAL = 0.1s`).
-- Emisión de posición, rotación de guiñada (yaw), nick, estado de animación (idle, caminar, correr, aire) y ruta del avatar.
+- Emisión de posición, rotación de guiñada (yaw), nick, estado de animación (idle, caminar, correr, aire), ruta del avatar y **aspecto personalizado** (texto compacto `Personalizacion.codificar()`), para que los clones remotos se vean igual que su dueño.
 - Instanciación de proxies remotos con el modelo 3D exacto elegido por cada cliente, interpolación suave (`lerp 8.0`) y etiqueta flotante `Label3D` tipo billboard sobre la cabeza.
+- No se emite la posición propia hasta que el anfitrión confirma la plaza (`avatar_confirmado()`), para que los demás no creen un clon con un avatar que va a ser sustituido.
 
 ### 7. Teletransporte y Panel de Islas (`TeleportManager.gd` / `TeleportPanel.gd`)
 - Panel colapsable accesible mediante tecla <kbd>T</kbd> o botón de pantalla.
@@ -202,7 +218,7 @@ El documento ahora contiene una auditoría completa estructurada en 4 secciones 
 
 2. **Lo Desarrollado en Profundidad:**
    - **Diagrama de flujo completo** de la máquina de estados secuencial ([Boot.gd](file:///f:/WoldVirtualP2P3D/gdscrip/Boot.gd)).
-   - **Carrusel 3D:** Selector de 8 avatares animados y cúpula cyberpunk procedural.
+   - **Carrusel 3D:** Selector de 24 avatares animados en 3 turnos de 8 y cúpula cyberpunk procedural.
    - **Registro:** Previsualización en tiempo real mediante `SubViewport` 3D y guardado local en `user://registro.cfg`.
    - **Hangar Espacial y Portal:** Estación procedural de 9 KB generada por código ([estacion.gd](file:///f:/WoldVirtualP2P3D/ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/gdscrip/estacion.gd)) con shaders de energía y orbes orbitantes.
    - **Metaverso P2P y Chunks:** Generación de islas en cuadrícula (199,5 m) y migración automática de anfitrión si el host se desconecta.

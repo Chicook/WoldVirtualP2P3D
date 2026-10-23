@@ -55,9 +55,9 @@ namespace Visor3D.Services
         }
 
         public static readonly int Port = 3030;
-        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba.exe";
+        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.5.exe";
         private const string ExeUrlFallback =
-            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.3/DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba.exe";
+            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.5/DMWoldVirtualp2pCNXv2.5.5.exe";
 
         // Valor de arranque: el release.json empaquetado junto al .exe. En cuanto el
         // nodo arranca, RefrescarReleaseVigente() lo sustituye por la release vigente

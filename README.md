@@ -5,7 +5,7 @@
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](LICENSE)
 [![.NET 8 WPF](https://img.shields.io/badge/.NET-8.0%20WPF-512bd4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
 [![Godot 4.7.2](https://img.shields.io/badge/Godot-4.7.2-478cbf?logo=godotengine&logoColor=white)](https://godotengine.org)
-[![Release v2.5.2](https://img.shields.io/badge/Release-v2.5.2-green.svg)](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.2)
+[![Release v2.5.5](https://img.shields.io/badge/Release-v2.5.5-green.svg)](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.5)
 [![Plataforma](https://img.shields.io/badge/Plataforma-Windows%20x64-blue)](#3-descarga-y-primer-arranque)
 [![Estado: Alpha](https://img.shields.io/badge/Estado-Alpha%20(prototipo)-orange)](#1-qu%C3%A9-es-y-estado-real)
 
@@ -82,7 +82,7 @@ flowchart TB
 - Solo funciona en **Windows x64**.
 - La red es **P2P solo en el transporte**: cada sesión tiene un **anfitrión con autoridad** (host-authority) y el resto de nodos se conectan a él por WebSocket. No hay replicación descentralizada sin servidor de confianza.
 - La "billetera DeFi" del visor está **en construcción**: la semilla BIP-39 de 12 palabras y sus derivaciones hash son reales, pero aún no se conecta a ninguna blockchain ni gestiona fondos.
-- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/VSC%23/Visor3D.csproj) versionado quedó en `0.1.0`, mientras que el binario publicado vigente es **v2.5.2** (construido a partir del mismo árbol con el número de versión de la sesión de publicación). Ambos datos se documentan tal cual son.
+- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/VSC%23/Visor3D.csproj) versionado coincide con el binario publicado vigente (**2.5.5**); el nombre del ensamblado (`AssemblyName`) es el mismo que el del `.exe`.
 
 ### Estado de las capacidades
 
@@ -176,23 +176,23 @@ WoldVirtualP2P3D/
 
 ### Descarga
 
-- **Release vigente**: [v2.5.3](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.3) — marcada como *Latest*. Nació del renombrado del tag `v2.5.2`, así que la ruta `.../download/v2.5.2/…` responde **404** y todo binario debe referenciarse bajo `.../download/v2.5.3/…`.
-- **Ejecutable recomendado**: [`DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba.exe`](https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.3/DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba.exe) — **561.984.817 bytes (≈536 MiB)**, portable, autocontenido. SHA-256 `9953720dde5a67a5520c109baed5df517a4f24396c7d1c1a94cdc02cbc2cdbbe` (verificado el 2026-10-22 contra el digest que publica GitHub).
-- La release incluye también un ZIP demo del mundo 3D, el descriptor `release.json` y el fichero `SHA256SUMS`, además de ejecutables históricos de versiones anteriores —entre ellos el de `v2.5.2`, que sigue publicado bajo esta misma etiqueta.
+- **Release vigente**: [v2.5.5](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.5) — marcada como *Latest*. Es una versión nueva (no se renombró ningún tag, R4) que corrige el arranque como cliente de un túnel caducado. El tag `v2.5.4` sigue publicado con el mundo de 24 avatares y sus assets históricos.
+- **Ejecutable recomendado**: [`DMWoldVirtualp2pCNXv2.5.5.exe`](https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.5/DMWoldVirtualp2pCNXv2.5.5.exe) — **787.264.673 bytes (≈751 MiB)**, portable, autocontenido. SHA-256 `8a9fa21d777182c28d1696a8bdf2bb2f70f713ccea9b9e32d3270e5fdd24695c` (verificado el 2026-10-23 contra el digest que publica GitHub).
+- La release incluye también el descriptor `release.json` y el fichero `SHA256SUMS`, además de los ejecutables de las releases anteriores (`v2.5.4`, `v2.5.3`…), cada uno bajo su propia etiqueta.
 
 **Requisitos**: Windows 10/11 x64. El ejecutable es autocontenido (incluye el runtime de .NET 8, el motor Godot y el mundo 3D): no hay nada que instalar, no necesita permisos de administrador y no escribe en el registro.
 
-**Aviso de SmartScreen**: el binario lleva una firma de desarrollo autofirmada, no un certificado de distribución. Al ejecutarlo por primera vez, Windows puede mostrar "Windows protegió tu equipo" → *Más información* → *Ejecutar de todas formas*.
+**Aviso de SmartScreen**: el binario v2.5.5 se publica **sin firmar** (no había certificado de firma disponible en el equipo de compilación), así que Windows puede mostrar "Windows protegió tu equipo" → *Más información* → *Ejecutar de todas formas*. El binario v2.5.3 sí llevaba una firma de desarrollo autofirmada; el estado real de cualquier descarga se comprueba con `Get-AuthenticodeSignature`.
 
-**Verificación**: descarga `SHA256SUMS` de la misma release y comprueba el digest. Desde el 2026-10-22 `SHA256SUMS` y `release.json` están alineados con el binario v2.5.3; históricamente estuvieron desalineados (apuntaban al binario `v0.3`, ver [§8](#8-actualizador-ota)), así que conviene comprobar que el `exe` declarado en `release.json` coincide con la primera línea de `SHA256SUMS`.
+**Verificación**: descarga `SHA256SUMS` de la misma release y comprueba el digest. Desde el 2026-10-23 `SHA256SUMS` y `release.json` están alineados con el binario v2.5.5; históricamente estuvieron desalineados (apuntaban al binario `v0.3`, ver [§8](#8-actualizador-ota)), así que conviene comprobar que el `exe` declarado en `release.json` coincide con la primera línea de `SHA256SUMS`.
 
 ### Qué ocurre al arrancarlo
 
 1. El visor se valida a sí mismo y muestra el flujo de identidad (ver [§4](#4-registro-e-identidad)).
-2. En el primer arranque extrae sus recursos embebidos en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\` (medido: **≈470 MiB** en disco por versión). El marcador que decide si hay que re-extraer es la **versión del ensamblado** (`AssemblyInformationalVersion`), no una constante a mano: así un OTA que cambia el `wvp3d.pck` embebido fuerza la re-extracción del mundo. La variable de entorno `WOLD_RUNTIME_DIR` permite redirigir la extracción.
+2. En el primer arranque extrae sus recursos embebidos en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\` (medido en la v2.5.5: **718.587.745 bytes ≈ 686 MiB** por versión — 537,7 MB de PCK + 180,9 MB de motor ya extraído). El marcador que decide si hay que re-extraer es la **versión del ensamblado** (`AssemblyInformationalVersion`), no una constante a mano: así un OTA que cambia el `wvp3d.pck` embebido fuerza la re-extracción del mundo. La variable de entorno `WOLD_RUNTIME_DIR` permite redirigir la extracción.
 3. Lanza el motor Godot incrustado y activa en segundo plano la API P2P local y el WebNodo.
 
-**Limitaciones conocidas**: cada versión publicada extrae su propia carpeta de runtime (no hay limpieza automática de versiones antiguas); el primer arranque tarda unos segundos por la extracción, y **el primer arranque tras un OTA también vuelve a extraer ~470 MiB**. Antes de esta corrección el marcador estaba congelado en `0.1.0`, de modo que todas las versiones compartían `runtime\0.1.0\` y el mundo actualizado por OTA no llegaba a disco.
+**Limitaciones conocidas**: cada versión publicada extrae su propia carpeta de runtime (no hay limpieza automática de versiones antiguas); el primer arranque tarda unos segundos por la extracción, y **el primer arranque tras un OTA también vuelve a extraer ~686 MiB**. Antes de esta corrección el marcador estaba congelado en `0.1.0`, de modo que todas las versiones compartían `runtime\0.1.0\` y el mundo actualizado por OTA no llegaba a disco.
 
 ---
 
@@ -224,11 +224,27 @@ flowchart TD
 
 Sigue el orden de las capturas de la cabecera:
 
-1. **Selector de avatares** — pantalla `SELECTOR DE AVATARES` con el contador `1 / 8`. Usa **← →** para rotar el carrusel circular de **8 modelos antropomórficos animados** (4 femeninos `AVMJ1..4` y 4 masculinos `AVH1..4`, en ese orden de aparición) y confirma con **ENTER**. Cada avatar gira sobre su pedestal.
-2. **Registro de jugador** — pantalla `REGISTRO DE JUGADOR` con tu avatar previsualizado en 3D. Escribe tu **nick** (mínimo 3 caracteres) y pulsa **Confirmar**. Se guarda en `user://registro.cfg` (sección `[jugador]`: nick + escena de avatar) y se calcula un hash SHA-256 (nick | avatar | tiempo) en `avatar_hash.json`.
-3. **Hangar** — aparece `GRACIAS POR ENTRAR A WOLD VIRTUAL 3D` / `CREA TU ISLA PROPIA`. Camina con **WASD** hasta el **portal dimensional** (anillo de energía).
-4. **Cruza el portal** → pantalla de carga → aterrizas en tu **isla procedural propia** en el archipiélago, bautizada `Isla <tu-nick> (<uuid>)`. Con **T** abres el panel de islas para teletransportarte; los demás jugadores conectados aparecen con su *nametag*.
-5. **Siguientes arranques**: si `registro.cfg` existe, el mundo salta directamente al hangar y no repite el registro.
+1. **Selector de avatares** — pantalla `SELECTOR DE AVATARES` con el contador `Turno n/3 · k/8`. Usa **← →** para rotar el carrusel circular de **24 modelos antropomórficos animados** (12 femeninos `AVMJ1..12` y 12 masculinos `AVH1..12`) y confirma con **ENTER**. Cada avatar gira sobre su pedestal; el carrusel los agrupa en **3 turnos de 8** con alternancia estricta chico/chica (nunca hay dos chicos juntos) y solo monta en escena los 8 del turno activo.
+2. **Registro de jugador** — pantalla `REGISTRO DE JUGADOR` con tu avatar previsualizado en 3D sobre una cúpula de energía. Escribe tu **nick** (mínimo 3 caracteres) y pulsa **Confirmar**. Se guarda en `user://registro.cfg` (sección `[jugador]`: nick + escena de avatar) y se calcula un hash SHA-256 (nick | avatar | tiempo) en `avatar_hash.json`.
+3. **Personalización del aspecto** (misma pantalla, panel derecho con pestañas):
+   - **Colores**: piel, pelo, camiseta, pantalón y zapatillas (tinte por material).
+   - **Cuerpo**: altura hasta **+30 cm**, complexión, cabeza, hombros, torso, brazos y piernas, con porcentaje visible.
+   - **Cara**: nariz, labios, orejas y ojos de 0 % (original) a 100 %.
+   Todo se aplica **en vivo** sobre la previsualización sin morph targets: se deforman los vértices de la malla del cuerpo por regiones (piel, UV y pesos de skin intactos, así que las animaciones siguen funcionando) y la altura se escala en el nodo visual del modelo, nunca en la cápsula de colisión. La estatura base se mide en espacio de mundo desde el hueso `HeadTop_End` del esqueleto (las unidades de malla de los GLB no son metros en todos los avatares). Se guarda en `[personalizacion]` de `user://registro.cfg`, se restaura al reconectar y se replica a los demás jugadores en el texto compacto de `PlayerSync` (10 Hz).
+4. **Hangar** — aparece `GRACIAS POR ENTRAR A WOLD VIRTUAL 3D` / `CREA TU ISLA PROPIA`. Camina con **WASD** hasta el **portal dimensional** (anillo de energía).
+5. **Cruza el portal** → pantalla de carga → aterrizas en tu **isla procedural propia** en el archipiélago, bautizada `Isla <tu-nick> (<uuid>)`. Con **T** abres el panel de islas para teletransportarte; los demás jugadores conectados aparecen con su *nametag*.
+6. **Siguientes arranques**: si `registro.cfg` existe, el mundo salta directamente al hangar y no repite el registro.
+
+**Reserva exclusiva de avatares.** El anfitrión es la única autoridad sobre quién usa cada avatar: no puede haber dos jugadores con el mismo modelo mientras quede alguno libre.
+
+- El turno de cada avatar es su página del carrusel: puestos 1–8 → turno 1, 9–16 → turno 2, 17–24 → turno 3.
+- Al conectar, el cliente declara el avatar elegido; si ya está ocupado, el anfitrión le asigna el más cercano del **mismo género**, empezando por su turno y siguiendo el orden 1 → 2 → 3. El cliente recibe el cambio, lo guarda en `registro.cfg` y ve un aviso ("El avatar X ya estaba en uso. Se te asignó Y · Turno N").
+- La plaza de quien se desconecta queda **libre y reutilizable** por el siguiente jugador.
+- Con los 24 avatares ocupados, el jugador 25 entra en **turno 4 con un avatar reciclado** (repetido) y la interfaz lo marca como "(avatar reutilizado)".
+- La reserva vive en el anfitrión. Tras una migración de anfitrión se descartan los IDs antiguos, las plazas huérfanas se liberan y cada cliente vuelve a declarar su avatar al reconectar.
+- **Consulta previa al carrusel (Fase B):** antes de elegir avatar, el visor abre una conexión corta e independiente con el anfitrión (`gdscrip/Sonda.gd`) y pide su tabla de plazas. El carrusel abre en el primer hueco libre, rotula `OCUPADO` sobre los avatares reservados y las flechas los saltan; si no hay sesión alcanzable se muestran los 24 libres. Con los 24 ocupados el contador avisa `reciclando` y se permite elegir igualmente (turno 4). Esta consulta no altera la conexión del mundo ni la del túnel: es un WebSocket breve que se cierra antes de arrancar la isla, y el anfitrión marca al consultante para no crearle isla ni dejarlo en el roster.
+- El reparto por orden de llegada a partir de un lobby persistente sigue pendiente: la consulta es una instantánea y la autoridad final sigue siendo la sustitución del anfitrión al conectar.
+- Comprobado con `tools/probar_turnos.gd` (catálogo y reservas), `tools/probar_cambio_avatar.gd` (cambio en caliente y aviso), `tools/probar_red.gd` (descubrimiento y URL de túneles intacta), `tools/probar_carrusel_ocupado.gd` (huecos, saltos y reciclaje) y la pareja `tools/probar_sonda_anfitrion.gd` + `tools/probar_sonda_invitado.gd` (consulta real por WebSocket entre dos procesos).
 
 ### 4.3 Invitar a otras personas (prueba de túneles)
 
@@ -255,14 +271,14 @@ carrusel de avatares → registro de nick → hangar / zona de portal → carga 
 
 | Elemento | Dato | Fuente |
 |---|---|---|
-| Avatares | 8 (4 `AVMJ*` femeninos + 4 `AVH*` masculinos), glTF + bin, con escena `Ch3D.tscn` cada uno | `gltfimport/avatares/` |
+| Avatares | 24 (12 `AVMJ*` femeninos + 12 `AVH*` masculinos), glTF + bin, con escena `Ch3D.tscn` cada uno; carrusel en 3 turnos de 8 con alternancia chico/chica | `gltfimport/avatares/`, `SLCAV/AVATARESCONANIMACION/` |
 | Isla / terreno | Chunks de **199,5 m**, **10 islas por fila** en rejilla serpentina, malla glTF compartida | `ChunkManager.gd`, `gltfimport/terrenoblok/` |
-| Shaders | 7 propios: `OCEANO`, `cielo_nubes`, `cupula_panel`, `grid_floor`, `hangar_panel`, `portal_energy`, `portal_ring` | `ESCENAS/…/shaders/` (`*.gdshader`) |
+| Shaders | 8 propios: `OCEANO`, `cielo_nubes`, `cupula_panel`, `grid_floor`, `hangar_panel`, `portal_energy`, `portal_ring`, `registro_fondo` | `gdshader/` (`*.gdshader`) |
 | Sincronización de jugadores | **10 Hz** (intervalo 0,1 s), RPCs con autoridad de anfitrión | `gdscrip/PlayerSync.gd` |
 | Panel de islas | Tecla **T**, teletransporte instantáneo entre parcelas | `gdscrip/TeleportPanel.gd` |
 | Addon | `limpiar_cache` | `project.godot` |
 
-Nota: `Boot.gd` contiene un comentario antiguo que habla de "3 chicas / 3 chicos"; el contenido real del carrusel son los **8 avatares** listados arriba.
+Nota: `Boot.gd` contiene un comentario antiguo que habla de "3 chicas / 3 chicos"; el contenido real del carrusel son los **24 avatares** listados arriba.
 
 ### Controles
 
@@ -274,7 +290,7 @@ Nota: `Boot.gd` contiene un comentario antiguo que habla de "3 chicas / 3 chicos
 | Panel de islas / teletransporte | **T** |
 | Confirmar avatar en el carrusel | **ENTER** |
 
-**Limitaciones conocidas**: las fuentes de Blender (`.blend`) de los avatares no se versionan; solo hay un `.blend` de prueba (`hm1.blend`). El pipeline documentado es "modelado en Blender → exportación glTF a `gltfimport/` → importación en Godot" y reconstruir los modelos exige las fuentes originales del autor.
+**Limitaciones conocidas**: las fuentes de Blender (`.blend`) de los avatares no se versionan; solo hay un `.blend` de prueba (`hm1.blend`). Los 16 avatares nuevos viven en `avtrnCRS/` (**≈4,2 GB** de GLB y PNG, también fuera de Git); sus `.import` llevan `process/size_limit=2048` y el `export_presets.cfg` excluye las copias duplicadas. El pipeline documentado es "modelado en Blender → exportación glTF a `gltfimport/` o `avtrnCRS/` → importación en Godot" y reconstruir los modelos exige las fuentes originales del autor.
 
 ---
 
@@ -369,6 +385,8 @@ El botón de la barra superior muestra los estados `Buscando · Al día · Actua
 
 **Situación actual del canal**: el OTA está **verificado en funcionamiento** — el registro de `%LOCALAPPDATA%\WoldVirtualP2P3D\update_debug.log` muestra un ciclo real `0.3.0 → 2.5.2` detectado, descargado, aplicado y relanzado. Lo que estuvo roto era el descriptor publicado: el `release.json` de la release apuntaba al binario `v0.3` bajo una ruta que no existe en esa release (404). El 2026-10-22 se subió el binario v2.5.3 y se regeneraron `release.json` y `SHA256SUMS` alineados con él.
 
+**Corrección v2.5.5 (2026-10-23)**: tras un OTA el visor podía arrancar Godot como **cliente del túnel efímero de la sesión anterior**, ya cerrado; como el cliente explícito no degrada a anfitrión, el mundo se quedaba en «Conectando a la red P2P». La causa era que `MainWindow.ComprobarHostMigrado()` interpretaba `user://session_host.txt` —que sólo escribe el anfitrión local— como destino remoto. Ahora ese fichero sólo actualiza el enlace de invitación, nunca el rol de arranque, y se ignoran los archivos de ejecuciones anteriores.
+
 **Pendiente** (fase F3 de la hoja de ruta): canal estable/beta, *changelog* en el tooltip y la espera controlada del `apply-pending.bat`.
 
 ---
@@ -400,33 +418,33 @@ El interruptor de desarrollo `-p:SkipGodotAssets=true` compila solo la UI sin el
 | Insumo | Tamaño | Origen |
 |---|---:|---|
 | `godot_exe.zip` | 86 MB (82 MiB) | Distribución oficial de Godot 4.7.2 win64 (`Godot_v4.7.2-stable_win64.exe`), empaquetada en ZIP |
-| `wvp3d.pck` | 312 MB (298 MiB) | Exportación PCK del proyecto Godot de `src/MTBGT/WoldVirtualP2P3D/` (con `--main-pack`) |
+| `wvp3d.pck` | 537,7 MB (512,8 MiB) | Exportación PCK del proyecto Godot de `src/MTBGT/WoldVirtualP2P3D/` con el `export_presets.cfg` versionado (24 avatares a 2K; sin copias duplicadas) |
 
-Reconstruirlos en otra máquina exige: 1) descargar Godot 4.7.2, y 2) abrir el proyecto MTBGT en el editor y exportarlo a PCK. Las fuentes `.blend` de los avatares no están versionadas (ver [§5](#5-el-mundo-3d-godot)).
+Reconstruirlos en otra máquina exige: 1) descargar Godot 4.7.2, y 2) abrir el proyecto MTBGT una vez (`--headless --path . --import`) y exportar con `--export-pack "Windows Desktop"`; el preset ya está versionado y fija el filtro de recursos. Las fuentes `.blend` de los avatares no están versionadas (ver [§5](#5-el-mundo-3d-godot)).
 
 ### Tamaños medidos del ciclo de publicación
 
 | Artefacto | Tamaño |
 |---|---:|
-| Exe publicado (v2.5.2) | 562 MB |
-| Extracción en disco por versión | ≈470 MiB |
+| Exe publicado (v2.5.5) | 787 MB (751 MiB) |
+| Extracción en disco por versión | ≈686 MiB |
 | Contenido versionado del repositorio | 425 ficheros, ~133 MiB |
 
 ### Pipeline completo
 
 ```mermaid
 flowchart LR
-    G["Proyecto Godot<br/>(src/MTBGT)"] -->|export PCK| PCK["wvp3d.pck (312 MB)"]
+    G["Proyecto Godot<br/>(src/MTBGT)"] -->|export PCK| PCK["wvp3d.pck (512,8 MiB)"]
     E["Godot 4.7.2 win64"] -->|empaquetado| ZIP["godot_exe.zip (86 MB)"]
     PCK --> CS["Visor3D.csproj<br/>single-file + self-contained"]
     ZIP --> CS
-    CS -->|dotnet publish -r win-x64| EXE["exe portable (~562 MB)"]
-    EXE --> FIR["Firma de desarrollo<br/>+ SHA256SUMS + release.json"]
+    CS -->|dotnet publish -r win-x64| EXE["exe portable (~751 MiB)"]
+    EXE --> FIR["SHA256SUMS + release.json"]
     FIR --> REL["GitHub Release"]
     REL -->|API de GitHub| UPD["Actualizador OTA del visor"]
 ```
 
-**Limitaciones conocidas**: la firma es de desarrollo (autofirmada), no hay certificado de distribución; el número `<Version>` del csproj versionado (`0.1.0`) no coincide con el binario publicado (`2.5.2`) — sincronizarlos es la primera tarea recomendada; `GodotConfig.cs` conserva rutas de desarrollo como *fallback* (deuda D9, ver [§13](#13-hoja-de-ruta-y-deuda-t%C3%A9cnica)).
+**Limitaciones conocidas**: la firma es de desarrollo (autofirmada), no hay certificado de distribución; `GodotConfig.cs` conserva rutas de desarrollo como *fallback* (deuda D9, ver [§13](#13-hoja-de-ruta-y-deuda-t%C3%A9cnica)).
 
 ---
 
@@ -530,7 +548,7 @@ Fuente: [`HOJA_DE_RUTA.md`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion
 | Extracción en frío | Rápida | 344 MB en 3,3 s |
 | Identidad | PBKDF2 + BIP-39 | 10/10 pruebas en entorno aislado |
 
-*(Cifras de la fase F2 para la v0.1.0; el binario vigente v2.5.2 incorpora el PCK sin comprimir de 312 MB, de ahí su mayor tamaño.)*
+*(Cifras de la fase F2 para la v0.1.0; el binario vigente v2.5.5 incorpora 24 avatares a 2K en un PCK de 512,8 MiB, de ahí su mayor tamaño. Los 171,5 MB correspondían a los 8 avatares originales.)*
 
 ### LucIA L1–L6
 

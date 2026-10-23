@@ -5,18 +5,24 @@ extends Node3D
 
 const SYNC_INTERVAL := 0.1
 const AVATAR_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/scenesconstr/userbaseh1.tscn")
+const Pers = preload("res://gdscrip/Personalizacion.gd")
 
 var _userbase: CharacterBody3D = null
+var _gestor: Node = null
 var _proxies: Dictionary = {} # peer_id(int) -> Node3D clon
 var _targets: Dictionary = {} # peer_id(int) -> Vector3 objetivo
 var _estados: Dictionary = {} # peer_id(int) -> int estado animacion
 var _rutas: Dictionary = {} # peer_id(int) -> ruta del avatar elegido
+var _pers: Dictionary = {} # peer_id(int) -> aspecto codificado
+var _mi_pers := ""
 var _nick := ""
 var _timer := 0.0
 
 func _ready() -> void:
+	_gestor = get_parent()
 	_userbase = get_parent().get_node_or_null("USERBASE") as CharacterBody3D
 	_nick = _leer_nick()
+	_mi_pers = Pers.codificar(Pers.leer())
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	# Al caer el servidor todos los IDs caducan (el nuevo anfitrion sera 1 y los
@@ -41,10 +47,14 @@ func _process(delta: float) -> void:
 	if _timer < SYNC_INTERVAL:
 		return
 	_timer = 0.0
+	# No anunciar el avatar hasta que el anfitrión confirme la plaza: evita que
+	# los demás creen un clon con el avatar que luego cambia.
+	if _gestor != null and _gestor.has_method("avatar_confirmado") and not bool(_gestor.call("avatar_confirmado")):
+		return
 	if _userbase != null and multiplayer.multiplayer_peer != null:
 		var st := multiplayer.multiplayer_peer.get_connection_status()
 		if st == MultiplayerPeer.CONNECTION_CONNECTED:
-			rpc("_net_position", _userbase.position, _userbase.rotation.y, _nick, _estado_propio(), _avatar_path())
+			rpc("_net_position", _userbase.position, _userbase.rotation.y, _nick, _estado_propio(), _avatar_path(), _mi_pers)
 
 func _on_peer_connected(id: int) -> void:
 	_ensure_proxy(id)
@@ -61,6 +71,7 @@ func _clear_all_proxies() -> void:
 	_targets.clear()
 	_estados.clear()
 	_rutas.clear()
+	_pers.clear()
 
 func _remove_proxy(id: int) -> void:
 	# Se elimina el avatar pero la isla queda (la conserva TeleportManager).
@@ -70,8 +81,9 @@ func _remove_proxy(id: int) -> void:
 		_targets.erase(id)
 		_estados.erase(id)
 		_rutas.erase(id)
+		_pers.erase(id)
 
-func _ensure_proxy(id: int, scene_path: String = "") -> void:
+func _ensure_proxy(id: int, scene_path: String = "", pers: String = "") -> void:
 	if id == multiplayer.get_unique_id():
 		return
 	if scene_path != "":
@@ -105,6 +117,8 @@ func _ensure_proxy(id: int, scene_path: String = "") -> void:
 	if "es_clon_remoto" in root:
 		root.set("es_clon_remoto", true)
 	get_parent().add_child(root)
+	Pers.aplicar(root, Pers.decodificar(pers))
+	_pers[id] = pers
 	# La cámara del clon sobra (no debe robar la vista): se libera tras el ready.
 	for cam in root.find_children("*", "Camera3D", true, false):
 		cam.queue_free()
@@ -121,23 +135,29 @@ func _ensure_proxy(id: int, scene_path: String = "") -> void:
 	var label := Label3D.new()
 	label.name = "NickLabel"
 	label.text = "Jugador %d" % id
-	label.position = Vector3(0, 2.1, 0)
+	label.position = Vector3(0, Pers.altura_total(root) + 0.18, 0)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	root.add_child(label)
 
 @rpc("any_peer", "unreliable")
-func _net_position(pos: Vector3, rot_y: float, nick: String, estado: int, avatar_path: String = "") -> void:
+func _net_position(pos: Vector3, rot_y: float, nick: String, estado: int, avatar_path: String = "", pers: String = "") -> void:
 	var sender := multiplayer.get_remote_sender_id()
 	if sender == 0:
 		return
-	_ensure_proxy(sender, avatar_path)
+	_ensure_proxy(sender, avatar_path, pers)
 	_targets[sender] = pos
 	_estados[sender] = estado
-	var proxy: Node3D = _proxies[sender]
+	var proxy: Node3D = _proxies.get(sender)
+	if proxy == null:
+		return
+	if str(_pers.get(sender, "")) != pers:
+		Pers.aplicar(proxy, Pers.decodificar(pers))
+		_pers[sender] = pers
 	proxy.rotation.y = rot_y
 	var label := proxy.get_node_or_null("NickLabel") as Label3D
 	if label:
 		label.text = nick if nick != "" else ("Jugador %d" % sender)
+		label.position.y = Pers.altura_total(proxy) + 0.18
 
 
 ## Estado de animación propio (0=idle, 1=andar, 2=correr, 3=aire)

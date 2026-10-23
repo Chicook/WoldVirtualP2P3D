@@ -1,36 +1,64 @@
-[gd_scene format=3 uid="uid://ch414pj1ltcd"]
+[gd_scene load_steps=13 format=3 uid="uid://ch414pj1ltcd"]
 
 [ext_resource type="PackedScene" uid="uid://7sujp7tvmdw4" path="res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/scenesconstr/userbaseh1.tscn" id="1_avatar"]
 [ext_resource type="Script" path="res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/gdscrip/registro.gd" id="1_registro"]
+[ext_resource type="PackedScene" path="res://SLCAV/AVATARESCONANIMACION/CUPULA.tscn" id="2_cupula"]
+[ext_resource type="Shader" path="res://gdshader/registro_fondo.gdshader" id="3_fondo"]
+[ext_resource type="Shader" path="res://gdshader/portal_ring.gdshader" id="4_aro"]
 
-[sub_resource type="ProceduralSkyMaterial" id="SkyMat_reg"]
-sky_top_color = Color(0.3, 0.55, 0.85, 1)
-sky_horizon_color = Color(0.7, 0.8, 0.9, 1)
-ground_bottom_color = Color(0.15, 0.15, 0.18, 1)
-ground_horizon_color = Color(0.4, 0.4, 0.45, 1)
-
-[sub_resource type="Sky" id="Sky_reg"]
-sky_material = SubResource("SkyMat_reg")
+[sub_resource type="ShaderMaterial" id="Mat_fondo"]
+shader = ExtResource("3_fondo")
+shader_parameter/color_arriba = Color(0.055, 0.075, 0.12, 1)
+shader_parameter/color_abajo = Color(0.012, 0.018, 0.035, 1)
+shader_parameter/color_brillo = Color(0.1, 0.48, 0.78, 1)
+shader_parameter/brillo = 0.3
+shader_parameter/rejilla_energia = 0.045
+shader_parameter/rejilla_celdas = 34.0
 
 [sub_resource type="Environment" id="Env_reg"]
-background_mode = 2
-sky = SubResource("Sky_reg")
+background_mode = 1
+background_color = Color(0.015, 0.022, 0.04, 1)
 ambient_light_source = 2
-ambient_light_energy = 0.8
+ambient_light_color = Color(0.62, 0.72, 0.95, 1)
+ambient_light_energy = 0.55
+glow_enabled = true
+glow_intensity = 0.7
+glow_bloom = 0.15
+glow_blend_mode = 1
+tonemap_mode = 2
 
 [sub_resource type="StandardMaterial3D" id="Mat_suelo"]
-albedo_color = Color(0.35, 0.38, 0.42, 1)
-roughness = 0.9
+albedo_color = Color(0.09, 0.11, 0.16, 1)
+metallic = 0.6
+roughness = 0.35
+emission_enabled = true
+emission = Color(0.05, 0.25, 0.4, 1)
+emission_energy_multiplier = 0.6
 
 [sub_resource type="CylinderMesh" id="Mesh_pedestal"]
 material = SubResource("Mat_suelo")
-top_radius = 1.2
-bottom_radius = 1.4
+top_radius = 1.1
+bottom_radius = 1.3
 height = 0.2
 
 [sub_resource type="CylinderShape3D" id="Shape_pedestal"]
-radius = 1.4
+radius = 1.3
 height = 0.2
+
+[sub_resource type="ShaderMaterial" id="Mat_aro"]
+shader = ExtResource("4_aro")
+shader_parameter/base_color = Color(0.03, 0.05, 0.08, 1)
+shader_parameter/glow_color = Color(0.15, 0.75, 1, 1)
+shader_parameter/bands = 4.0
+shader_parameter/speed = 0.5
+shader_parameter/glow_energy = 1.8
+
+[sub_resource type="TorusMesh" id="Mesh_aro"]
+material = SubResource("Mat_aro")
+inner_radius = 1.14
+outer_radius = 1.26
+rings = 96
+ring_segments = 12
 
 [node name="REGISTRO" type="Control"]
 layout_mode = 3
@@ -42,6 +70,7 @@ grow_vertical = 2
 script = ExtResource("1_registro")
 
 [node name="Fondo" type="ColorRect" parent="."]
+material = SubResource("Mat_fondo")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -53,21 +82,23 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-theme_override_constants/separation = 16
+theme_override_constants/separation = 24
 alignment = 1
 
 [node name="VBox" type="VBoxContainer" parent="Panel"]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
+size_flags_vertical = 4
 
 [node name="Titulo" type="Label" parent="Panel/VBox"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 22
 text = "REGISTRO DE JUGADOR"
 horizontal_alignment = 1
 
 [node name="ViewportContainer" type="SubViewportContainer" parent="Panel/VBox"]
-custom_minimum_size = Vector2(480, 480)
+custom_minimum_size = Vector2(440, 440)
 layout_mode = 2
 stretch = true
 
@@ -75,20 +106,29 @@ stretch = true
 own_world_3d = true
 transparent_bg = true
 render_target_update_mode = 3
-size = Vector2i(480, 480)
+size = Vector2i(440, 440)
 
 [node name="Preview3D" type="Node3D" parent="Panel/VBox/ViewportContainer/Viewport"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="Panel/VBox/ViewportContainer/Viewport/Preview3D"]
 environment = SubResource("Env_reg")
 
+[node name="Cupula" parent="Panel/VBox/ViewportContainer/Viewport/Preview3D" instance=ExtResource("2_cupula")]
+transform = Transform3D(0.4, 0, 0, 0, 0.4, 0, 0, 0, 0.4, 0, -0.12, 0)
+
 [node name="Sol" type="DirectionalLight3D" parent="Panel/VBox/ViewportContainer/Viewport/Preview3D"]
 transform = Transform3D(0.8660254, -0.35355338, 0.35355341, 0, 0.70710677, 0.70710677, -0.5, -0.61237246, 0.61237246, 0, 4, 2)
-light_energy = 1.2
+light_energy = 1.5
 shadow_enabled = true
 
+[node name="Relleno" type="OmniLight3D" parent="Panel/VBox/ViewportContainer/Viewport/Preview3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 1.9)
+light_color = Color(0.85, 0.92, 1, 1)
+light_energy = 2.2
+omni_range = 5.0
+
 [node name="CamaraFrente" type="Camera3D" parent="Panel/VBox/ViewportContainer/Viewport/Preview3D"]
-transform = Transform3D(1, 0, 0, 0, 0.98162723, 0.190809, 0, -0.190809, 0.98162723, 0, 1.6, 3.6)
+transform = Transform3D(1, 0, 0, 0, 0.9814, 0.1926, 0, -0.1926, 0.9814, 0, 1.52, 2.65)
 current = true
 fov = 45.0
 
@@ -101,6 +141,10 @@ mesh = SubResource("Mesh_pedestal")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Panel/VBox/ViewportContainer/Viewport/Preview3D/Pedestal"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 shape = SubResource("Shape_pedestal")
+
+[node name="AroLuz" type="MeshInstance3D" parent="Panel/VBox/ViewportContainer/Viewport/Preview3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("Mesh_aro")
 
 [node name="userbaseh1" parent="Panel/VBox/ViewportContainer/Viewport/Preview3D" instance=ExtResource("1_avatar")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -123,6 +167,416 @@ text = "Confirmar"
 [node name="ErrorLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
+
+[node name="Personalizacion" type="VBoxContainer" parent="Panel"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+size_flags_vertical = 4
+
+[node name="PersTitulo" type="Label" parent="Panel/Personalizacion"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "PERSONALIZA TU AVATAR"
+horizontal_alignment = 1
+
+[node name="Tabs" type="TabContainer" parent="Panel/Personalizacion"]
+custom_minimum_size = Vector2(340, 270)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+current_tab = 0
+
+[node name="Colores" type="VBoxContainer" parent="Panel/Personalizacion/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PersAyuda" type="Label" parent="Panel/Personalizacion/Tabs/Colores"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Un color por prenda. Pulsa una muestra para abrir la paleta."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="PersGrid" type="GridContainer" parent="Panel/Personalizacion/Tabs/Colores"]
+layout_mode = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="Piel" type="VBoxContainer" parent="Panel/Personalizacion/Tabs/Colores/PersGrid"]
+layout_mode = 2
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Piel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Piel"
+
+[node name="Color" type="ColorPickerButton" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Piel"]
+custom_minimum_size = Vector2(96, 30)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+edit_alpha = false
+
+[node name="Pelo" type="VBoxContainer" parent="Panel/Personalizacion/Tabs/Colores/PersGrid"]
+layout_mode = 2
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Pelo"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Pelo"
+
+[node name="Color" type="ColorPickerButton" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Pelo"]
+custom_minimum_size = Vector2(96, 30)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+edit_alpha = false
+
+[node name="Camiseta" type="VBoxContainer" parent="Panel/Personalizacion/Tabs/Colores/PersGrid"]
+layout_mode = 2
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Camiseta"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Camiseta"
+
+[node name="Color" type="ColorPickerButton" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Camiseta"]
+custom_minimum_size = Vector2(96, 30)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+edit_alpha = false
+
+[node name="Pantalon" type="VBoxContainer" parent="Panel/Personalizacion/Tabs/Colores/PersGrid"]
+layout_mode = 2
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Pantalon"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Pantalon"
+
+[node name="Color" type="ColorPickerButton" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Pantalon"]
+custom_minimum_size = Vector2(96, 30)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+edit_alpha = false
+
+[node name="Zapatillas" type="VBoxContainer" parent="Panel/Personalizacion/Tabs/Colores/PersGrid"]
+layout_mode = 2
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Zapatillas"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Zapatillas"
+
+[node name="Color" type="ColorPickerButton" parent="Panel/Personalizacion/Tabs/Colores/PersGrid/Zapatillas"]
+custom_minimum_size = Vector2(96, 30)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+edit_alpha = false
+
+[node name="Cuerpo" type="VBoxContainer" parent="Panel/Personalizacion/Tabs"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="AyudaCuerpo" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Altura hasta +30 cm y volumen por zonas del cuerpo."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="AlturaFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cuerpo"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/AlturaFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Altura"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cuerpo/AlturaFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 30.0
+step = 1.0
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/AlturaFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "+0 cm"
+horizontal_alignment = 2
+
+[node name="AnchoFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cuerpo"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/AnchoFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Complexion"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cuerpo/AnchoFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.85
+max_value = 1.15
+step = 0.01
+value = 1.0
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/AnchoFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "100%"
+horizontal_alignment = 2
+
+[node name="CabezaFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cuerpo"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/CabezaFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Cabeza"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cuerpo/CabezaFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.85
+max_value = 1.15
+step = 0.01
+value = 1.0
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/CabezaFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "100%"
+horizontal_alignment = 2
+
+[node name="HombrosFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cuerpo"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/HombrosFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Hombros"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cuerpo/HombrosFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.8
+max_value = 1.25
+step = 0.01
+value = 1.0
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/HombrosFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "100%"
+horizontal_alignment = 2
+
+[node name="TorsoFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cuerpo"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/TorsoFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Torso"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cuerpo/TorsoFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.8
+max_value = 1.25
+step = 0.01
+value = 1.0
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/TorsoFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "100%"
+horizontal_alignment = 2
+
+[node name="BrazosFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cuerpo"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/BrazosFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Brazos"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cuerpo/BrazosFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.8
+max_value = 1.25
+step = 0.01
+value = 1.0
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/BrazosFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "100%"
+horizontal_alignment = 2
+
+[node name="PiernasFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cuerpo"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/PiernasFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Piernas"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cuerpo/PiernasFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.8
+max_value = 1.25
+step = 0.01
+value = 1.0
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cuerpo/PiernasFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "100%"
+horizontal_alignment = 2
+
+[node name="Cara" type="VBoxContainer" parent="Panel/Personalizacion/Tabs"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="AyudaCara" type="Label" parent="Panel/Personalizacion/Tabs/Cara"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Rasgos faciales. Al 0% el avatar queda original."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="NarizFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cara"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cara/NarizFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Nariz"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cara/NarizFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.01
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cara/NarizFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "0%"
+horizontal_alignment = 2
+
+[node name="LabiosFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cara"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cara/LabiosFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Labios"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cara/LabiosFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.01
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cara/LabiosFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "0%"
+horizontal_alignment = 2
+
+[node name="OrejasFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cara"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cara/OrejasFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Orejas"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cara/OrejasFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.01
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cara/OrejasFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "0%"
+horizontal_alignment = 2
+
+[node name="OjosFila" type="HBoxContainer" parent="Panel/Personalizacion/Tabs/Cara"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Etiqueta" type="Label" parent="Panel/Personalizacion/Tabs/Cara/OjosFila"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Ojos"
+
+[node name="Slider" type="HSlider" parent="Panel/Personalizacion/Tabs/Cara/OjosFila"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.01
+
+[node name="Valor" type="Label" parent="Panel/Personalizacion/Tabs/Cara/OjosFila"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "0%"
+horizontal_alignment = 2
+
+[node name="Restablecer" type="Button" parent="Panel/Personalizacion"]
+layout_mode = 2
+text = "Restablecer aspecto"
 
 [connection signal="pressed" from="Panel/VBox/Confirmar" to="." method="_on_confirmar_pressed"]
 [connection signal="text_submitted" from="Panel/VBox/NickEdit" to="." method="_on_nick_text_submitted"]

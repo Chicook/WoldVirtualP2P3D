@@ -1,14 +1,6 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" uid="uid://dv2s0xk5lmrbf" path="res://gdscrip/SLAV.gd" id="1_script"]
-[ext_resource type="PackedScene" uid="uid://cgfk34rm6k4yi" path="res://gltfimport/avatares/AVMJ1.gltf" id="1_p1"]
-[ext_resource type="PackedScene" uid="uid://css5h10q7c7yv" path="res://gltfimport/avatares/AVMJ2.gltf" id="1_p2"]
-[ext_resource type="PackedScene" uid="uid://cnclwarjtesb0" path="res://gltfimport/avatares/AVH1.gltf" id="1_p3"]
-[ext_resource type="PackedScene" uid="uid://cqfocaudp68gs" path="res://gltfimport/avatares/AVH2.gltf" id="1_p4"]
-[ext_resource type="PackedScene" uid="uid://tsx5wbisblrj" path="res://gltfimport/avatares/AVMJ3.gltf" id="1_p5"]
-[ext_resource type="PackedScene" uid="uid://86dmygl67t68" path="res://gltfimport/avatares/AVH3.gltf" id="1_p6"]
-[ext_resource type="PackedScene" uid="uid://bn6kl8v5cil51" path="res://gltfimport/avatares/AVMJ4.gltf" id="1_p7"]
-[ext_resource type="PackedScene" uid="uid://nxeagq2653p6" path="res://gltfimport/avatares/AVH4.gltf" id="1_p8"]
 [ext_resource type="PackedScene" path="res://SLCAV/AVATARESCONANIMACION/CUPULA.tscn" id="1_cupula"]
 
 [sub_resource type="Environment" id="Environment_slav"]
@@ -45,9 +37,11 @@ material = SubResource("Mat_stage")
 
 [node name="SLAV" type="Node3D"]
 script = ExtResource("1_script")
-avatar_scenes = Array[PackedScene]([ExtResource("1_p1"), ExtResource("1_p2"), ExtResource("1_p3"), ExtResource("1_p4"), ExtResource("1_p5"), ExtResource("1_p6"), ExtResource("1_p7"), ExtResource("1_p8")])
-playable_scenes = Array[String](["res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ1Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ2Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH1Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH2Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ3Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH3Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ4Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH4Ch3D.tscn"])
-avatar_names = Array[String](["AVMJ1", "AVMJ2", "AVH1", "AVH2", "AVMJ3", "AVH3", "AVMJ4", "AVH4"])
+avatar_paths = Array[String](["res://gltfimport/avatares/AVH1.gltf", "res://gltfimport/avatares/AVMJ1.gltf", "res://gltfimport/avatares/AVH2.gltf", "res://gltfimport/avatares/AVMJ2.gltf", "res://gltfimport/avatares/AVH3.gltf", "res://gltfimport/avatares/AVMJ3.gltf", "res://gltfimport/avatares/AVH4.gltf", "res://gltfimport/avatares/AVMJ4.gltf", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm1_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm4_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm2_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj1_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm3_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj2_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm5_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj3_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj4_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm6_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj5_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm7_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj6_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm8_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj7_anim.glb", "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm9_anim.glb"])
+playable_scenes = Array[String](["res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH1Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ1Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH2Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ2Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH3Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ3Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH4Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ4Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH5Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ5Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH6Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ6Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH7Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ7Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH8Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ8Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH9Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ9Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH10Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ10Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH11Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ11Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH12Ch3D.tscn", "res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/AVMJ12Ch3D.tscn"])
+avatar_names = Array[String](["AVH1", "AVMJ1", "AVH2", "AVMJ2", "AVH3", "AVMJ3", "AVH4", "AVMJ4", "AVH5", "AVMJ5", "AVH6", "AVMJ6", "AVH7", "AVMJ7", "AVH8", "AVMJ8", "AVH9", "AVMJ9", "AVH10", "AVMJ10", "AVH11", "AVMJ11", "AVH12", "AVMJ12"])
+avatar_scales = Array[float]([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.84, 1.0, 1.0, 1.0, 1.0, 1.0, 0.87])
+per_turn = 8
 radius = 1.95
 y_offset = 0.0
 face_offset_deg = 0.0
@@ -144,9 +138,11 @@ offset_right = 200.0
 offset_bottom = 216.0
 grow_horizontal = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
-theme_override_font_sizes/font_size = 20
-text = "1 / 8"
+theme_override_colors/font_color = Color(0.75, 0.86, 1, 1)
+theme_override_colors/font_outline_color = Color(0.01, 0.03, 0.07, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 22
+text = "Turno 1/3  ·  1/8"
 horizontal_alignment = 1
 vertical_alignment = 1
 
