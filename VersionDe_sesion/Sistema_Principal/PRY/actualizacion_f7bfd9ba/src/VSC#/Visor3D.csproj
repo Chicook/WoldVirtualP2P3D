@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba</AssemblyName>
+    <AssemblyName>DMWoldVirtualp2pCNXv2.5.4</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.5.3</Version>
-    <AssemblyVersion>2.5.3.0</AssemblyVersion>
-    <FileVersion>2.5.3.0</FileVersion>
+    <Version>2.5.4</Version>
+    <AssemblyVersion>2.5.4.0</AssemblyVersion>
+    <FileVersion>2.5.4.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualp2pCNX v2.5.3 (mundo en PCK, actualizador con SHA-256 y reanudación, UI del actualizador en la barra)</Description>
+    <Description>Visor 3D — DMWoldVirtualp2pCNX v2.5.4 (24 avatares a 2K, carrusel con turnos y ocupación, aspecto persistente, mundo en PCK, actualizador con SHA-256 y reanudación)</Description>
   </PropertyGroup>
 
   <!--

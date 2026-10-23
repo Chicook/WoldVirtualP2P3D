@@ -47,11 +47,12 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba`, que corresponde al exe
-`DMWoldVirtualp2pCNXv2.5.3__actualizacion_f7bfd9ba.exe`.
+extensión: hoy `DMWoldVirtualp2pCNXv2.5.4`, que corresponde al exe
+`DMWoldVirtualp2pCNXv2.5.4.exe`.
 
-**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.3`) ↔
-nombre del fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). El actualizador lee
+**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.4`) ↔
+nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.4.exe`) ↔ `release.json` (`version`, `tag`,
+`exe`, `url`). El actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación
 hace que un visor se crea "al día" teniendo binario nuevo por instalar.
@@ -61,7 +62,7 @@ Renombrar `v2.5.2` → `v2.5.3` invalidó todas las URLs `…/download/v2.5.2/�
 y dejó obsoletos los metadatos que las referenciaban. Si una release sale mal: se sube el asset
 corregido bajo un tag **nuevo**, no se toca el existente.
 
-**R5 — La re-extracción cuesta ~470 MB y segundos.** Es comportamiento esperado tras un OTA, no un
+**R5 — La re-extracción cuesta ~600 MB y segundos.** Es comportamiento esperado tras un OTA, no un
 fallo. No se "arregla" volviendo el marcador a una constante fija: eso fue el defecto que existía
 antes (constante `"0.1.0"`) y quedó documentado en el comentario de `AppExtractor.cs:16-19`.
 
@@ -84,7 +85,10 @@ y caer en modo local (comentario en `GodotHwndHost.cs:108-112`). Escena principa
 `GodotHwndHost.cs:125` (`args += $" -- {_userArgs}"`). El contrato entre el visor y el motor es:
 `--client --ip=<host> --port=<puerto> --peer-url="<url>"`, emitido en
 `<src/>VSC#/MainWindow.xaml.cs:641` y parseado en
-`<src/>MTBGT/WoldVirtualP2P3D/gdscrip/ChunkManager.gd:674-684` (y registrado en `Boot.gd:30-37`).
+`<src/>MTBGT/WoldVirtualP2P3D/gdscrip/Red.gd:10-130` (compartido por `ChunkManager.gd:864-869` y
+`Sonda.gd:21-69`; registrado en `Boot.gd:34-42`). La sonda previa al carrusel usa el mismo
+descubrimiento y la misma URL que el mundo: si tocas el parseo de túneles (`Red.gd`), el cambio vale
+para ambos lados.
 **Cambiar una bandera exige tocar los dos lados en el mismo commit.** Sin `--userArgs`, Godot arranca
 como `SERVIDOR_LOCAL` por defecto (`GodotHwndHost.cs:138`): no es un error, pero un binario que deba
 conectar y no conecta se manifiesta así.
@@ -194,10 +198,14 @@ Con evidencia en el log, no "me parece que va". El visor escribe en
 
 ## 9. Huecos conocidos (no ocultarlos detrás de estas reglas)
 
-- **El preset de exportación no está versionado.** No existe `export_presets.cfg` en
-  `<src/>MTBGT/WoldVirtualP2P3D/`; el PCK se exportó con un preset `Windows Desktop` creado fuera del
-  repo. La exportación no es reproducible desde un clon limpio. *Estado: Parcial.*
-  Solución pendiente: versionar `export_presets.cfg` (es texto) y fijar el comando exacto.
+- **Preset de exportación (resuelto el 2026-10-23).** `export_presets.cfg` está versionado en
+  `<src/>MTBGT/WoldVirtualP2P3D/` con `export_filter="all_resources"` y un `exclude_filter` que
+  descarta las copias de avatares que ningún catálogo usa (`avtrnCRS/Texturas/` y los `.glb` sin
+  animación). Las texturas usadas llevan `process/size_limit=2048` en sus `.import` (los 24 avatares
+  a 2K; el terreno 4K a 2K). Comando exacto, reproducible desde un clon con los assets locales:
+  `godot --headless --path . --import` y
+  `godot --headless --path . --export-pack "Windows Desktop" wvp3d.pck`.
+  *Estado: Implementado.*
 - **Formato de `tamano_mb`:** `/api/info` emite coma decimal (`"536,0"`) por heredar la cultura del
   sistema. Corrección aplazada a propósito: recompilar invalidaría el digest publicado (§8.9).
   *Estado: Implementado, sin prueba real de consumo externo estricto.*
