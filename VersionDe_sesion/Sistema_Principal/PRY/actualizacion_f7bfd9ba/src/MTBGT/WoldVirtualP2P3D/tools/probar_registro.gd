@@ -71,13 +71,6 @@ func _correr() -> void:
 	Pers.aplicar(reg._preview, Pers.POR_DEFECTO)
 	var alto_base := Pers.altura_total(reg._preview)
 
-	var carpetas := OS.get_environment("TEMP").path_join("pers")
-	DirAccess.make_dir_recursive_absolute(carpetas)
-	var tabs: TabContainer = reg.get_node("Panel/Personalizacion/Tabs")
-	tabs.current_tab = 0
-	await create_timer(0.4).timeout
-	get_root().get_texture().get_image().save_png(carpetas.path_join("registro_tab_colores.png"))
-
 	for ruta in CONTROLES:
 		var nodo := reg.get_node(ruta)
 		if nodo is ColorPickerButton:
@@ -86,6 +79,13 @@ func _correr() -> void:
 			nodo.value = float(DATOS[_clave(ruta)])
 	reg._on_pers_cambiada()
 	await create_timer(0.8).timeout
+
+	var carpetas := OS.get_environment("TEMP").path_join("pers")
+	DirAccess.make_dir_recursive_absolute(carpetas)
+	var tabs: TabContainer = reg.get_node("Panel/Personalizacion/Tabs")
+	tabs.current_tab = 0
+	await create_timer(0.4).timeout
+	get_root().get_texture().get_image().save_png(carpetas.path_join("registro_tab_colores.png"))
 
 	var preview: Node3D = reg._preview
 	fallos += _comprobar_preview(preview, DATOS)

@@ -11,7 +11,7 @@
 
 | Carrusel de avatares (8 por turno) | Registro de jugador | Hangar y portal | Isla y P2P |
 |:---:|:---:|:---:|:---:|
-| [![Carrusel de avatares en 3 turnos](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/01_carrusel_avatares.png)](#7-el-mundo-3d-godot) | [![Pantalla de registro con nick](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/02_registro_jugador.png)](#6-registro-e-identidad) | [![Hangar cyberpunk con portal](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/03_hangar_portal.png)](#7-el-mundo-3d-godot) | [![Isla procedural con nodos P2P](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/04_metaverso_isla_p2p.png)](#8-red-p2p-webnodo-y-t%C3%BAneles-ef%C3%ADmeros) |
+| [![Carrusel de avatares en 3 turnos](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/01_carrusel_avatares.png)](#7-el-mundo-3d-godot) | [![Registro de jugador con personalización](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/02_registro_jugador.png)](#6-registro-e-identidad) | [![Hangar cyberpunk con portal](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/03_hangar_portal.png)](#7-el-mundo-3d-godot) | [![Isla procedural con nodos P2P](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/04_metaverso_isla_p2p.png)](#8-red-p2p-webnodo-y-t%C3%BAneles-ef%C3%ADmeros) |
 
 > **Esta fase es una prueba de conexión P2P 3D.** El objetivo es validar que varias personas puedan encontrarse en el mundo, elegir avatar, personalizarlo y compartir sesión por túnel o LAN. **No es todavía un metaverso completo:** no hay economía, ni blockchain, ni chat de texto/voz/webcam, ni construcción de islas, y LucIA no está integrada. Todo ese alcance está en la hoja de ruta con estado **Planificado** (ver [§3](#3-visi%C3%B3n-del-metaverso-alcance-planificado)).
 
@@ -185,7 +185,7 @@ El objetivo es comunicación dentro del mundo en tres modalidades: **texto**, **
 
 ## 4. Mapa del repositorio
 
-El repositorio versiona **477 ficheros** con **≈268 MB** de contenido (suma de blobs en `main`). Por lenguajes: **36.421 líneas de Python** (122 ficheros), **7.425 líneas de C#** (29), **6.159 líneas de GDScript** (41, incluidos los scripts de escenas y herramientas) y **1.255 líneas de XAML** (7).
+El repositorio versiona **479 ficheros** con **≈269 MB** de contenido (suma de blobs en `main`). Por lenguajes: **36.421 líneas de Python** (122 ficheros), **7.425 líneas de C#** (29), **6.159 líneas de GDScript** (41, incluidos los scripts de escenas y herramientas) y **1.255 líneas de XAML** (7).
 
 ### Modelo de versionado
 
@@ -242,7 +242,7 @@ WoldVirtualP2P3D/
 | `src/STM_JSON/` | Utilidades de registro JSON | Python + JSON | 4 | Implementado |
 | `src/STM_SGR/` | Vault de credenciales OpenRouter | Python | 1 | Implementado |
 | `src/STM_HRTS/` | Manifiesto `pyproject.toml` de LucIA + registro | TOML + Python + YAML | 3 | Implementado |
-| `src/STM_DOC/` | Documentación y capturas del sistema | Markdown + PNG | 7 | Documentación |
+| `src/STM_DOC/` | Documentación y capturas del sistema | Markdown + PNG | 9 | Documentación |
 | `src/STM_CH/` | Artefactos de ejecución de LucIA (ledger, memorias, datastore) | Datos | 13 | Pendiente de limpieza |
 | `src/tests/` | Pruebas pytest de LucIA | Python | 10 | Implementado |
 | `VersionDe_sesion/CONTRRF/` | Herramienta RFPRMN + taller aislado TLLDCD | Python | 11 | Implementado |
@@ -325,7 +325,18 @@ Sigue el orden de las capturas de la cabecera:
 - El reparto por orden de llegada a partir de un lobby persistente sigue pendiente: la consulta es una instantánea y la autoridad final sigue siendo la sustitución del anfitrión al conectar.
 - Comprobado con `tools/probar_turnos.gd`, `tools/probar_cambio_avatar.gd`, `tools/probar_red.gd`, `tools/probar_carrusel_ocupado.gd` y la pareja `tools/probar_sonda_anfitrion.gd` + `tools/probar_sonda_invitado.gd`.
 
-### 6.3 Invitar a otras personas (prueba de túneles)
+### 6.3 Galería: la zona de registro del avatar
+
+Capturas del **2026-10-24** del aspecto actual de `registro.tscn` a 1280×720, con el avatar sobre la cúpula de energía, el campo de nick y **Confirmar** a la izquierda, y el panel **PERSONALIZA TU AVATAR** a la derecha. Los tres grupos de controles actúan **en vivo** sobre la previsualización, sin botón de aplicar.
+
+| Colores | Cuerpo | Cara |
+|:---:|:---:|:---:|
+| [![Pestaña Colores: piel, pelo, camiseta, pantalón y zapatillas](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/02_registro_jugador.png)](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/02_registro_jugador.png) | [![Pestaña Cuerpo: altura y proporciones](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/05_registro_cuerpo.png)](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/05_registro_cuerpo.png) | [![Pestaña Cara: rasgos faciales](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/06_registro_cara.png)](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/STM_DOC/docs/img/06_registro_cara.png) |
+| Tinte por material en 5 zonas: piel, pelo, camiseta, pantalón y zapatillas | Altura hasta **+30 cm** y seis volúmenes (complexión, cabeza, hombros, torso, brazos, piernas) | Nariz, labios, orejas y ojos de **0 %** (original) a **100 %** |
+
+El botón **Restablecer aspecto** devuelve todos los valores a su estado original. La captura la genera [`tools/probar_registro.gd`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/MTBGT/WoldVirtualP2P3D/tools/probar_registro.gd), que además comprueba los 16 controles, que el tinte llegue al material correcto, que la altura crezca exactamente lo pedido y que aplicar el aspecto dos veces no acumule escala.
+
+### 6.4 Invitar a otras personas (prueba de túneles)
 
 Con la sesión 3D abierta, el botón **🌐 WebNodo** de la barra superior levanta un **túnel efímero público** y copia al portapapeles una URL tipo `https://xxx.trycloudflare.com/?host=...`. Tus contactos pueden:
 
@@ -508,7 +519,7 @@ Reconstruirlos en otra máquina exige: 1) descargar Godot 4.7.2, y 2) abrir el p
 | Exe publicado (v2.5.5) | 787.264.673 B (≈751 MiB) |
 | PCK embebido | 537.728.852 B (512,8 MiB) |
 | Extracción en disco por versión | 718.587.745 B (≈686 MiB) |
-| Contenido versionado del repositorio | 477 ficheros, ≈268 MB |
+| Contenido versionado del repositorio | 479 ficheros, 268.812.386 B (≈269 MB) |
 
 ### Pipeline completo
 
@@ -680,7 +691,7 @@ El repositorio aún versiona artefactos de ejecución de LucIA que convendría d
 
 ### Tamaño y ramas
 
-- Contenido versionado: **477 ficheros, ≈268 MB**.
+- Contenido versionado: **479 ficheros, ≈269 MB**.
 - Ramas remotas: `main` (integración) más una familia de ramas de trabajo por asistente (`DevAntigravityIA`, `DevChatGPTIA`, `DevCursorIA`, `DevDeepSeekHarnessIA`, `DevOpencodeIA`, `DevQoderIA`, `DevTraeIA`).
 
 ### Ficheros de configuración de agentes
