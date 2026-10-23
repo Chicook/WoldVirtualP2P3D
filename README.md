@@ -5,7 +5,7 @@
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](LICENSE)
 [![.NET 8 WPF](https://img.shields.io/badge/.NET-8.0%20WPF-512bd4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
 [![Godot 4.7.2](https://img.shields.io/badge/Godot-4.7.2-478cbf?logo=godotengine&logoColor=white)](https://godotengine.org)
-[![Release v2.5.2](https://img.shields.io/badge/Release-v2.5.2-green.svg)](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.2)
+[![Release v2.5.5](https://img.shields.io/badge/Release-v2.5.5-green.svg)](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.5)
 [![Plataforma](https://img.shields.io/badge/Plataforma-Windows%20x64-blue)](#3-descarga-y-primer-arranque)
 [![Estado: Alpha](https://img.shields.io/badge/Estado-Alpha%20(prototipo)-orange)](#1-qu%C3%A9-es-y-estado-real)
 
@@ -82,7 +82,7 @@ flowchart TB
 - Solo funciona en **Windows x64**.
 - La red es **P2P solo en el transporte**: cada sesión tiene un **anfitrión con autoridad** (host-authority) y el resto de nodos se conectan a él por WebSocket. No hay replicación descentralizada sin servidor de confianza.
 - La "billetera DeFi" del visor está **en construcción**: la semilla BIP-39 de 12 palabras y sus derivaciones hash son reales, pero aún no se conecta a ninguna blockchain ni gestiona fondos.
-- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/VSC%23/Visor3D.csproj) versionado quedó en `0.1.0`, mientras que el binario publicado vigente es **v2.5.2** (construido a partir del mismo árbol con el número de versión de la sesión de publicación). Ambos datos se documentan tal cual son.
+- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/VSC%23/Visor3D.csproj) versionado coincide con el binario publicado vigente (**2.5.5**); el nombre del ensamblado (`AssemblyName`) es el mismo que el del `.exe`.
 
 ### Estado de las capacidades
 
@@ -176,23 +176,23 @@ WoldVirtualP2P3D/
 
 ### Descarga
 
-- **Release vigente**: [v2.5.4](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.4) — marcada como *Latest*. El tag `v2.5.4` ya existía con assets históricos; el 2026-10-23 se le añadió el binario v2.5.4 con el mundo Godot de 24 avatares. **No se renombró ningún tag** (R4).
-- **Ejecutable recomendado**: [`DMWoldVirtualp2pCNXv2.5.4.exe`](https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.4/DMWoldVirtualp2pCNXv2.5.4.exe) — **787.264.673 bytes (≈751 MiB)**, portable, autocontenido. SHA-256 `cf010ad8232f15fc33b6091a1b2a4c3c734d6ad3e30a808b8909f6533fbebb3a` (verificado el 2026-10-23 contra el digest que publica GitHub).
-- La release incluye también un ZIP demo del mundo 3D, el descriptor `release.json` y el fichero `SHA256SUMS`, además de ejecutables históricos de versiones anteriores —entre ellos el de `v2.5.3`, que sigue publicado bajo esta misma etiqueta.
+- **Release vigente**: [v2.5.5](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.5) — marcada como *Latest*. Es una versión nueva (no se renombró ningún tag, R4) que corrige el arranque como cliente de un túnel caducado. El tag `v2.5.4` sigue publicado con el mundo de 24 avatares y sus assets históricos.
+- **Ejecutable recomendado**: [`DMWoldVirtualp2pCNXv2.5.5.exe`](https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.5/DMWoldVirtualp2pCNXv2.5.5.exe) — **787.264.673 bytes (≈751 MiB)**, portable, autocontenido. SHA-256 `8a9fa21d777182c28d1696a8bdf2bb2f70f713ccea9b9e32d3270e5fdd24695c` (verificado el 2026-10-23 contra el digest que publica GitHub).
+- La release incluye también el descriptor `release.json` y el fichero `SHA256SUMS`, además de los ejecutables de las releases anteriores (`v2.5.4`, `v2.5.3`…), cada uno bajo su propia etiqueta.
 
 **Requisitos**: Windows 10/11 x64. El ejecutable es autocontenido (incluye el runtime de .NET 8, el motor Godot y el mundo 3D): no hay nada que instalar, no necesita permisos de administrador y no escribe en el registro.
 
-**Aviso de SmartScreen**: el binario v2.5.4 se publica **sin firmar** (no había certificado de firma disponible en el equipo de compilación), así que Windows puede mostrar "Windows protegió tu equipo" → *Más información* → *Ejecutar de todas formas*. El binario v2.5.3 sí llevaba una firma de desarrollo autofirmada; el estado real de cualquier descarga se comprueba con `Get-AuthenticodeSignature`.
+**Aviso de SmartScreen**: el binario v2.5.5 se publica **sin firmar** (no había certificado de firma disponible en el equipo de compilación), así que Windows puede mostrar "Windows protegió tu equipo" → *Más información* → *Ejecutar de todas formas*. El binario v2.5.3 sí llevaba una firma de desarrollo autofirmada; el estado real de cualquier descarga se comprueba con `Get-AuthenticodeSignature`.
 
-**Verificación**: descarga `SHA256SUMS` de la misma release y comprueba el digest. Desde el 2026-10-23 `SHA256SUMS` y `release.json` están alineados con el binario v2.5.4; históricamente estuvieron desalineados (apuntaban al binario `v0.3`, ver [§8](#8-actualizador-ota)), así que conviene comprobar que el `exe` declarado en `release.json` coincide con la primera línea de `SHA256SUMS`.
+**Verificación**: descarga `SHA256SUMS` de la misma release y comprueba el digest. Desde el 2026-10-23 `SHA256SUMS` y `release.json` están alineados con el binario v2.5.5; históricamente estuvieron desalineados (apuntaban al binario `v0.3`, ver [§8](#8-actualizador-ota)), así que conviene comprobar que el `exe` declarado en `release.json` coincide con la primera línea de `SHA256SUMS`.
 
 ### Qué ocurre al arrancarlo
 
 1. El visor se valida a sí mismo y muestra el flujo de identidad (ver [§4](#4-registro-e-identidad)).
-2. En el primer arranque extrae sus recursos embebidos en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\` (medido en la v2.5.4: **623.884.740 bytes ≈ 595 MiB** por versión — 537,7 MB de PCK + 86,2 MB de motor). El marcador que decide si hay que re-extraer es la **versión del ensamblado** (`AssemblyInformationalVersion`), no una constante a mano: así un OTA que cambia el `wvp3d.pck` embebido fuerza la re-extracción del mundo. La variable de entorno `WOLD_RUNTIME_DIR` permite redirigir la extracción.
+2. En el primer arranque extrae sus recursos embebidos en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\` (medido en la v2.5.5: **718.587.745 bytes ≈ 686 MiB** por versión — 537,7 MB de PCK + 180,9 MB de motor ya extraído). El marcador que decide si hay que re-extraer es la **versión del ensamblado** (`AssemblyInformationalVersion`), no una constante a mano: así un OTA que cambia el `wvp3d.pck` embebido fuerza la re-extracción del mundo. La variable de entorno `WOLD_RUNTIME_DIR` permite redirigir la extracción.
 3. Lanza el motor Godot incrustado y activa en segundo plano la API P2P local y el WebNodo.
 
-**Limitaciones conocidas**: cada versión publicada extrae su propia carpeta de runtime (no hay limpieza automática de versiones antiguas); el primer arranque tarda unos segundos por la extracción, y **el primer arranque tras un OTA también vuelve a extraer ~595 MiB**. Antes de esta corrección el marcador estaba congelado en `0.1.0`, de modo que todas las versiones compartían `runtime\0.1.0\` y el mundo actualizado por OTA no llegaba a disco.
+**Limitaciones conocidas**: cada versión publicada extrae su propia carpeta de runtime (no hay limpieza automática de versiones antiguas); el primer arranque tarda unos segundos por la extracción, y **el primer arranque tras un OTA también vuelve a extraer ~686 MiB**. Antes de esta corrección el marcador estaba congelado en `0.1.0`, de modo que todas las versiones compartían `runtime\0.1.0\` y el mundo actualizado por OTA no llegaba a disco.
 
 ---
 
@@ -385,6 +385,8 @@ El botón de la barra superior muestra los estados `Buscando · Al día · Actua
 
 **Situación actual del canal**: el OTA está **verificado en funcionamiento** — el registro de `%LOCALAPPDATA%\WoldVirtualP2P3D\update_debug.log` muestra un ciclo real `0.3.0 → 2.5.2` detectado, descargado, aplicado y relanzado. Lo que estuvo roto era el descriptor publicado: el `release.json` de la release apuntaba al binario `v0.3` bajo una ruta que no existe en esa release (404). El 2026-10-22 se subió el binario v2.5.3 y se regeneraron `release.json` y `SHA256SUMS` alineados con él.
 
+**Corrección v2.5.5 (2026-10-23)**: tras un OTA el visor podía arrancar Godot como **cliente del túnel efímero de la sesión anterior**, ya cerrado; como el cliente explícito no degrada a anfitrión, el mundo se quedaba en «Conectando a la red P2P». La causa era que `MainWindow.ComprobarHostMigrado()` interpretaba `user://session_host.txt` —que sólo escribe el anfitrión local— como destino remoto. Ahora ese fichero sólo actualiza el enlace de invitación, nunca el rol de arranque, y se ignoran los archivos de ejecuciones anteriores.
+
 **Pendiente** (fase F3 de la hoja de ruta): canal estable/beta, *changelog* en el tooltip y la espera controlada del `apply-pending.bat`.
 
 ---
@@ -424,8 +426,8 @@ Reconstruirlos en otra máquina exige: 1) descargar Godot 4.7.2, y 2) abrir el p
 
 | Artefacto | Tamaño |
 |---|---:|
-| Exe publicado (v2.5.4) | 787 MB (751 MiB) |
-| Extracción en disco por versión | ≈595 MiB |
+| Exe publicado (v2.5.5) | 787 MB (751 MiB) |
+| Extracción en disco por versión | ≈686 MiB |
 | Contenido versionado del repositorio | 425 ficheros, ~133 MiB |
 
 ### Pipeline completo
@@ -442,7 +444,7 @@ flowchart LR
     REL -->|API de GitHub| UPD["Actualizador OTA del visor"]
 ```
 
-**Limitaciones conocidas**: la firma es de desarrollo (autofirmada), no hay certificado de distribución; el número `<Version>` del csproj versionado (`0.1.0`) no coincide con el binario publicado (`2.5.2`) — sincronizarlos es la primera tarea recomendada; `GodotConfig.cs` conserva rutas de desarrollo como *fallback* (deuda D9, ver [§13](#13-hoja-de-ruta-y-deuda-t%C3%A9cnica)).
+**Limitaciones conocidas**: la firma es de desarrollo (autofirmada), no hay certificado de distribución; `GodotConfig.cs` conserva rutas de desarrollo como *fallback* (deuda D9, ver [§13](#13-hoja-de-ruta-y-deuda-t%C3%A9cnica)).
 
 ---
 
@@ -546,7 +548,7 @@ Fuente: [`HOJA_DE_RUTA.md`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion
 | Extracción en frío | Rápida | 344 MB en 3,3 s |
 | Identidad | PBKDF2 + BIP-39 | 10/10 pruebas en entorno aislado |
 
-*(Cifras de la fase F2 para la v0.1.0; el binario vigente v2.5.4 incorpora 24 avatares a 2K en un PCK de 512,8 MiB, de ahí su mayor tamaño. Los 171,5 MB correspondían a los 8 avatares originales.)*
+*(Cifras de la fase F2 para la v0.1.0; el binario vigente v2.5.5 incorpora 24 avatares a 2K en un PCK de 512,8 MiB, de ahí su mayor tamaño. Los 171,5 MB correspondían a los 8 avatares originales.)*
 
 ### LucIA L1–L6
 

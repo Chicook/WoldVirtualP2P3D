@@ -49,6 +49,7 @@ namespace Visor3D
         private string _enlaceCompartible = "";
         private string _hostSesionUrl = "";
         private string _hostInicial = "";
+        private readonly DateTime _arranqueUtc = DateTime.UtcNow;
         private string _llaveHashActual = "";
         private int _rotacionesLlave;
         private ReleaseInfo? _updateInfo;
@@ -761,12 +762,23 @@ namespace Visor3D
                     "Godot", "app_userdata", "WoldVirtualP2P3D", "session_host.txt");
                 if (!File.Exists(path)) return;
 
+                // session_host.txt sólo lo escribe el anfitrión LOCAL, y su túnel
+                // efímero muere al cerrar el proceso. Un archivo anterior a este
+                // arranque es de una sesión pasada: no debe convertirnos en
+                // clientes de un destino que ya no existe.
+                if (File.GetLastWriteTimeUtc(path) < _arranqueUtc) return;
+
                 string nuevo = File.ReadAllText(path).Trim();
                 if (string.IsNullOrWhiteSpace(nuevo)) return;
                 if (nuevo.Equals(_hostSesionUrl, StringComparison.OrdinalIgnoreCase)) return;
+                // Si el archivo apunta a nuestro propio portal, somos el anfitrión.
+                if (!string.IsNullOrEmpty(_urlPublica) &&
+                    nuevo.Equals(_urlPublica, StringComparison.OrdinalIgnoreCase)) return;
 
                 _hostSesionUrl = nuevo;
-                _urlAmigoPendiente = nuevo;
+                // Sólo se actualiza el enlace de invitación. _urlAmigoPendiente no se
+                // toca: eso decide el rol con el que arranca Godot y un anfitrión no
+                // debe arrancar como cliente de su propio túnel.
                 if (!string.IsNullOrEmpty(_urlPublica))
                 {
                     _enlaceCompartible = _urlPublica.Equals(nuevo, StringComparison.OrdinalIgnoreCase)

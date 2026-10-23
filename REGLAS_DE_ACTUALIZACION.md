@@ -47,11 +47,11 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualp2pCNXv2.5.4`, que corresponde al exe
-`DMWoldVirtualp2pCNXv2.5.4.exe`.
+extensión: hoy `DMWoldVirtualp2pCNXv2.5.5`, que corresponde al exe
+`DMWoldVirtualp2pCNXv2.5.5.exe`.
 
-**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.4`) ↔
-nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.4.exe`) ↔ `release.json` (`version`, `tag`,
+**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.5`) ↔
+nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.5.exe`) ↔ `release.json` (`version`, `tag`,
 `exe`, `url`). El actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación
@@ -62,7 +62,7 @@ Renombrar `v2.5.2` → `v2.5.3` invalidó todas las URLs `…/download/v2.5.2/�
 y dejó obsoletos los metadatos que las referenciaban. Si una release sale mal: se sube el asset
 corregido bajo un tag **nuevo**, no se toca el existente.
 
-**R5 — La re-extracción cuesta ~600 MB y segundos.** Es comportamiento esperado tras un OTA, no un
+**R5 — La re-extracción cuesta ~686 MiB y segundos.** Es comportamiento esperado tras un OTA, no un
 fallo. No se "arregla" volviendo el marcador a una constante fija: eso fue el defecto que existía
 antes (constante `"0.1.0"`) y quedó documentado en el comentario de `AppExtractor.cs:16-19`.
 
@@ -209,6 +209,18 @@ Con evidencia en el log, no "me parece que va". El visor escribe en
 - **Formato de `tamano_mb`:** `/api/info` emite coma decimal (`"536,0"`) por heredar la cultura del
   sistema. Corrección aplazada a propósito: recompilar invalidaría el digest publicado (§8.9).
   *Estado: Implementado, sin prueba real de consumo externo estricto.*
+- **Sesión persistida (resuelto el 2026-10-23).** `user://session_host.txt` sólo lo escribe el
+  anfitrión local (`ChunkManager.gd:801-807`, llamado desde `:775`): nunca identifica a un anfitrión
+  remoto. Hasta v2.5.4 el visor lo leía en `MainWindow.ComprobarHostMigrado()` y lo asignaba a
+  `_urlAmigoPendiente`, que decide el rol con el que arranca Godot; tras reiniciar o actualizar, el
+  visor arrancaba como **cliente de su propio túnel ya cerrado** y la carga no terminaba (el cliente
+  explícito no degrada a anfitrión). Desde v2.5.5 ese fichero sólo actualiza el enlace de invitación
+  y se ignoran los archivos anteriores al arranque. *Estado: Implementado, sin prueba real.*
+- **`WOLD_RUNTIME_DIR` con barras `/` (resuelto el 2026-10-23).** `AppExtractor.ExtractResource`
+  comparaba la ruta extraída con `destDir` sin normalizar; con barras normales (`E:/tmp/...`)
+  descartaba las entradas del zip del motor y dejaba `Servidor3D` vacío. Ahora ambas rutas pasan por
+  `Path.GetFullPath`. Con la ruta por defecto (barras invertidas de Windows) nunca ocurrió.
+  *Estado: Implementado.*
 - **El PCK embebido no se valida por hash** en tiempo de ejecución: `AppExtractor` se guía por la
   versión del ensamblado, no por el contenido. Un PCK corrupto en el `.exe` sólo se detecta al
   arrancar Godot. *Estado: Planificado.*

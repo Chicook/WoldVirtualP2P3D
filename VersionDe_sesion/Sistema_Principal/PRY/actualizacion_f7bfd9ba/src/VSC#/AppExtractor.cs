@@ -118,12 +118,13 @@ namespace Visor3D
             }
 
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            string destDirFull = Path.GetFullPath(destDir);
             foreach (var entry in archive.Entries)
             {
                 if (string.IsNullOrEmpty(entry.Name)) continue; // Carpeta
                 string cleanEntryName = entry.FullName.TrimStart('/', '\\');
-                string targetPath = Path.GetFullPath(Path.Combine(destDir, cleanEntryName));
-                if (!targetPath.StartsWith(destDir, StringComparison.OrdinalIgnoreCase))
+                string targetPath = Path.GetFullPath(Path.Combine(destDirFull, cleanEntryName));
+                if (!targetPath.StartsWith(destDirFull, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 string? parentDir = Path.GetDirectoryName(targetPath);
