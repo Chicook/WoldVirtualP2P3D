@@ -698,7 +698,7 @@ Seguimiento detallado en el issue [#17](https://github.com/Chicook/WoldVirtualP2
 | P1 | Firma de código | SmartScreen sigue avisando en 2.5.4–2.5.9 |
 | P1 | CI y suite unitaria del visor | Hoy solo hay autopruebas de arranque del ejecutable |
 | P1 | Recolección de runtimes antiguos | 8,0 GB en 15 carpetas, sin limpieza automática |
-| P2 | `release.json` / `SHA256SUMS` siempre firmados y verificados por hash | Verificación manual por `gh api`, sin automatizar |
+| P2 | `release.json` / `SHA256SUMS` publicados y verificados por hash | Hoy la verificación es manual con `gh api`, sin automatizar |
 
 Checklist de publicación: [§7 de `REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md).
 
