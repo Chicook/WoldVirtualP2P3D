@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://b8tpman202601" path="res://gdscrip/TeleportManager.gd" id="5_s7nl5"]
 [ext_resource type="Script" uid="uid://datppanel2601" path="res://gdscrip/TeleportPanel.gd" id="6_fl0rh"]
 [ext_resource type="Script" uid="uid://dbpowhi8rrk81" path="res://gdscrip/PlayerSync.gd" id="7_rbb7m"]
+[ext_resource type="Script" path="res://gdscrip/Construccion.gd" id="8_const"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_njqwk"]
 
@@ -63,5 +64,8 @@ script = ExtResource("6_fl0rh")
 
 [node name="PlayerSync" type="Node3D" parent="." unique_id=910101003]
 script = ExtResource("7_rbb7m")
+
+[node name="Constructor" type="Node3D" parent="."]
+script = ExtResource("8_const")
 
 [editable path="ISLA3DCHUNK"]

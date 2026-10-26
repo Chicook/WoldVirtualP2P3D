@@ -54,10 +54,16 @@ namespace Visor3D.Services
             set => _publicTunnelUrl = value;
         }
 
+        /// <summary>Puerto local del relay de chat; /chat se proxya aquí.</summary>
+        public int ChatLocalPort { get; set; } = 8920;
+
+        /// <summary>False hasta que el relay de chat está escuchando.</summary>
+        public bool ChatEnabled { get; set; }
+
         public static readonly int Port = 3030;
-        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.5.exe";
+        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.6.exe";
         private const string ExeUrlFallback =
-            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.5/DMWoldVirtualp2pCNXv2.5.5.exe";
+            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.6/DMWoldVirtualp2pCNXv2.5.6.exe";
 
         // Valor de arranque: el release.json empaquetado junto al .exe. En cuanto el
         // nodo arranca, RefrescarReleaseVigente() lo sustituye por la release vigente
@@ -571,8 +577,23 @@ namespace Visor3D.Services
                 // contrario el upgrade se responde con HTML y el cliente nunca conecta.
                 if (req.IsWebSocketRequest)
                 {
-                    // PROXY WEBSOCKET para P2P (Godot -> localhost:8911)
-                    await ProxyWebSocketAsync(ctx);
+                    // /chat -> relay del chat; cualquier otra ruta -> motor Godot (8911).
+                    string rutaWs = req.Url?.AbsolutePath ?? "/";
+                    if (rutaWs.StartsWith("/chat", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!ChatEnabled || ChatLocalPort <= 0)
+                        {
+                            ctx.Response.StatusCode = 503;
+                            ctx.Response.StatusDescription = "Chat no disponible";
+                            ctx.Response.Close();
+                            return;
+                        }
+                        await ProxyWebSocketAsync(ctx, $"ws://localhost:{ChatLocalPort}/chat");
+                    }
+                    else
+                    {
+                        await ProxyWebSocketAsync(ctx, "ws://localhost:8911");
+                    }
                     return;
                 }
 
@@ -761,7 +782,7 @@ namespace Visor3D.Services
             catch { }
         }
 
-        private async Task ProxyWebSocketAsync(HttpListenerContext ctx)
+        private async Task ProxyWebSocketAsync(HttpListenerContext ctx, string destino)
         {
             try
             {
@@ -769,7 +790,7 @@ namespace Visor3D.Services
                 var clientWs = wsContext.WebSocket;
 
                 using var serverWs = new System.Net.WebSockets.ClientWebSocket();
-                await serverWs.ConnectAsync(new Uri("ws://localhost:8911"), CancellationToken.None);
+                await serverWs.ConnectAsync(new Uri(destino), CancellationToken.None);
 
                 var clientToRemote = Task.Run(async () =>
                 {

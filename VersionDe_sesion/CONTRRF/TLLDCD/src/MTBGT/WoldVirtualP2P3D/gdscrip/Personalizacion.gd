@@ -838,8 +838,16 @@ static func _altura_base_mundo(avatar: Node, sk: Skeleton3D) -> float:
 		extra = 0.12
 	if i < 0:
 		return ALTURA_REFERENCIA
-	var mundo: Vector3 = sk.global_transform * sk.get_bone_global_rest(i).origin
-	var punto: Vector3 = avatar.global_transform.affine_inverse() * mundo
+	# Se compone con transformaciones LOCALES: esto se llama antes de que el avatar
+	# entre en el árbol (Boot -> set_player_avatar) y global_transform lanzaría
+	# "!is_inside_tree()" dejando la altura a 0 y el avatar sin escalar.
+	var xf := Transform3D.IDENTITY
+	var nodo: Node = sk
+	while nodo != null and nodo != avatar:
+		if nodo is Node3D:
+			xf = (nodo as Node3D).transform * xf
+		nodo = nodo.get_parent()
+	var punto: Vector3 = xf * sk.get_bone_global_rest(i).origin
 	return maxf(punto.y + extra, 0.5)
 
 

@@ -19,6 +19,12 @@ namespace Visor3D
         // una versión anterior.
         private static readonly string AppVersion = ObtenerVersionEnsamblado();
 
+        /// <summary>Versión usada como marcador de re-extracción (informativa).</summary>
+        public static string Version => AppVersion;
+
+        /// <summary>En la prueba de arranque no debe aparecer ningún diálogo modal.</summary>
+        public static bool SilentErrors { get; set; }
+
         private static string ObtenerVersionEnsamblado()
         {
             var info = typeof(AppExtractor).Assembly
@@ -101,9 +107,12 @@ namespace Visor3D
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Error al preparar el motor 3D:\n{ex.Message}\n\nDirectorio: {RuntimeDir}",
-                    "Error de extracción", MessageBoxButton.OK, MessageBoxImage.Error);
+                if (!SilentErrors)
+                {
+                    MessageBox.Show(
+                        $"Error al preparar el motor 3D:\n{ex.Message}\n\nDirectorio: {RuntimeDir}",
+                        "Error de extracción", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
                 return false;
             }
         }

@@ -5,6 +5,8 @@ extends Node3D
 ## Anadir como nodo hijo de IslaFinal (ver ISLA_FINAL.tscn).
 
 signal islands_updated(islands: Array)
+## Reemite el resultado del registro de isla que realiza ChunkManager.
+signal isla_registrada(exito: bool, mensaje: String)
 
 const SPAWN_HEIGHT := 45.0
 const POLL_INTERVAL := 1.0
@@ -18,6 +20,8 @@ var _userbase: CharacterBody3D = null
 func _ready() -> void:
 	_chunk_manager = get_parent()
 	_userbase = get_parent().get_node_or_null("USERBASE") as CharacterBody3D
+	if _chunk_manager != null and _chunk_manager.has_signal("isla_registrada"):
+		_chunk_manager.connect("isla_registrada", _on_isla_registrada)
 	set_process(true)
 	# Escaneo inmediato + segundo escaneo tardio (los RPC de islas llegan con retardo en clientes)
 	call_deferred("_scan_islands")
@@ -125,16 +129,33 @@ func get_islands() -> Array:
 			active = _chunk_manager.get("active_islands")
 		if _chunk_manager.get("owner_names") != null:
 			names = _chunk_manager.get("owner_names")
+	var mi_isla := -1
+	if _chunk_manager != null and _chunk_manager.get("my_own_index") != null:
+		mi_isla = int(_chunk_manager.get("my_own_index"))
 	for idx in island_history.keys():
+		var dueno_uuid := _uuid_dueno(int(idx))
 		out.append({
 			"index": idx,
 			"position": island_history[idx],
 			"offline": owner_offline.get(idx, false),
 			"nombre": _nombre_dueno(int(idx), active, names),
 			"uuid": _uuid_corto(int(idx)),
+			"propia": int(idx) == mi_isla,
+			"registrada": not dueno_uuid.is_empty(),
 		})
 	out.sort_custom(func(a, b): return a["index"] < b["index"])
 	return out
+
+
+## UUID estable del dueño, o "" si el dueño no está registrado.
+func _uuid_dueno(idx: int) -> String:
+	if _chunk_manager == null or _chunk_manager.get("island_owners") == null:
+		return ""
+	var owners: Dictionary = _chunk_manager.get("island_owners")
+	if not owners.has(idx):
+		return ""
+	var dato: Array = owners[idx]
+	return str(dato[2]) if dato.size() > 2 else ""
 
 
 ## Nombre del dueño de la isla (nick del registro, "—" si no se conoce).
@@ -222,6 +243,18 @@ func mark_owner_left(_player_id: int) -> void:
 		_active = _chunk_manager.get("active_islands")
 	# La isla queda en island_history para visita publica.
 	islands_updated.emit(get_islands())
+
+## API que usa el panel; el registro real vive en ChunkManager.
+func registrar_mi_isla() -> void:
+	if _chunk_manager != null and _chunk_manager.has_method("registrar_mi_isla"):
+		_chunk_manager.call("registrar_mi_isla")
+		return
+	isla_registrada.emit(false, "El mundo todavía no está listo para registrar la isla.")
+
+
+func _on_isla_registrada(exito: bool, mensaje: String) -> void:
+	isla_registrada.emit(exito, mensaje)
+
 
 func teleport_to(index: int) -> bool:
 	if not island_history.has(index):

@@ -204,6 +204,23 @@
                             </Button.Resources>
                         </Button>
 
+                        <!-- Chat de texto, voz y webcam del metaverso -->
+                        <Button x:Name="BtnChat"
+                                Content="💬 Chat"
+                                Height="24" Padding="8,1"
+                                FontSize="10" FontWeight="SemiBold"
+                                Foreground="#7CE7C0" Background="#0F2A24"
+                                BorderBrush="#2DD4BF" BorderThickness="1"
+                                Cursor="Hand"
+                                Margin="6,0,0,0"
+                                ToolTip="Abrir el chat del metaverso (texto, voz y webcam)">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="3"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
                         <!-- Solo aparece si el proceso de Godot muere: reincrustar sin cerrar el visor -->
                         <Button x:Name="BtnReiniciar3D"
                                 Content="⟳ Reiniciar 3D"
@@ -336,12 +353,307 @@
                 </Grid>
             </Grid>
 
-            <!-- Área Central 3D -->
+            <!-- Área Central 3D + panel de chat acoplado -->
             <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <!-- Ancho 0 = chat oculto; al abrirlo el viewport 3D se reduce. -->
+                    <ColumnDefinition x:Name="ColChat" Width="0"/>
+                </Grid.ColumnDefinitions>
+
                 <!-- Contenedor del HwndHost de Godot. OJO: es un HWND nativo y se pinta
                      SIEMPRE por encima del resto de WPF de esta región (airspace). Por eso
-                     aquí no se pone ningún control: la UI vive en la barra superior. -->
-                <Grid x:Name="ContenedorGodotMain" Background="#000000" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                     el chat vive en una columna propia y nunca se superpone al motor. -->
+                <Grid x:Name="ContenedorGodotMain" Grid.Column="0" Background="#000000"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- PANEL DE CHAT (texto + voz + webcam)                        -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <Border x:Name="PanelChat" Grid.Column="1"
+                        Visibility="Collapsed"
+                        Background="#0A0F1D"
+                        BorderBrush="#163B67"
+                        BorderThickness="1,0,0,0">
+                    <Grid Margin="10,10,10,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Cabecera -->
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="💬 Chat del metaverso"
+                                       Foreground="#00D9FF" FontSize="12.5" FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <Button x:Name="BtnAmigos" Grid.Column="1"
+                                    Content="👥 Amigos"
+                                    Height="22" Padding="6,0" Margin="0,0,6,0"
+                                    FontSize="10" FontWeight="SemiBold"
+                                    Foreground="#E2E8F0" Background="#111A2C"
+                                    BorderBrush="#1D3A5C" BorderThickness="1"
+                                    Cursor="Hand" ToolTip="Abrir tu lista de amigos">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                            <Button x:Name="BtnChatCerrar" Grid.Column="2"
+                                    Content="✕" Width="22" Height="22" Padding="0"
+                                    FontSize="11" FontWeight="Bold"
+                                    Foreground="#94A3B8" Background="#111A2C"
+                                    BorderBrush="#1D3A5C" BorderThickness="1"
+                                    Cursor="Hand" ToolTip="Cerrar el chat">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </Grid>
+
+                        <!-- Amigos, solicitudes y personas conectadas en la sesión -->
+                        <Border x:Name="PanelAmigos" Grid.Row="1"
+                                Visibility="Collapsed"
+                                Background="#0D1424"
+                                BorderBrush="#1D3A5C" BorderThickness="1"
+                                CornerRadius="5" Padding="8"
+                                Margin="0,0,0,8">
+                            <ScrollViewer MaxHeight="300"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Tu código:"
+                                                   Foreground="#94A3B8" FontSize="10"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="TxtMiCodigo" Grid.Column="1"
+                                                   Text="—"
+                                                   Foreground="#2DD4BF" FontFamily="Consolas"
+                                                   FontSize="11.5" FontWeight="Bold"
+                                                   Margin="6,0,6,0" VerticalAlignment="Center"/>
+                                        <Button x:Name="BtnCopiarCodigo" Grid.Column="2"
+                                                Content="Copiar" Height="22" Padding="6,0"
+                                                FontSize="10" FontWeight="SemiBold"
+                                                Foreground="#E2E8F0" Background="#162238"
+                                                BorderBrush="#2A4365" BorderThickness="1"
+                                                Cursor="Hand"
+                                                ToolTip="Copiar tu código para compartirlo">
+                                            <Button.Resources>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="CornerRadius" Value="4"/>
+                                                </Style>
+                                            </Button.Resources>
+                                        </Button>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="TxtCodigoAmigo" Height="26" Padding="6,2"
+                                                 MaxLength="64"
+                                                 FontSize="11" Foreground="#E2E8F0"
+                                                 CaretBrush="#00D9FF"
+                                                 VerticalContentAlignment="Center"
+                                                 ToolTip="Pega el código de amigo de la otra persona">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="Background" Value="#111A2C"/>
+                                                    <Setter Property="BorderBrush" Value="#1D3A5C"/>
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                            <Setter Property="Background" Value="#0D2137"/>
+                                                            <Setter Property="BorderBrush" Value="#2DD4BF"/>
+                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
+                                        <Button x:Name="BtnAgregarAmigo" Grid.Column="1"
+                                                Content="Añadir" Height="26" Padding="8,0"
+                                                Margin="6,0,0,0"
+                                                FontSize="10" FontWeight="Bold"
+                                                Foreground="#0B1120" Background="#2DD4BF"
+                                                BorderBrush="#2DD4BF" BorderThickness="1"
+                                                Cursor="Hand">
+                                            <Button.Resources>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="CornerRadius" Value="4"/>
+                                                </Style>
+                                            </Button.Resources>
+                                        </Button>
+                                    </Grid>
+                                    <TextBlock Text="Pega el código de 8 caracteres de la otra persona."
+                                               Foreground="#64748B" FontSize="9"
+                                               TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                    <TextBlock x:Name="TxtEstadoAmigos"
+                                               Foreground="#94A3B8" FontSize="9.5"
+                                               TextWrapping="Wrap" Margin="0,0,0,2"/>
+
+                                    <TextBlock x:Name="LblSolicitudes" Text="SOLICITUDES"
+                                               Foreground="#FBBF24" FontSize="9" FontWeight="Bold"
+                                               Margin="0,4,0,3"
+                                               Visibility="Collapsed"/>
+                                    <StackPanel x:Name="ListaSolicitudes"/>
+
+                                    <TextBlock Text="AMIGOS"
+                                               Foreground="#00D9FF" FontSize="9" FontWeight="Bold"
+                                               Margin="0,6,0,3"/>
+                                    <StackPanel x:Name="ListaAmigos"/>
+
+                                    <TextBlock x:Name="LblEnSesion" Text="EN ESTA SESIÓN"
+                                               Foreground="#94A3B8" FontSize="9" FontWeight="Bold"
+                                               Margin="0,6,0,3"
+                                               Visibility="Collapsed"/>
+                                    <StackPanel x:Name="ListaEnSesion"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Vídeos remotos + mensajes -->
+                        <Grid Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                                <Border x:Name="MarcoCamLocal" Visibility="Collapsed"
+                                        Background="#050811" BorderBrush="#2DD4BF" BorderThickness="1"
+                                        CornerRadius="5" HorizontalAlignment="Left" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <TextBlock Text="TU CÁMARA" Foreground="#2DD4BF" FontSize="9"
+                                                   FontWeight="Bold" Margin="5,3,5,0"/>
+                                        <Image x:Name="ImgCamLocal" Width="160" Height="90"
+                                               Stretch="UniformToFill" Margin="4"/>
+                                    </StackPanel>
+                                </Border>
+                                <WrapPanel x:Name="PanelVideos" Orientation="Horizontal"/>
+                            </StackPanel>
+
+                            <ListBox x:Name="ListaChat" Grid.Row="1"
+                                     Background="#080C16" BorderBrush="#163B67" BorderThickness="1"
+                                     Foreground="#E2E8F0" FontSize="11.5"
+                                     HorizontalContentAlignment="Stretch"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                        </Grid>
+
+                        <!-- Controles de voz y cámara -->
+                        <Grid Grid.Row="3" Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="BtnChatMic" Grid.Column="0"
+                                    Content="🎙 Voz"
+                                    Height="28" Padding="8,1" Margin="0,0,6,0"
+                                    FontSize="10.5" FontWeight="SemiBold"
+                                    Foreground="#E2E8F0" Background="#162238"
+                                    BorderBrush="#2A4365" BorderThickness="1"
+                                    Cursor="Hand"
+                                    ToolTip="Activar o desactivar tu micrófono">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                            <Button x:Name="BtnChatCam" Grid.Column="1"
+                                    Content="📷 Cámara"
+                                    Height="28" Padding="8,1" Margin="0,0,6,0"
+                                    FontSize="10.5" FontWeight="SemiBold"
+                                    Foreground="#E2E8F0" Background="#162238"
+                                    BorderBrush="#2A4365" BorderThickness="1"
+                                    Cursor="Hand"
+                                    ToolTip="Activar o desactivar tu webcam">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                            <ProgressBar x:Name="BarraMic" Grid.Column="2"
+                                         Height="5" Minimum="0" Maximum="100" Value="0"
+                                         VerticalAlignment="Center"
+                                         Foreground="#2DD4BF" Background="#111A2C"
+                                         BorderThickness="0"/>
+                        </Grid>
+
+                        <!-- Entrada de texto -->
+                        <Grid Grid.Row="4" Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Al hacer clic (o al abrir el chat) el cuadro se
+                                 enciende: fondo más claro y borde turquesa. -->
+                            <TextBox x:Name="TxtChat" Grid.Column="0"
+                                     Height="28" Padding="6,3"
+                                     MaxLength="500"
+                                     FontSize="11.5"
+                                     Foreground="#E2E8F0"
+                                     CaretBrush="#00D9FF"
+                                     VerticalContentAlignment="Center"
+                                     ToolTip="Escribe y pulsa Enter para enviar">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="Background" Value="#111A2C"/>
+                                        <Setter Property="BorderBrush" Value="#1D3A5C"/>
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                <Setter Property="Background" Value="#0D2137"/>
+                                                <Setter Property="BorderBrush" Value="#2DD4BF"/>
+                                                <Setter Property="BorderThickness" Value="2"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                            <Button x:Name="BtnChatEnviar" Grid.Column="1"
+                                    Content="Enviar"
+                                    Height="28" Padding="10,1" Margin="6,0,0,0"
+                                    FontSize="10.5" FontWeight="Bold"
+                                    Foreground="#0B1120" Background="#2DD4BF"
+                                    BorderBrush="#2DD4BF" BorderThickness="1"
+                                    Cursor="Hand">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </Grid>
+
+                        <!-- Estado del chat -->
+                        <TextBlock x:Name="TxtChatEstado" Grid.Row="5"
+                                   Text="Chat desconectado"
+                                   Foreground="#64748B" FontSize="9.5"
+                                   TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </Grid>
+                </Border>
             </Grid>
         </Grid>
 

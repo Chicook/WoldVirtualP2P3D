@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Windows;
+using Visor3D.Chat;
 using Visor3D.Services;
 
 namespace Visor3D
@@ -11,6 +12,20 @@ namespace Visor3D
         public static WebNodoService WebNodo { get; } = new WebNodoService();
         private void OnStartup(object sender, StartupEventArgs e)
         {
+            // Prueba de humo del chat sin abrir ventana ni extraer el motor.
+            if (Array.Exists(e.Args, a => a.Equals("--chat-selftest", StringComparison.OrdinalIgnoreCase)))
+            {
+                Environment.Exit(ChatSelfTest.Run());
+                return;
+            }
+
+            // Prueba de arranque previa a publicar: recursos, extracción, portal y motor.
+            if (Array.Exists(e.Args, a => a.Equals("--startup-selftest", StringComparison.OrdinalIgnoreCase)))
+            {
+                Environment.Exit(StartupSelfTest.Run());
+                return;
+            }
+
             // ── RESET COMPLETO DE SESIÓN ─────────────────────────────────────────
             // Comentado para preservar la cuenta del usuario entre sesiones y actualizaciones.
             // LimpiarDatosDeUsuario();
