@@ -1,6 +1,9 @@
 extends Node3D
 ## Zona del portal. Permite usar el avatar elegido en el carrusel como jugador.
 
+const Pers = preload("res://gdscrip/Personalizacion.gd")
+
+
 func set_player_avatar(scene_path: String) -> void:
 	var ps: PackedScene = load(scene_path)
 	if ps == null:
@@ -18,5 +21,6 @@ func set_player_avatar(scene_path: String) -> void:
 		(inst as Node3D).position = pos
 		(inst as Node3D).rotation.y = PI
 	add_child(inst)
+	Pers.aplicar(inst, Pers.leer())
 	for cam in inst.find_children("*", "Camera3D", true, false):
 		(cam as Camera3D).current = true

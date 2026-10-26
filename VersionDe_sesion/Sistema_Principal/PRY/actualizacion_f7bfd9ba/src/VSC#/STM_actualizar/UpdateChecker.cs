@@ -39,11 +39,6 @@ namespace Visor3D.Update
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         }
 
-        // Caché de releases por instancia: si se pide la mejor actualización y, acto
-        // seguido, la última publicada (para el portal WebNodo), sólo se hace UNA
-        // llamada a la API de GitHub.
-        private List<GhRelease>? _releasesCache;
-
         /// <summary>
         /// Devuelve la mejor actualización disponible, o null si ya estamos al día.
         /// </summary>
@@ -56,14 +51,14 @@ namespace Visor3D.Update
                 Log($"Versión local normalizada: {local}");
                 Log($"Consultando: {currentVersion}");
 
-                var releases = await GetReleasesAsync();
+                var releases = await FetchReleasesAsync();
                 if (releases.Count == 0)
                 {
                     Log("No se encontraron releases publicadas.");
                     return null;
                 }
 
-                var elegido = ElegirMejor(releases, local, $"local={local}");
+                var elegido = SeleccionarMejorRelease(releases, local);
                 Log(elegido == null
                     ? "El sistema ya está al día."
                     : $"Actualización disponible: {elegido.TagName} ({elegido.AssetName})");
@@ -77,44 +72,34 @@ namespace Visor3D.Update
         }
 
         /// <summary>
-        /// Devuelve SIEMPRE la última release publicada con binario, sin compararla
-        /// con la versión local. La usa el portal WebNodo para anunciar el MISMO
-        /// binario que vigila el botón de actualización, incluso si ya estamos al día.
+        /// Devuelve la release vigente (la de mayor versión publicada), sin comparar
+        /// con la local. La usa el portal WebNodo para anunciar exactamente el mismo
+        /// binario que el botón de actualización instalaría.
         /// </summary>
-        public async Task<ReleaseInfo?> ObtenerUltimaReleaseAsync()
+        public async Task<ReleaseInfo?> GetLatestReleaseAsync()
         {
             try
             {
-                var releases = await GetReleasesAsync();
-                if (releases.Count == 0) return null;
-
-                var ultima = ElegirMejor(releases, null, "última publicada");
-                Log(ultima == null
-                    ? "No hay ninguna release con binario."
-                    : $"Última release publicada: {ultima.TagName} ({ultima.AssetName})");
-                return ultima;
+                var releases = await FetchReleasesAsync();
+                var elegido = SeleccionarMejorRelease(releases, umbral: null);
+                Log(elegido == null
+                    ? "No hay ninguna release publicada."
+                    : $"Release vigente: {elegido.TagName} ({elegido.AssetName})");
+                return elegido;
             }
             catch (Exception ex)
             {
-                Log($"Error consultando la última release: {ex.Message}");
+                Log($"Error consultando GitHub: {ex.Message}");
                 return null;
             }
         }
 
-        /// <summary>Devuelve las releases consultadas (con caché por instancia).</summary>
-        private async Task<List<GhRelease>> GetReleasesAsync()
-        {
-            return _releasesCache ??= await FetchReleasesAsync();
-        }
-
         /// <summary>
-        /// Elige, por separado, la mejor versión ESTABLE y la mejor PRERELEASE
-        /// (con prioridad a la estable) y devuelve la ganadora. Si
-        /// <paramref name="minExclusivo"/> no es null, descarta las releases que no
-        /// sean ESTRICTAMENTE más nuevas que esa versión.
+        /// Elige, por separado, la mejor versión ESTABLE y la mejor PRERELEASE, y da
+        /// prioridad a la estable. Así, si sólo existen betas publicadas, también se
+        /// detectan. Con <paramref name="umbral"/> en null se ignora el filtro de edad.
         /// </summary>
-        private static ReleaseInfo? ElegirMejor(
-            List<GhRelease> releases, Version? minExclusivo, string contextoLog)
+        private static ReleaseInfo? SeleccionarMejorRelease(List<GhRelease> releases, Version? umbral)
         {
             ReleaseInfo? mejorEstable = null;
             Version? mejorEstableVer = null;
@@ -132,21 +117,21 @@ namespace Visor3D.Update
                 // sustituye el binario, por lo que la versión real puede estar en
                 // el NOMBRE del fichero (p. ej. DMWold...v0.0.013....exe). Tomamos
                 // la mayor entre la del tag y la del binario para no perder updates.
-                var tagVer   = ParseVersion(rel.TagName);
+                var tagVer = ParseVersion(rel.TagName);
                 var assetVer = ParseAssetVersion(asset.Name);
-                var v        = MaxVersion(tagVer, assetVer);
-                Log($"Release '{rel.TagName}' | tag={tagVer} | asset='{asset.Name}' ({assetVer}) | efectiva={v} | {contextoLog}");
+                var v = MaxVersion(tagVer, assetVer);
+                Log($"Release '{rel.TagName}' | tag={tagVer} | asset='{asset.Name}' ({assetVer}) | efectiva={v} | umbral={umbral?.ToString() ?? "-"}");
                 if (v == null) continue;
-                if (minExclusivo != null && v <= minExclusivo) continue;   // no es más nueva
+                if (umbral != null && v <= umbral) continue;   // no es más nueva que la local
 
                 var info = new ReleaseInfo
                 {
-                    TagName    = rel.TagName,
-                    Version    = v.ToString(),
-                    AssetUrl   = asset.Url,
-                    AssetName  = asset.Name,
-                    AssetSize  = asset.Size,
-                    Digest     = asset.Digest,
+                    TagName = rel.TagName,
+                    Version = v.ToString(),
+                    AssetUrl = asset.Url,
+                    AssetName = asset.Name,
+                    AssetSize = asset.Size,
+                    Digest = asset.Digest,
                     Prerelease = rel.Prerelease
                 };
 

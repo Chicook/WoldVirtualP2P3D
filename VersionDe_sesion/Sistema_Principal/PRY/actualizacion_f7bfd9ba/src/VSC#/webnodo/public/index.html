@@ -321,7 +321,7 @@
 
       <a href="/descargar" class="btn-download-hero" id="btn-descarga">
         <span>&#11015;</span>
-        <span id="lbl-descarga">Descargar DMWoldVirtualp2pCNXv0.0.20_p2p.exe</span>
+        <span id="lbl-descarga">Descargando datos de la &uacute;ltima versi&oacute;n&hellip;</span>
       </a>
 
       <!-- Grid de Metadatos de Sesión -->
@@ -401,13 +401,18 @@
 
     document.getElementById('link-p2p').innerText = window.location.href;
 
-    // Cargar datos de la API
+    // Cargar datos de la API: el visor anuncia la release vigente real, no la
+    // que venía empaquetada con este portal.
     fetch('/api/info?token=' + encodeURIComponent(WT)).then(r => r.json()).then(d => {
       if (d.disponible) {
         document.getElementById('lbl-descarga').innerText = `Descargar ${d.nombre} (${d.tamano_mb} MB)`;
         document.getElementById('btn-descarga').href = d.url_descarga;
+        return;
       }
-    }).catch(() => {});
+      document.getElementById('lbl-descarga').innerText = 'Descargar la \u00FAltima versi\u00F3n del visor';
+    }).catch(() => {
+      document.getElementById('lbl-descarga').innerText = 'Descargar la \u00FAltima versi\u00F3n del visor';
+    });
 
     fetch('/api/p2p-status?token=' + encodeURIComponent(WT)).then(r => r.json()).then(d => {
       if (d.online && d.tunnel_url) {

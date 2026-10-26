@@ -8,7 +8,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Visor3D.Update;
 
 namespace Visor3D.Services
 {
@@ -56,50 +55,62 @@ namespace Visor3D.Services
         }
 
         public static readonly int Port = 3030;
-        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.2__actualizacion_f7bfd9ba.exe";
+        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.5.exe";
         private const string ExeUrlFallback =
-            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.2/DMWoldVirtualp2pCNXv2.5.2__actualizacion_f7bfd9ba.exe";
+            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.5/DMWoldVirtualp2pCNXv2.5.5.exe";
 
-        // Nombre, URL y tamaño del .exe que anuncia el portal. Se inicializan desde
-        // release.json (junto al .exe) y se sincronizan en caliente con la última
-        // release publicada — ver ActualizarReleasePortal(), invocado desde MainWindow
-        // al mismo tiempo que el botón de actualización consulta GitHub.
-        private string _exeName;
-        private string _exeUrl;
-        private string _exeSizeMb;
+        // Valor de arranque: el release.json empaquetado junto al .exe. En cuanto el
+        // nodo arranca, RefrescarReleaseVigente() lo sustituye por la release vigente
+        // real consultada a GitHub.
+        private static readonly (string Name, string Url, string SizeMb) ReleaseLocal = LeerReleaseLocal();
+        private static (string Name, string Url, string SizeMb) ReleaseActiva = ReleaseLocal;
+        private static readonly object _releaseLock = new object();
+        private static bool _refresheoLanzado;
 
-        private string ExeName   => _exeName;
-        private string ExeUrl    => _exeUrl;
-        private string ExeSizeMb => _exeSizeMb;
-
-        public WebNodoService()
-        {
-            var release = LeerRelease();
-            _exeName   = release.Name;
-            _exeUrl    = release.Url;
-            _exeSizeMb = release.SizeMb;
-        }
+        private static string ExeName { get { lock (_releaseLock) return ReleaseActiva.Name; } }
+        private static string ExeUrl { get { lock (_releaseLock) return ReleaseActiva.Url; } }
+        private static string ExeSizeMb { get { lock (_releaseLock) return ReleaseActiva.SizeMb; } }
 
         /// <summary>
-        /// Sincroniza el binario que ofrece el portal con la última release
-        /// publicada — la MISMA que vigila el botón de actualización. De este modo,
-        /// cuando el visor se actualiza, WebNodo apunta a la nueva versión.
+        /// Refresca la release vigente consultando GitHub con el MISMO criterio que
+        /// el botón de actualización (UpdateChecker). Sin esto, el portal seguiría
+        /// anunciando el binario empaquetado con el visor aunque el OTA ya instaló
+        /// uno más nuevo.
         /// </summary>
-        public void ActualizarReleasePortal(ReleaseInfo? info)
+        public static void RefrescarReleaseVigente()
         {
-            if (info == null ||
-                string.IsNullOrWhiteSpace(info.AssetName) ||
-                string.IsNullOrWhiteSpace(info.AssetUrl))
-                return;
-
-            lock (_lock)
+            lock (_releaseLock)
             {
-                _exeName = info.AssetName!;
-                _exeUrl  = info.AssetUrl!;
-                if (info.AssetSize > 0)
-                    _exeSizeMb = (info.AssetSize / 1048576.0).ToString("0.0");
+                if (_refresheoLanzado) return;
+                _refresheoLanzado = true;
             }
-            VisorLog.Info($"WebNodo: portal sincronizado con la última versión ({_exeName}).");
+
+            _ = Task.Run(RefrescarReleaseAsync);
+        }
+
+        private static async Task RefrescarReleaseAsync()
+        {
+            try
+            {
+                var info = await new Visor3D.Update.UpdateChecker().GetLatestReleaseAsync();
+                if (info == null || string.IsNullOrWhiteSpace(info.AssetName) ||
+                    string.IsNullOrWhiteSpace(info.AssetUrl))
+                {
+                    VisorLog.Info("WebNodo: GitHub no informa de release vigente; se mantiene la local.");
+                    return;
+                }
+
+                string mb = info.AssetSize > 0
+                    ? (info.AssetSize / 1048576.0).ToString("0.0")
+                    : "—";
+                var nueva = (Name: info.AssetName!, Url: info.AssetUrl!, SizeMb: mb);
+                lock (_releaseLock) ReleaseActiva = nueva;
+                VisorLog.Info($"WebNodo: release vigente → {nueva.Name} ({nueva.SizeMb} MB)");
+            }
+            catch (Exception ex)
+            {
+                VisorLog.Info($"WebNodo: no se pudo leer la release vigente ({ex.Message}); se mantiene la local.");
+            }
         }
 
         // Token por sesión para /api/*: la página lo recibe embebido y lo envía en cada llamada.
@@ -111,7 +122,7 @@ namespace Visor3D.Services
         private static readonly RateLimiter _limiteDescarga = new();
         private readonly SemaphoreSlim _descargaUnica = new(1, 1);
 
-        private static (string Name, string Url, string SizeMb) LeerRelease()
+        private static (string Name, string Url, string SizeMb) LeerReleaseLocal()
         {
             try
             {
@@ -132,7 +143,7 @@ namespace Visor3D.Services
             return (ExeNameFallback, ExeUrlFallback, "—");
         }
 
-        private string IndexHtml =>
+        private static string IndexHtml =>
             $@"<html lang=""es"">
 <head>
   <meta charset=""UTF-8""/>
@@ -246,6 +257,7 @@ namespace Visor3D.Services
                 }
 
                 _startError = null;
+                RefrescarReleaseVigente();
                 _cts = new CancellationTokenSource();
 
                 // Si había recursos previos en estado inconsistente, limpiarlo
@@ -489,7 +501,7 @@ namespace Visor3D.Services
             }
         }
 
-        private string ObtenIndexHtml()
+        private static string ObtenIndexHtml()
         {
             // 1. Probar desde disco
             var pathOnDisk = Path.Combine(AppContext.BaseDirectory, "webnodo", "public", "index.html");
@@ -637,13 +649,30 @@ namespace Visor3D.Services
                 else if (path == "/descargar" || path.StartsWith("/descargar/"))
                 {
                     VisorLog.Info($"WebNodo: descarga solicitada desde {req.RemoteEndPoint} ({ExeName})");
-                    string localExe = Path.Combine(AppContext.BaseDirectory, "webnodo", "descargas", ExeName);
-                    if (!File.Exists(localExe))
-                        localExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "webnodo", "descargas", ExeName);
-                    if (!File.Exists(localExe))
-                        localExe = Path.Combine(AppContext.BaseDirectory, ExeName);
 
-                    if (File.Exists(localExe))
+                    // Tras un OTA el propio .exe en ejecución YA es la release vigente,
+                    // así que se sirve directamente: evita depender de la copia empaquetada
+                    // en «descargas», que queda obsoleta al actualizar.
+                    string? localExe = null;
+                    string self = Environment.ProcessPath ?? "";
+                    if (string.Equals(Path.GetFileName(self), ExeName, StringComparison.OrdinalIgnoreCase))
+                        localExe = self;
+
+                    if (localExe == null)
+                    {
+                        foreach (var carpeta in new[]
+                        {
+                            Path.Combine(AppContext.BaseDirectory, "webnodo", "descargas"),
+                            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "webnodo", "descargas"),
+                            AppContext.BaseDirectory
+                        })
+                        {
+                            string candidato = Path.Combine(carpeta, ExeName);
+                            if (File.Exists(candidato)) { localExe = candidato; break; }
+                        }
+                    }
+
+                    if (localExe != null && File.Exists(localExe))
                     {
                         res.ContentType = "application/octet-stream";
                         res.AddHeader("Content-Disposition", $"attachment; filename=\"{ExeName}\"");

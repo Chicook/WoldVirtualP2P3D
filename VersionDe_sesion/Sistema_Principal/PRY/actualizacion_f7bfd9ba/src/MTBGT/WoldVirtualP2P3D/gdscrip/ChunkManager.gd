@@ -3,6 +3,13 @@ extends Node3D
 ## Se emite cuando MI isla está generada y el avatar colocado en ella.
 ## El Boot la usa para cerrar la ventana de carga.
 signal mi_isla_lista
+## Se emite cuando el anfitrión cambia el avatar elegido porque ya estaba
+## reservado por otro jugador.
+signal avatar_asignado(anterior: String, nuevo: String, turno: int, reciclado: bool)
+
+const Pers = preload("res://gdscrip/Personalizacion.gd")
+const Turnos = preload("res://gdscrip/Turnos.gd")
+const Red = preload("res://gdscrip/Red.gd")
 
 @export var chunk_size: float = 199.5
 @export var islands_per_row: int = 10
@@ -44,6 +51,15 @@ var _url_poll := 0.0
 var _conectado_migracion := false
 var _fallo_migracion := false
 
+## --- Reserva de avatares por turnos ---
+var _turnos := {}       # indice de avatar -> peer id que lo tiene reservado
+var _reciclados := {}   # peer id -> indice de avatar reutilizado (turno 4)
+var _sondas := {}       # peer id -> true si solo vino a consultar plazas
+var _mi_turno := 0
+var _mi_reciclado := false
+var _avatar_confirmado := false
+var _isla_pendiente := false
+
 ## Sustituye el avatar por defecto (userbaseh1) por el avatar elegido en el
 ## carrusel. Debe llamarse ANTES de add_child() para que "@onready userbase"
 ## recoja el nodo nuevo, y para que TeleportManager/PlayerSync lo encuentren.
@@ -67,6 +83,7 @@ func set_player_avatar(scene_path: String) -> void:
 	old.free()
 	parent.add_child(nueva)
 	parent.move_child(nueva, idx)
+	Pers.aplicar(nueva, Pers.leer())
 	userbase = nueva
 	var tp = get_node_or_null("TeleportManager")
 	if tp and "_userbase" in tp:
@@ -74,6 +91,167 @@ func set_player_avatar(scene_path: String) -> void:
 	var ps = get_node_or_null("PlayerSync")
 	if ps and "_userbase" in ps:
 		ps._userbase = nueva
+
+
+## --- Reserva de avatares por turnos (solo el anfitrion decide) -------------
+
+## Avatar elegido en el registro, o "" si el mundo corre sin avatar de catalogo.
+func _avatar_local() -> String:
+	if userbase != null and is_instance_valid(userbase):
+		var ruta := str(userbase.scene_file_path)
+		if Turnos.indice(ruta) >= 0:
+			return ruta
+	var cfg := ConfigFile.new()
+	if cfg.load("user://registro.cfg") == OK:
+		var guardada := str(cfg.get_value("jugador", "avatar_scene", ""))
+		if Turnos.indice(guardada) >= 0:
+			return guardada
+	return ""
+
+
+## El cliente anuncia su avatar al conectar; el anfitrion reserva la plaza.
+@rpc("any_peer", "reliable")
+func _declarar_avatar(ruta: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var id := multiplayer.get_remote_sender_id()
+	if id == 0 or id == multiplayer.get_unique_id():
+		return
+	_asignar_avatar(id, ruta, true)
+
+
+## Respuesta del anfitrion: avatar definitivo (puede ser un sustituto).
+@rpc("authority", "reliable")
+func _avatar_asignado(ruta: String, turno: int, reciclado: bool) -> void:
+	_aplicar_asignacion_local({
+		"ruta": ruta,
+		"indice": Turnos.indice(ruta),
+		"turno": turno,
+		"reciclado": reciclado,
+	})
+
+
+## Instantanea de plazas para el resto de peers (util tras migracion).
+@rpc("authority", "reliable")
+func _sync_turnos(datos: Dictionary) -> void:
+	_turnos = datos.get("plazas", {})
+	_reciclados = datos.get("reciclados", {})
+
+
+func _asignar_avatar(id: int, ruta: String, avisar: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	_limpiar_turnos_obsoletos()
+	var pedida := ruta
+	if Turnos.indice(pedida) < 0:
+		if pedida.is_empty():
+			return
+		var libre := Turnos.primera_libre(_turnos)
+		pedida = Turnos.AVATARES[libre] if libre >= 0 else Turnos.AVATARES[0]
+	var asig := Turnos.reservar(_turnos, id, pedida)
+	if asig.is_empty():
+		return
+	if bool(asig["reciclado"]):
+		_reciclados[id] = int(asig["indice"])
+	else:
+		_reciclados.erase(id)
+	_broadcast_turnos()
+	if avisar and id != multiplayer.get_unique_id():
+		rpc_id(id, "_avatar_asignado", str(asig["ruta"]), int(asig["turno"]), bool(asig["reciclado"]))
+	elif id == multiplayer.get_unique_id():
+		_aplicar_asignacion_local(asig)
+
+
+## Aplica en este peer el avatar y turno confirmados por el anfitrion.
+func _aplicar_asignacion_local(asig: Dictionary) -> void:
+	var ruta := str(asig.get("ruta", ""))
+	var idx := Turnos.indice(ruta)
+	if idx < 0:
+		return
+	var anterior := _avatar_local()
+	_mi_turno = int(asig.get("turno", 0))
+	_mi_reciclado = bool(asig.get("reciclado", false))
+	_avatar_confirmado = true
+	if ruta == anterior:
+		return
+	set_player_avatar(ruta)
+	_guardar_avatar_asignado(ruta)
+	if userbase != null and userbase.has_method("snap_camera"):
+		userbase.call("snap_camera")
+	avatar_asignado.emit(Turnos.nombre_de(Turnos.indice(anterior)), Turnos.nombre_de(idx),
+			_mi_turno, _mi_reciclado)
+
+
+func _guardar_avatar_asignado(ruta: String) -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load("user://registro.cfg") != OK:
+		return
+	cfg.set_value("jugador", "avatar_scene", ruta)
+	cfg.save("user://registro.cfg")
+
+
+## IDs que ya no estan conectados (p. ej. tras migracion) dejan su plaza libre.
+func _limpiar_turnos_obsoletos() -> void:
+	var vivos := {}
+	vivos[multiplayer.get_unique_id()] = true
+	for p in multiplayer.get_peers():
+		vivos[int(p)] = true
+	Turnos.limpiar(_turnos, vivos)
+	for pid in _reciclados.keys():
+		if not vivos.has(int(pid)):
+			_reciclados.erase(pid)
+
+
+func _broadcast_turnos() -> void:
+	if not multiplayer.is_server() or multiplayer.get_peers().is_empty():
+		return
+	rpc("_sync_turnos", {"plazas": _turnos, "reciclados": _reciclados})
+
+
+func mi_turno() -> int:
+	return _mi_turno
+
+
+func mi_reciclado() -> bool:
+	return _mi_reciclado
+
+
+func avatar_confirmado() -> bool:
+	return _avatar_confirmado
+
+
+## Plazas ocupadas ahora mismo (indice de avatar -> id). Solo lectura.
+func turnos_snapshot() -> Dictionary:
+	return _turnos.duplicate()
+
+
+## Un peer acaba de consultar plazas sin entrar al mundo: no debe registrarse
+## ni quedar en el roster. Lo llama la Sonda del anfitrion.
+func marcar_sonda(id: int) -> void:
+	if not multiplayer.is_server():
+		return
+	_sondas[id] = true
+	pending_claims.erase(id)
+	if _roster.has(id):
+		_roster.erase(id)
+		_broadcast_roster()
+
+
+## Si el anfitrion aun no ha confirmado el avatar, retiene el cierre de la
+## pantalla de carga (maximo 2 s) para no entrar con un avatar y cambiarlo luego.
+func _esperar_avatar() -> void:
+	for _i in 20:
+		await get_tree().create_timer(0.1).timeout
+		if _avatar_confirmado:
+			break
+	if not _isla_pendiente:
+		return
+	_isla_pendiente = false
+	if not _avatar_confirmado:
+		_mi_turno = Turnos.turno_de(Turnos.indice(_avatar_local()))
+		_avatar_confirmado = true
+	mi_isla_lista.emit()
+
 
 func _ready():
 	# Garantizar entorno con cielo y nubes si la escena se ejecuta de forma aislada
@@ -168,6 +346,12 @@ func _on_connected_ok():
 	rpc_id(1, "_claim_island", my_own_index, _mi_nick)
 	# Compartir mi URL pública con el resto (para poder reconectar tras migración).
 	rpc_id(1, "_reportar_direccion", _mi_url, _mi_ip)
+	# Reserva del avatar: la plaza la decide el anfitrión y responde si toca sustituto.
+	var ruta_avatar := _avatar_local()
+	if ruta_avatar.is_empty():
+		_avatar_confirmado = true
+	else:
+		rpc_id(1, "_declarar_avatar", ruta_avatar)
 
 func _iniciar_como_servidor():
 	# El anfitrión sirve el mundo por WebSocket (TCP 8911). Este es el puerto que el
@@ -181,6 +365,11 @@ func _iniciar_como_servidor():
 		printerr("[ChunkManager/WS] ERROR al crear servidor WebSocket en ", PUERTO_WS, ": ", err)
 		return
 	multiplayer.multiplayer_peer = ws_peer
+
+	# Reservar mi propio avatar antes de registrar mi isla: mi_isla_lista se
+	# emite de inmediato y no debe entrar con una plaza sin asignar.
+	_asignar_avatar(multiplayer.get_unique_id(), _avatar_local(), false)
+	_avatar_confirmado = true
 
 	var mis_ips := IP.get_local_addresses()
 	var ips_txt: String = ""
@@ -267,6 +456,10 @@ func _adopt_or_register(id: int) -> void:
 	if not multiplayer.get_peers().has(id):
 		pending_claims.erase(id)
 		return # se fue durante el margen
+	if _sondas.has(id):
+		_sondas.erase(id)
+		pending_claims.erase(id)
+		return # solo consulto plazas, no entra al mundo
 	var claimed := int(pending_claims.get(id, -1))
 	pending_claims.erase(id)
 	if claimed >= 0 and spawned_indices.has(claimed):
@@ -316,9 +509,16 @@ func _on_peer_disconnected(id):
 	var tm = get_node_or_null("TeleportManager")
 	if tm != null and tm.has_method("mark_owner_left"):
 		tm.mark_owner_left(id)
-	if multiplayer.is_server() and _roster.has(id):
-		_roster.erase(id)
-		_broadcast_roster()
+	if multiplayer.is_server():
+		# La plaza del jugador que se va queda libre para el siguiente.
+		_sondas.erase(id)
+		var liberadas := Turnos.liberar(_turnos, id)
+		var era_reciclado := _reciclados.erase(id)
+		if not liberadas.is_empty() or era_reciclado:
+			_broadcast_turnos()
+		if _roster.has(id):
+			_roster.erase(id)
+			_broadcast_roster()
 
 # Si el servidor (usuario 1) se va, este cliente asume el rol de anfitrion para
 # que las nuevas instancias tengan a quien conectarse. Reconstruye el estado a
@@ -428,6 +628,12 @@ func _promover_a_servidor() -> void:
 	multiplayer.multiplayer_peer = ws_peer
 	_mi_id = multiplayer.get_unique_id()
 
+	# Los IDs viejos caducan con la migración: las plazas de quienes ya no
+	# están se liberan y cada cliente vuelve a declarar su avatar al reconectar.
+	_reciclados.clear()
+	_asignar_avatar(_mi_id, _avatar_local(), false)
+	_avatar_confirmado = true
+
 	# Reconstruir registro sin duplicar islas: conservar mi isla y reservar indices usados
 	var tm2 = get_node_or_null("TeleportManager")
 	var used_max := -1
@@ -531,7 +737,11 @@ func _spawn_island_for_player(id: int, index: int, nick: String = ""):
 		# La cámara orbital queda lejos tras el salto: recolocarla al instante.
 		if userbase.has_method("snap_camera"):
 			userbase.call("snap_camera")
-		mi_isla_lista.emit()
+		if _avatar_confirmado:
+			mi_isla_lista.emit()
+		else:
+			_isla_pendiente = true
+			_esperar_avatar()
 
 
 func _process(delta: float) -> void:
@@ -649,176 +859,14 @@ func _nick_unico(nick: String, id: int) -> String:
 	return "%s#%d" % [base, n]
 
 
-## Obtiene la dirección del nodo objetivo a partir de argumentos CLI, p2p_session.json o auto-descubrimiento LAN
+## Obtiene la dirección del nodo objetivo (CLI, p2p_session.json o LAN).
+## La resolución vive en Red.gd para que la Sonda consulte con las mismas banderas.
 func _obtener_peer_target() -> Dictionary:
-	var res := {
-		"host": "127.0.0.1",
-		"port": PUERTO_WS,
-		"force_host": false,
-		"is_client": false,
-		"source": "predeterminado (loopback local)"
-	}
-	
-	# 1. Revisar argumentos de línea de comandos (tanto de usuario como generales del motor)
-	var all_args: Array = OS.get_cmdline_args()
-	all_args.append_array(OS.get_cmdline_user_args())
-	print("[ChunkManager/WS] Args evaluados para resolver rol/host: ", all_args)
-	
-	var cli_ip := ""
-	var cli_port := 0
-	var cli_is_client := false
-	var cli_force_host := false
-	
-	for i in range(all_args.size()):
-		var arg: String = str(all_args[i]).strip_edges()
-		if arg == "--client":
-			cli_is_client = true
-		elif arg == "--force-host" or arg == "--server":
-			cli_force_host = true
-		elif arg.begins_with("--ip="):
-			cli_ip = arg.get_slice("=", 1).strip_edges().replace("\"", "").replace("'", "")
-		elif arg.begins_with("--host="):
-			cli_ip = arg.get_slice("=", 1).strip_edges().replace("\"", "").replace("'", "")
-		elif arg.begins_with("--port="):
-			cli_port = int(arg.get_slice("=", 1).strip_edges())
-		elif arg == "--ip" or arg == "-ip" or arg == "--host":
-			if i + 1 < all_args.size() and not str(all_args[i + 1]).begins_with("-"):
-				cli_ip = str(all_args[i + 1]).strip_edges().replace("\"", "").replace("'", "")
-		elif arg == "--port":
-			if i + 1 < all_args.size() and not str(all_args[i + 1]).begins_with("-"):
-				cli_port = int(str(all_args[i + 1]).strip_edges())
-		elif arg.begins_with("--peer-url="):
-			var url := arg.get_slice("=", 1).strip_edges().replace("\"", "").replace("'", "")
-			if not url.is_empty():
-				var parsed := _parse_url_host_port(url)
-				if not parsed.get("host", "").is_empty():
-					cli_ip = parsed["host"]
-					if cli_port == 0:
-						cli_port = parsed["port"]
-		elif arg.begins_with("http://") or arg.begins_with("https://") or arg.begins_with("woldvirtual://"):
-			var parsed := _parse_url_host_port(arg)
-			if not parsed.get("host", "").is_empty():
-				cli_ip = parsed["host"]
-				if cli_port == 0:
-					cli_port = parsed["port"]
-
-	if cli_force_host:
-		res["force_host"] = true
-		res["source"] = "Línea de comandos (--force-host / --server)"
-		return res
-
-	if not cli_ip.is_empty():
-		var final_port := cli_port if cli_port > 0 else PUERTO_WS
-		res["host"] = cli_ip
-		res["port"] = final_port
-		res["is_client"] = true
-		res["source"] = "Línea de comandos (--client / --ip / --peer-url)"
-		return res
-
-	if cli_is_client:
-		res["is_client"] = true
-
-	# 2. Revisar archivos de sesión p2p_session.json generados por el Visor C#
-	var posibles_rutas := [
-		"user://p2p_session.json",
-		"res://p2p_session.json",
-		OS.get_executable_path().get_base_dir().path_join("test_user_data/user/p2p_session.json"),
-		OS.get_executable_path().get_base_dir().path_join("p2p_session.json")
-	]
-	
-	for ruta in posibles_rutas:
-		if FileAccess.file_exists(ruta):
-			var fa := FileAccess.open(ruta, FileAccess.READ)
-			if fa:
-				var txt := fa.get_as_text()
-				fa.close()
-				var j = JSON.parse_string(txt)
-				if j is Dictionary:
-					var remote_ip: String = str(j.get("remoteIp", "")).strip_edges()
-					var remote_port: int = int(j.get("remotePort", PUERTO_WS))
-					var es_cliente: bool = bool(j.get("esCliente", false))
-					var es_primero: bool = bool(j.get("esPrimerUsuario", false))
-					var p_url: String = str(j.get("peerUrl", "")).strip_edges()
-					
-					if not remote_ip.is_empty() and remote_ip != "127.0.0.1" and remote_ip != "localhost":
-						res["host"] = remote_ip
-						res["port"] = remote_port if remote_port > 0 else PUERTO_WS
-						res["is_client"] = true
-						res["source"] = "p2p_session.json (remoteIp explícito: " + ruta + ")"
-						return res
-
-					if not p_url.is_empty():
-						var parsed := _parse_url_host_port(p_url)
-						if not parsed.get("host", "").is_empty() and parsed["host"] != "127.0.0.1" and parsed["host"] != "localhost":
-							res["host"] = parsed["host"]
-							res["port"] = parsed["port"]
-							res["is_client"] = true
-							res["source"] = "p2p_session.json (peerUrl: " + ruta + ")"
-							return res
-
-					if es_primero:
-						res["force_host"] = true
-						res["source"] = "p2p_session.json (esPrimerUsuario=true)"
-						return res
-
-	# 3. Auto-descubrimiento en red local (LAN Beacon)
-	# Si no se pasó enlace ni parámetro y no está forzado el anfitrión,
-	# buscar brevemente si ya hay otro equipo emitiendo en la misma red LAN.
-	var lan_host := _buscar_host_en_lan(350)
-	if not lan_host.is_empty():
-		res["host"] = lan_host["host"]
-		res["port"] = int(lan_host.get("port", PUERTO_WS))
-		res["is_client"] = true
-		res["source"] = "Auto-descubrimiento en red local (Beacon UDP LAN)"
-		return res
-
-	return res
-
+	return Red.resolver_objetivo()
 
 ## Construye la URL WebSocket del anfitrión a partir del host/puerto resueltos.
-## - Túneles HTTP (cloudflared / serveo / localhost.run) -> wss://<host> (TLS del túnel)
-## - IP o nombre LAN -> ws://<host>:8911 (servidor WebSocket del motor)
 func _resolver_url_ws(host: String, _port: int) -> String:
-	var h := host.strip_edges()
-	if h.begins_with("ws://") or h.begins_with("wss://"):
-		return h
-	# Cualquier dominio público (túnel propio, Cloudflare, ngrok, serveo...) va por TLS.
-	# Solo IPs y dominios de LAN usan ws://host:8911.
-	if _parece_dominio_publico(h):
-		return "wss://%s" % h
-	return "ws://%s:%d" % [h, PUERTO_WS]
-
-## True para nombres de dominio enroutables por Internet (no IP, no LAN).
-func _parece_dominio_publico(h: String) -> bool:
-	var bajo := h.to_lower()
-	if bajo.is_empty() or bajo == "localhost":
-		return false
-	if bajo.is_valid_ip_address():
-		return false
-	for sufijo in [".local", ".lan", ".home", ".internal", ".localdomain"]:
-		if bajo.ends_with(sufijo):
-			return false
-	return bajo.contains(".")
-
-
-func _parse_url_host_port(url_str: String) -> Dictionary:
-	var clean := url_str.strip_edges().replace("\"", "").replace("'", "")
-	clean = clean.replace("https://", "").replace("http://", "").replace("woldvirtual://", "").strip_edges()
-	if clean.contains("/"):
-		clean = clean.split("/")[0]
-	var host := clean
-	var port := PUERTO_WS
-	if clean.contains(":"):
-		var partes := clean.split(":")
-		host = partes[0].strip_edges()
-		var p := int(partes[1].strip_edges())
-		# Si el puerto en la URL es el de WebNodo HTTP (3030..3040), el de la API P2P (7890),
-		# o HTTP/HTTPS (80/443), el canal del metaverso es el WebSocket del motor (8911).
-		if (p >= 3030 and p <= 3040) or p == 7890 or p == 80 or p == 443:
-			port = PUERTO_WS
-		elif p > 0 and p <= 65535:
-			port = p
-	return {"host": host, "port": port}
+	return Red.resolver_url_ws(host, _port)
 
 
 func _iniciar_lan_beacon() -> void:
@@ -833,28 +881,3 @@ func _emitir_beacon_lan() -> void:
 	if _beacon_udp and multiplayer.is_server():
 		var msg := ("WOLDVIRTUAL_HOST_WS_%d" % PUERTO_WS).to_utf8_buffer()
 		_beacon_udp.put_packet(msg)
-
-
-func _buscar_host_en_lan(timeout_ms: int = 350) -> Dictionary:
-	var listener := PacketPeerUDP.new()
-	var bind_err := listener.bind(8912)
-	if bind_err != OK:
-		return {}
-
-	var start_time := Time.get_ticks_msec()
-	while Time.get_ticks_msec() - start_time < timeout_ms:
-		OS.delay_msec(25)
-		if listener.get_available_packet_count() > 0:
-			var pkt := listener.get_packet()
-			var msg := pkt.get_string_from_utf8()
-			var sender_ip := listener.get_packet_ip()
-			if msg.begins_with("WOLDVIRTUAL_HOST") and not sender_ip.is_empty():
-				# Descartar paquetes propios si provienen de esta misma máquina
-				var mis_ips := IP.get_local_addresses()
-				if not mis_ips.has(sender_ip) and sender_ip != "127.0.0.1":
-					listener.close()
-					print("[ChunkManager/WS] Par anfitrión detectado en LAN: ", sender_ip, ":", PUERTO_WS)
-					return {"host": sender_ip, "port": PUERTO_WS}
-	listener.close()
-	return {}
-

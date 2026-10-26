@@ -1,0 +1,24 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://bvycielo01mat"]
+
+[ext_resource type="Shader" uid="uid://claoia8rdmloe" path="res://gdshader/cielo_nubes.gdshader" id="1_sky"]
+
+[resource]
+shader = ExtResource("1_sky")
+shader_parameter/sky_top_color = Color(0.16, 0.45, 0.88, 1)
+shader_parameter/sky_horizon_color = Color(0.66, 0.83, 0.98, 1)
+shader_parameter/ground_bottom_color = Color(0.04, 0.14, 0.24, 1)
+shader_parameter/ground_horizon_color = Color(0.48, 0.68, 0.82, 1)
+shader_parameter/sun_color = Color(1, 0.96, 0.84, 1)
+shader_parameter/sun_disk_size = 0.045
+shader_parameter/sun_glow_intensity = 1.0
+shader_parameter/cloud_color_sun = Color(1, 0.99, 0.96, 1)
+shader_parameter/cloud_color_shadow = Color(0.62, 0.7, 0.82, 1)
+shader_parameter/cloud_coverage = 0.52
+shader_parameter/cloud_softness = 0.18
+shader_parameter/cloud_scale = 1.2
+shader_parameter/cloud_speed = 0.018
+shader_parameter/cloud_direction = Vector2(1, 0.35)
+shader_parameter/cirrus_color = Color(0.96, 0.98, 1, 0.55)
+shader_parameter/cirrus_coverage = 0.4
+shader_parameter/cirrus_scale = 3.5
+shader_parameter/cirrus_speed = 0.028

@@ -8,14 +8,26 @@ namespace Visor3D
 {
     /// <summary>
     /// Extrae los recursos embebidos (motor Godot + mundo .pck) a
-    /// %LOCALAPPDATA%\WoldVirtualP2P3D\runtime\0.1.0-pck\.
+    /// %LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\.
     /// Solo lo hace la primera vez o cuando cambia la versión del runtime.
     /// </summary>
     public static class AppExtractor
     {
-        // v0.1.0-pck: el mundo viaja como PCK (no como proyecto suelto), así que
-        // este marcador fuerza la re-extracción en instalaciones anteriores.
-        private const string AppVersion = "0.1.0";
+        // El marcador de re-extracción es la versión del propio ensamblado, no una
+        // constante a mano: un OTA reemplaza el .exe —y con él el PCK embebido—, y si
+        // el marcador no se moviera el visor seguiría arrancando el mundo extraído por
+        // una versión anterior.
+        private static readonly string AppVersion = ObtenerVersionEnsamblado();
+
+        private static string ObtenerVersionEnsamblado()
+        {
+            var info = typeof(AppExtractor).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (string.IsNullOrWhiteSpace(info)) return "0.0.0";
+
+            int plus = info.IndexOf('+');          // descarta el sufijo "+<sha>"
+            return (plus >= 0 ? info.Substring(0, plus) : info).Trim();
+        }
 
         /// <summary>
         /// Carpeta de runtime. Se puede redirigir con la variable de entorno
@@ -106,12 +118,13 @@ namespace Visor3D
             }
 
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            string destDirFull = Path.GetFullPath(destDir);
             foreach (var entry in archive.Entries)
             {
                 if (string.IsNullOrEmpty(entry.Name)) continue; // Carpeta
                 string cleanEntryName = entry.FullName.TrimStart('/', '\\');
-                string targetPath = Path.GetFullPath(Path.Combine(destDir, cleanEntryName));
-                if (!targetPath.StartsWith(destDir, StringComparison.OrdinalIgnoreCase))
+                string targetPath = Path.GetFullPath(Path.Combine(destDirFull, cleanEntryName));
+                if (!targetPath.StartsWith(destDirFull, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 string? parentDir = Path.GetDirectoryName(targetPath);

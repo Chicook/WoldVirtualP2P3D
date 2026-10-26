@@ -1,88 +1,132 @@
-# Binarios grandes (>50MB) — mantener el repo bajo 1GB y dentro del límite de GitHub (100MB/archivo)
-*.onnx
-**/tts_models/**
-**/ipfs.exe
-**/.ipfs/**/ipfs.exe
-**/STMIPFSCOMFIG/ipfs.exe
+# ═══════════════════════════════════════════════════════════════════════════
+# .gitignore — WoldVirtualP2P3D
+# Política: solo código fuente, assets de diseño pequeños y documentación.
+# Nada que supere 50 MB, nada ejecutable, nada de datos de usuario/sesión.
+# ═══════════════════════════════════════════════════════════════════════════
 
-# Cachés y entornos
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-node_modules/
-.env
-.env.*
-!.env.example
-
-# IDE / SO
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-
-# Godot 4 caches y temporales (mantener repo bajo 1GB)
-.godot/
-.import/
-/export/
-/builds/
-*.tmp
-*.blend1
-*.bak
-*.pck.bak*
-*.translation
-DEMO_Wold_Virtual_P2P_3D__actualizacion_b5592aff/.godot/
-
-VersionDe_sesion/Sistema_Principal/PRY/actualizacion_b5592aff/src/MTBGT/WoldVirtualP2P3D/ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/importblend/hm1.blend.import
-
-# .NET / C# compilaciones y binarios generados
-bin/
-obj/
-*.user
-*.suo
-**/bin/
-**/obj/
-**/dist/
-*.pdb
-*.deps.json
-*.runtimeconfig.json
-*.runtimeconfig.dev.json
-
-# Ejecutables y librerías grandes que superan el límite de GitHub (100MB)
-**/Godot_v*
-**/Servidor3D/Godot*
+# ──────────────────────────────────────────────────────────────────────────
+# 1. EJECUTABLES Y BINARIOS COMPILADOS (superan límite GitHub 100 MB)
+# ──────────────────────────────────────────────────────────────────────────
 *.exe
 *.dll
 *.so
 *.dylib
-*.zip
-*.pck
+*.app
+
+# .NET build output
+**/bin/
+**/obj/
+**/dist/
 **/publish*/
 **/publish_out/
 **/publish_standalone/
 
-# Datos de usuario locales / sesiones de prueba
+# Símbolos y configuración de runtime
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.runtimeconfig.dev.json
+*.user
+*.suo
+
+# ──────────────────────────────────────────────────────────────────────────
+# 2. GODOT — PACKS, CACHES E IMPORTACIÓN (archivos generados automáticamente)
+# ──────────────────────────────────────────────────────────────────────────
+*.pck
+*.pck.bak*
+*.zip
+godot_exe.zip
+wvp3d.pck
+
+# Carpetas generadas por el editor Godot
+.godot/
+.import/
+/export/
+/builds/
+**/DEMO_Wold_Virtual_P2P_3D__actualizacion_b5592aff/.godot/
+
+# Archivos temporales Godot
+*.tmp
+*.bak
+*.blend1
+*.translation
+
+# ──────────────────────────────────────────────────────────────────────────
+# 3. ASSETS 3D PESADOS (GLB/GLTF/FBX — varios MB cada uno)
+#    Los modelos de avatar están en avtrnCRS y gltfimport.
+#    Se excluyen los binarios compilados; el .tscn y .gd SÍ se suben.
+# ──────────────────────────────────────────────────────────────────────────
+*.glb
+*.gltf
+*.fbx
+*.blend
+*.dae
+*.obj
+*.mtl
+
+# Importaciones de Godot de esos modelos (se regeneran al abrir el editor)
+*.glb.import
+*.gltf.import
+*.fbx.import
+*.blend.import
+*.dae.import
+
+# Ruta específica que ya había hardcodeada
+VersionDe_sesion/Sistema_Principal/PRY/actualizacion_b5592aff/src/MTBGT/WoldVirtualP2P3D/ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/importblend/hm1.blend.import
+
+# ──────────────────────────────────────────────────────────────────────────
+# 4. TEXTURAS Y MEDIA GRANDES
+#    Las texturas grandes de avatares/mundo van por release, no por repo.
+# ──────────────────────────────────────────────────────────────────────────
+*.hdr
+*.exr
+*.tga
+*.bmp
+
+# Importaciones de imagen de Godot (regeneradas por el editor)
+*.png.import
+*.jpg.import
+*.jpeg.import
+*.webp.import
+*.hdr.import
+*.exr.import
+*.tga.import
+*.bmp.import
+*.svg.import
+
+# Audio y video
+*.mp3
+*.ogg
+*.wav
+*.flac
+*.mp4
+*.avi
+*.mov
+*.webm
+
+# Importaciones de audio
+*.mp3.import
+*.ogg.import
+*.wav.import
+*.flac.import
+
+# ──────────────────────────────────────────────────────────────────────────
+# 5. MODELOS DE IA / ML (pueden ser varios GB)
+# ──────────────────────────────────────────────────────────────────────────
+*.onnx
+*.pt
+*.pth
+*.safetensors
+*.gguf
+*.ggml
+**/tts_models/**
+**/llm_models/**
+
+# ──────────────────────────────────────────────────────────────────────────
+# 6. DATOS DE USUARIO, CREDENCIALES Y SESIONES (NUNCA al repositorio)
+# ──────────────────────────────────────────────────────────────────────────
 test_user_data/
 **/test_user_data/
-registro.cfg
-**/registro.cfg
-p2p_session.json
-**/p2p_session.json
-
-# Carpeta de versión de prueba (excluida del repo)
-VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_prueba/
-
-# ═══════════════════════════════════════════════════════════════════════════
-# ZONA SENSIBLE — añadido 2026-10-21 (taller aislado)
-# Nada de lo siguiente debe subirse al repositorio al ejecutar la actualización.
-# ═══════════════════════════════════════════════════════════════════════════
-
-# 1) Taller: snapshots, builds, logs, temporales y LOCALAPPDATA redirigido
-**/_taller/
-*.log
-
-# 2) Identidad y credenciales del usuario (llave, semilla, hardware, sesión)
 **/datos_usuario/
 **/llave_acceso.json
 **/credentials.json
@@ -90,20 +134,101 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 **/semilla_wallet*
 **/wold_hardware_id*
 **/avatares_usados.json
-**/*.cid
+**/pc_sello.json
+**/hardware_id.json
+registro.cfg
+**/registro.cfg
+p2p_session.json
+**/p2p_session.json
 
-# 3) Actualizador OTA: descargas a medias y estado
-**/STM_actualizar/update-pending/
-**/STM_actualizar/state.json
-**/apply-pending.bat
-
-# 4) Portal WebNodo: binarios servidos
-**/webnodo/descargas/
-
-# 5) IPFS local (miles de blobs .ldb) y certificados/secretos
-**/.ipfs/
+# ──────────────────────────────────────────────────────────────────────────
+# 7. CERTIFICADOS Y CLAVES PRIVADAS
+# ──────────────────────────────────────────────────────────────────────────
 **/*.pfx
 **/*.pem
 **/*.key
 **/*.token
+**/*.cid
+**/*.cer
+**/*.p12
+
+# ──────────────────────────────────────────────────────────────────────────
+# 8. IPFS LOCAL (miles de blobs .ldb)
+# ──────────────────────────────────────────────────────────────────────────
+**/.ipfs/
+**/ipfs.exe
+**/.ipfs/**/ipfs.exe
+**/STMIPFSCOMFIG/ipfs.exe
+
+# ──────────────────────────────────────────────────────────────────────────
+# 9. ACTUALIZADOR OTA Y PORTAL WEBNODO
+# ──────────────────────────────────────────────────────────────────────────
+**/STM_actualizar/update-pending/
+**/STM_actualizar/state.json
+**/apply-pending.bat
+**/webnodo/descargas/
+
+# ──────────────────────────────────────────────────────────────────────────
+# 10. LOGS Y TEMPORALES DEL TALLER
+# ──────────────────────────────────────────────────────────────────────────
+**/_taller/
+*.log
+*.log.*
+
+# ──────────────────────────────────────────────────────────────────────────
+# 11. PYTHON — CACHES Y ENTORNOS VIRTUALES
+# ──────────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# ──────────────────────────────────────────────────────────────────────────
+# 12. NODE / WEB
+# ──────────────────────────────────────────────────────────────────────────
+node_modules/
+.env
+.env.*
+!.env.example
+
+# ──────────────────────────────────────────────────────────────────────────
+# 13. IDE Y SISTEMA OPERATIVO
+# ──────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+desktop.ini
+
+# ──────────────────────────────────────────────────────────────────────────
+# 14. VERSIONES/CARPETAS ESPECÍFICAS YA IDENTIFICADAS
+# ──────────────────────────────────────────────────────────────────────────
+# Versión de prueba antigua
+VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_prueba/
+
+# ──────────────────────────────────────────────────────────────────────────
+# 15. DATOS GENERADOS Y RECURSOS 3D LOCALES DUPLICADOS
+# ──────────────────────────────────────────────────────────────────────────
+**/ipfs_datastore/
+*.npz
+*.npy
+
+# Texturas e importaciones glTF: se conservan localmente para exportar el PCK.
+**/avtrnCRS/Texturas/
+**/avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/
+**/gltfimport/avatares/
+**/gltfimport/terrenoblok/
+
+# ──────────────────────────────────────────────────────────────────────────
+# 16. ESTADO MUTABLE, MEMORIA Y SECRETOS LOCALES
+# ──────────────────────────────────────────────────────────────────────────
+**/vault.enc
+**/STM_RFC/envios.json
+**/blockchain_ledger.json
+**/memoria_LUCIA_*.json
+**/ialocal_ultimo.txt
+**/nonexistent_ledger.json
+**/purgador_informe.json
 
