@@ -42,6 +42,7 @@ graph TD
     F --> H["PlayerSync.gd (Clones Remotos)"]
     F --> I["TeleportManager + TeleportPanel"]
     F --> J["Cielo con Nubes + Océano 3D"]
+    F --> K["Construccion.gd (Terreno + Prims)"]
 ```
 
 ### Módulos del Sistema
@@ -84,7 +85,8 @@ graph TD
 - Cuadrícula procedural de islas en serpenteo (`chunk_size = 199.5m`, 10 islas por fila).
 - Multijugador sobre `WebSocketMultiplayerPeer` (TCP 8911) sin necesidad de servidor dedicado central: el primer peer asume el rol de host; los siguientes entran como clientes (`ChunkManager.gd:356`).
 - Replicación remota de terreno (`_spawn_island_for_player`), control anti-duplicados y recolocación orbital instantánea de cámara (`snap_camera`).
-- **Migración dinámica de anfitrión:** Si el jugador host se desconecta, uno de los clientes asume automáticamente el servidor en el puerto 8911 reconstruyendo el estado del mundo desde el historial de islas.
+- **Propiedad persistente de isla:** cada instalación recibe un UUID estable (`gdscrip/Identidad.gd`, sección `[identidad]` de `user://registro.cfg`). El anfitrión lo vincula a un índice en `user://islas_registro.cfg` y lo replica como tercer campo de `island_owners`. Al reconectar, `_claim_island(idx, nick, uuid)` recupera la misma isla; el spawn es idempotente y no duplica nodos. La posición guardada solo se restaura si pertenece a esa misma isla. *Estado: Implementado, sin prueba real de dos instancias.* La prueba aislada `tools/probar_registro_islas.gd` valida persistencia, rechazo de índices ajenos y los dos botones, pero no sustituye la prueba de red.
+- **Migración dinámica de anfitrión:** Si el jugador host se desconecta, uno de los clientes asume automáticamente el servidor en el puerto 8911 conservando las islas ya instanciadas y los UUID de sus dueños.
 - **Reserva de avatares:** sólo el anfitrión decide las plazas (`_declarar_avatar` → `_avatar_asignado` + `_sync_turnos`); al desconectarse un peer su plaza se libera. El cierre de la pantalla de carga espera como máximo 2 s a que llegue la confirmación, para no entrar con un avatar que va a cambiar.
 - **Sondas de sesión:** `marcar_sonda(id)` (`ChunkManager.gd:230`) aparta a un peer que sólo consultó plazas: no se le crea isla, se cancela su reclamación pendiente y se retira del roster. `turnos_snapshot()` (`ChunkManager.gd:224`) entrega una copia de la tabla de plazas a la sonda del anfitrión.
 - **Descubrimiento compartido:** la resolución de host/puerto y URL WebSocket (argumentos, `p2p_session.json`, beacon LAN y túneles) vive en `gdscrip/Red.gd`; tanto el mundo (`ChunkManager.gd:864`) como la sonda (`Sonda.gd:21`) usan la misma lógica, de modo que el flujo de túneles no cambia.
@@ -95,9 +97,10 @@ graph TD
 - Instanciación de proxies remotos con el modelo 3D exacto elegido por cada cliente, interpolación suave (`lerp 8.0`) y etiqueta flotante `Label3D` tipo billboard sobre la cabeza.
 - No se emite la posición propia hasta que el anfitrión confirma la plaza (`avatar_confirmado()`), para que los demás no creen un clon con un avatar que va a ser sustituido.
 
-### 7. Teletransporte y Panel de Islas (`TeleportManager.gd` / `TeleportPanel.gd`)
-- Panel colapsable accesible mediante tecla <kbd>T</kbd> o botón de pantalla.
-- Registro histórico persistente de islas descubiertas, detección de estados (online / offline) y teletransporte local inmediato del avatar a cualquier isla de la red.
+### 7. Teletransporte y Explorador de Islas (`TeleportManager.gd` / `TeleportPanel.gd`)
+- Barra superior con **Explorador de islas** (también <kbd>T</kbd>) y **Registra tu isla**. El segundo botón guarda la isla ya asignada; no crea una isla adicional. Muestra el resultado en la etiqueta superior y marca en la lista `TU ISLA` y `registrada`.
+- El historial de islas observadas (`island_history`) vive durante la sesión y permite teletransporte local inmediato. El dato que sobrevive entre reinicios es el vínculo UUID → índice del anfitrión (`islas_registro.cfg`) y la isla guardada por el cliente (`[isla]` en `registro.cfg`), no un catálogo completo de posiciones.
+- Límite conocido: si otra máquina actúa como anfitrión sin el registro anterior ni una isla con ese UUID ya instanciada, no puede validar la propiedad y asigna una isla nueva. No existe almacenamiento compartido entre anfitriones.
 
 ### 8. Renderizado del Mundo, Agua y Atmósfera
 - **Océano 3D (`gdshader/OCEANO.gdshader`):** Agua con refracción, mapas normales de ruido procedural (`FastNoiseLite`), mapeo triplanar global y animación de olas en vertex shader.
@@ -105,6 +108,27 @@ graph TD
 
 ### 9. Herramientas de Mantenimiento (`addons/limpiar_cache` / `tools/limpiar_cache_godot.ps1`)
 - Plugin de editor que intercepta el cierre y detención de escenas para purgar automáticamente archivos huérfanos de `.godot/imported`, `shader_cache` y temporales del editor.
+
+### 10. Edición de Terreno y Construcción de Prims (`res://gdscrip/Construccion.gd`)
+
+Sistema propio inspirado en el rezado de Second Life/OpenSimulator, sin reutilizar su código ni su formato. Se activa con <kbd>B</kbd> y se monta en `ISLA3Dblock.tscn` como nodo `Constructor`.
+
+- **Terreno editable (`gdscrip/TerrenoEditable.gd`):**
+  - Al registrar cada isla se hornea una sola vez el morph del `isla3D` (`bake_mesh_from_current_blend_shape_mix()`) y se captura antes el material de superficie para no perderlo. La malla queda por instancia: **10 920 vértices y 64 272 índices** por isla.
+  - **Aislamiento por isla:** aunque `ChunkManager` duplica las islas con `duplicate()`, que comparte recursos, `configurar()` copia los arrays de superficie (vértices, normales, índices, UVs, tangentes y colores) y clona material y `ConcavePolygonShape3D`. Esculpir una isla no toca a las demás ni la malla horneada del `.gltf`, y una isla instanciada después de editar otra nace intacta. `Construccion.registrar_isla()` rechaza registrar el mismo nodo bajo dos índices.
+  - Pincel por vértice con radio en metros, caída *smoothstep*, seis herramientas (subir, bajar, suavizar, aplanar, **mover** y **playa**) y límites de altura **0,0–0,95 m** sobre la geometría base.
+  - **Mover** transporta el montículo en la dirección del arrastre con advección *upwind* (`-v·∇h` usando solo los vecinos de barlovento y avance máximo de media celda por paso). El esquema de diferencias centradas quedaba inestable y aplanaba el montículo en vez de desplazarlo. El mismo estencil transporta el color, así que la arena viaja con la tierra; como el upwind de primer orden difumina el alfa, `_equilibrar_alfa()` devuelve a los vértices afectados la máscara perdida. Medido: centroide de arena **+4,08 m**, masa 126 → 110 (−12,7 %) y alfa 1,00 en la tierra movida.
+  - **Playa** aplana la costa hacia `nivel_agua + MARGEN_PLAYA_M` (1 m sobre el agua) y pinta arena por vértice; la máscara se mezcla con la caída del pincel, así que el borde se funde con el terreno sin escalón.
+  - Normales recalculadas a mano (producto vectorial de la cara) y reconstrucción de `ArrayMesh`; la colisión `ConcavePolygonShape3D` se regenera con `set_faces`, con *debounce* de 0,5 s tras el último cambio para no repetir 64 272 caras en cada fotograma.
+  - **Arena (`gdshader/TERRENO_EDITABLE.gdshader`):** material opaco que conserva la textura rocosa original y mezcla el albedo del vértice usando `COLOR.a` como máscara (`0` = textura, `1` = arena). El color de arena es un albedo lineal (~0,24/0,17/0,09) y no se sube: con la luz de la isla (cielo + sol) cualquier valor mayor se quema a blanco. El material se clona por isla y el color sin arena comparte el RGB de la arena para que al interpolar no aparezca un halo claro.
+  - **Formato propio `WVPT` v2:** magia + versión `u16` + número de vértices `u32` + hash `s64` de la geometría base + alturas `float32` + color RGBA8 por vértice (máscara de arena). `cargar()` rechaza magia/versión/recuento/hash incorrectos y sigue aceptando blobs v1 (solo alturas, sin arena).
+- **Prims (`gdscrip/Prims.gd`):** catálogo procedural de **cubo, esfera, cilindro, cono y toro**, paleta de 8 colores, serialización JSON segura (sin `Vector3`/`Color`) con versión, `siguiente` y UUID del dueño. La forma de colisión del toro es trimesh; el resto usa cajas/esferas/cilindros aproximados.
+- **Edición (`gdscrip/Construccion.gd`):** rezar desde la cámara, seleccionar con clic, mover con flechas/WASD, subir/bajar con <kbd>RePág</kbd>/<kbd>AvPág</kbd>, rotar 15° con <kbd>Q</kbd>/<kbd>E</kbd>, escalar proporcional con <kbd>+</kbd>/<kbd>−</kbd> (rejilla de 0,5 m con <kbd>Shift</kbd> de 1 m), duplicar con <kbd>Ctrl</kbd>+<kbd>D</kbd> y borrar con <kbd>Supr</kbd>. El panel (`gdscrip/ConstructorPanel.gd`) permite cambiar herramienta, radio, fuerza, color, escala y snap.
+- **Autoridad y red:** viaja por el mismo `WebSocketMultiplayerPeer` (TCP 8911) que el visor publica en su túnel HTTP; no se abre un canal nuevo ni se usa SSH. Solo el dueño de la isla (UUID/peer id validado por el anfitrión) puede editar; el anfitrión difunde por RPC fiable y los clientes envían su estado al entrar. `_validar_remitente()` exige que el remitente coincida con el `island_owners` de esa isla, sin excepción para el propio peer id ni para remitentes sin identificar, y la mira se pinta roja sobre islas ajenas como vista previa del rechazo. El estado se transfiere troceado en bloques de **6000 B** con zstd: el blob medido de una isla ocupa **87 378 B → 17 719 B comprimido** (v2, con colores).
+- **Persistencia:** `user://construccion/terreno_<idx>_<uuid>.bin` y `prims_<idx>_<uuid>.json`; al salir se guarda lo pendiente. Un cliente conserva marcado como sucio el estado de islas ajenas para que un futuro anfitrión pueda persistirlo tras una migración.
+- **Validación:** `tools/probar_construccion.gd` ejecuta **128 comprobaciones sin fallos** (pincel, límites, suavizado, aplanado, desplazamiento del montículo, playa y máscara de arena, aislamiento de malla/material/colisión entre islas —incluida una isla instanciada después de editar otra—, conservación de la arena al mover, normales, colisión, serialización v1/v2 y corrupción, catálogo y JSON de prims, registro, rez, permisos por `island_owners`, selección, escala proporcional, movimiento, color, borrado, bloqueo del avatar y devolución del control al salir). `tools/capturar_construccion.gd` repite el recorrido con ventana y capturas (**25 comprobaciones**); `tools/sonda_escena_construccion.gd` confirma que la escena monta el nodo `Constructor`. *Estado: Implementado y validado en headless y con capturas locales de la escena; sin prueba real de dos máquinas.*
+- **Rendimiento medido (headless):** paso de pincel ~5,8–10,7 ms; reconstrucción de colisión ~20–24 ms; el coste del pincel es lineal con el total de vértices (10 920 por isla), no con el radio.
+- **Límites conocidos:** sin deshacer/rehacer ni selección múltiple; la colisión va medio segundo por detrás durante el trazo; las prims no tienen física propia; el avatar queda bloqueado mientras el modo construcción está activo y recupera el control al salir, sin otro clic (2.5.8); el túnel es HTTP/WebSocket (cloudflared/serveo/localhost.run), no SSH; tras una migración de anfitrión, un cliente puede no recuperar permiso de edición hasta que su dueño vuelva a registrarse.
 
 ---
 
@@ -164,20 +188,31 @@ La rapidez de desarrollo y las transformaciones sucesivas desde el proyecto orig
    - La replicación confía ciegamente en las posiciones enviadas por cada cliente sin validación del servidor.
 
 ### F. Deuda de Control de Versiones
-1. **Inexistencia de `.gitignore`:**
-   - No hay archivo `.gitignore` en la raíz, dejando expuesta la caché `.godot/` (300 MB) a ser versionada por error.
+1. **`.gitignore` ya existe:** la raíz del repositorio excluye `.godot/`, cachés y artefactos de compilación. La afirmación anterior de esta auditoría (ausencia de `.gitignore`) quedó obsoleta.
+
+### G. Deuda del Sistema de Construcción
+1. **Sin deshacer/rehacer ni selección múltiple:** cada edición se aplica directamente al estado autoritativo; un error de pincel solo se corrige esculpiendo de nuevo.
+2. **Colisión diferida:** la malla visual responde al instante, pero la colisión trimesh se reconstruye 0,5 s después del último cambio; durante el trazo el avatar puede atravesar el terreno.
+3. **Coste lineal por paso de pincel:** `aplicar_pincel` recorre los 10 920 vértices en cada paso; con radios grandes o muchas islas simultáneas el coste sube. No hay índice espacial ni malla reducida para colisión.
+4. **Transferencia completa:** el estado se envía entero al entrar y tras cada guardado; no hay delta incremental ni comprobación de versión por prim.
+5. **Permisos tras migración:** el nuevo anfitrión valida la propiedad con `island_owners`; si el dueño no vuelve a registrarse, su isla queda en solo lectura.
+6. **Persistencia local, no compartida:** los archivos viven en `user://construccion/` de cada peer; no hay almacenamiento común entre anfitriones.
+7. **Sin prueba de dos máquinas:** la suite headless valida lógica y formatos, no latencia, pérdida de paquetes ni el túnel HTTP real.
 
 ---
 
 ## 4. Tareas Pendientes (Roadmap Priorizado)
 
 ### Fase 1: Prioridad Alta (Inmediata / Rendimiento y Estabilidad)
+- [ ] **Prueba real de construcción a dos máquinas:** validar pincel, rez, permisos, guardado y túnel HTTP con dos instancias; la suite headless no cubre red ni latencia.
 - [ ] **Deduplicar Texturas de Avatares:** Reasignar los materiales de `AVH3` para que utilicen las texturas de `AVH2`, y los de `AVMJ3/AVMJ4` para que usen las de `AVMJ2/AVMJ1`. Borrar los 18 archivos duplicados y recuperar ~170 MB.
 - [ ] **Crear `.gitignore`:** Incluir `.godot/`, `*.blend1`, `*.bak`, `*.tmp` y capturas de prueba.
 - [ ] **Unificar Controlador de Avatar:** Crear un único `PlayerController.gd` en `res://gdscrip/` que gestione la cámara orbital, animaciones y movimiento tanto para avatares masculinos como femeninos.
 - [ ] **Corregir Fallback de `registro.gd`:** Cambiar la variable `siguiente_escena` para que apunte a `entornodeprueba.tscn` en vez de `mnpr.tscn`.
 
 ### Fase 2: Prioridad Media (Arquitectura y Jugabilidad)
+- [ ] **Construcción: deshacer/rehacer y selección múltiple:** historial por isla y operaciones agrupadas para acercar la edición al flujo de Second Life/OpenSimulator.
+- [ ] **Construcción: colisión y física de prims:** actualización incremental de la colisión del terreno y formas exactas por prim (el toro ya usa trimesh).
 - [ ] **Aplanar Estructura de Carpetas:**
   - Reducir rutas a un esquema limpio:
     ```

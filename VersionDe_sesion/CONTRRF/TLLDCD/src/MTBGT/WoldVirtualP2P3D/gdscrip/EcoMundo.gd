@@ -4,7 +4,7 @@ extends Node
 ## ISLA3Dblock para que esos RPC no fallen y se descarten sin efectos.
 
 @rpc("authority", "call_local", "reliable")
-func _spawn_island_for_player(_id: int, _index: int, _nick: String = "") -> void:
+func _spawn_island_for_player(_id: int, _index: int, _nick: String = "", _uuid: String = "") -> void:
 	pass
 
 

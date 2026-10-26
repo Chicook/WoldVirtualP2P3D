@@ -6,10 +6,16 @@ signal mi_isla_lista
 ## Se emite cuando el anfitrión cambia el avatar elegido porque ya estaba
 ## reservado por otro jugador.
 signal avatar_asignado(anterior: String, nuevo: String, turno: int, reciclado: bool)
+## Resultado de "Registra tu isla" para que la interfaz muestre éxito o error.
+signal isla_registrada(exito: bool, mensaje: String)
 
 const Pers = preload("res://gdscrip/Personalizacion.gd")
 const Turnos = preload("res://gdscrip/Turnos.gd")
 const Red = preload("res://gdscrip/Red.gd")
+const Identidad = preload("res://gdscrip/Identidad.gd")
+
+## Registro exclusivo del anfitrión: UUID estable -> índice de isla.
+const REGISTRO_ISLAS := "user://islas_registro.cfg"
 
 @export var chunk_size: float = 199.5
 @export var islands_per_row: int = 10
@@ -17,6 +23,8 @@ const Red = preload("res://gdscrip/Red.gd")
 @onready var original_island = $ISLA3DCHUNK
 @onready var original_ocean = $Oceano3D
 @onready var userbase = $USERBASE
+## Constructor opcional: si la escena no lo incluye, la isla no es editable.
+@onready var _constructor = get_node_or_null("Constructor")
 
 ## Transporte de red único: WebSocket (TCP). Es el único canal que atraviesa los
 ## túneles efímeros (cloudflared / serveo / localhost.run) que levanta el Visor C#,
@@ -27,11 +35,18 @@ var ws_peer = WebSocketMultiplayerPeer.new()
 var next_island_index = 0
 var active_islands = {} # Diccionario: player_id -> island_index
 var owner_names = {} # Diccionario: player_id -> nick del dueño
-var island_owners = {} # Diccionario: island_index -> [owner_id, nick] (vive en TODOS los peers)
+var island_owners = {} # island_index -> [owner_id, nick, owner_uuid] (vive en TODOS los peers)
 var spawned_indices := {} # indices ya instanciados en esta maquina (anti-duplicados)
 var my_own_index := -1 # indice de MI isla (-1 = aun sin asignar)
 var pending_claims := {} # peer_id -> indice reclamado al reconectar
+var pending_uuids := {} # peer_id -> UUID estable reclamado al reconectar
 var _mi_nick := ""
+var _mi_uuid := ""
+var _mi_isla_guardada := -1
+var _mi_isla_anunciada := false
+var _registro_islas_ruta := REGISTRO_ISLAS
+var _uuid_por_isla := {} # island_index -> UUID estable (todos los peers)
+var _islas_por_uuid := {} # UUID estable -> island_index (autoridad del anfitrion)
 var _save_pos_timer := 0.0
 var _last_saved_pos := Vector3.ZERO
 var _last_target_host := "127.0.0.1"
@@ -272,6 +287,8 @@ func _ready():
 	original_island.hide()
 	original_ocean.hide()
 	_mi_nick = _leer_nick()
+	_mi_uuid = Identidad.asegurar_identidad()
+	_mi_isla_guardada = Identidad.leer_mi_isla(_mi_uuid)
 	_mi_ip = _primera_ip_lan()
 	_mi_url = _leer_mi_url()
 	set_process(true)
@@ -342,8 +359,8 @@ func _on_connected_ok():
 	_mi_id = multiplayer.get_unique_id()
 	print("[ChunkManager/WS] ✔ CONECTADO EXITOSAMENTE al mundo P2P! ID único asignado: ", _mi_id)
 	# Anunciar mi isla por si es una reconexion tras migracion de anfitrion:
-	# el servidor me reconocera y NO me creara isla nueva.
-	rpc_id(1, "_claim_island", my_own_index, _mi_nick)
+	# el servidor reconoce el UUID estable y NO me creara isla nueva.
+	rpc_id(1, "_claim_island", _mi_isla_guardada, _mi_nick, _mi_uuid)
 	# Compartir mi URL pública con el resto (para poder reconectar tras migración).
 	rpc_id(1, "_reportar_direccion", _mi_url, _mi_ip)
 	# Reserva del avatar: la plaza la decide el anfitrión y responde si toca sustituto.
@@ -382,9 +399,12 @@ func _iniciar_como_servidor():
 	# Activar beacon LAN de auto-descubrimiento para que otros equipos en la misma red puedan unirse sin enlace
 	_iniciar_lan_beacon()
 
-	# El servidor registra su propia isla
+	# El anfitrión conserva su isla entre reinicios y registra su propia identidad.
+	_cargar_registro_islas()
+	if _islas_por_uuid.has(_mi_uuid):
+		_mi_isla_guardada = int(_islas_por_uuid[_mi_uuid])
 	owner_names[multiplayer.get_unique_id()] = _nick_unico(_mi_nick, multiplayer.get_unique_id())
-	_register_player(multiplayer.get_unique_id())
+	_register_player(multiplayer.get_unique_id(), _mi_uuid, _mi_isla_guardada)
 
 	_mi_id = multiplayer.get_unique_id()
 	_roster = {_mi_id: {"order": 0, "url": _mi_url, "ip": _mi_ip, "nick": _mi_nick}}
@@ -405,7 +425,9 @@ func _on_peer_connected(id):
 	if multiplayer.is_server():
 		# Enviar a este nuevo jugador las islas que ya existen (con su dueño)
 		for p_id in active_islands:
-			rpc_id(id, "_spawn_island_for_player", p_id, active_islands[p_id], str(owner_names.get(p_id, "")))
+			var idx := int(active_islands[p_id])
+			rpc_id(id, "_spawn_island_for_player", p_id, idx,
+					str(owner_names.get(p_id, "")), str(_uuid_por_isla.get(idx, "")))
 		# Cinturon y tirantes: reenviar islas huerfanas del historial que no esten
 		# en el registro (p. ej. tras migracion de anfitrion o salidas previas).
 		_send_orphan_islands(id)
@@ -420,9 +442,12 @@ func _on_peer_connected(id):
 # El cliente anuncia el indice de su isla y su nick al conectarse
 # (-1 = jugador nuevo).
 @rpc("any_peer", "reliable")
-func _claim_island(idx: int, nick: String) -> void:
+func _claim_island(idx: int, nick: String, uuid: String = "") -> void:
+	if not multiplayer.is_server():
+		return
 	var sender := multiplayer.get_remote_sender_id()
 	pending_claims[sender] = idx
+	pending_uuids[sender] = uuid if Identidad.uuid_valido(uuid) else ""
 	# Nombre único: si otro jugador ya usa ese nick, se sufija (#2, #3...).
 	owner_names[sender] = _nick_unico(nick, sender)
 
@@ -455,26 +480,76 @@ func _adopt_or_register(id: int) -> void:
 	await get_tree().create_timer(2.5).timeout
 	if not multiplayer.get_peers().has(id):
 		pending_claims.erase(id)
+		pending_uuids.erase(id)
 		return # se fue durante el margen
 	if _sondas.has(id):
 		_sondas.erase(id)
 		pending_claims.erase(id)
+		pending_uuids.erase(id)
 		return # solo consulto plazas, no entra al mundo
 	var claimed := int(pending_claims.get(id, -1))
+	var uuid := str(pending_uuids.get(id, ""))
 	pending_claims.erase(id)
-	if claimed >= 0 and spawned_indices.has(claimed):
-		# Reconexion: ya tiene isla instanciada aqui. Solo mapear, sin generar.
-		# Se depuran entradas obsoletas con el mismo indice (IDs antiguos).
-		_drop_fake_key(claimed)
-		for old_id in active_islands.keys():
-			if int(old_id) != id and int(active_islands[old_id]) == claimed and int(old_id) > 0:
-				active_islands.erase(old_id)
-		active_islands[id] = claimed
-		next_island_index = maxi(next_island_index, claimed + 1)
-		print("Reconexion reconocida: jugador ", id, " conserva isla ", claimed)
+	pending_uuids.erase(id)
+	var reclamada := _resolver_isla_reclamada(id, claimed, uuid)
+	if reclamada >= 0:
+		_adoptar_isla(id, reclamada, uuid)
 		return
-	# Jugador verdaderamente nuevo: crear su isla
-	_register_player(id)
+	# Jugador nuevo, identidad desconocida o isla ya ocupada: crear otra.
+	_register_player(id, uuid)
+
+
+## Un UUID registrado manda sobre el índice que recuerde el cliente. La
+## reclamación directa solo es válida si el anfitrión ya la asoció a ese UUID.
+func _resolver_isla_reclamada(id: int, claimed: int, uuid: String) -> int:
+	var idx := -1
+	if uuid != "":
+		if _islas_por_uuid.has(uuid):
+			idx = int(_islas_por_uuid[uuid])
+		elif claimed >= 0 and str(_uuid_por_isla.get(claimed, "")) == uuid:
+			idx = claimed
+	elif claimed >= 0:
+		idx = claimed
+	if idx < 0 or not _puede_reclamar_isla(idx, id, uuid):
+		return -1
+	return idx
+
+
+func _puede_reclamar_isla(index: int, id: int, uuid: String) -> bool:
+	if index < 0:
+		return false
+	var dueno := str(_uuid_por_isla.get(index, ""))
+	if uuid != "" and dueno != "" and dueno != uuid:
+		return false
+	if uuid == "" and dueno != "":
+		return false
+	for p_id in active_islands.keys():
+		if int(p_id) == id or int(active_islands[p_id]) != index:
+			continue
+		if _peer_vivo(int(p_id)):
+			return false
+	return true
+
+
+func _peer_vivo(id: int) -> bool:
+	return id == multiplayer.get_unique_id() or multiplayer.get_peers().has(id)
+
+
+func _adoptar_isla(id: int, index: int, uuid: String) -> void:
+	# Se depuran entradas obsoletas con el mismo indice (IDs y dueños antiguos).
+	_drop_fake_key(index)
+	for old_id in active_islands.keys():
+		if int(old_id) != id and int(active_islands[old_id]) == index:
+			active_islands.erase(old_id)
+	active_islands[id] = index
+	next_island_index = maxi(next_island_index, index + 1)
+	var nick := str(owner_names.get(id, ""))
+	_vincular_propietario(index, id, nick, uuid)
+	# call_local: también actualiza la copia del anfitrión. Si la isla ya estaba
+	# instanciada, el receptor solo refresca dueño y reactiva al jugador propio.
+	rpc("_spawn_island_for_player", id, index, nick, uuid)
+	print("Reconexion reconocida: jugador ", id, " conserva isla ", index)
+
 
 # Elimina la clave ficticia que reservaba una isla huerfana ahora reclamada.
 func _drop_fake_key(idx: int) -> void:
@@ -495,13 +570,142 @@ func _send_orphan_islands(to_id: int) -> void:
 	for entry in tm.get_islands():
 		var idx := int(entry["index"])
 		if not covered.has(idx):
-			rpc_id(to_id, "_spawn_island_for_player", -1000 - idx, idx, "")
+			rpc_id(to_id, "_spawn_island_for_player", -1000 - idx, idx, "",
+					str(_uuid_por_isla.get(idx, "")))
 			covered[idx] = true
 
-func _register_player(id):
-	active_islands[id] = next_island_index
-	rpc("_spawn_island_for_player", id, next_island_index, str(owner_names.get(id, "")))
-	next_island_index += 1
+func _register_player(id: int, uuid: String = "", preferido: int = -1):
+	var index := preferido
+	if index < 0 or not _puede_reclamar_isla(index, id, uuid):
+		index = next_island_index
+		while spawned_indices.has(index) or _indice_activo(index):
+			index += 1
+	active_islands[id] = index
+	next_island_index = maxi(next_island_index, index + 1)
+	var nick := str(owner_names.get(id, ""))
+	_vincular_propietario(index, id, nick, uuid)
+	rpc("_spawn_island_for_player", id, index, nick, uuid)
+
+
+func _indice_activo(index: int) -> bool:
+	for p_id in active_islands.keys():
+		if int(active_islands[p_id]) == index and _peer_vivo(int(p_id)):
+			return true
+	return false
+
+
+## Mantiene el mapa dueño estable en todos los peers y el registro del anfitrión.
+func _vincular_propietario(index: int, id: int, nick: String, uuid: String) -> void:
+	var dueno_actual := str(_uuid_por_isla.get(index, ""))
+	if dueno_actual == "" and Identidad.uuid_valido(uuid):
+		dueno_actual = uuid
+	island_owners[index] = [id, nick, dueno_actual]
+	if dueno_actual != "":
+		var anterior := int(_islas_por_uuid.get(dueno_actual, -1))
+		if anterior >= 0 and anterior != index \
+				and str(_uuid_por_isla.get(anterior, "")) == dueno_actual:
+			_uuid_por_isla.erase(anterior)
+		_uuid_por_isla[index] = dueno_actual
+		_islas_por_uuid[dueno_actual] = index
+	if multiplayer.is_server():
+		_guardar_registro_islas()
+
+
+func _cargar_registro_islas() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(_registro_islas_ruta) != OK or not cfg.has_section("propietarios"):
+		return
+	for uuid in cfg.get_section_keys("propietarios"):
+		if not Identidad.uuid_valido(uuid):
+			continue
+		var index := int(cfg.get_value("propietarios", uuid, -1))
+		if index < 0 or _islas_por_uuid.has(uuid) or _uuid_por_isla.has(index):
+			continue
+		_islas_por_uuid[uuid] = index
+		_uuid_por_isla[index] = uuid
+		next_island_index = maxi(next_island_index, index + 1)
+
+
+func _guardar_registro_islas() -> void:
+	if not multiplayer.is_server():
+		return
+	var cfg := ConfigFile.new()
+	for uuid in _islas_por_uuid.keys():
+		if Identidad.uuid_valido(str(uuid)):
+			cfg.set_value("propietarios", str(uuid), int(_islas_por_uuid[uuid]))
+	cfg.save(_registro_islas_ruta)
+
+
+## API pública del botón "Registra tu isla".
+func registrar_mi_isla() -> void:
+	if my_own_index < 0:
+		isla_registrada.emit(false, "Tu isla todavía no está asignada.")
+		return
+	if not Identidad.uuid_valido(_mi_uuid):
+		_mi_uuid = Identidad.asegurar_identidad()
+	if multiplayer.is_server():
+		var error := _procesar_registro_isla(
+				multiplayer.get_unique_id(), my_own_index, _mi_uuid)
+		_confirmar_registro_isla(error.is_empty(), error, my_own_index)
+		return
+	if multiplayer.multiplayer_peer == null \
+			or multiplayer.multiplayer_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+		isla_registrada.emit(false, "Sin conexión con el anfitrión.")
+		return
+	rpc_id(1, "_solicitar_registro_isla", my_own_index, _mi_uuid)
+
+
+@rpc("any_peer", "reliable")
+func _solicitar_registro_isla(index: int, uuid: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender := multiplayer.get_remote_sender_id()
+	var error := _procesar_registro_isla(sender, index, uuid)
+	rpc_id(sender, "_respuesta_registro_isla", error.is_empty(), error, index)
+
+
+func _procesar_registro_isla(sender: int, index: int, uuid: String) -> String:
+	if not multiplayer.is_server():
+		return "Solo el anfitrión puede registrar islas."
+	if sender <= 0 or not Identidad.uuid_valido(uuid):
+		return "Solicitud de registro no válida."
+	if int(active_islands.get(sender, -1)) != index:
+		return "Esa isla ya no te pertenece."
+	var dueno := str(_uuid_por_isla.get(index, ""))
+	if dueno != "" and dueno != uuid:
+		return "La isla %d ya está registrada por otro jugador." % index
+	if _islas_por_uuid.has(uuid) and int(_islas_por_uuid[uuid]) != index:
+		return "Tu identidad ya tiene registrada la isla %d." % int(_islas_por_uuid[uuid])
+	var nick := str(owner_names.get(sender, _mi_nick))
+	_vincular_propietario(index, sender, nick, uuid)
+	if is_inside_tree():
+		rpc("_sync_island_owner", index, sender, nick, uuid)
+	return ""
+
+
+@rpc("authority", "reliable")
+func _respuesta_registro_isla(exito: bool, mensaje: String, index: int) -> void:
+	_confirmar_registro_isla(exito, mensaje, index)
+
+
+func _confirmar_registro_isla(exito: bool, mensaje: String, index: int) -> void:
+	if exito:
+		_mi_isla_guardada = index
+		if not Identidad.uuid_valido(_mi_uuid):
+			_mi_uuid = Identidad.asegurar_identidad()
+		Identidad.guardar_mi_isla(index, _mi_uuid)
+		mensaje = "Isla %d registrada. Se recuperará al volver." % index
+	isla_registrada.emit(exito, mensaje)
+
+
+## Mantiene actualizado el dueño estable en los demás peers.
+@rpc("authority", "reliable")
+func _sync_island_owner(index: int, id: int, nick: String, uuid: String) -> void:
+	_vincular_propietario(index, id, nick, uuid)
+	if id == multiplayer.get_unique_id():
+		_mi_isla_guardada = index
+		if Identidad.uuid_valido(_mi_uuid):
+			Identidad.guardar_mi_isla(index, _mi_uuid)
 
 # El servidor CONSERVA el registro del peer salido (no se borra): sus nodos de
 # isla siguen en escena y los futuros jugadores deben recibirlos al conectarse.
@@ -635,6 +839,7 @@ func _promover_a_servidor() -> void:
 	_avatar_confirmado = true
 
 	# Reconstruir registro sin duplicar islas: conservar mi isla y reservar indices usados
+	_cargar_registro_islas()
 	var tm2 = get_node_or_null("TeleportManager")
 	var used_max := -1
 	if tm2 != null and tm2.has_method("get_max_index"):
@@ -656,6 +861,9 @@ func _promover_a_servidor() -> void:
 				active_islands[-1000 - hidx] = hidx
 				covered[hidx] = true
 	owner_names[new_id] = _nick_unico(_mi_nick, new_id)
+	_vincular_propietario(my_own_index, new_id, _mi_nick, _mi_uuid)
+	_mi_isla_guardada = my_own_index
+	Identidad.guardar_mi_isla(my_own_index, _mi_uuid)
 	_roster = {new_id: {"order": 0, "url": _mi_url, "ip": _mi_ip, "nick": _mi_nick}}
 	_next_order = 1
 	_broadcast_roster()
@@ -682,66 +890,89 @@ func _my_island_index(tm) -> int:
 	return best
 
 @rpc("authority", "call_local", "reliable")
-func _spawn_island_for_player(id: int, index: int, nick: String = ""):
-	if spawned_indices.has(index):
-		return # ya instanciada aqui (reenvio tras migracion o reconexion)
-	spawned_indices[index] = true
-	# Dueño conocido en todos los peers (los clientes no ven active_islands).
-	island_owners[index] = [id, nick]
-	print("Generando isla ", index, " para el jugador ", id)
-	
+func _spawn_island_for_player(id: int, index: int, nick: String = "", uuid: String = ""):
+	var nueva := not spawned_indices.has(index)
+	var new_island = null
+	if nueva:
+		spawned_indices[index] = true
+		print("Generando isla ", index, " para el jugador ", id)
+		var centro := _centro_isla(index)
+		new_island = original_island.duplicate()
+		new_island.show()
+		add_child(new_island)
+		new_island.position.x += centro.x
+		new_island.position.z += centro.y
+		var new_ocean = original_ocean.duplicate()
+		new_ocean.show()
+		add_child(new_ocean)
+		new_ocean.position.x += centro.x
+		new_ocean.position.z += centro.y
+	# Dueño estable conocido en todos los peers (los clientes no ven active_islands).
+	_vincular_propietario(index, id, nick, uuid)
+	# La isla acaba de nacer: preparar su terreno editable y sus objetos.
+	if nueva and new_island != null and _constructor != null:
+		_constructor.registrar_isla(index, new_island)
+	if id == multiplayer.get_unique_id():
+		_activar_mi_isla(index)
+
+
+func _centro_isla(index: int) -> Vector2:
 	var row := int(float(index) / float(islands_per_row))
-	var col = index % islands_per_row
-	
-	var pos_x = 0.0
-	var pos_z = -row * chunk_size
-	
+	var col := index % islands_per_row
+	var pos_x := 0.0
+	var pos_z := -row * chunk_size
 	if row % 2 == 0:
 		pos_x = -col * chunk_size
 	else:
 		pos_x = -(islands_per_row - 1 - col) * chunk_size
-		
-	# Instanciar nueva isla
-	var new_island = original_island.duplicate()
-	new_island.show()
-	add_child(new_island)
-	new_island.position.x += pos_x
-	new_island.position.z += pos_z
-	
-	var new_ocean = original_ocean.duplicate()
-	new_ocean.show()
-	add_child(new_ocean)
-	new_ocean.position.x += pos_x
-	new_ocean.position.z += pos_z
-	
-	# Si esta isla es para MÍ, muevo MI avatar al centro de esta isla o a su última posición guardada
-	if id == multiplayer.get_unique_id():
-		my_own_index = index
-		var cfg := ConfigFile.new()
-		var pos_cargada := false
-		if cfg.load("user://registro.cfg") == OK:
-			if cfg.has_section_key("posicion", "has_saved_pos") and bool(cfg.get_value("posicion", "has_saved_pos", false)):
-				var sx: float = float(cfg.get_value("posicion", "x", pos_x))
-				var sy: float = float(cfg.get_value("posicion", "y", 42.0))
-				var sz: float = float(cfg.get_value("posicion", "z", pos_z))
-				var srot: float = float(cfg.get_value("posicion", "rot_y", 0.0))
-				if sy > -5.0:
-					userbase.position = Vector3(sx, sy, sz)
-					userbase.rotation.y = srot
-					_last_saved_pos = userbase.position
-					pos_cargada = true
-		if not pos_cargada:
-			userbase.position.x = pos_x
-			userbase.position.z = pos_z
-			_last_saved_pos = userbase.position
-		# La cámara orbital queda lejos tras el salto: recolocarla al instante.
-		if userbase.has_method("snap_camera"):
-			userbase.call("snap_camera")
+	return Vector2(pos_x, pos_z)
+
+
+## Fija la isla propia, la persiste y coloca el avatar solo la primera vez.
+func _activar_mi_isla(index: int) -> void:
+	var primera := my_own_index != index
+	my_own_index = index
+	_mi_isla_guardada = index
+	if not Identidad.uuid_valido(_mi_uuid):
+		_mi_uuid = Identidad.asegurar_identidad()
+	Identidad.guardar_mi_isla(index, _mi_uuid)
+	if primera:
+		_colocar_avatar_en_isla(index)
+	if not _mi_isla_anunciada:
+		_mi_isla_anunciada = true
 		if _avatar_confirmado:
 			mi_isla_lista.emit()
 		else:
 			_isla_pendiente = true
 			_esperar_avatar()
+
+
+func _colocar_avatar_en_isla(index: int) -> void:
+	var centro := _centro_isla(index)
+	var cfg := ConfigFile.new()
+	var pos_cargada := false
+	if cfg.load("user://registro.cfg") == OK:
+		var has_pos := cfg.has_section_key("posicion", "has_saved_pos") \
+				and bool(cfg.get_value("posicion", "has_saved_pos", false))
+		# La posición solo vale para la misma isla: evita reaparecer en otra.
+		var idx_pos := int(cfg.get_value("posicion", "island_index", -1))
+		if has_pos and idx_pos == index:
+			var sx: float = float(cfg.get_value("posicion", "x", centro.x))
+			var sy: float = float(cfg.get_value("posicion", "y", 42.0))
+			var sz: float = float(cfg.get_value("posicion", "z", centro.y))
+			var srot: float = float(cfg.get_value("posicion", "rot_y", 0.0))
+			if sy > -5.0:
+				userbase.position = Vector3(sx, sy, sz)
+				userbase.rotation.y = srot
+				_last_saved_pos = userbase.position
+				pos_cargada = true
+	if not pos_cargada:
+		userbase.position.x = centro.x
+		userbase.position.z = centro.y
+		_last_saved_pos = userbase.position
+	# La cámara orbital queda lejos tras el salto: recolocarla al instante.
+	if userbase.has_method("snap_camera"):
+		userbase.call("snap_camera")
 
 
 func _process(delta: float) -> void:
@@ -824,9 +1055,16 @@ func _guardar_posicion_jugador() -> void:
 	if pos.distance_to(_last_saved_pos) < 0.05:
 		return
 	_last_saved_pos = pos
+	var idx_pos := my_own_index
+	var tm = get_node_or_null("TeleportManager")
+	if tm != null and tm.has_method("current_island_index"):
+		var detectada := int(tm.call("current_island_index", pos))
+		if detectada >= 0:
+			idx_pos = detectada
 	var cfg := ConfigFile.new()
 	var _err = cfg.load("user://registro.cfg")
 	cfg.set_value("posicion", "has_saved_pos", true)
+	cfg.set_value("posicion", "island_index", idx_pos)
 	cfg.set_value("posicion", "x", pos.x)
 	cfg.set_value("posicion", "y", pos.y)
 	cfg.set_value("posicion", "z", pos.z)

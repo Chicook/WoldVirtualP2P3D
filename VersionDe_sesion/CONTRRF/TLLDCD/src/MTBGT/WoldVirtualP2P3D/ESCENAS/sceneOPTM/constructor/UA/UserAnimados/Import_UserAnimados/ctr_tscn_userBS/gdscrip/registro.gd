@@ -7,6 +7,7 @@ signal registro_completado(nick: String)
 @export var siguiente_escena: String = "res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/scenesconstr/mnpr.tscn"
 
 const Pers = preload("res://gdscrip/Personalizacion.gd")
+const Identidad = preload("res://gdscrip/Identidad.gd")
 
 @onready var nick_edit: LineEdit = $Panel/VBox/NickEdit
 @onready var error_label: Label = $Panel/VBox/ErrorLabel
@@ -154,8 +155,10 @@ func _on_confirmar_pressed() -> void:
 		error_label.text = "El nick debe tener al menos 3 letras."
 		return
 
-	# 1. Guardar local en user://registro.cfg (nick, avatar y aspecto)
+	# 1. Guardar local en user://registro.cfg sin perder identidad ni posición.
+	Identidad.asegurar_identidad()
 	var cfg := ConfigFile.new()
+	cfg.load("user://registro.cfg")
 	cfg.set_value("jugador", "nick", nick)
 	cfg.set_value("jugador", "avatar_scene", _selected_avatar_scene)
 	cfg.save("user://registro.cfg")

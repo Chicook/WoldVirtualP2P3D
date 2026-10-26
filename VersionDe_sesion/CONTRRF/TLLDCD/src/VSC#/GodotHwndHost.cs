@@ -142,6 +142,14 @@ namespace Visor3D
             bool godotTieneFoco = focusHwnd == _childHwnd || focusHwnd == _hostHwnd ||
                                   IsChildOf(_hostHwnd, focusHwnd);
 
+            // Si el usuario escribe en el chat (u otro TextBox WPF), las teclas
+            // son para el texto: no deben mover al avatar ni saltar. Solo se
+            // aplica si el foco nativo NO está ya en Godot: al volver a la
+            // vista 3D, WPF puede conservar el TextBox como foco lógico.
+            if (!godotTieneFoco &&
+                Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
+                return;
+
             if (godotTieneFoco || IsKeyboardFocusWithin)
             {
                 PostMessage(_childHwnd, msg.message, msg.wParam, msg.lParam);
@@ -185,6 +193,18 @@ namespace Visor3D
                     // Cualquier clic dentro del host: restaurar foco a Godot
                     ActivateGodotFocus();
                     break;
+
+                case WM_PARENTNOTIFY:
+                {
+                    // Los clics sobre el área 3D los recibe directamente el HWND
+                    // hijo de Godot; el padre se entera por esta notificación.
+                    // Es la vía que devuelve el teclado a Godot tras usar el chat.
+                    int evento = (int)(wParam.ToInt64() & 0xFFFF);
+                    if (evento == WM_LBUTTONDOWN || evento == WM_RBUTTONDOWN ||
+                        evento == WM_MBUTTONDOWN)
+                        ActivateGodotFocus();
+                    break;
+                }
             }
 
             return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
@@ -323,6 +343,8 @@ namespace Visor3D
 
             int exStyle = GetWindowLong(_childHwnd, GWL_EXSTYLE);
             exStyle &= ~WS_EX_DLGMODALFRAME & ~WS_EX_CLIENTEDGE & ~WS_EX_STATICEDGE & ~WS_EX_WINDOWEDGE;
+            // Permite que el host reciba WM_PARENTNOTIFY de los clics en Godot.
+            exStyle &= ~WS_EX_NOPARENTNOTIFY;
             SetWindowLong(_childHwnd, GWL_EXSTYLE, exStyle);
 
             SetWindowPos(_childHwnd, IntPtr.Zero, 0, 0, 0, 0,
@@ -382,7 +404,13 @@ namespace Visor3D
 
         protected override bool TranslateAcceleratorCore(ref MSG msg, ModifierKeys modifiers)
         {
-            if (_childHwnd != IntPtr.Zero)
+            // Igual que en OnThreadPreprocessMessage: escribir en el chat manda,
+            // salvo que el foco nativo ya esté devuelto a Godot.
+            bool escribiendoWpf =
+                GetFocus() != _childHwnd &&
+                Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase;
+
+            if (_childHwnd != IntPtr.Zero && !escribiendoWpf)
             {
                 // Reenviar mensajes de teclado que lleguen por esta vía (fallback).
                 // La vía principal es OnThreadPreprocessMessage.
@@ -557,7 +585,8 @@ namespace Visor3D
         private const int WS_THICKFRAME   = 0x00040000;
         private const int WS_CLIPCHILDREN = 0x02000000;
 
-        private const int WS_EX_DLGMODALFRAME = 0x00000001;
+        private const int WS_EX_DLGMODALFRAME  = 0x00000001;
+        private const int WS_EX_NOPARENTNOTIFY = 0x00000004;
         private const int WS_EX_WINDOWEDGE    = 0x00000100;
         private const int WS_EX_CLIENTEDGE    = 0x00000200;
         private const int WS_EX_STATICEDGE    = 0x00200000;
@@ -579,5 +608,6 @@ namespace Visor3D
         private const int WM_LBUTTONDOWN = 0x0201;
         private const int WM_RBUTTONDOWN = 0x0204;
         private const int WM_MBUTTONDOWN = 0x0207;
+        private const int WM_PARENTNOTIFY = 0x0210;
     }
 }

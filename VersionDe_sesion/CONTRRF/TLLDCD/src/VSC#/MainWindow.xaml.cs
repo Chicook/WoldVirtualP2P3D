@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -14,10 +15,14 @@ using System.Threading.Tasks;
 using System.Reflection;
 using System.Management;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
 using Microsoft.Win32;
+using Visor3D.Chat;
 using Visor3D.RedP2P;
 using Visor3D.Seguridad;
 using Visor3D.Services;
@@ -52,6 +57,8 @@ namespace Visor3D
         private string _urlPublica = "";
         private string _enlaceCompartible = "";
         private string _hostSesionUrl = "";
+        private List<string> _nodosRedLan = new();
+        private bool _consultaRedEnCurso;
         private string _hostInicial = "";
         private readonly DateTime _arranqueUtc = DateTime.UtcNow;
         private string _llaveHashActual = "";
@@ -60,6 +67,33 @@ namespace Visor3D
         private bool _descargandoActualizacion;
         private CancellationTokenSource? _ctsDescarga;
         private System.Windows.Threading.DispatcherTimer? _timerMigracion;
+
+        // ── Chat del metaverso (texto + voz + webcam) ─────────────────
+        private const double AnchoPanelChat = 340;
+        private ChatRelayServer? _chatServer;
+        private ChatClient? _chatClient;
+        private ChatVoice? _chatVoice;
+        private ChatWebcam? _chatWebcam;
+        private System.Windows.Threading.DispatcherTimer? _timerChat;
+        private string _chatUsuario = "";
+        private bool _chatActivo;
+        private bool _chatConectando;
+        private bool _chatAbierto;
+        private int _chatNoLeidos;
+        private DateTime _chatProximoIntento = DateTime.MinValue;
+        private readonly Dictionary<int, string> _nombresChat = new();
+        private readonly Dictionary<int, (Border Marco, Image Imagen, TextBlock Nombre)> _tilesChat = new();
+        private readonly Dictionary<int, DateTime> _ultimoVideoChat = new();
+
+        // ── Amigos y mensajes privados ────────────────────────────────
+        private string _chatUid = "";
+        private FriendsStore? _amigos;
+        private readonly Dictionary<int, string> _uidPorId = new();
+        private readonly HashSet<string> _uidsEnLinea = new();
+        private readonly HashSet<string> _reenviosAmistad = new();
+        private readonly Dictionary<string, PrivateChatWindow> _ventanasPrivadas = new();
+        private readonly Dictionary<string, int> _privadosNoLeidos = new();
+        private readonly Dictionary<string, List<MensajePrivado>> _historialPrivado = new();
 
         public MainWindow(string? initialConnectionUrl = null)
         {
@@ -79,6 +113,7 @@ namespace Visor3D
             this.SizeChanged += (s, e) => AjustarBarraResponsive();
             this.Closing += (s, e) =>
             {
+                DetenerChatSesion();
                 _godotHostMain?.StopGodot();
                 _p2pServicio?.Dispose();
                 DetenerTunelWebNodo();
@@ -97,9 +132,23 @@ namespace Visor3D
             BtnCopiarUrlP2P.Click += OnCopiarUrlP2PClicked;
             TxtUrlP2P.MouseLeftButtonDown += (s, e) => OnCopiarUrlP2PClicked(s, e);
             BtnConectarAmigo.Click += OnConectarAmigoClicked;
+            BtnBuscarRed.Click += OnBuscarRedClicked;
+            BtnUsarNodoRed.Click += OnUsarNodoRedClicked;
 
             // WebNodo — portal de descarga y conexión para amigos en el metaverso
             BtnWebNodo.Click += OnWebNodoClicked;
+
+            // Chat del metaverso (texto, voz y webcam)
+            BtnChat.Click += (s, e) => AlternarPanelChat();
+            BtnChatCerrar.Click += (s, e) => CerrarPanelChat();
+            BtnChatEnviar.Click += (s, e) => EnviarMensajeChat();
+            BtnChatMic.Click += (s, e) => AlternarMicrofonoChat();
+            BtnChatCam.Click += (s, e) => AlternarCamaraChat();
+            TxtChat.KeyDown += OnChatTextBoxKeyDown;
+            BtnAmigos.Click += (s, e) => AlternarPanelAmigos();
+            BtnCopiarCodigo.Click += (s, e) => CopiarCodigoAmigo();
+            BtnAgregarAmigo.Click += (s, e) => EnviarSolicitudPorCodigo();
+            TxtCodigoAmigo.KeyDown += OnCodigoAmigoKeyDown;
 
             // Si Godot se cae, se puede reincrustar sin cerrar el visor
             BtnReiniciar3D.Click += (s, e) => ReiniciarMotor3D();
@@ -400,6 +449,8 @@ namespace Visor3D
 
         public void MostrarPantallaBienvenida()
         {
+            DetenerChatSesion();
+
             _godotHostMain?.StopGodot();
             ContenedorGodotMain.Children.Clear();
             _godotHostMain = null;
@@ -431,6 +482,9 @@ namespace Visor3D
             bool estaRegistrado = (File.Exists(UserProfilePath) || File.Exists(CredentialsPath)) &&
                 File.Exists(Path.Combine(TestUserDataDir, "user", "llave_acceso.json"));
             BtnCrearCuenta.Visibility = estaRegistrado ? Visibility.Collapsed : Visibility.Visible;
+
+            // Antes de registrarse o entrar: ¿hay alguien en la red P2P?
+            _ = ActualizarEstadoRedAsync();
         }
 
         public void ActivarModoLogin(string username = "")
@@ -473,6 +527,84 @@ namespace Visor3D
         private void OnVolverBienvenidaClicked(object sender, RoutedEventArgs e)
         {
             MostrarPantallaBienvenida();
+        }
+
+        private void OnBuscarRedClicked(object sender, RoutedEventArgs e)
+        {
+            // El motor puede seguir cerrando y liberar el 8912 tarde: se reintenta.
+            _ = ActualizarEstadoRedAsync();
+        }
+
+        /// <summary>Si el nodo lo detectó la baliza LAN, deja el destino listo para entrar.</summary>
+        private void OnUsarNodoRedClicked(object sender, RoutedEventArgs e)
+        {
+            if (_nodosRedLan.Count == 0) return;
+            string ip = _nodosRedLan[0];
+            ActivarModoLogin();
+            TxtUrlAmigo.Text = $"{ip}:{DescubrimientoP2P.PuertoGodot}";
+            TxtEstadoRed.Text = $"🔗 Nodo seleccionado: {ip}";
+            TxtDetalleRed.Text = "Pulsa «Conectar» para comprobarlo y después inicia sesión.";
+            TxtLoginUser.Focus();
+        }
+
+        /// <summary>
+        /// Refleja en la pantalla previa si el metaverso está vacío u ocupado.
+        /// Prioriza la baliza LAN (anfitrión con el mismo puerto UDP que usa Godot)
+        /// y, si no hay nadie en la red local, consulta el portal del enlace de
+        /// invitación. No abre el WebSocket del juego.
+        /// </summary>
+        private async Task ActualizarEstadoRedAsync()
+        {
+            if (_consultaRedEnCurso) return;
+            _consultaRedEnCurso = true;
+            string? errorLan = null;
+            try
+            {
+                TxtEstadoRed.Text = "Buscando nodos en tu red…";
+                TxtDetalleRed.Text = "Escuchando la baliza del metaverso (UDP 8912).";
+                BtnBuscarRed.IsEnabled = false;
+                BtnUsarNodoRed.Visibility = Visibility.Collapsed;
+
+                var lan = await DescubrimientoP2P.BuscarEnLanAsync();
+                _nodosRedLan = lan.Nodos;
+                errorLan = lan.Error;
+
+                string enlace = !string.IsNullOrWhiteSpace(_hostInicial) ? _hostInicial : _urlAmigoPendiente;
+                bool enlaceResponde = _nodosRedLan.Count == 0 && !string.IsNullOrWhiteSpace(enlace)
+                    && await DescubrimientoP2P.ConsultarNodoAsync(enlace);
+
+                if (_nodosRedLan.Count > 0)
+                {
+                    TxtEstadoRed.Text = _nodosRedLan.Count == 1
+                        ? "● Metaverso ocupado: 1 nodo en tu red"
+                        : $"● Metaverso ocupado: {_nodosRedLan.Count} nodos en tu red";
+                    TxtDetalleRed.Text =
+                        $"{string.Join(", ", _nodosRedLan)} · Pulsa «Usar este nodo» o pega su enlace al entrar.";
+                    BtnUsarNodoRed.Visibility = Visibility.Visible;
+                }
+                else if (enlaceResponde)
+                {
+                    TxtEstadoRed.Text = "● El nodo de tu enlace está en línea";
+                    TxtDetalleRed.Text =
+                        $"{enlace} responde. Pulsa «Acceder», comprueba el enlace y luego inicia sesión.";
+                }
+                else
+                {
+                    TxtEstadoRed.Text = "○ Metaverso vacío: serás el primero";
+                    TxtDetalleRed.Text = errorLan
+                        ?? "No se detectaron nodos. Al entrar se creará la sesión y podrás copiar tu enlace para invitar.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TxtEstadoRed.Text = "○ Metaverso vacío: serás el primero";
+                TxtDetalleRed.Text = $"No se pudo completar la búsqueda: {ex.Message}";
+            }
+            finally
+            {
+                _consultaRedEnCurso = false;
+                BtnBuscarRed.IsEnabled = true;
+            }
         }
 
         private void OnLoginClicked(object sender, RoutedEventArgs e)
@@ -634,6 +766,8 @@ namespace Visor3D
                 IniciarGodotMain();
                 _ = EstablecerTunelEfimeroAsync();
                 IniciarP2P(user);
+                if (string.IsNullOrWhiteSpace(uuid)) uuid = ObtenerUuidDelPerfil(user);
+                IniciarChatSesion(user, uuid);
             }
             catch (Exception ex)
             {
@@ -662,11 +796,22 @@ namespace Visor3D
                     string rolLog = "";
                     if (!string.IsNullOrWhiteSpace(_urlAmigoPendiente))
                     {
-                        if (TryParseConnectionTarget(_urlAmigoPendiente, out string targetHost, out int targetPort))
+                        // Todos los invitados convergen en el anfitrión raíz. Un enlace
+                        // reenviado por un invitado es `<portal del invitado>?host=<raíz>`;
+                        // conectarse al portal del invitado no funciona (su 8911 no
+                        // escucha) y dejaría al tercer usuario fuera de la sesión.
+                        string destino = !string.IsNullOrWhiteSpace(_hostSesionUrl)
+                            ? _hostSesionUrl
+                            : _urlAmigoPendiente;
+                        if (TryParseConnectionTarget(destino, out string targetHost, out int targetPort))
                         {
                             // Inyectar rol explícito de cliente hacia el destino remoto
-                            userArgs = $"--client --ip={targetHost} --port={targetPort} --peer-url=\"{_urlAmigoPendiente}\"";
-                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO -> {targetHost}:{targetPort} (peer-url={_urlAmigoPendiente})";
+                            userArgs = $"--client --ip={targetHost} --port={targetPort} --peer-url=\"{destino}\"";
+                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO -> {targetHost}:{targetPort} (peer-url={destino})";
+                            if (!destino.Equals(_urlAmigoPendiente, StringComparison.OrdinalIgnoreCase))
+                            {
+                                rolLog += $" | raíz de la sesión; el enlace apuntaba a {_urlAmigoPendiente}";
+                            }
                             Console.WriteLine($"[Visor3D -> Godot] Parámetros inyectados: {userArgs}");
                             System.Diagnostics.Debug.WriteLine($"[Visor3D -> Godot] Parámetros inyectados: {userArgs}");
 
@@ -680,8 +825,8 @@ namespace Visor3D
                         }
                         else
                         {
-                            userArgs = $"--peer-url=\"{_urlAmigoPendiente}\"";
-                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO (URL sin parsear: {_urlAmigoPendiente})";
+                            userArgs = $"--peer-url=\"{destino}\"";
+                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO (URL sin parsear: {destino})";
                             Console.WriteLine($"[Visor3D -> Godot] Parámetros inyectados (URL sin parsear): {userArgs}");
                             System.Diagnostics.Debug.WriteLine($"[Visor3D -> Godot] Parámetros inyectados (URL sin parsear): {userArgs}");
                         }
@@ -1002,9 +1147,12 @@ namespace Visor3D
             {
                 bool hasTarget = TryParseConnectionTarget(_urlAmigoPendiente, out string targetHost, out int targetPort);
                 bool esClienteRemoto = hasTarget && targetHost != "127.0.0.1" && targetHost != "localhost" && !string.IsNullOrEmpty(targetHost);
+                // misma raíz que la línea de órdenes del motor, para que el fichero de
+                // sesión no vuelva a apuntar al portal del invitado que compartió el enlace
+                string peerUrl = !string.IsNullOrWhiteSpace(_hostSesionUrl) ? _hostSesionUrl : (_urlAmigoPendiente ?? "");
                 var sessionData = new
                 {
-                    peerUrl = _urlAmigoPendiente ?? "",
+                    peerUrl,
                     remoteIp = hasTarget ? targetHost : "",
                     remotePort = hasTarget ? targetPort : 8911,
                     esCliente = esClienteRemoto,
@@ -1120,6 +1268,1488 @@ namespace Visor3D
             }
         }
 
+        // ═══════════════════════════════════════════════════════════
+        // CHAT DEL METAVERSO (texto + voz + webcam)
+        // El anfitrión de la sesión retransmite; los invitados llegan a su
+        // relay por el mismo túnel público del WebNodo (ruta /chat), así
+        // que no hace falta un túnel adicional.
+        // ═══════════════════════════════════════════════════════════
+
+        private void IniciarChatSesion(string usuario, string uid)
+        {
+            DetenerChatSesion();
+
+            _chatUsuario = ChatProtocol.CleanName(usuario);
+            _chatUid = ChatProtocol.CleanUid(uid);
+            if (_chatUid.Length == 0) _chatUid = ChatProtocol.BuildFallbackUid(_chatUsuario);
+            try
+            {
+                _amigos = FriendsStore.Load(_chatUid);
+            }
+            catch (Exception ex)
+            {
+                _amigos = null;
+                Log($"[Chat] No se pudo cargar la lista de amigos: {ex.Message}");
+            }
+            _chatActivo = true;
+            _chatProximoIntento = DateTime.MinValue;
+
+            _uidsEnLinea.Clear();
+            _uidPorId.Clear();
+            _reenviosAmistad.Clear();
+            TxtMiCodigo.Text = ChatProtocol.BuildFriendCode(_chatUid);
+            TxtEstadoAmigos.Text = "";
+            RefrescarAmigos();
+
+            try
+            {
+                _chatServer = new ChatRelayServer();
+                _chatServer.Log += mensaje => Log($"[Chat] {mensaje}");
+                if (_chatServer.Start(8920, 10))
+                    Log($"[Chat] Relay local escuchando en el puerto {_chatServer.Port}.");
+                else
+                    Log("[Chat] No se pudo abrir el relay local; este visor solo podrá unirse como cliente.");
+            }
+            catch (Exception ex)
+            {
+                Log($"[Chat] Relay local no disponible: {ex.Message}");
+                _chatServer = null;
+            }
+
+            App.WebNodo.ChatEnabled = _chatServer?.IsRunning == true;
+            App.WebNodo.ChatLocalPort = _chatServer?.Port ?? 0;
+
+            _chatVoice = new ChatVoice();
+            _chatVoice.MicFrame += OnMicrofonoChat;
+            if (!_chatVoice.StartPlayback())
+                Log($"[Chat] {_chatVoice.LastError}");
+
+            _timerChat = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(2)
+            };
+            _timerChat.Tick += (s, e) => MantenerChatSesion();
+            _timerChat.Start();
+
+            ActualizarEstadoChat();
+            _ = ConectarChatAsync();
+        }
+
+        private void DetenerChatSesion()
+        {
+            _chatActivo = false;
+
+            foreach (var ventana in _ventanasPrivadas.Values.ToArray())
+            {
+                try { ventana.CerrarPorSesion(); } catch { }
+            }
+            _ventanasPrivadas.Clear();
+            _privadosNoLeidos.Clear();
+            _historialPrivado.Clear();
+            _uidPorId.Clear();
+            _uidsEnLinea.Clear();
+            _reenviosAmistad.Clear();
+            try { _amigos?.Guardar(); } catch { }
+            _amigos = null;
+            _chatUid = "";
+
+            _timerChat?.Stop();
+            _timerChat = null;
+
+            var cliente = _chatClient;
+            _chatClient = null;
+            try { cliente?.Dispose(); } catch { }
+
+            try { _chatWebcam?.Dispose(); } catch { }
+            _chatWebcam = null;
+
+            try { _chatVoice?.Dispose(); } catch { }
+            _chatVoice = null;
+
+            try { _chatServer?.Dispose(); } catch { }
+            _chatServer = null;
+
+            App.WebNodo.ChatEnabled = false;
+            App.WebNodo.ChatLocalPort = 0;
+
+            _nombresChat.Clear();
+            _tilesChat.Clear();
+            _ultimoVideoChat.Clear();
+            PanelVideos.Children.Clear();
+            ListaChat.Items.Clear();
+            ImgCamLocal.Source = null;
+            MarcoCamLocal.Visibility = Visibility.Collapsed;
+            BarraMic.Value = 0;
+
+            _chatConectando = false;
+            _chatNoLeidos = 0;
+            _chatAbierto = false;
+            PanelChat.Visibility = Visibility.Collapsed;
+            ColChat.Width = new GridLength(0);
+            ActualizarBotonChat();
+
+            PanelAmigos.Visibility = Visibility.Collapsed;
+            ListaAmigos.Children.Clear();
+            ListaSolicitudes.Children.Clear();
+            ListaEnSesion.Children.Clear();
+            LblSolicitudes.Visibility = Visibility.Collapsed;
+            LblEnSesion.Visibility = Visibility.Collapsed;
+            TxtMiCodigo.Text = "—";
+            TxtEstadoAmigos.Text = "";
+            TxtCodigoAmigo.Clear();
+            BtnAmigos.Content = "👥 Amigos";
+
+            BtnChatMic.Content = "🎙 Voz";
+            MarcarBotonChat(BtnChatMic, false);
+            BtnChatCam.Content = "📷 Cámara";
+            MarcarBotonChat(BtnChatCam, false);
+            TxtChatEstado.Text = "Chat desconectado";
+        }
+
+        /// <summary>
+        /// Decide a qué relay conectar: el local si este visor es el anfitrión
+        /// de la sesión, o el del anfitrión a través de su URL pública
+        /// (<c>wss://host/chat</c>, que el WebNodo enruta al relay).
+        /// </summary>
+        private string ResolverEndpointChat()
+        {
+            int puertoLocal = _chatServer?.Port ?? 8920;
+            if (EsAnfitrionChat()) return $"ws://127.0.0.1:{puertoLocal}/chat";
+
+            string anfitrion = !string.IsNullOrWhiteSpace(_hostSesionUrl)
+                ? _hostSesionUrl
+                : _urlAmigoPendiente;
+            if (string.IsNullOrWhiteSpace(anfitrion))
+                return $"ws://127.0.0.1:{puertoLocal}/chat";
+
+            if (Uri.TryCreate(anfitrion, UriKind.Absolute, out Uri? uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                string esquema = uri.Scheme == Uri.UriSchemeHttps ? "wss" : "ws";
+                return $"{esquema}://{uri.Authority}/chat";
+            }
+
+            // IP o host:puerto de la red local: el relay del anfitrión escucha en 8920.
+            if (TryParseConnectionTarget(anfitrion, out string host, out _))
+                return $"ws://{host}:8920/chat";
+
+            return $"ws://127.0.0.1:{puertoLocal}/chat";
+        }
+
+        /// <summary>
+        /// True si este visor es el anfitrión raíz de la sesión: quien no recibió
+        /// enlace de invitación, o quien Godot marcó como nuevo anfitrión tras una
+        /// migración (su portal coincide con el último session_host.txt).
+        /// </summary>
+        private bool EsAnfitrionChat()
+        {
+            if (string.IsNullOrWhiteSpace(_urlAmigoPendiente)) return true;
+            if (!string.IsNullOrWhiteSpace(_urlPublica) &&
+                _hostSesionUrl.Equals(_urlPublica, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            try
+            {
+                string path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Godot", "app_userdata", "WoldVirtualP2P3D", "session_host.txt");
+                if (!File.Exists(path) || File.GetLastWriteTimeUtc(path) < _arranqueUtc) return false;
+
+                string actual = File.ReadAllText(path).Trim();
+                return !string.IsNullOrWhiteSpace(_urlPublica) &&
+                       actual.Equals(_urlPublica, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private async Task ConectarChatAsync()
+        {
+            if (!_chatActivo || _chatConectando) return;
+
+            string endpoint = ResolverEndpointChat();
+            var actual = _chatClient;
+            if (actual != null && actual.IsConnected &&
+                string.Equals(actual.EndPoint, endpoint, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            _chatConectando = true;
+            try
+            {
+                if (actual != null)
+                {
+                    _chatClient = null;
+                    try { actual.Dispose(); } catch { }
+                }
+
+                // La presencia se limpia antes de crear el cliente: el saludo
+                // `welcome` puede encolar `PeerJoined` antes que `Connected`, y
+                // limpiar después borraría a los pares ya conectados.
+                _uidPorId.Clear();
+                _uidsEnLinea.Clear();
+                _reenviosAmistad.Clear();
+                ActualizarEstadoVentanasPrivadas();
+                RefrescarAmigos();
+
+                Log($"[Chat] Conectando a {endpoint}…");
+                var cliente = new ChatClient(_chatUsuario, _chatUid);
+                SuscribirEventosChat(cliente);
+                _chatClient = cliente;
+
+                bool ok = await cliente.ConnectAsync(endpoint);
+                if (!ok)
+                {
+                    if (ReferenceEquals(_chatClient, cliente)) _chatClient = null;
+                    try { cliente.Dispose(); } catch { }
+                    _chatProximoIntento = DateTime.UtcNow.AddSeconds(5);
+                    TxtChatEstado.Text = $"🔴 Sin conexión con el anfitrión del chat. Reintentando…";
+                    return;
+                }
+
+                _chatProximoIntento = DateTime.MinValue;
+                await cliente.SendStateAsync(_chatVoice?.IsMicOn == true, _chatWebcam?.IsRunning == true);
+            }
+            catch (Exception ex)
+            {
+                Log($"[Chat] Error al conectar: {ex.Message}");
+                _chatProximoIntento = DateTime.UtcNow.AddSeconds(5);
+            }
+            finally
+            {
+                _chatConectando = false;
+            }
+        }
+
+        private void SuscribirEventosChat(ChatClient cliente)
+        {
+            cliente.Connected += uri => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                AgregarMensajeSistemaChat("Conectado al chat del metaverso.");
+                ActualizarEstadoChat();
+            }));
+
+            cliente.Disconnected += motivo => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _chatVoice?.Reset();
+                _uidPorId.Clear();
+                _uidsEnLinea.Clear();
+                _reenviosAmistad.Clear();
+                ActualizarEstadoVentanasPrivadas();
+                RefrescarAmigos();
+                AgregarMensajeSistemaChat($"Chat desconectado ({motivo}). Reintentando…");
+                ActualizarEstadoChat();
+            }));
+
+            cliente.TextReceived += (id, nombre, texto) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _nombresChat[id] = nombre;
+                bool propio = id == (_chatClient?.MyId ?? -1);
+                AgregarMensajeChat(
+                    propio ? "Tú" : ChatProtocol.CleanName(nombre),
+                    texto,
+                    propio ? Color.FromRgb(45, 212, 191) : Color.FromRgb(0, 217, 255));
+
+                if (!_chatAbierto && !propio)
+                {
+                    _chatNoLeidos++;
+                    ActualizarBotonChat();
+                }
+            }));
+
+            cliente.SystemReceived += texto => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                AgregarMensajeSistemaChat(texto);
+            }));
+
+            cliente.PeerJoined += (id, nombre, uid) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                AgregarPresencia(id, nombre, uid);
+                ActualizarNombreTile(id);
+                ActualizarEstadoChat();
+            }));
+
+            cliente.PeerLeft += (id, uid) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                QuitarPresencia(id);
+                QuitarTileVideo(id);
+                _chatVoice?.RemoveRemote(id);
+                ActualizarEstadoChat();
+            }));
+
+            cliente.PeerState += (id, nombre, audio, video) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!string.IsNullOrWhiteSpace(nombre)) _nombresChat[id] = nombre;
+                ActualizarNombreTile(id);
+                if (!video) OcultarTileVideo(id);
+                ActualizarEstadoChat();
+            }));
+
+            cliente.MediaReceived += (tipo, datos, emisor) =>
+            {
+                if (tipo == ChatProtocol.KindAudio)
+                {
+                    _chatVoice?.PlayRemote(emisor, datos);
+                    return;
+                }
+
+                if (tipo == ChatProtocol.KindVideo)
+                {
+                    BitmapImage? imagen = DecodificarJpeg(datos);
+                    if (imagen == null) return;
+                    Dispatcher.BeginInvoke(new Action(() => MostrarTileVideo(emisor, imagen)));
+                }
+            };
+
+            cliente.ErrorReceived += texto => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                AgregarMensajeSistemaChat("⚠ " + texto);
+            }));
+
+            cliente.FriendRequestReceived += (uid, nombre, nota) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                string id = ChatProtocol.CleanUid(uid);
+                if (id.Length == 0 || _amigos == null) return;
+
+                string limpio = ChatProtocol.CleanName(nombre);
+                if (_amigos.EsAmigo(id))
+                {
+                    // La otra persona puede tener una lista antigua: confirmamos.
+                    _ = cliente.SendFriendResponseAsync(id, true);
+                    return;
+                }
+
+                _amigos.AgregarEntrante(id, limpio);
+                _amigos.Guardar();
+
+                string aviso = string.IsNullOrWhiteSpace(nota)
+                    ? $"{limpio} te ha enviado una solicitud de amistad."
+                    : $"{limpio} te ha enviado una solicitud de amistad: «{nota}»";
+                AgregarMensajeSistemaChat(aviso);
+                TxtEstadoAmigos.Text = $"Solicitud de {limpio}.";
+                if (_chatAbierto) PanelAmigos.Visibility = Visibility.Visible;
+                else
+                {
+                    _chatNoLeidos++;
+                    ActualizarBotonChat();
+                }
+                RefrescarAmigos();
+            }));
+
+            cliente.FriendRequestSent += (uid, nombre, destino) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_amigos == null) return;
+                _amigos.ResolverSaliente(destino, uid, nombre);
+                _amigos.Guardar();
+                TxtEstadoAmigos.Text = string.IsNullOrWhiteSpace(nombre)
+                    ? "Solicitud enviada. Esperando respuesta…"
+                    : $"Solicitud enviada a {nombre}. Esperando respuesta…";
+                RefrescarAmigos();
+            }));
+
+            cliente.FriendAccepted += (uid, nombre) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                string id = ChatProtocol.CleanUid(uid);
+                if (id.Length == 0 || _amigos == null) return;
+                if (!TieneSolicitudEnviadaA(id)) return;
+
+                string limpio = ChatProtocol.CleanName(nombre);
+                _amigos.QuitarSaliente(id);
+                _amigos.QuitarSaliente(ChatProtocol.BuildFriendCode(id));
+                _amigos.QuitarEntrante(id);
+                _amigos.AgregarAmigo(id, limpio);
+                _amigos.Guardar();
+
+                AgregarMensajeSistemaChat($"{limpio} ha aceptado tu solicitud de amistad.");
+                TxtEstadoAmigos.Text = $"{limpio} ya es tu amigo.";
+                ActualizarEstadoVentanasPrivadas();
+                RefrescarAmigos();
+            }));
+
+            cliente.FriendDeclined += (uid, nombre) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                string id = ChatProtocol.CleanUid(uid);
+                if (id.Length == 0 || _amigos == null) return;
+
+                string limpio = ChatProtocol.CleanName(nombre);
+                _amigos.QuitarSaliente(id);
+                _amigos.QuitarSaliente(ChatProtocol.BuildFriendCode(id));
+                _amigos.Guardar();
+
+                AgregarMensajeSistemaChat($"{limpio} ha rechazado tu solicitud de amistad.");
+                TxtEstadoAmigos.Text = $"{limpio} ha rechazado la solicitud.";
+                RefrescarAmigos();
+            }));
+
+            cliente.FriendRequestFailed += (destino, motivo) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                string razon = string.IsNullOrWhiteSpace(motivo)
+                    ? "No se pudo enviar la solicitud."
+                    : motivo;
+                TxtEstadoAmigos.Text = "⚠ " + razon;
+                AgregarMensajeSistemaChat("⚠ " + razon);
+                RefrescarAmigos();
+            }));
+
+            cliente.DirectMessageReceived += (uid, nombre, texto, ts) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                string id = ChatProtocol.CleanUid(uid);
+                if (id.Length == 0) return;
+
+                string limpio = ChatProtocol.CleanName(nombre);
+                if (_amigos == null || !_amigos.EsAmigo(id))
+                {
+                    AgregarMensajeSistemaChat(
+                        $"{limpio} intentó enviarte un mensaje privado. Añádelo como amigo para responder.");
+                    if (!_chatAbierto)
+                    {
+                        _chatNoLeidos++;
+                        ActualizarBotonChat();
+                    }
+                    return;
+                }
+
+                if (_amigos.ActualizarNombreAmigo(id, limpio)) _amigos.Guardar();
+                RegistrarHistorialPrivado(id, limpio, texto, propio: false);
+
+                if (_ventanasPrivadas.TryGetValue(id, out var ventana))
+                {
+                    ventana.AgregarMensaje(limpio, texto, false);
+                    if (ventana.IsActive)
+                    {
+                        ventana.Activate();
+                    }
+                    else
+                    {
+                        _privadosNoLeidos[id] = (_privadosNoLeidos.TryGetValue(id, out int n) ? n : 0) + 1;
+                        RefrescarAmigos();
+                    }
+                }
+                else
+                {
+                    _privadosNoLeidos[id] = (_privadosNoLeidos.TryGetValue(id, out int n) ? n : 0) + 1;
+                    AgregarMensajeSistemaChat($"Nuevo mensaje privado de {limpio}.");
+                    if (!_chatAbierto)
+                    {
+                        _chatNoLeidos++;
+                        ActualizarBotonChat();
+                    }
+                    RefrescarAmigos();
+                }
+            }));
+
+            cliente.DirectMessageFailed += (uid, motivo) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                string razon = string.IsNullOrWhiteSpace(motivo)
+                    ? "No se pudo entregar el mensaje privado."
+                    : motivo;
+                string id = ChatProtocol.CleanUid(uid);
+                if (_ventanasPrivadas.TryGetValue(id, out var ventana))
+                    ventana.AgregarSistema("No se pudo entregar: " + razon);
+                else
+                    AgregarMensajeSistemaChat("⚠ " + razon);
+            }));
+        }
+
+        /// <summary>Reconexión y caducidad de vídeos; se ejecuta cada 2 s en el hilo de UI.</summary>
+        private void MantenerChatSesion()
+        {
+            if (!_chatActivo) return;
+
+            foreach (var par in _ultimoVideoChat.ToArray())
+            {
+                if ((DateTime.UtcNow - par.Value).TotalSeconds < 6) continue;
+                if (_tilesChat.TryGetValue(par.Key, out var tile))
+                    tile.Marco.Visibility = Visibility.Collapsed;
+                _ultimoVideoChat.Remove(par.Key);
+            }
+
+            if (_chatVoice?.IsMicOn == true)
+                BarraMic.Value = Math.Min(100, _chatVoice.Level * 140);
+            else if (BarraMic.Value > 0)
+                BarraMic.Value = 0;
+
+            ActualizarEstadoChat();
+
+            if (_chatConectando || DateTime.UtcNow < _chatProximoIntento) return;
+            if (_chatClient?.IsConnected == true &&
+                string.Equals(_chatClient.EndPoint, ResolverEndpointChat(), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            _ = ConectarChatAsync();
+        }
+
+        private void ActualizarEstadoChat()
+        {
+            if (!_chatActivo)
+            {
+                TxtChatEstado.Text = "Chat desconectado";
+                return;
+            }
+
+            var texto = new StringBuilder();
+            if (_chatClient?.IsConnected == true)
+                texto.Append($"🟢 Conectado como {_chatUsuario} (id {_chatClient.MyId})");
+            else
+                texto.Append("🔴 Sin conexión con el anfitrión del chat");
+
+            if (_chatServer?.IsRunning == true)
+                texto.Append($" · relay :{_chatServer.Port} · {_chatServer.ClientCount} conectados");
+            if (_chatVoice?.IsMicOn == true)
+                texto.Append(" · 🎙 micrófono activo");
+            if (_chatWebcam?.IsRunning == true)
+                texto.Append(" · 📷 cámara activa");
+
+            TxtChatEstado.Text = texto.ToString();
+        }
+
+        private void AlternarPanelChat()
+        {
+            if (_chatAbierto) CerrarPanelChat();
+            else AbrirPanelChat();
+        }
+
+        private void AbrirPanelChat()
+        {
+            if (_chatAbierto) return;
+
+            _chatAbierto = true;
+            PanelChat.Visibility = Visibility.Visible;
+            ColChat.Width = new GridLength(AnchoPanelChat);
+            _chatNoLeidos = 0;
+            ActualizarBotonChat();
+            ActualizarEstadoChat();
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                TxtChat.Focus();
+                TxtChat.CaretIndex = TxtChat.Text.Length;
+            }), System.Windows.Threading.DispatcherPriority.Input);
+        }
+
+        private void CerrarPanelChat()
+        {
+            if (!_chatAbierto) return;
+
+            _chatAbierto = false;
+            PanelChat.Visibility = Visibility.Collapsed;
+            ColChat.Width = new GridLength(0);
+            ActualizarBotonChat();
+            _godotHostMain?.ActivateGodotFocus();
+        }
+
+        private void ActualizarBotonChat()
+        {
+            BtnChat.Content = _chatNoLeidos > 0 ? $"💬 Chat ({_chatNoLeidos})" : "💬 Chat";
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // Amigos: presencia, solicitudes y chat privado
+        // ═══════════════════════════════════════════════════════════
+
+        private void AgregarPresencia(int id, string nombre, string uid)
+        {
+            _nombresChat[id] = nombre;
+            string limpio = ChatProtocol.CleanUid(uid);
+            if (limpio.Length > 0) _uidPorId[id] = limpio;
+            RecalcularPresencia();
+        }
+
+        private void QuitarPresencia(int id)
+        {
+            _nombresChat.Remove(id);
+            _uidPorId.Remove(id);
+            RecalcularPresencia();
+        }
+
+        private void RecalcularPresencia()
+        {
+            var antes = new HashSet<string>(_uidsEnLinea);
+            _uidsEnLinea.Clear();
+            foreach (var uid in _uidPorId.Values)
+            {
+                if (uid != _chatUid) _uidsEnLinea.Add(uid);
+            }
+
+            ActualizarEstadoVentanasPrivadas();
+            if (!antes.SetEquals(_uidsEnLinea)) RefrescarAmigos();
+            else ActualizarBotonAmigos();
+
+            ReenviarSolicitudesPendientes();
+        }
+
+        private void ActualizarEstadoVentanasPrivadas()
+        {
+            foreach (var par in _ventanasPrivadas)
+                par.Value.SetEnLinea(_uidsEnLinea.Contains(par.Key));
+        }
+
+        private List<(string Uid, string Nombre)> PersonasEnSesion()
+        {
+            var vistos = new Dictionary<string, string>();
+            foreach (var par in _uidPorId)
+            {
+                if (string.IsNullOrEmpty(par.Value) || par.Value == _chatUid) continue;
+                if (vistos.ContainsKey(par.Value)) continue;
+                string nombre = _nombresChat.TryGetValue(par.Key, out string? n) ? n : "Jugador";
+                vistos[par.Value] = ChatProtocol.CleanName(nombre);
+            }
+            return vistos.Select(x => (x.Key, x.Value)).ToList();
+        }
+
+        private void AlternarPanelAmigos()
+        {
+            bool visible = PanelAmigos.Visibility == Visibility.Visible;
+            PanelAmigos.Visibility = visible ? Visibility.Collapsed : Visibility.Visible;
+            if (!visible)
+            {
+                RefrescarAmigos();
+                TxtCodigoAmigo.Focus();
+            }
+        }
+
+        private void CopiarCodigoAmigo()
+        {
+            string codigo = ChatProtocol.BuildFriendCode(_chatUid);
+            if (codigo.Length == 0) return;
+
+            try
+            {
+                Clipboard.SetText(codigo);
+                TxtEstadoAmigos.Text = "Código copiado al portapapeles.";
+            }
+            catch
+            {
+                TxtEstadoAmigos.Text = "No se pudo copiar. Código: " + codigo;
+            }
+        }
+
+        private void OnCodigoAmigoKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter) return;
+            EnviarSolicitudPorCodigo();
+            e.Handled = true;
+        }
+
+        private void EnviarSolicitudPorCodigo()
+        {
+            if (_amigos == null) return;
+
+            string codigo = ChatProtocol.CleanUid(TxtCodigoAmigo.Text).ToUpperInvariant();
+            if (codigo.Length == 0)
+            {
+                TxtEstadoAmigos.Text = "Introduce el código de la otra persona.";
+                return;
+            }
+
+            if (codigo == ChatProtocol.BuildFriendCode(_chatUid))
+            {
+                TxtEstadoAmigos.Text = "Ese es tu propio código.";
+                return;
+            }
+
+            var cliente = _chatClient;
+            if (cliente?.IsConnected != true)
+            {
+                TxtEstadoAmigos.Text = "Sin conexión con el chat. Reintentando…";
+                return;
+            }
+
+            if (_amigos.TieneSaliente(codigo))
+            {
+                TxtEstadoAmigos.Text = "Ya hay una solicitud pendiente con ese código.";
+                return;
+            }
+
+            _amigos.RegistrarSaliente("", codigo, "");
+            _amigos.Guardar();
+            TxtCodigoAmigo.Clear();
+            TxtEstadoAmigos.Text = "Solicitud enviada. Esperando respuesta…";
+            RefrescarAmigos();
+            _ = cliente.SendFriendRequestAsync(codigo);
+        }
+
+        private void SolicitarAmistad(string uid, string nombre)
+        {
+            if (_amigos == null) return;
+
+            string id = ChatProtocol.CleanUid(uid);
+            if (id.Length == 0 || id == _chatUid) return;
+
+            string limpio = ChatProtocol.CleanName(nombre);
+            if (_amigos.EsAmigo(id))
+            {
+                TxtEstadoAmigos.Text = $"{limpio} ya es tu amigo.";
+                return;
+            }
+            if (_amigos.TieneEntrante(id))
+            {
+                TxtEstadoAmigos.Text = $"{limpio} ya te envió una solicitud; acéptala en la lista.";
+                return;
+            }
+            if (_amigos.TieneSaliente(id))
+            {
+                TxtEstadoAmigos.Text = $"Ya enviaste una solicitud a {limpio}.";
+                return;
+            }
+
+            var cliente = _chatClient;
+            if (cliente?.IsConnected != true)
+            {
+                TxtEstadoAmigos.Text = "Sin conexión con el chat. Reintentando…";
+                return;
+            }
+
+            _amigos.RegistrarSaliente(id, "", limpio);
+            _amigos.Guardar();
+            TxtEstadoAmigos.Text = $"Solicitud enviada a {limpio}.";
+            RefrescarAmigos();
+            _ = cliente.SendFriendRequestAsync(id);
+        }
+
+        private bool TieneSolicitudEnviadaA(string uid)
+        {
+            if (_amigos == null) return false;
+            if (_amigos.TieneSaliente(uid)) return true;
+
+            string codigo = ChatProtocol.BuildFriendCode(uid);
+            return codigo.Length > 0 && _amigos.Outgoing.Any(r =>
+                r.Uid.Length == 0 &&
+                string.Equals(r.Code, codigo, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private void ResponderSolicitud(string uid, string nombre, bool aceptar)
+        {
+            if (_amigos == null) return;
+
+            string id = ChatProtocol.CleanUid(uid);
+            if (id.Length == 0) return;
+
+            string limpio = ChatProtocol.CleanName(nombre);
+            var cliente = _chatClient;
+            if (cliente?.IsConnected != true)
+            {
+                TxtEstadoAmigos.Text = "Sin conexión con el chat. No se puede responder ahora mismo.";
+                return;
+            }
+
+            _amigos.QuitarEntrante(id);
+            if (aceptar) _amigos.AgregarAmigo(id, limpio);
+            _amigos.Guardar();
+
+            TxtEstadoAmigos.Text = aceptar
+                ? $"{limpio} ya es tu amigo."
+                : $"Solicitud de {limpio} rechazada.";
+            AgregarMensajeSistemaChat(aceptar
+                ? $"Has aceptado a {limpio}."
+                : $"Has rechazado la solicitud de {limpio}.");
+
+            RefrescarAmigos();
+            _ = cliente.SendFriendResponseAsync(id, aceptar);
+        }
+
+        private void CancelarSolicitudEnviada(FriendRequestRecord solicitud)
+        {
+            if (_amigos == null) return;
+
+            string clave = solicitud.Uid.Length > 0 ? solicitud.Uid : solicitud.Code;
+            _amigos.QuitarSaliente(clave);
+            _amigos.Guardar();
+            TxtEstadoAmigos.Text = "Solicitud cancelada.";
+            RefrescarAmigos();
+        }
+
+        private void QuitarAmigo(string uid)
+        {
+            if (_amigos == null) return;
+
+            string id = ChatProtocol.CleanUid(uid);
+            var amigo = _amigos.BuscarAmigo(id);
+            if (amigo == null) return;
+
+            string nombre = string.IsNullOrWhiteSpace(amigo.Name) ? "este amigo" : amigo.Name;
+            if (MessageBox.Show(
+                    $"¿Quitar a «{nombre}» de tu lista de amigos?\n\n" +
+                    "Solo se borra en este equipo; la otra persona no recibe ningún aviso.",
+                    "Amigos", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            _amigos.QuitarAmigo(id);
+            _amigos.Guardar();
+
+            if (_ventanasPrivadas.TryGetValue(id, out var ventana))
+            {
+                _ventanasPrivadas.Remove(id);
+                try { ventana.CerrarPorSesion(); } catch { }
+            }
+            _privadosNoLeidos.Remove(id);
+            _historialPrivado.Remove(id);
+
+            TxtEstadoAmigos.Text = $"{nombre} ya no está en tu lista.";
+            RefrescarAmigos();
+        }
+
+        private void AbrirChatPrivado(string uid, string nombre)
+        {
+            if (_amigos == null) return;
+
+            string id = ChatProtocol.CleanUid(uid);
+            if (id.Length == 0 || !_amigos.EsAmigo(id)) return;
+
+            string limpio = _amigos.BuscarAmigo(id)?.Name ?? ChatProtocol.CleanName(nombre);
+            if (_ventanasPrivadas.TryGetValue(id, out var existente))
+            {
+                if (existente.IsVisible)
+                {
+                    existente.Activate();
+                    existente.Focus();
+                    _privadosNoLeidos.Remove(id);
+                    RefrescarAmigos();
+                    return;
+                }
+                _ventanasPrivadas.Remove(id);
+            }
+
+            var ventana = new PrivateChatWindow(
+                id, limpio,
+                texto => EnviarMensajePrivado(id, texto),
+                v => _ventanasPrivadas.Remove(id));
+            ventana.Owner = this;
+            ventana.Leido += v =>
+            {
+                if (_privadosNoLeidos.Remove(id)) RefrescarAmigos();
+            };
+            ventana.SetEnLinea(_uidsEnLinea.Contains(id));
+
+            if (_historialPrivado.TryGetValue(id, out var historial) && historial.Count > 0)
+                ventana.CargarHistorial(historial);
+
+            _ventanasPrivadas[id] = ventana;
+            _privadosNoLeidos.Remove(id);
+            RefrescarAmigos();
+            ventana.Show();
+            ventana.Activate();
+        }
+
+        private void EnviarMensajePrivado(string uid, string texto)
+        {
+            string id = ChatProtocol.CleanUid(uid);
+            if (id.Length == 0) return;
+
+            string autor = _amigos?.BuscarAmigo(id)?.Name ?? "Tú";
+            RegistrarHistorialPrivado(id, autor, texto, propio: true);
+
+            var cliente = _chatClient;
+            if (cliente?.IsConnected != true)
+            {
+                if (_ventanasPrivadas.TryGetValue(id, out var ventana))
+                    ventana.AgregarSistema("Sin conexión con el chat. El mensaje no se envió.");
+                return;
+            }
+
+            _ = cliente.SendDirectAsync(id, texto);
+        }
+
+        private void RegistrarHistorialPrivado(string uid, string autor, string texto, bool propio)
+        {
+            if (!_historialPrivado.TryGetValue(uid, out var lista))
+            {
+                lista = new List<MensajePrivado>();
+                _historialPrivado[uid] = lista;
+            }
+
+            lista.Add(new MensajePrivado(propio, propio ? "Tú" : autor, texto));
+            if (lista.Count > 200) lista.RemoveRange(0, lista.Count - 200);
+        }
+
+        private void ReenviarSolicitudesPendientes()
+        {
+            var cliente = _chatClient;
+            if (cliente?.IsConnected != true || _amigos == null) return;
+
+            foreach (var pendiente in _amigos.Outgoing.ToList())
+            {
+                if (pendiente.Uid.Length > 0 && _amigos.EsAmigo(pendiente.Uid)) continue;
+
+                string objetivo = pendiente.Uid;
+                bool resuelto = false;
+
+                if (objetivo.Length == 0 && pendiente.Code.Length > 0)
+                {
+                    foreach (var persona in PersonasEnSesion())
+                    {
+                        if (!string.Equals(
+                                ChatProtocol.BuildFriendCode(persona.Uid),
+                                pendiente.Code,
+                                StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        objetivo = persona.Uid;
+                        _amigos.ResolverSaliente(pendiente.Code, objetivo, persona.Nombre);
+                        _amigos.Guardar();
+                        resuelto = true;
+                        break;
+                    }
+                }
+
+                if (objetivo.Length == 0 || !_uidsEnLinea.Contains(objetivo)) continue;
+
+                string clave = cliente.MyId + ":" + objetivo;
+                if (!_reenviosAmistad.Add(clave)) continue;
+
+                _ = cliente.SendFriendRequestAsync(objetivo);
+                if (resuelto) RefrescarAmigos();
+            }
+        }
+
+        private void RefrescarAmigos()
+        {
+            if (ListaAmigos == null) return;
+
+            TxtMiCodigo.Text = _chatUid.Length > 0 ? ChatProtocol.BuildFriendCode(_chatUid) : "—";
+            ListaAmigos.Children.Clear();
+            ListaSolicitudes.Children.Clear();
+            ListaEnSesion.Children.Clear();
+
+            var amigos = _amigos?.Friends.ToList() ?? new List<FriendRecord>();
+            var entrantes = _amigos?.Incoming.ToList() ?? new List<FriendRequestRecord>();
+            var salientes = _amigos?.Outgoing.ToList() ?? new List<FriendRequestRecord>();
+
+            if (amigos.Count == 0)
+                ListaAmigos.Children.Add(TextoAmigos("Aún no tienes amigos."));
+            else
+                foreach (var amigo in amigos
+                             .OrderByDescending(a => _uidsEnLinea.Contains(a.Uid))
+                             .ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase))
+                    ListaAmigos.Children.Add(CrearFilaAmigo(amigo));
+
+            LblSolicitudes.Visibility = entrantes.Count + salientes.Count > 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            foreach (var solicitud in entrantes.OrderByDescending(s => s.At))
+                ListaSolicitudes.Children.Add(CrearFilaSolicitud(solicitud));
+
+            foreach (var pendiente in salientes.OrderByDescending(s => s.At))
+                ListaSolicitudes.Children.Add(CrearFilaPendiente(pendiente));
+
+            var enSesion = PersonasEnSesion()
+                .Where(p => _amigos?.EsAmigo(p.Uid) != true &&
+                            _amigos?.TieneSaliente(p.Uid) != true &&
+                            _amigos?.TieneEntrante(p.Uid) != true)
+                .OrderBy(p => p.Nombre, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            LblEnSesion.Visibility = enSesion.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            foreach (var persona in enSesion)
+                ListaEnSesion.Children.Add(CrearFilaSesion(persona.Uid, persona.Nombre));
+
+            ActualizarBotonAmigos();
+        }
+
+        private void ActualizarBotonAmigos()
+        {
+            if (BtnAmigos == null) return;
+
+            int amigos = _amigos?.Friends.Count ?? 0;
+            int enLinea = _amigos?.Friends.Count(f => _uidsEnLinea.Contains(f.Uid)) ?? 0;
+            int pendientes = (_amigos?.Incoming.Count ?? 0) + _privadosNoLeidos.Values.Sum();
+
+            BtnAmigos.Content = pendientes > 0 ? $"👥 Amigos ({pendientes})" : "👥 Amigos";
+            BtnAmigos.ToolTip = amigos > 0
+                ? $"{enLinea}/{amigos} amigos en línea"
+                : "Abrir tu lista de amigos";
+        }
+
+        private Border CrearFilaAmigo(FriendRecord amigo)
+        {
+            bool enLinea = _uidsEnLinea.Contains(amigo.Uid);
+            var grid = NuevaFilaAmigo();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(10) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var punto = new System.Windows.Shapes.Ellipse
+            {
+                Width = 7,
+                Height = 7,
+                Fill = new SolidColorBrush(enLinea
+                    ? Color.FromRgb(45, 212, 191)
+                    : Color.FromRgb(71, 85, 105)),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(punto, 0);
+            grid.Children.Add(punto);
+
+            string etiqueta = string.IsNullOrWhiteSpace(amigo.Name) ? "Jugador" : amigo.Name;
+            if (_privadosNoLeidos.TryGetValue(amigo.Uid, out int noLeidos) && noLeidos > 0)
+                etiqueta += $" ({noLeidos})";
+
+            var nombre = new TextBlock
+            {
+                Text = etiqueta,
+                Foreground = new SolidColorBrush(Color.FromRgb(226, 232, 240)),
+                FontSize = 10.5,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(2, 0, 4, 0),
+                ToolTip = enLinea ? "En línea" : "Sin conexión"
+            };
+            Grid.SetColumn(nombre, 1);
+            grid.Children.Add(nombre);
+
+            var chat = BotonAmigos("Chat");
+            chat.Click += (s, e) => AbrirChatPrivado(amigo.Uid, amigo.Name);
+            Grid.SetColumn(chat, 2);
+            grid.Children.Add(chat);
+
+            var quitar = BotonAmigos("✕");
+            quitar.ToolTip = "Quitar de tu lista de amigos";
+            quitar.Click += (s, e) => QuitarAmigo(amigo.Uid);
+            Grid.SetColumn(quitar, 3);
+            grid.Children.Add(quitar);
+
+            return new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(10, 16, 29)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(22, 34, 56)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(4, 2, 3, 2),
+                Margin = new Thickness(0, 1, 0, 1),
+                Child = grid
+            };
+        }
+
+        private Border CrearFilaSolicitud(FriendRequestRecord solicitud)
+        {
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            string nombre = string.IsNullOrWhiteSpace(solicitud.Name) ? "Jugador" : solicitud.Name;
+            var texto = new TextBlock
+            {
+                Text = $"👋 {nombre}",
+                Foreground = new SolidColorBrush(Color.FromRgb(251, 191, 36)),
+                FontSize = 10.5,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(texto, 0);
+            grid.Children.Add(texto);
+
+            var aceptar = BotonAmigos("✓");
+            aceptar.ToolTip = $"Aceptar a {nombre}";
+            aceptar.Click += (s, e) => ResponderSolicitud(solicitud.Uid, nombre, true);
+            Grid.SetColumn(aceptar, 1);
+            grid.Children.Add(aceptar);
+
+            var rechazar = BotonAmigos("✕");
+            rechazar.ToolTip = "Rechazar la solicitud";
+            rechazar.Click += (s, e) => ResponderSolicitud(solicitud.Uid, nombre, false);
+            Grid.SetColumn(rechazar, 2);
+            grid.Children.Add(rechazar);
+
+            return new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(26, 22, 10)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(80, 62, 20)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(4, 2, 3, 2),
+                Margin = new Thickness(0, 1, 0, 1),
+                Child = grid
+            };
+        }
+
+        private Border CrearFilaPendiente(FriendRequestRecord solicitud)
+        {
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            string nombre = !string.IsNullOrWhiteSpace(solicitud.Name)
+                ? solicitud.Name
+                : (!string.IsNullOrWhiteSpace(solicitud.Code) ? "Código " + solicitud.Code : "Solicitud");
+            var texto = new TextBlock
+            {
+                Text = $"⏳ {nombre}",
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                FontSize = 10.5,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = "Esperando respuesta"
+            };
+            Grid.SetColumn(texto, 0);
+            grid.Children.Add(texto);
+
+            var cancelar = BotonAmigos("✕");
+            cancelar.ToolTip = "Cancelar la solicitud enviada";
+            cancelar.Click += (s, e) => CancelarSolicitudEnviada(solicitud);
+            Grid.SetColumn(cancelar, 1);
+            grid.Children.Add(cancelar);
+
+            return new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(13, 20, 36)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(29, 58, 92)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(4, 2, 3, 2),
+                Margin = new Thickness(0, 1, 0, 1),
+                Child = grid
+            };
+        }
+
+        private Border CrearFilaSesion(string uid, string nombre)
+        {
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var texto = new TextBlock
+            {
+                Text = nombre,
+                Foreground = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
+                FontSize = 10.5,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(texto, 0);
+            grid.Children.Add(texto);
+
+            var agregar = BotonAmigos("Añadir");
+            agregar.ToolTip = $"Enviar solicitud de amistad a {nombre}";
+            agregar.Click += (s, e) => SolicitarAmistad(uid, nombre);
+            Grid.SetColumn(agregar, 1);
+            grid.Children.Add(agregar);
+
+            return new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(10, 16, 29)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(22, 34, 56)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(4, 2, 3, 2),
+                Margin = new Thickness(0, 1, 0, 1),
+                Child = grid
+            };
+        }
+
+        private static Grid NuevaFilaAmigo()
+            => new() { Margin = new Thickness(0) };
+
+        private static Button BotonAmigos(string texto)
+        {
+            var boton = new Button
+            {
+                Content = texto,
+                Height = 20,
+                MinWidth = 22,
+                Padding = new Thickness(5, 0, 5, 0),
+                Margin = new Thickness(3, 0, 0, 0),
+                FontSize = 9.5,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromRgb(226, 232, 240)),
+                Background = new SolidColorBrush(Color.FromRgb(22, 34, 56)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(42, 67, 101)),
+                BorderThickness = new Thickness(1),
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+            boton.Resources.Add(typeof(Border), new Style(typeof(Border))
+            {
+                Setters = { new Setter(Border.CornerRadiusProperty, new CornerRadius(4)) }
+            });
+            return boton;
+        }
+
+        private static TextBlock TextoAmigos(string texto) => new()
+        {
+            Text = texto,
+            Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+            FontSize = 10,
+            FontStyle = FontStyles.Italic,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(2, 1, 2, 1)
+        };
+
+        private static void MarcarBotonChat(Button boton, bool activo)
+        {
+            boton.Background = new SolidColorBrush(activo
+                ? Color.FromRgb(6, 78, 59)
+                : Color.FromRgb(22, 34, 56));
+            boton.BorderBrush = new SolidColorBrush(activo
+                ? Color.FromRgb(34, 197, 94)
+                : Color.FromRgb(42, 67, 101));
+            boton.Foreground = new SolidColorBrush(activo
+                ? Colors.White
+                : Color.FromRgb(226, 232, 240));
+        }
+
+        private void OnChatTextBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                EnviarMensajeChat();
+                e.Handled = true;
+            }
+            else if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                CerrarPanelChat();
+                e.Handled = true;
+            }
+        }
+
+        private void EnviarMensajeChat()
+        {
+            string texto = TxtChat.Text.Trim();
+            if (texto.Length == 0) return;
+
+            var cliente = _chatClient;
+            if (cliente == null || !cliente.IsConnected)
+            {
+                AgregarMensajeSistemaChat("Sin conexión con el anfitrión del chat. Reintentando…");
+                return;
+            }
+
+            _ = cliente.SendTextAsync(texto);
+            TxtChat.Clear();
+            TxtChat.Focus();
+        }
+
+        private void AlternarMicrofonoChat()
+        {
+            if (!_chatActivo || _chatVoice == null) return;
+
+            if (_chatVoice.IsMicOn)
+            {
+                _chatVoice.StopMic();
+                MarcarBotonChat(BtnChatMic, false);
+                BtnChatMic.Content = "🎙 Voz";
+            }
+            else
+            {
+                if (ChatVoice.MicrophoneCount == 0)
+                {
+                    MessageBox.Show("No se detectó ningún micrófono en este equipo.",
+                        "Chat de voz", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!_chatVoice.StartMic())
+                {
+                    MessageBox.Show(_chatVoice.LastError ?? "No se pudo abrir el micrófono.",
+                        "Chat de voz", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                MarcarBotonChat(BtnChatMic, true);
+                BtnChatMic.Content = "🎙 Voz ON";
+            }
+
+            _ = _chatClient?.SendStateAsync(_chatVoice.IsMicOn, _chatWebcam?.IsRunning == true);
+            ActualizarEstadoChat();
+        }
+
+        private void AlternarCamaraChat()
+        {
+            if (!_chatActivo) return;
+
+            if (_chatWebcam?.IsRunning == true)
+            {
+                _chatWebcam.Dispose();
+                _chatWebcam = null;
+                ImgCamLocal.Source = null;
+                MarcoCamLocal.Visibility = Visibility.Collapsed;
+                MarcarBotonChat(BtnChatCam, false);
+                BtnChatCam.Content = "📷 Cámara";
+            }
+            else
+            {
+                if (ChatWebcam.ListDevices().Count == 0)
+                {
+                    MessageBox.Show("No se detectó ninguna webcam conectada.",
+                        "Chat con webcam", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var camara = new ChatWebcam();
+                camara.FrameJpeg += OnCamaraFrameLocal;
+                camara.Error += mensaje => Dispatcher.BeginInvoke(new Action(() => Log($"[Chat] {mensaje}")));
+
+                if (!camara.Start(0))
+                {
+                    MessageBox.Show(camara.LastError ?? "No se pudo abrir la webcam.",
+                        "Chat con webcam", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    camara.Dispose();
+                    return;
+                }
+
+                _chatWebcam = camara;
+                MarcoCamLocal.Visibility = Visibility.Visible;
+                MarcarBotonChat(BtnChatCam, true);
+                BtnChatCam.Content = "📷 Cámara ON";
+            }
+
+            _ = _chatClient?.SendStateAsync(_chatVoice?.IsMicOn == true, _chatWebcam?.IsRunning == true);
+            ActualizarEstadoChat();
+        }
+
+        /// <summary>Se ejecuta en el hilo de captura de NAudio: solo encola el envío.</summary>
+        private void OnMicrofonoChat(byte[] pcm)
+        {
+            var cliente = _chatClient;
+            if (cliente == null || !cliente.IsConnected) return;
+            _ = cliente.SendMediaAsync(ChatProtocol.KindAudio, pcm);
+        }
+
+        /// <summary>Se ejecuta en el hilo de DirectShow: preview local y envío al relay.</summary>
+        private void OnCamaraFrameLocal(byte[] jpeg)
+        {
+            BitmapImage? imagen = DecodificarJpeg(jpeg);
+            if (imagen != null)
+                Dispatcher.BeginInvoke(new Action(() => ImgCamLocal.Source = imagen));
+
+            var cliente = _chatClient;
+            if (cliente == null || !cliente.IsConnected) return;
+            _ = cliente.SendMediaAsync(ChatProtocol.KindVideo, jpeg);
+        }
+
+        private static BitmapImage? DecodificarJpeg(byte[] datos)
+        {
+            try
+            {
+                using var ms = new MemoryStream(datos);
+                var imagen = new BitmapImage();
+                imagen.BeginInit();
+                imagen.CacheOption = BitmapCacheOption.OnLoad;
+                imagen.StreamSource = ms;
+                imagen.EndInit();
+                imagen.Freeze();
+                return imagen;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private void MostrarTileVideo(int id, BitmapImage imagen)
+        {
+            if (!_tilesChat.TryGetValue(id, out var tile))
+            {
+                var nombreControl = new TextBlock
+                {
+                    Foreground = new SolidColorBrush(Color.FromRgb(0, 217, 255)),
+                    FontSize = 9,
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(5, 3, 5, 0),
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = 152
+                };
+                var imagenControl = new Image
+                {
+                    Width = 152,
+                    Height = 86,
+                    Stretch = Stretch.UniformToFill,
+                    Margin = new Thickness(4)
+                };
+                var pila = new StackPanel();
+                pila.Children.Add(nombreControl);
+                pila.Children.Add(imagenControl);
+
+                var marco = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(5, 8, 17)),
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(45, 212, 191)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(5),
+                    Margin = new Thickness(0, 0, 6, 6),
+                    Child = pila
+                };
+
+                tile = (marco, imagenControl, nombreControl);
+                _tilesChat[id] = tile;
+                PanelVideos.Children.Add(marco);
+            }
+
+            tile.Imagen.Source = imagen;
+            tile.Nombre.Text = _nombresChat.TryGetValue(id, out string? nombre) ? nombre : $"Peer {id}";
+            tile.Marco.Visibility = Visibility.Visible;
+            _ultimoVideoChat[id] = DateTime.UtcNow;
+        }
+
+        private void ActualizarNombreTile(int id)
+        {
+            if (!_tilesChat.TryGetValue(id, out var tile)) return;
+            if (_nombresChat.TryGetValue(id, out string? nombre))
+                tile.Nombre.Text = nombre;
+        }
+
+        private void OcultarTileVideo(int id)
+        {
+            _ultimoVideoChat.Remove(id);
+            if (_tilesChat.TryGetValue(id, out var tile))
+                tile.Marco.Visibility = Visibility.Collapsed;
+        }
+
+        private void QuitarTileVideo(int id)
+        {
+            _ultimoVideoChat.Remove(id);
+            if (!_tilesChat.TryGetValue(id, out var tile)) return;
+
+            PanelVideos.Children.Remove(tile.Marco);
+            _tilesChat.Remove(id);
+        }
+
+        private void AgregarMensajeChat(string autor, string texto, Color color)
+        {
+            var bloque = new TextBlock
+            {
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 11.5,
+                Margin = new Thickness(2, 1, 2, 1)
+            };
+            bloque.Inlines.Add(new Run
+            {
+                Text = autor + ": ",
+                Foreground = new SolidColorBrush(color),
+                FontWeight = FontWeights.Bold
+            });
+            bloque.Inlines.Add(new Run
+            {
+                Text = texto,
+                Foreground = new SolidColorBrush(Color.FromRgb(226, 232, 240))
+            });
+            AnadirLineaChat(bloque);
+        }
+
+        private void AgregarMensajeSistemaChat(string texto)
+        {
+            var bloque = new TextBlock
+            {
+                Text = "· " + texto,
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 10.5,
+                FontStyle = FontStyles.Italic,
+                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                Margin = new Thickness(2, 1, 2, 1)
+            };
+            AnadirLineaChat(bloque);
+        }
+
+        private void AnadirLineaChat(TextBlock bloque)
+        {
+            ListaChat.Items.Add(bloque);
+            while (ListaChat.Items.Count > 400)
+                ListaChat.Items.RemoveAt(0);
+            ListaChat.ScrollIntoView(bloque);
+        }
+
         private void OnCopiarUrlP2PClicked(object sender, RoutedEventArgs e)
         {
             string enlace = !string.IsNullOrWhiteSpace(_enlaceCompartible)
@@ -1193,7 +2823,9 @@ namespace Visor3D
             BtnConectarAmigo.Content = "⏳ Probando...";
             BtnConectarAmigo.IsEnabled = false;
 
-            bool responde = await P2PNodo.PingParAsync(url);
+            // El enlace compartido es el portal WebNodo del anfitrión; un ip:8911
+            // de la LAN se comprueba con una conexión TCP al WebSocket del motor.
+            bool responde = await DescubrimientoP2P.SondearAsync(_hostSesionUrl);
             BtnConectarAmigo.Content = "🔗 Conectar";
             BtnConectarAmigo.IsEnabled = true;
 

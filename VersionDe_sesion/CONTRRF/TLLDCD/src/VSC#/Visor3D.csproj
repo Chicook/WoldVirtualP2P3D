@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualp2pCNXv2.5.5</AssemblyName>
+    <AssemblyName>DMWoldVirtualp2pCNXv2.5.9</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.5.5</Version>
-    <AssemblyVersion>2.5.5.0</AssemblyVersion>
-    <FileVersion>2.5.5.0</FileVersion>
+    <Version>2.5.9</Version>
+    <AssemblyVersion>2.5.9.0</AssemblyVersion>
+    <FileVersion>2.5.9.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualp2pCNX v2.5.5 (corrige el arranque como cliente de un túnel caducado; 24 avatares a 2K, carrusel con turnos y ocupación, aspecto persistente, mundo en PCK, actualizador con SHA-256 y reanudación)</Description>
+    <Description>Visor 3D — DMWoldVirtualp2pCNX v2.5.9 (el terreno solo se edita en la isla propia y la arena conserva su color al moverla; un invitado conecta con la raíz de la sesión y todos los usuarios se ven entre sí; pantalla de presencia en la bienvenida con estado vacío/ocupado y detección del nodo del enlace; conserva el control del avatar y el reinicio de usuarios de la 2.5.8/2.5.7)</Description>
   </PropertyGroup>
 
   <!--
@@ -55,6 +55,11 @@
   <ItemGroup>
     <!-- WMI: lectura de hardware (CPU, placa base, SO) -->
     <PackageReference Include="System.Management" Version="8.0.0" />
+    <!-- Chat de voz: captura/reproducción PCM de baja latencia -->
+    <PackageReference Include="NAudio" Version="2.3.0" />
+    <!-- Chat de webcam: captura DirectShow y compresión JPEG -->
+    <PackageReference Include="AForge.Video" Version="2.2.5" />
+    <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
   </ItemGroup>
 
   <!-- Recursos web (para fases posteriores y WebNodo) -->

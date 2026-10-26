@@ -47,6 +47,10 @@ enum AnimationState { IDLE, WALK, RUN, RUN_HTR, JUMP, AIR, STRAFE_LEFT, STRAFE_R
 var current_animation := AnimationState.IDLE
 var blend_values := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 var alt_gr_pressed := false
+## El avatar responde a las flechas desde el arranque; sólo se suelta
+## mientras el teclado está en el chat del visor o en modo construcción.
+var control_avatar := true
+var _clic_pendiente := Vector2.INF
 # La cámara orbita con retardo: el cuerpo gira al instante (se VE girar),
 # la cámara lo sigue suavemente y termina detrás (espalda).
 var _cam_yaw := 0.0
@@ -103,6 +107,42 @@ func _input(event: InputEvent) -> void:
 			-deg_to_rad(camera_pitch_limit),
 			deg_to_rad(camera_pitch_limit)
 		)
+
+
+## Clic izquierdo: si el rayo de cámara alcanza al avatar, recupera el control
+## (por ejemplo, tras escribir en el chat). Un clic fuera no lo suelta.
+func _unhandled_input(event: InputEvent) -> void:
+	if es_clon_remoto or get_meta("construccion_activa", false):
+		return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_clic_pendiente = event.position
+
+
+func _clic_sobre_avatar(screen_pos: Vector2) -> bool:
+	if camera == null or not is_instance_valid(camera):
+		# Sin cámara orbital (primera persona) cualquier clic toma el control.
+		return true
+	var origen := camera.project_ray_origin(screen_pos)
+	var destino := origen + camera.project_ray_normal(screen_pos) * 1000.0
+	var consulta := PhysicsRayQueryParameters3D.create(origen, destino)
+	consulta.collide_with_areas = false
+	var impacto := get_world_3d().direct_space_state.intersect_ray(consulta)
+	return not impacto.is_empty() and impacto.get("collider") == self
+
+
+## Al salir de Godot (clic en el chat del visor) se suelta el avatar y las
+## teclas: evita que una flecha pulsada durante el cambio de foco lo mueva.
+## Al volver a la vista 3D recupera el control sin exigir otro clic.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		control_avatar = false
+		alt_gr_pressed = false
+		velocity.x = 0.0
+		velocity.z = 0.0
+		for accion in ["ui_left", "ui_right", "ui_up", "ui_down", "ui_accept"]:
+			Input.action_release(accion)
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		control_avatar = not get_meta("construccion_activa", false)
 #endregion
 
 
@@ -114,13 +154,22 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 
-	# 7.2. Salto.
-	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+	# 7.2. Selección diferida: el raycast se resuelve en el paso de física.
+	# Sólo devuelve el control; un clic fuera del cuerpo no lo quita.
+	if _clic_pendiente != Vector2.INF:
+		if _clic_sobre_avatar(_clic_pendiente):
+			control_avatar = true
+		_clic_pendiente = Vector2.INF
+
+	# 7.3. Salto (con el avatar controlable).
+	if control_avatar and Input.is_action_just_pressed("ui_accept") and is_on_floor():
 		velocity.y = jump_velocity
 		current_animation = AnimationState.JUMP
 
-	# 7.3. Dirección de movimiento.
-	var input_dir := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	# 7.4. Dirección de movimiento (solo si el avatar está seleccionado).
+	var input_dir := Vector2.ZERO
+	if control_avatar:
+		input_dir = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	# El modelo hm1 mira hacia +Z (al contrario que el -Z de Godot):
 	# se gira la entrada 180° para que W avance hacia donde mira la cara
 	# y A/D queden en su izquierda/derecha real.
@@ -130,7 +179,7 @@ func _physics_process(delta: float) -> void:
 	# KEY_ALT permite detectarlo aunque el teclado use una distribución española.
 	var sprinting := alt_gr_pressed or Input.is_key_pressed(KEY_ALT) or Input.is_key_pressed(KEY_AT)
 
-	# 7.4. Velocidad y selección de animación.
+	# 7.5. Velocidad y selección de animación.
 	if moving:
 		var selected_speed := run_speed if sprinting else speed
 		velocity.x = direction.x * selected_speed
@@ -153,11 +202,11 @@ func _physics_process(delta: float) -> void:
 		if is_on_floor():
 			current_animation = AnimationState.IDLE
 
-	# 7.5. Estado en aire: Saltar al subir, Falling_IdleOF al caer.
+	# 7.6. Estado en aire: Saltar al subir, Falling_IdleOF al caer.
 	if not is_on_floor():
 		current_animation = AnimationState.JUMP if velocity.y >= 0.0 else AnimationState.AIR
 
-	# 7.6. Aplicar animación, mover y seguir con la cámara.
+	# 7.7. Aplicar animación, mover y seguir con la cámara.
 	_update_animation_tree(delta)
 	move_and_slide()
 	_update_camera_follow(delta)

@@ -1,8 +1,8 @@
 # 🌐 Wold Virtual P2P 3D — Visor C# (.NET 8 WPF) & WebNodo
 
-> **Ubicación:** `VersionDe_sesion/Sistema_Principal/PRY/actualizacion_049ac229/src/VSC#`  
-> **Versión Actual:** `0.0.012` (actualización `049ac229`) — EXE: `DMWoldVirtualp2pCNXv0.0.012_actualizacion_049ac229.exe`  
-> **Tecnologías:** C# 12, .NET 8 WPF, Win32 P/Invoke (`HwndHost`), Godot Engine 4 (incrustado), Node.js / Express (WebNodo), WMI (`System.Management`).
+> **Ubicación:** `VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#`  
+> **Versión Actual:** `2.5.9` — EXE: `DMWoldVirtualp2pCNXv2.5.9.exe` (publicada el 2026-10-26 como release *Latest*; asset, `release.json` y `SHA256SUMS` verificados por API)
+> **Tecnologías:** C# 12, .NET 8 WPF, Win32 P/Invoke (`HwndHost`), Godot Engine 4 (incrustado), WebNodo nativo en C# (`HttpListener`), WMI (`System.Management`).
 
 ---
 
@@ -374,3 +374,174 @@ flowchart TD
    - Separar el motor Godot y el proyecto 3D en assets de descarga inicial bajo demanda en lugar de meter 460 MB de un zip dentro del ensamblado C#.
 2. **Verificación de Calidad Pre-Release:**
    - Comprobación automática de que no existen archivos `credentials.json`, `llave_acceso.json` ni `registro.cfg` en las carpetas a distribuir.
+
+---
+
+## 7. Chat del metaverso (texto, voz y webcam)
+
+Implementado en `Chat/` y expuesto como un panel acoplado a la derecha del visor
+(`💬 Chat` en la barra superior). No usa un túnel propio: reutiliza el túnel público
+del WebNodo con la ruta `/chat`.
+
+```
+Invitado ──wss://host/chat──► WebNodo del anfitrión ──ws──► ChatRelayServer :8920
+                                                              │
+                                              audio/vídeo/texto a todos los pares
+```
+
+| Archivo | Responsabilidad |
+|---|---|
+| `Chat/ChatProtocol.cs` | Límites y tramas: texto JSON; audio/vídeo binario `[tipo][id emisor][payload]`. |
+| `Chat/ChatRelayServer.cs` | Relay WebSocket del anfitrión (TcpListener en 8920-8929, sin URL ACL). Máx. 16 clientes, tramas enmascaradas, ping/pong, límites de tamaño y tasa. |
+| `Chat/ChatClient.cs` | Cliente `ClientWebSocket` con reconexión gestionada desde `MainWindow`. |
+| `Chat/ChatVoice.cs` | Micrófono NAudio 16 kHz/16 bits/mono en tramas de 20 ms y mezcla de voces remotas. |
+| `Chat/ChatWebcam.cs` | Captura DirectShow (AForge) a 320×180, JPEG calidad 55, ~4 fps. |
+| `MainWindow.xaml(.cs)` | Panel, estados de micrófono/cámara, tiles de vídeo, avisos y reconexión. |
+| `Services/WebNodoService.cs` | Enruta `WS /chat` al relay; el resto sigue yendo al motor Godot (8911). |
+
+**Funcionamiento:** cada visor levanta su propio relay, de modo que cualquiera pueda
+asumir el rol de anfitrión tras una migración. El cliente elige relay local si es el
+anfitrión de la sesión (sin enlace de invitación, o `session_host.txt` apunta a su
+portal) y, si no, `wss://<anfitrión>/chat`. La reconexión se reintenta cada pocos
+segundos y se reevalúa cuando Godot cambia de anfitrión.
+
+**Privacidad:** micrófono y webcam solo se activan al pulsar sus botones; no hay
+captura automática.
+
+**Validación real (2026-10-26):** `--chat-selftest` (sin interfaz) supera 24/24
+comprobaciones: relay, dos clientes, identificadores, texto con emisor, audio de
+640 bytes, vídeo JPEG, recorte a 500 caracteres, texto cruzando el proxy `/chat`
+del WebNodo, presencia con uid, solicitudes de amistad y mensajes privados
+dirigidos (detalle en la sección 9). `dotnet build -p:SkipGodotAssets=true -c
+Debug` termina sin errores ni avisos.
+
+**Límites conocidos (pendientes de prueba entre dos máquinas):**
+
+- En la primera conexión entrante Windows puede pedir permiso de firewall para el
+  relay (puerto 8920). Por túnel no hace falta: el tráfico llega por localhost.
+- Sin auriculares hay eco (el micrófono capta el altavoz).
+- El ancho de banda crece con cada par: el vídeo se reenvía a todos (~20-30 KB por
+  trama, 4 fps) y el audio ~32 KB/s por emisor.
+- La captura usa el primer micrófono y la primera webcam del sistema; no hay selector
+  de dispositivo.
+- El audio no se transcodifica: si un driver no acepta 16 kHz mono, el micrófono
+  muestra error en vez de remuestrear.
+- Tras una migración de anfitrión, el chat se reconecta en el siguiente ciclo (≈2 s
+  más el tiempo de conexión); durante ese hueco no hay mensajes.
+- El chat no pide contraseña: cualquiera que tenga el enlace público de la sesión
+  puede entrar (máx. 16 clientes y límites de tasa como única protección). No lo
+  uses para conversaciones privadas.
+
+---
+
+## 8. Control del avatar y foco del teclado
+
+Desde la 2.5.8 el avatar responde a las flechas y a WASD **desde el arranque**, sin
+clic previo. El control se suelta solo en dos situaciones: mientras el teclado está
+en un `TextBox` del visor (Godot pierde el foco) y mientras el modo construcción está
+activo. Al recuperar el foco o al salir de construcción, el control vuelve **sin
+exigir otro clic**.
+
+| Archivo | Cambio |
+|---|---|
+| `.../gdscripuser/AVMJ1Ch3D.gd` | `control_avatar := true` por defecto; `FOCUS_OUT` suelta el control y las `ui_*`; `FOCUS_IN` lo recupera salvo con `construccion_activa`. |
+| `.../ctr_tscn_userBS/gdscrip/userbaseh_1.gd` | Mismo modelo para el avatar por defecto `userbaseh1`. |
+| `gdscrip/userbase.gd` | Cápsula en primera persona con el mismo modelo de foco. |
+| `gdscrip/Construccion.gd` | `_bloquear_avatar()` marca `construccion_activa` y devuelve `control_avatar = true` al cerrar el modo. |
+| `GodotHwndHost.cs` | Devuelve el teclado a Godot al pulsar en el área 3D (`WM_PARENTNOTIFY`) y no reenvía teclas mientras se escribe en un `TextBox` WPF. |
+| `MainWindow.xaml` | El cuadro de texto del chat se ilumina (fondo `#0D2137`, borde turquesa) al recibir el foco. |
+
+**Comportamiento:** el clic izquierdo sobre el cuerpo del avatar sigue lanzando un
+rayo desde la cámara y devuelve el control (útil tras escribir en el chat); un clic
+en otro punto ya **no** lo quita. Al perder el foco de Godot se suelta el avatar, se
+detiene la velocidad horizontal y se liberan las acciones `ui_*` para que ninguna
+flecha retenida lo mueva. Los botones de voz y cámara se marcan en verde al quedarse
+activos.
+
+**Validación real (2026-10-26):** `tools/probar_control_clic.gd` en headless supera
+**35/35** comprobaciones sobre `userbaseh1`, `AVMJ1Ch3D` y la cápsula: se mueven sin
+clic, perder el foco los detiene, recuperarlo les devuelve el control y el rayo
+selecciona al acertar en el cuerpo. `tools/probar_construccion.gd` supera **85/85**,
+incluida la comprobación de que al salir de construcción se devuelve el control sin
+otro clic. `dotnet publish -c Release -r win-x64 --self-contained true` termina con
+0 errores y 0 avisos.
+
+**Límites conocidos:**
+
+- No se ha validado el foco real dentro del visor embebido con el túnel activo: la
+  comprobación es headless y se apoya en `WM_PARENTNOTIFY` y en `TextBoxBase`, no en
+  una prueba E2E de escritorio.
+- El rayo usa la cápsula de colisión del avatar (torso); un clic en la cabeza o los
+  pies, fuera de la cápsula, no devuelve el control.
+- Con el modo construcción activo el avatar no camina por diseño hasta salir de él.
+
+---
+
+## 9. Amigos y chat privado
+
+Los usuarios pueden enviarse solicitudes de amistad, aceptarlas o rechazarlas,
+mantener una lista local de amigos y abrir una conversación privada uno a uno
+desde esa lista. No hay servidor central: las solicitudes y los privados viajan
+por el mismo relay de la sesión que ya usa el chat.
+
+```
+Ana ──wss://host/chat──► relay del anfitrión ──solo al uid de Beto──► Beto
+                                │
+                     código de amigo (8 caracteres) → uid estable
+```
+
+| Archivo | Responsabilidad |
+|---|---|
+| `Chat/ChatProtocol.cs` | Normaliza el `uid`, calcula el código de amigo y define los mensajes `friend_req`, `friend_sent`, `friend_ok`, `friend_no`, `friend_fail`, `dm` y `dm_fail`. |
+| `Chat/ChatRelayServer.cs` | Resuelve el destino por uid o por código y entrega solo a las sesiones de esa persona. Límite adicional de 20 acciones sociales cada 10 s. |
+| `Chat/ChatClient.cs` | Envía y recibe solicitudes, respuestas y privados; la presencia (`join`/`bye`) incluye el uid. |
+| `Chat/FriendsStore.cs` | Persistencia local: `%LocalAppData%\WoldVirtualP2P3D\user\friends_<uid>.json` con amigos, solicitudes entrantes y salientes. |
+| `PrivateChatWindow.xaml(.cs)` | Ventana de conversación privada con estado en línea, historial en memoria y mensajes de error. |
+| `MainWindow.xaml(.cs)` | Botón `👥 Amigos`, código copiable, alta por código, personas de la sesión, aceptar/rechazar, no leídos y apertura del chat privado. |
+
+**Identidad y códigos.** El uid sale del `uuid` del perfil (o de un hash estable del
+alias si el perfil es antiguo). El código de amigo son 8 caracteres derivados del
+uid; se comparte y el relay lo traduce al uid real del cliente conectado. El chat
+sigue usando identificadores numéricos por conexión para las funciones de voz y
+webcam, pero las amistades y los privados usan el uid.
+
+**Funcionamiento.** `👥 Amigos` despliega el panel dentro del chat. Muestra tu
+código, un campo para pegar el de otra persona, las solicitudes pendientes, tus
+amigos con punto verde/gris y un botón `Chat`. También lista a las personas
+conectadas en la sesión para enviarles una solicitud sin intercambiar códigos. El
+privado se abre en una ventana aparte; si no la tienes delante, el botón de amigos
+muestra el número de solicitudes y mensajes sin leer. Los privados de alguien que
+no es amigo se descartan y solo dejan un aviso.
+
+**Validación real (2026-10-26):**
+
+- `--chat-selftest` supera 24/24 comprobaciones, incluidas: código de amigo estable
+  de 8 caracteres, persistencia y recarga de amigos/solicitudes, resolución de una
+  solicitud por código al uid real, presencia con uid, solicitud entregada solo al
+  destino, aceptación entregada al remitente, privado entregado solo al
+  destinatario, privado que no se difunde a la sala y avisos cuando el destino no
+  está conectado.
+- `dotnet build -p:SkipGodotAssets=true -c Debug`: 0 errores, 0 avisos.
+- Arranque real del visor durante 8 s: ventana «Wold Virtual p2p 3D» viva, sin
+  excepción de XAML y sin procesos residuales. No se ha probado el flujo visual
+  completo con dos visores autenticados en máquinas distintas.
+
+**Límites conocidos:**
+
+- **No hay servidor central ni cola offline.** Solicitudes y privados solo se
+  entregan mientras ambas personas están conectadas al mismo relay de sesión. Las
+  solicitudes pendientes se reintentan al aparecer el destino en la sesión, pero
+  el remitente también tiene que estar conectado.
+- La lista de amigos es **local al equipo**: no se sincroniza entre PCs ni entre
+  instalaciones del mismo usuario. El archivo es JSON plano, sin cifrar.
+- El historial del chat privado vive en memoria y se pierde al cerrar el visor. No
+  se guarda en disco.
+- El relay no comprueba la amistad: enruta por uid. La ventana del visor descarta
+  los privados de desconocidos, pero un cliente modificado podría enviarlos.
+- No hay bloqueo, denuncia, borrado remoto ni estado «escribiendo».
+- Un código de 8 caracteres puede colisionar en teoría; el relay no entrega si el
+  código coincide con varias personas distintas.
+- Si el perfil no tiene `uuid`, la identidad cae al hash del alias: dos personas con
+  el mismo nombre comparten identidad.
+- El chat no está autenticado (ver límite de la sección 7). No lo uses para
+  información sensible.
