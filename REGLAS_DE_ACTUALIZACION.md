@@ -49,7 +49,7 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
 extensión: hoy `DMWoldVirtualp2pCNXv2.5.9`, que corresponde al exe
-`DMWoldVirtualp2pCNXv2.5.9.exe` (compilado el 2026-10-26, aún sin publicar).
+`DMWoldVirtualp2pCNXv2.5.9.exe` (compilado y publicado el 2026-10-26).
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.9`) ↔
 nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.9.exe`) ↔ `release.json` (`version`, `tag`,

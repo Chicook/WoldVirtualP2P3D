@@ -6,7 +6,7 @@
 > **Repositorio:** `https://github.com/Chicook/WoldVirtualP2P3D.git`
 > **Alcance:** `src/` — visor C# (`VSC#`) y mundo Godot (`MTBGT/WoldVirtualP2P3D`).
 > **Documento hermano:** [`README_desarrollo_20261026.md`](README_desarrollo_20261026.md) cubre los 7 bloques previos de la jornada (cuenta única, llave de hardware, barrera de login, animaciones, foco, optimización de texturas y retirada de `test_user_data`). Este archivo **no repite** ese contenido: documenta el resto del trabajo del día, con prioridad en el sistema de terreno y construcción.
-> **Estado del árbol:** la 2.5.9 está compilada y probada en local; **no publicada**. Binarios publicados el 2026-10-26: 2.5.6 (§9), 2.5.7 (§10) y 2.5.8 (§11); la versión vigente en GitHub sigue siendo la 2.5.8 hasta que se suba la 2.5.9 (§12). El OTA entre versiones sigue sin ejecutar.
+> **Estado del árbol:** la 2.5.9 está **publicada** en GitHub (tag `v2.5.9`, marcada como *Latest*) con los tres assets verificados por API y el portal sirviendo el binario nuevo (§12). Binarios publicados el 2026-10-26: 2.5.6 (§9), 2.5.7 (§10), 2.5.8 (§11) y 2.5.9 (§12). El OTA **desde GitHub** en un equipo con la versión anterior sigue sin ejecutar; el OTA local con los componentes reales sí se ejecutó (§4).
 
 ---
 
@@ -180,15 +180,16 @@ La pantalla de bienvenida muestra, antes del registro o del login, si el metaver
 | Chat con el binario 2.5.9 | `DMWoldVirtualp2pCNXv2.5.9.exe --chat-selftest` | **24/24 OK, 0 fallos**, exit 0; micrófonos=1, webcams=1 |
 | Red con el binario 2.5.9 | `DMWoldVirtualp2pCNXv2.5.9.exe --red-selftest` | **6 OK, 0 fallos**, exit 0 |
 | OTA local con los componentes reales | Cliente 2.5.8 publicado + `UpdateDownloader` + `UpdateApplier` contra HTTP local | **OK**: digest falso rechazado; descarga de 788.201.343 B con SHA-256 verificado; `state.json` con `apply=true`; el `.bat` sustituyó el exe y relanzó; el cliente quedó con `FileVersion 2.5.9.0` y re-extrajo `runtime\2.5.9` con el PCK `ca7b7436…d2e2a`; sin `ERROR`/`EXCEPTION` |
+| Asset 2.5.9 publicado | `gh api repos/Chicook/WoldVirtualP2P3D/releases/tags/v2.5.9` | Release pública, `draft=false`, `prerelease=false`, publicada `2026-10-26T20:07:07Z` y marcada *Latest*; los tres `digest` coinciden con los locales: exe `96c1cf98…187798` (788.201.343 B), `release.json` `065ccb2d…4eb6b8` (217 B) y `SHA256SUMS` `e3f74b35…4952c7b1` (175 B); tag anotado sobre el commit `928bc87` |
+| Portal con la 2.5.9 | Visor 2.5.9 en ejecución; `GET /`, `/api/info?token=…` y `/descargar` | Log: `release vigente → DMWoldVirtualp2pCNXv2.5.9.exe (751,7 MB)`; `/api/info` → `{"disponible":true,"nombre":"DMWoldVirtualp2pCNXv2.5.9.exe","tamano_mb":"751,7","url_descarga":"/descargar"}`; `/descargar` **200**, `Content-Length: 788201343`, `filename="DMWoldVirtualp2pCNXv2.5.9.exe"` |
 
 **No ejecutado (y por tanto no acreditado):**
 
 - Sesión real de dos máquinas con construcción, chat, voz y webcam a través del túnel.
 - Latencia, pérdida de paquetes y reconexión del túnel HTTP.
 - Interacción visual completa en el visor WPF embebido (foco, clic y resaltado).
-- OTA de punta a punta **a través de GitHub** (UpdateChecker + CDN) 2.5.7 → 2.5.8 ni 2.5.8 → 2.5.9 en un equipo con la versión anterior. La prueba OTA local de la tabla cubre descarga, SHA-256, reemplazo, relanzamiento y re-extracción, pero no la selección de release ni el asset remoto.
+- OTA de punta a punta **a través de GitHub** (UpdateChecker + CDN) 2.5.7 → 2.5.8 ni 2.5.8 → 2.5.9 en un equipo con la versión anterior. La prueba OTA local de la tabla cubre descarga, SHA-256, reemplazo, relanzamiento y re-extracción, pero no la selección de release ni el asset remoto; la release 2.5.9 ya está publicada, así que este es el único paso que falta del ciclo.
 - Prueba de migración de anfitrión con permisos de construcción y chat.
-- Publicación de la 2.5.9: no hay tag, asset ni `release.json` en GitHub; `/api/info` del binario en ejecución anuncia el exe nuevo pero con tamaño «—» mientras la release vigente siga siendo la 2.5.8.
 - Estado «ocupado» de la pantalla de presencia con un segundo equipo real (en local se filtra la propia baliza a propósito).
 
 ---
@@ -477,28 +478,31 @@ a la publicación.
 
 ---
 
-## 12. Versión 2.5.9 preparada (2026-10-26)
+## 12. Publicación v2.5.9 (2026-10-26)
 
 La 2.5.9 agrupa el trabajo posterior a la 2.5.8: aislamiento del terreno por isla,
 conservación del color al mover la tierra, convergencia de invitados contra la raíz de la
-sesión y pantalla de presencia en la bienvenida. **El binario está compilado y probado en
-local; la release no se ha subido a GitHub.**
+sesión y pantalla de presencia en la bienvenida. El binario se publicó el **2026-10-26 a
+las 20:07 UTC**, marcado como *Latest*, con los tres assets verificados por API y el portal
+sirviendo ya el ejecutable nuevo.
 
 | Dato | Valor |
 |---|---|
-| Estado | Compilada y probada en local el 2026-10-26 20:55; **sin tag ni asset en GitHub** |
-| Asset local | `DMWoldVirtualp2pCNXv2.5.9.exe` |
+| Release | [`v2.5.9`](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.9), *Latest*; tag anotado sobre el commit `928bc87` (objeto de tag `1fce8334…`) |
+| Asset | `DMWoldVirtualp2pCNXv2.5.9.exe` |
 | Tamaño | 788.201.343 B (751,7 MiB) |
-| SHA-256 local | `96c1cf98fac799ce9058f9846757d0b5743ed0c96aa9a98493cab5f3ec187798` |
+| SHA-256 | `96c1cf98fac799ce9058f9846757d0b5743ed0c96aa9a98493cab5f3ec187798`; coincide con el `digest` de la API |
 | PCK embebido | 537.811.448 B (512,9 MiB), SHA-256 `ca7b7436f82e26a8be9b964544cebba93e9e29d1086005c561fd8ba5be2d2e2a`; exportado del árbol de este commit el 2026-10-26 20:54 |
-| `release.json` local | version `2.5.9`, tag `v2.5.9`, exe y URL del asset nuevo, `size_mb` 751.7; SHA-256 `065ccb2da75fe64a5acde361f19c06427035f0478061849deae1b0c6634eb6b8` |
-| `SHA256SUMS` local | exe + `release.json`, junto al binario en `bin/Release/…/publish/`; no versionado (R17) |
+| `release.json` | version `2.5.9`, tag `v2.5.9`, exe y URL del asset nuevo, `size_mb` 751.7; SHA-256 `065ccb2da75fe64a5acde361f19c06427035f0478061849deae1b0c6634eb6b8`; coincide con el `digest` de la API |
+| `SHA256SUMS` | exe + `release.json`; SHA-256 `e3f74b3582d7083598077629c68efdc5fb2bca3f1a67a31ae1b2d9364952c7b1`; coincide con el `digest` de la API |
+| Verificación por API | `gh api …/releases/tags/v2.5.9`: `draft=false`, `prerelease=false`, publicada `2026-10-26T20:07:07Z`; nombres, tamaños y `digest` de los tres assets iguales a los locales |
 | Arranque | **15/15 OK**, exit 0; `.extracted` = `2.5.9`; PCK extraído idéntico al embebido |
 | Chat | **24/24 OK**, exit 0 |
 | Red | **6 OK, 0 fallos**, exit 0 |
 | Terreno | **128 OK, 0 fallos**; aislamiento y color al mover incluidos |
 | Prueba visual | **25 OK, 0 fallos**; arena arrastrada conserva el tono |
 | OTA local | **OK** con los componentes reales: digest falso rechazado, descarga de 788.201.343 B con SHA-256 verificado, reemplazo por `.bat`, relanzamiento y `runtime\2.5.9` re-extraído con el PCK nuevo |
+| Portal | `release vigente → DMWoldVirtualp2pCNXv2.5.9.exe (751,7 MB)`; `/api/info` anuncia el exe y `751,7`; `/descargar` **200** con `Content-Length: 788201343` |
 
 ### 12.1 Qué cambia en el PCK y en el visor
 
@@ -526,18 +530,18 @@ extraído antes (R1), y renombrar un tag publicado está prohibido (R4, §8.2). 
 tag nuevo: el actualizador elige la versión mayor del nombre del asset y el primer arranque
 extrae `runtime\2.5.9\`.
 
-### 12.3 Lo que falta antes de publicar
+### 12.3 Lo que queda por acreditar
 
-1. **Confirmación del responsable** para crear el tag `v2.5.9` y subir exe + `release.json` +
-   `SHA256SUMS` (R16).
-2. **Portal:** con la release publicada, comprobar `/api/info` con el tamaño real y
-   `/descargar` con `Content-Length` igual al asset (R12, §7). Hoy el binario en ejecución
-   anuncia el exe nuevo pero el tamaño queda en «—» mientras la vigente sea la 2.5.8.
-3. **OTA real vía GitHub 2.5.8 → 2.5.9** en un equipo con la versión anterior (R13, §7).
-   La prueba local ya cubrió descarga, SHA-256, reemplazo, relanzamiento y re-extracción,
-   pero no la selección de release ni la CDN de GitHub.
-4. **Dos equipos reales** para la convergencia de invitados y el estado «ocupado» de la
-   pantalla de presencia.
+1. **OTA real vía GitHub 2.5.8 → 2.5.9** en un equipo con la versión anterior (R13, §7). La
+   release ya está publicada y el portal ya sirve el asset, así que falta únicamente ejecutar
+   el ciclo completo en un cliente con la 2.5.8: selección de release, descarga desde la CDN,
+   verificación, reemplazo y re-extracción. La prueba local (§4) ya cubrió los componentes.
+2. **Tres equipos reales** para la convergencia de invitados: que un tercero que recibe el
+   enlace reenviado vea a los dos anteriores.
+3. **Dos equipos reales** para el estado «ocupado» de la pantalla de presencia.
+4. **Botón del portal del invitado:** «Copiar Enlace de Invitado» sigue copiando
+   `window.location.href` sin `?host=` (`WebNodoService.cs:241`); el banner del visor sí compone
+   la raíz. Es el camino por el que se propaga un enlace que apunta al invitado.
 
 ---
 
@@ -562,4 +566,4 @@ extrae `runtime\2.5.9\`.
 
 ---
 
-*Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. Binarios publicados el mismo día: 2.5.6 (ver §9), 2.5.7 (ver §10) y 2.5.8 (ver §11). La 2.5.9 está compilada y probada en local, pendiente de publicación (ver §12).*
+*Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. Binarios publicados el mismo día: 2.5.6 (ver §9), 2.5.7 (ver §10), 2.5.8 (ver §11) y 2.5.9 (ver §12). La 2.5.9 es la release vigente; quedan por ejecutar el OTA real desde GitHub y las pruebas de dos o tres equipos.*
