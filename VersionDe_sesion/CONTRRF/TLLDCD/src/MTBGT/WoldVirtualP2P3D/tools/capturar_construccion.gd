@@ -142,6 +142,7 @@ func _correr() -> void:
 
 	# ---------------------------------------------------------------- mover
 	await _restaurar_base()
+	var origen_base := _media_caja(-0.05, 0.0, -0.05, 0.05)
 	await _fijar_radio_fuerza(8.0, 4.0)
 	await _pincel(1, 40, _objetivo)
 	var plataforma := _media_anillo(0.30, 0.45)
@@ -159,11 +160,17 @@ func _correr() -> void:
 	await _pincel_mover(12, _objetivo, 0.6)
 	var centro_despues := _centroide_exceso(umbral)
 	var origen_despues := _media_caja(-0.05, 0.0, -0.05, 0.05)
+	var levantado := origen_antes - origen_base
+	var retirado := origen_antes - origen_despues
 	_check((centro_despues - centro_antes) * _t.escala > 1.5,
 			"mover desplaza el montículo %.2f m hacia +X"
 			% ((centro_despues - centro_antes) * _t.escala))
-	_check(origen_despues < origen_antes - 0.01,
-			"mover vacía la posición original (%.3f -> %.3f)" % [origen_antes, origen_despues])
+	_check(levantado > 0.004,
+			"mover parte de un montículo levantado (%.1f cm)"
+			% (levantado * _t.escala * 100.0))
+	_check(retirado >= maxf(0.002, levantado * 0.6),
+			"mover vacía la posición original (%.3f -> %.3f, base %.3f)"
+			% [origen_antes, origen_despues, origen_base])
 	print("MOVER resultado: centro x=%.2f m, origen=%.3f"
 			% [centro_despues * _t.escala, origen_despues])
 	await _capturar("08_mover.png")
