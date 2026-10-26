@@ -7,9 +7,10 @@ no pasa el checklist de §7, **no se publica**.
 **Fuente de verdad:** el código, no los README. Cada regla cita el fichero y la línea que la
 sustentan. Si el código cambia y esta página no, gana el código y esta página es un defecto.
 
-Rutas relativas a la raíz del repositorio. El proyecto activo está bajo
-`VersionDe_sesion/Sistema_Principal/PRY/<versión_activa>/` (hoy `actualizacion_f7bfd9ba`); en lo
-que sigue, `<src/>` = esa carpeta `src/`.
+Rutas relativas a la raíz del repositorio. El proyecto que se compila y exporta está bajo
+`VersionDe_sesion/CONTRRF/TLLDCD/src/`; en lo que sigue, `<src/>` = esa carpeta `src/`. La copia
+`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/` es la última instantánea
+RFPRMN y está congelada en la 2.5.5: no es el árbol del que sale un binario nuevo.
 
 ---
 
@@ -30,7 +31,7 @@ Ningún paso se salta ni se reordena. Cada flecha es una dependencia real, no un
 ```
 
 **Por qué el orden importa:** el PCK y el motor se incrustan en el `.exe` en el paso 4
-(`<src/>VSC#/Visor3D.csproj:80-81`, `EmbeddedResource Include="godot_exe.zip"` / `"wvp3d.pck"`).
+(`<src/>VSC#/Visor3D.csproj:85-86`, `EmbeddedResource Include="godot_exe.zip"` / `"wvp3d.pck"`).
 Exportar el mundo *después* de compilar produce un binario con el mundo viejo.
 
 ---
@@ -40,18 +41,18 @@ Exportar el mundo *después* de compilar produce un binario con el mundo viejo.
 **R1 — El número de versión es la única señal de que el mundo cambió.**
 El marcador de re-extracción es la versión del ensamblado
 (`<src/>VSC#/AppExtractor.cs:20`, `AppVersion = ObtenerVersionEnsamblado()`), que fija la carpeta
-`runtime\<versión>\` (`AppExtractor.cs:36,40`). Si cambias `wvp3d.pck` o `godot_exe.zip` y publicas
+`runtime\<versión>\` (`AppExtractor.cs:42,52`). Si cambias `wvp3d.pck` o `godot_exe.zip` y publicas
 con la **misma** versión, los equipos ya actualizados seguirán arrancando el mundo extraído antes:
 el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualp2pCNXv2.5.7`, que corresponde al exe
-`DMWoldVirtualp2pCNXv2.5.7.exe`.
+extensión: hoy `DMWoldVirtualp2pCNXv2.5.8`, que corresponde al exe
+`DMWoldVirtualp2pCNXv2.5.8.exe`.
 
-**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.7`) ↔
-nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.7.exe`) ↔ `release.json` (`version`, `tag`,
+**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.8`) ↔
+nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.8.exe`) ↔ `release.json` (`version`, `tag`,
 `exe`, `url`). El actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación
@@ -71,26 +72,26 @@ antes (constante `"0.1.0"`) y quedó documentado en el comentario de `AppExtract
 ## 3. Reglas del motor Godot
 
 **R6 — El ejecutable del motor se llama y se coloca exactamente:**
-`runtime\<versión>\Servidor3D\Godot_v4.7.2-stable_win64.exe` (`AppExtractor.cs:51-52`). Cambiar la
+`runtime\<versión>\Servidor3D\Godot_v4.7.2-stable_win64.exe` (`AppExtractor.cs:58`). Cambiar la
 versión del engine obliga a actualizar esa ruta y el `godot_exe.zip`; el fallo de nombre se
 autocorrige buscando el exe en subcarpetas, pero no se debe contar con ello.
 
 **R7 — El mundo se lanza con `--main-pack`, nunca con `--path` en distribución.**
-`<src/>VSC#/GodotHwndHost.cs:116`. Godot 4 **no** tiene flag `--scene`: la escena es argumento
+`<src/>VSC#/GodotHwndHost.cs:230`. Godot 4 **no** tiene flag `--scene`: la escena es argumento
 posicional y un `--scene` desconocido puede abortar el arranque antes de leer los argumentos de red
 y caer en modo local (comentario en `GodotHwndHost.cs:108-112`). Escena principal:
 `res://WoldVirtual3DP2P.tscn` (`<src/>VSC#/GodotConfig.cs:79`).
 
 **R8 — Los argumentos de red van siempre después de `--`.**
-`GodotHwndHost.cs:125` (`args += $" -- {_userArgs}"`). El contrato entre el visor y el motor es:
+`GodotHwndHost.cs:239` (`args += $" -- {_userArgs}"`). El contrato entre el visor y el motor es:
 `--client --ip=<host> --port=<puerto> --peer-url="<url>"`, emitido en
-`<src/>VSC#/MainWindow.xaml.cs:641` y parseado en
-`<src/>MTBGT/WoldVirtualP2P3D/gdscrip/Red.gd:10-130` (compartido por `ChunkManager.gd:864-869` y
-`Sonda.gd:21-69`; registrado en `Boot.gd:34-42`). La sonda previa al carrusel usa el mismo
-descubrimiento y la misma URL que el mundo: si tocas el parseo de túneles (`Red.gd`), el cambio vale
-para ambos lados.
+`<src/>VSC#/MainWindow.xaml.cs:717` y parseado en
+`<src/>MTBGT/WoldVirtualP2P3D/gdscrip/Red.gd:6-130` (precargado por `ChunkManager.gd:14` y
+`Sonda.gd:9`, que lo usan en `ChunkManager.gd:1103-1107` y `Sonda.gd:24-31`). La sonda previa al
+carrusel usa el mismo descubrimiento y la misma URL que el mundo: si tocas el parseo de túneles
+(`Red.gd`), el cambio vale para ambos lados.
 **Cambiar una bandera exige tocar los dos lados en el mismo commit.** Sin `--userArgs`, Godot arranca
-como `SERVIDOR_LOCAL` por defecto (`GodotHwndHost.cs:138`): no es un error, pero un binario que deba
+como `SERVIDOR_LOCAL` por defecto (`GodotHwndHost.cs:252`): no es un error, pero un binario que deba
 conectar y no conecta se manifiesta así.
 
 **R9 — El proyecto Godot y el PCK no conviven en Git.** `*.pck` y `*.zip` están excluidos
@@ -105,20 +106,20 @@ de una build anterior.
 
 **R10 — Puertos fijados en código, no en documentación:** portal `3030`, con rango de reserva
 `3030…3040` y proxy interno `puerto + 100`
-(`<src/>VSC#/Services/WebNodoService.cs:57,270,280`); WebSocket del motor **TCP 8911**
-(`WebNodoService.cs:772`, `MainWindow.xaml.cs:815`). **No hay ENet**: cualquier doc que mencione
+(`<src/>VSC#/Services/WebNodoService.cs:63,275-276,286`); WebSocket del motor **TCP 8911**
+(`WebNodoService.cs:575`, `MainWindow.xaml.cs:726`). **No hay ENet**: cualquier doc que mencione
 ENet/8910 está obsoleto.
 
 **R11 — El portal anuncia la release vigente real, nunca una etiqueta fija.**
-Al arrancar, `RefrescarReleaseVigente()` (`WebNodoService.cs:80,260`) consulta GitHub con el **mismo**
+Al arrancar, `RefrescarReleaseVigente()` (`WebNodoService.cs:86,266`) consulta GitHub con el **mismo**
 criterio que el botón de actualizar y sustituye el valor empaquetado. Está prohibido volver a:
 leer sólo `release.json` del disco (ningún OTA lo regenera → el portal queda congelado), o escribir
 un nombre de exe a mano en `webnodo/public/index.html`. El `ExeNameFallback`
-(`WebNodoService.cs:58`) es último recurso ante fallo de red, no el valor anunciado.
+(`WebNodoService.cs:64`) es último recurso ante fallo de red, no el valor anunciado.
 
 **R12 — `/descargar` sirve el `.exe` en ejecución si su nombre coincide con la release vigente**, y
 sólo si no, busca en `webnodo/descargas/`, y si tampoco lo encuentra redirige a GitHub
-(`WebNodoService.cs`, bloque `/descargar`). Prohibido servir un binario obsoleto del disco: es mejor
+(`WebNodoService.cs:670-707`, bloque `/descargar`). Prohibido servir un binario obsoleto del disco: es mejor
 redirigir.
 
 **R13 — Un visor ya instalado no se arregla cambiando GitHub.** Las correcciones de R11/R12 llegan a
@@ -210,7 +211,7 @@ Con evidencia en el log, no "me parece que va". El visor escribe en
   sistema. Corrección aplazada a propósito: recompilar invalidaría el digest publicado (§8.9).
   *Estado: Implementado, sin prueba real de consumo externo estricto.*
 - **Sesión persistida (resuelto el 2026-10-23).** `user://session_host.txt` sólo lo escribe el
-  anfitrión local (`ChunkManager.gd:801-807`, llamado desde `:775`): nunca identifica a un anfitrión
+  anfitrión local (`ChunkManager.gd:1035`): nunca identifica a un anfitrión
   remoto. Hasta v2.5.4 el visor lo leía en `MainWindow.ComprobarHostMigrado()` y lo asignaba a
   `_urlAmigoPendiente`, que decide el rol con el que arranca Godot; tras reiniciar o actualizar, el
   visor arrancaba como **cliente de su propio túnel ya cerrado** y la carga no terminaba (el cliente

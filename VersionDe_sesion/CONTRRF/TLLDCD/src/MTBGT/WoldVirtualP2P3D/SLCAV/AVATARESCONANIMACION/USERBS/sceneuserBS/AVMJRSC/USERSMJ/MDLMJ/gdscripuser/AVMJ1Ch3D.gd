@@ -31,9 +31,9 @@ var _state := St.IDLE
 var current_animation: int = 0
 var _blends := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0])
 var alt_gr_pressed := false
-## El avatar no responde a las flechas hasta que se hace clic sobre él
-## (en el visor WPF el foco del teclado se comparte con el chat).
-var control_avatar := false
+## El avatar responde a las flechas desde el arranque; sólo se suelta
+## mientras el teclado está en el chat del visor o en modo construcción.
+var control_avatar := true
 var _clic_pendiente := Vector2.INF
 var _cam_yaw := 0.0
 var _cam_pitch := 0.18
@@ -70,8 +70,8 @@ func _input(event: InputEvent) -> void:
 		)
 
 
-## Clic izquierdo: selecciona el avatar si el rayo de cámara lo alcanza.
-## Un clic en cualquier otro sitio lo deselecciona.
+## Clic izquierdo: si el rayo de cámara alcanza al avatar, recupera el control
+## (por ejemplo, tras escribir en el chat). Un clic fuera no lo suelta.
 func _unhandled_input(event: InputEvent) -> void:
 	if not enable_control or get_meta("construccion_activa", false):
 		return
@@ -93,6 +93,7 @@ func _clic_sobre_avatar(screen_pos: Vector2) -> bool:
 
 ## Al salir de Godot (clic en el chat del visor) se suelta el avatar y las
 ## teclas: evita que una flecha pulsada durante el cambio de foco lo mueva.
+## Al volver a la vista 3D recupera el control sin exigir otro clic.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		control_avatar = false
@@ -101,6 +102,8 @@ func _notification(what: int) -> void:
 		velocity.z = 0.0
 		for accion in ["ui_left", "ui_right", "ui_up", "ui_down", "ui_accept"]:
 			Input.action_release(accion)
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		control_avatar = not get_meta("construccion_activa", false)
 
 
 func _physics_process(delta: float) -> void:
@@ -109,13 +112,15 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 	# El raycast se resuelve aquí: el estado físico solo se consulta en física.
+	# Sólo devuelve el control; un clic fuera del cuerpo no lo quita.
 	if _clic_pendiente != Vector2.INF:
-		control_avatar = _clic_sobre_avatar(_clic_pendiente)
+		if _clic_sobre_avatar(_clic_pendiente):
+			control_avatar = true
 		_clic_pendiente = Vector2.INF
 	if control_avatar and Input.is_action_just_pressed("ui_accept") and is_on_floor():
 		velocity.y = jump_velocity
 
-	# Sin clic previo sobre el avatar las flechas no lo controlan.
+	# Las flechas sólo mueven al avatar cuando tiene el control (sin chat ni construcción).
 	var input_dir := Vector2.ZERO
 	if control_avatar:
 		input_dir = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")

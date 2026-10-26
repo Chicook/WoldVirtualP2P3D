@@ -1,8 +1,8 @@
 # 🌐 Wold Virtual P2P 3D — Visor C# (.NET 8 WPF) & WebNodo
 
 > **Ubicación:** `VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#`  
-> **Versión Actual:** `2.5.7` — EXE: `DMWoldVirtualp2pCNXv2.5.7.exe`  
-> **Tecnologías:** C# 12, .NET 8 WPF, Win32 P/Invoke (`HwndHost`), Godot Engine 4 (incrustado), Node.js / Express (WebNodo), WMI (`System.Management`).
+> **Versión Actual:** `2.5.8` — EXE: `DMWoldVirtualp2pCNXv2.5.8.exe`  
+> **Tecnologías:** C# 12, .NET 8 WPF, Win32 P/Invoke (`HwndHost`), Godot Engine 4 (incrustado), WebNodo nativo en C# (`HttpListener`), WMI (`System.Management`).
 
 ---
 
@@ -434,42 +434,46 @@ Debug` termina sin errores ni avisos.
 
 ---
 
-## 8. Selección del avatar con el ratón y activación del chat
+## 8. Control del avatar y foco del teclado
 
-El avatar ya no se mueve con las flechas por el simple hecho de que la ventana de
-Godot tenga el foco: **hay que hacer clic sobre él**. De este modo el mismo teclado
-sirve para escribir en el chat sin que el personaje camine o salte.
+Desde la 2.5.8 el avatar responde a las flechas y a WASD **desde el arranque**, sin
+clic previo. El control se suelta solo en dos situaciones: mientras el teclado está
+en un `TextBox` del visor (Godot pierde el foco) y mientras el modo construcción está
+activo. Al recuperar el foco o al salir de construcción, el control vuelve **sin
+exigir otro clic**.
 
 | Archivo | Cambio |
 |---|---|
-| `.../gdscripuser/AVMJ1Ch3D.gd` | Clic izquierdo → rayo desde la cámara; `control_avatar` habilita las flechas y el salto (el giro con botón derecho sigue igual). |
-| `.../ctr_tscn_userBS/gdscrip/userbaseh_1.gd` | Mismo comportamiento para el avatar por defecto `userbaseh1`. |
-| `gdscrip/userbase.gd` | Cápsula en primera persona: cualquier clic en la vista 3D toma el control. |
+| `.../gdscripuser/AVMJ1Ch3D.gd` | `control_avatar := true` por defecto; `FOCUS_OUT` suelta el control y las `ui_*`; `FOCUS_IN` lo recupera salvo con `construccion_activa`. |
+| `.../ctr_tscn_userBS/gdscrip/userbaseh_1.gd` | Mismo modelo para el avatar por defecto `userbaseh1`. |
+| `gdscrip/userbase.gd` | Cápsula en primera persona con el mismo modelo de foco. |
+| `gdscrip/Construccion.gd` | `_bloquear_avatar()` marca `construccion_activa` y devuelve `control_avatar = true` al cerrar el modo. |
 | `GodotHwndHost.cs` | Devuelve el teclado a Godot al pulsar en el área 3D (`WM_PARENTNOTIFY`) y no reenvía teclas mientras se escribe en un `TextBox` WPF. |
 | `MainWindow.xaml` | El cuadro de texto del chat se ilumina (fondo `#0D2137`, borde turquesa) al recibir el foco. |
 
-**Comportamiento:** un clic izquierdo sobre el cuerpo del avatar lo selecciona; un
-clic en otro punto de la vista 3D lo deselecciona. Al perder el foco de Godot (abrir
-el chat, pulsar micrófono/cámara o cambiar de ventana) se suelta el avatar, se
+**Comportamiento:** el clic izquierdo sobre el cuerpo del avatar sigue lanzando un
+rayo desde la cámara y devuelve el control (útil tras escribir en el chat); un clic
+en otro punto ya **no** lo quita. Al perder el foco de Godot se suelta el avatar, se
 detiene la velocidad horizontal y se liberan las acciones `ui_*` para que ninguna
-flecha retenida lo mueva. Los botones de voz y cámara ya se marcan en verde al
-quedarse activos.
+flecha retenida lo mueva. Los botones de voz y cámara se marcan en verde al quedarse
+activos.
 
 **Validación real (2026-10-26):** `tools/probar_control_clic.gd` en headless supera
-25/25 comprobaciones sobre `userbaseh1`, `AVMJ1Ch3D` y la cápsula: empiezan sin
-control, las flechas no los mueven hasta el clic, el rayo acierta en el cuerpo, el
-clic fuera no selecciona, se mueven tras seleccionar y perder el foco los detiene.
-`dotnet build -p:SkipGodotAssets=true -c Debug` termina con 0 errores y 0 avisos.
+**35/35** comprobaciones sobre `userbaseh1`, `AVMJ1Ch3D` y la cápsula: se mueven sin
+clic, perder el foco los detiene, recuperarlo les devuelve el control y el rayo
+selecciona al acertar en el cuerpo. `tools/probar_construccion.gd` supera **85/85**,
+incluida la comprobación de que al salir de construcción se devuelve el control sin
+otro clic. `dotnet publish -c Release -r win-x64 --self-contained true` termina con
+0 errores y 0 avisos.
 
 **Límites conocidos:**
 
-- No se ha validado visualmente dentro del visor embebido: hace falta una sesión de
-  escritorio con el motor y el túnel activos. La lógica de foco se apoya en
-  `WM_PARENTNOTIFY` y en la comprobación de `TextBoxBase`, no en una prueba E2E.
+- No se ha validado el foco real dentro del visor embebido con el túnel activo: la
+  comprobación es headless y se apoya en `WM_PARENTNOTIFY` y en `TextBoxBase`, no en
+  una prueba E2E de escritorio.
 - El rayo usa la cápsula de colisión del avatar (torso); un clic en la cabeza o los
-  pies, fuera de la cápsula, no lo selecciona.
-- La selección se pierde al abrir el chat o cambiar de ventana: hay que volver a
-  hacer clic sobre el avatar para caminar de nuevo.
+  pies, fuera de la cápsula, no devuelve el control.
+- Con el modo construcción activo el avatar no camina por diseño hasta salir de él.
 
 ---
 

@@ -3,8 +3,9 @@ extends CharacterBody3D
 const SPEED = 5.0
 const JUMP_VELOCITY = 4.5
 var mouse_sensitivity := 0.003
-## La cápsula no responde a las flechas hasta hacer clic en la vista 3D.
-var control_avatar := false
+## La cápsula responde a las flechas desde el arranque; sólo se suelta
+## mientras el teclado está en el chat del visor o en modo construcción.
+var control_avatar := true
 
 @onready var camera = $Camera3D
 
@@ -23,7 +24,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## Al perder el foco (clic en el chat del visor) se suelta el avatar y las
-## teclas para que ninguna flecha retenida lo mueva.
+## teclas para que ninguna flecha retenida lo mueva. Al recuperar el foco
+## vuelve a responder sin exigir otro clic.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		control_avatar = false
@@ -31,6 +33,8 @@ func _notification(what: int) -> void:
 		velocity.z = 0.0
 		for accion in ["ui_left", "ui_right", "ui_up", "ui_down", "ui_accept"]:
 			Input.action_release(accion)
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		control_avatar = not get_meta("construccion_activa", false)
 
 
 func _input(event: InputEvent) -> void:

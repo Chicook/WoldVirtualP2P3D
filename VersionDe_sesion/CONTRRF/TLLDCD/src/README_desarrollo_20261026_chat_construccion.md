@@ -6,7 +6,7 @@
 > **Repositorio:** `https://github.com/Chicook/WoldVirtualP2P3D.git`
 > **Alcance:** `src/` — visor C# (`VSC#`) y mundo Godot (`MTBGT/WoldVirtualP2P3D`).
 > **Documento hermano:** [`README_desarrollo_20261026.md`](README_desarrollo_20261026.md) cubre los 7 bloques previos de la jornada (cuenta única, llave de hardware, barrera de login, animaciones, foco, optimización de texturas y retirada de `test_user_data`). Este archivo **no repite** ese contenido: documenta el resto del trabajo del día, con prioridad en el sistema de terreno y construcción.
-> **Estado del árbol:** cambios sin commit. No se ha publicado binario, PCK ni OTA.
+> **Estado del árbol:** correcciones de la 2.5.8 sin commit al empezar esta edición. Binarios publicados el 2026-10-26: 2.5.6 (§9), 2.5.7 (§10) y 2.5.8 (§11). El OTA entre versiones sigue sin ejecutar.
 
 ---
 
@@ -16,10 +16,10 @@
 |---|---|---|---|
 | Chat de texto, voz y webcam | `VSC#` (WPF) | Relay WebSocket, cliente, audio NAudio, webcam AForge, panel acoplado y proxy `/chat` | Implementado y validado con selftest sin interfaz (24/24). Sin prueba entre dos máquinas |
 | Amigos y chat privado | `VSC#` (WPF) | Código de amigo, solicitudes, lista local, ventana de conversación privada | Implementado y validado en el mismo selftest (24/24). Sin prueba entre dos máquinas |
-| Clic de avatar y foco de teclado | `VSC#` + Godot | Selección por rayo, liberación al perder foco, reenvío de teclado y resaltado del chat | Implementado y validado en headless (25/25). Sin prueba visual dentro del visor embebido |
+| Control de avatar y foco de teclado | `VSC#` + Godot | Control desde el arranque, liberación al perder foco, recuperación al volver, reenvío de teclado y resaltado del chat | Implementado y validado en headless (35/35). Sin prueba E2E del foco en el visor embebido |
 | Explorador y registro de isla | Godot | Botones «Explorador de islas» y «Registra tu isla», propiedad persistente por UUID | Implementado y validado en headless (23/23). Sin prueba real de dos instancias |
-| Edición de terreno | Godot | Horneado por isla, pincel de 4 herramientas, normales, colisión trimesh, formato `WVPT` | Implementado y validado en headless (84/84). Sin prueba real de dos máquinas |
-| Construcción de prims | Godot | 5 primitivas, rezado, selección, transformación, color, duplicado, borrado, red y persistencia | Implementado y validado en headless (84/84). Sin prueba real de dos máquinas |
+| Edición de terreno | Godot | Horneado por isla, pincel de 4 herramientas, normales, colisión trimesh, formato `WVPT` | Implementado y validado en headless (85/85) y con capturas visuales (9/9). Sin prueba real de dos máquinas |
+| Construcción de prims | Godot | 5 primitivas, rezado, selección, transformación, color, duplicado, borrado, red y persistencia | Implementado y validado en headless (85/85) y con capturas visuales (9/9). Sin prueba real de dos máquinas |
 | Integración en el mundo | Godot | Nodo `Constructor` en `ISLA3Dblock.tscn`, registro desde `ChunkManager`, bloqueo del avatar | Sonda de escena OK y humo del mundo OK |
 
 **Validación global:** compilación C# con 0 errores y 0 avisos; suites headless con 0 fallos. **No** se ha probado el flujo completo entre dos máquinas, ni la latencia del túnel, ni la interfaz WPF en uso real.
@@ -78,14 +78,15 @@ Implementado en [`VSC#/Chat/`](VSC%23/Chat) y acoplado a la derecha del visor. E
 
 **Límites asumidos:** no hay servidor central ni cola offline; la lista de amigos es local al equipo y es JSON plano sin cifrar; el historial privado se pierde al cerrar; el relay no comprueba la amistad (solo enruta); un perfil sin `uuid` cae a un hash del alias.
 
-### 3.3 Clic de avatar y foco de teclado
+### 3.3 Control de avatar y foco de teclado
 
-- El avatar ya no se mueve por tener el foco la ventana: **hay que hacer clic sobre él**. Un clic izquierdo lanza un rayo desde la cámara y activa `control_avatar`; un clic fuera lo deselecciona y lo detiene.
-- Al perder el foco (abrir el chat, pulsar micrófono/cámara, cambiar de ventana) se suelta el control, se anula la velocidad horizontal y se liberan las acciones `ui_*` para que una flecha retenida no mueva al personaje.
+- Desde la 2.5.8 el avatar responde a las flechas y a WASD **desde el arranque**: `control_avatar` vale `true` por defecto en los tres controladores (`userbase.gd`, `userbaseh_1.gd`, `AVMJ1Ch3D.gd`). La 2.5.7 exigía un clic previo, lo que dejaba al personaje inmóvil hasta que el jugador lo seleccionaba.
+- El control se suelta solo al perder el foco (abrir el chat, pulsar micrófono/cámara, cambiar de ventana) y mientras `construccion_activa` está marcado. Al recuperar el foco se devuelve el control **sin otro clic**, salvo que el modo construcción siga activo.
+- Un clic izquierdo sobre el cuerpo sigue lanzando un rayo desde la cámara y devuelve el control; un clic fuera ya **no** lo quita.
 - En WPF, [`GodotHwndHost.cs`](VSC%23/GodotHwndHost.cs) devuelve el teclado a Godot con `WM_PARENTNOTIFY` y no reenvía teclas mientras se escribe en un `TextBox`.
 - El cuadro de texto del chat se resalta con borde turquesa al recibir el foco.
 
-**Validación:** [`tools/probar_control_clic.gd`](MTBGT/WoldVirtualP2P3D/tools/probar_control_clic.gd) supera **25/25** comprobaciones en headless sobre `userbaseh1`, `AVMJ1Ch3D` y la cápsula. **No** se ha validado visualmente dentro del visor embebido.
+**Validación:** [`tools/probar_control_clic.gd`](MTBGT/WoldVirtualP2P3D/tools/probar_control_clic.gd) supera **35/35** comprobaciones en headless sobre `userbaseh1`, `AVMJ1Ch3D` y la cápsula. **No** se ha validado el foco real dentro del visor embebido con el túnel activo.
 
 ### 3.4 Explorador y registro de isla (Godot)
 
@@ -121,7 +122,7 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 
 - [`ISLA3Dblock.tscn`](MTBGT/WoldVirtualP2P3D/ESCENAS/sceneOPTM/constructor/chunk3DBLOCK/ISLA3Dblock.tscn) monta un nodo `Constructor` con `Construccion.gd`.
 - [`ChunkManager.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/ChunkManager.gd) llama a `registrar_isla()` justo después de crear cada isla, tanto en el anfitrión como en los clientes.
-- En modo construcción se marca `construccion_activa` en el avatar, se pone `control_avatar = false` y se liberan las acciones `ui_*`. Los tres controladores de avatar (`userbase.gd`, `userbaseh_1.gd`, `AVMJ1Ch3D.gd`) ignoran el clic de selección mientras el modo está activo.
+- En modo construcción se marca `construccion_activa` en el avatar, se pone `control_avatar = false` y se liberan las acciones `ui_*`; al salir se devuelve `control_avatar = true`. Los tres controladores de avatar (`userbase.gd`, `userbaseh_1.gd`, `AVMJ1Ch3D.gd`) ignoran el clic de selección mientras el modo está activo.
 - **Humo del mundo:** al arrancar el mundo completo se observó `Generando isla 0 para el jugador 1` seguido de `[Construccion] Isla 0 preparada: 10920 vértices`, sin errores de construcción.
 
 ---
@@ -132,8 +133,8 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 |---|---|---|
 | Compilación del visor | `dotnet build VSC#/Visor3D.csproj -p:SkipGodotAssets=true -c Debug` | **0 errores, 0 avisos** (1,16 s incremental) |
 | Chat, amigos y proxy | `DMWoldVirtualp2pCNXv2.5.6.exe --chat-selftest` | **24/24 OK, 0 fallos**; micrófonos=1, webcams=1; mismo binario publicado |
-| Terreno y prims | `Godot --headless --path . --script res://tools/probar_construccion.gd` | **84 OK, 0 fallos**; pincel 6,75 ms, colisión 19,29 ms, blob 43 698 → 17 388 B |
-| Clic de avatar | `Godot --headless --path . --script res://tools/probar_control_clic.gd` | **25/25 OK, 0 fallos** |
+| Terreno y prims | `Godot --headless --path . --script res://tools/probar_construccion.gd` | **85 OK, 0 fallos**; pincel 6,75 ms, colisión 19,29 ms, blob 43 698 → 17 388 B |
+| Control de avatar | `Godot --headless --path . --script res://tools/probar_control_clic.gd` | **35/35 OK, 0 fallos** |
 | Registro de islas | `Godot --headless --path . --script res://tools/probar_registro_islas.gd` | **23/23 OK, 0 fallos** |
 | Escena de construcción | `Godot --headless --path . --script res://tools/sonda_escena_construccion.gd` | `Constructor=true`, script `res://gdscrip/Construccion.gd`, **OK** |
 | Humo del mundo | Arranque completo de `ISLA3Dblock.tscn` | Isla 0 registrada con 10 920 vértices, sin errores de construcción |
@@ -152,7 +153,7 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 - Sesión real de dos máquinas con construcción, chat, voz y webcam a través del túnel.
 - Latencia, pérdida de paquetes y reconexión del túnel HTTP.
 - Interacción visual completa en el visor WPF embebido (foco, clic y resaltado).
-- OTA de punta a punta 2.5.5 → 2.5.6 en un equipo con la versión anterior.
+- OTA de punta a punta 2.5.7 → 2.5.8 en un equipo con la versión anterior.
 - Prueba de migración de anfitrión con permisos de construcción y chat.
 
 ---
@@ -163,7 +164,7 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 
 1. **Prueba de dos máquinas para construcción:** pincel, rezado, permisos, guardado, recarga y migración de anfitrión.
 2. **Prueba de dos máquinas para chat:** texto, voz, webcam, amigos, privados y reconexión tras migración.
-3. **Prueba visual del visor embebido:** clic sobre el avatar, flechas, foco del chat y resaltado.
+3. **Prueba E2E del visor embebido:** flechas sin clic, foco del chat, recuperación al volver y resaltado.
 4. **Checklist de release:** completar [`REGLAS_DE_ACTUALIZACION.md`](../../../../REGLAS_DE_ACTUALIZACION.md) §7 antes de generar PCK, binario u OTA.
 
 ### P1 — Producto
@@ -249,7 +250,7 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 3. Arrastrar con el botón izquierdo sobre el terreno de la propia isla para esculpir.
 4. Con **Seleccionar**, hacer clic en una prim; después mover, rotar, escalar, duplicar o borrar.
 5. Elegir tipo y color en el panel y pulsar **Rezar** para crear una prim nueva.
-6. Salir con <kbd>B</kbd> o <kbd>Esc</kbd>. El avatar queda libre; hay que volver a hacer clic sobre él para caminar.
+6. Salir con <kbd>B</kbd> o <kbd>Esc</kbd>. El avatar recupera el control y camina con las flechas o WASD sin otro clic.
 
 > El terreno y las prims solo se pueden editar en la isla propia. En islas ajenas el panel muestra el estado en tono de aviso y rechaza la edición.
 
@@ -260,10 +261,10 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 E:/Program\ Files/dotnet/dotnet.exe build "VSC#/Visor3D.csproj" -p:SkipGodotAssets=true -c Debug
 
 # Selftest del chat (el ejecutable compilado)
-"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.7.exe" --chat-selftest
+"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.8.exe" --chat-selftest
 
 # Prueba de arranque previa a publicar
-"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.7.exe" --startup-selftest
+"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.8.exe" --startup-selftest
 
 # Godot (desde MTBGT/WoldVirtualP2P3D)
 "C:/Users/User/Desktop/Godot_v4.7.2-stable_win64_console.exe" --headless --path . \
@@ -377,7 +378,63 @@ El reinicio de cuenta sí se ejecutó en este equipo y su resultado quedó archi
 
 ---
 
-## 11. Reglas para continuar esta fase
+## 11. Publicación v2.5.8 (2026-10-26)
+
+La 2.5.6 introdujo el control de avatar por clic para que el teclado del chat no
+moviera al personaje, pero el avatar arrancaba bloqueado: el usuario lo percibió como
+«los avatares no andan en esta actualización». La 2.5.8 devuelve el control desde el
+arranque, lo suelta solo al perder el foco o entrar en construcción y lo recupera sin
+otro clic. El chat, los amigos, el reinicio de cuenta de la 2.5.7 y la construcción no
+cambian de comportamiento.
+
+| Dato | Valor |
+|---|---|
+| Release | [`v2.5.8`](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.8), tag sobre el commit de publicación de esta rama |
+| Asset | `DMWoldVirtualp2pCNXv2.5.8.exe` |
+| Tamaño | 788.180.863 B (751,7 MiB) |
+| SHA-256 local | `44dea928130f65977f71746a7579d9f2255edb7271b4e85f219af09ee3b1f609` |
+| PCK embebido | 537.803.820 B (512,9 MiB), SHA-256 `6456b82b81fb5daa93bc1537b82b4c4c4fbcf1ccdf123e01b3b2ecc0cd0ca2ec`; exportado del árbol de este commit el 2026-10-26 17:27 |
+| `release.json` | version `2.5.8`, tag `v2.5.8`, exe y URL del asset nuevo, `size_mb` 751.7; SHA-256 `f33f6c07a655fa5a7695cf7ab0413d00247d9df836dfabcd9600e50be5353747` |
+| `SHA256SUMS` | exe + `release.json`; SHA-256 `ce25ea61c1a0a021a0fae0f2eec630d624117b13b2ce8bb20ec686a4e04c5cb3` |
+| Prueba de arranque | **11/11 OK**, exit 0; marcador `.extracted` = `2.5.8`; PCK extraído idéntico al embebido |
+| Chat | **24/24 OK**, exit 0 |
+| Control de avatar | **35/35 OK**, exit 0 |
+| Construcción | **85/85 OK**, exit 0 |
+| Prueba visual | **9/9 OK** y 10 capturas de terreno y prims; herramienta local no versionada para no desalinear el PCK |
+
+### 11.1 Qué cambia en el PCK y en el visor
+
+- **Godot:** `control_avatar := true` en `userbase.gd`, `userbaseh_1.gd` y
+  `AVMJ1Ch3D.gd`; `NOTIFICATION_APPLICATION_FOCUS_IN` recupera el control salvo con
+  `construccion_activa`; un clic fuera del cuerpo ya no lo quita;
+  `Construccion._bloquear_avatar()` devuelve el control al salir.
+- **Pruebas:** `probar_control_clic.gd` pasa de 25 a **35** comprobaciones y
+  `probar_construccion.gd` de 84 a **85**.
+- **C#:** solo cambian `<Version>`, `<AssemblyVersion>`, `<FileVersion>`,
+  `<AssemblyName>` y la descripción del `.csproj`, más `ExeNameFallback` y
+  `ExeUrlFallback` de `WebNodoService`.
+- **PCK:** la 2.5.7 reutilizó el PCK de la 2.5.6 (`9a5e2a06…baf4f`); la 2.5.8 lleva uno
+  nuevo (`6456b82b…0ca2ec`) porque los controladores de avatar han cambiado. Se exportó a
+  las 17:27:11; el único cambio posterior del árbol es una comprobación añadida a
+  `tools/probar_construccion.gd` (17:27:32), que no forma parte del mundo empaquetado.
+
+### 11.2 Por qué es una versión nueva y no un reemplazo
+
+Recompilar bajo el tag `v2.5.7` habría dejado a los equipos ya actualizados con
+`runtime\2.5.7\` extraído antes (R1), y mover o renombrar un tag publicado está
+prohibido (R4, §8.2). La 2.5.8 es un tag nuevo: el actualizador elige la versión mayor
+del nombre del asset y el primer arranque extrae `runtime\2.5.8\`.
+
+### 11.3 Límite no acreditado
+
+No se ejecutó el OTA 2.5.7 → 2.5.8 en un equipo distinto ni una sesión de dos máquinas
+con chat o construcción. La verificación de los tres `digest` con `gh api` y la prueba
+del portal con el binario en ejecución se anotan en el commit de documentación posterior
+a la publicación.
+
+---
+
+## 12. Reglas para continuar esta fase
 
 1. **No publicar** binario, PCK ni OTA sin completar el checklist de [`REGLAS_DE_ACTUALIZACION.md`](../../../../REGLAS_DE_ACTUALIZACION.md) §7.
 2. **No afirmar** que existe túnel SSH: el sistema usa túneles HTTP/WebSocket. Si se quiere SSH, es trabajo pendiente con diseño propio.
@@ -388,7 +445,7 @@ El reinicio de cuenta sí se ejecutó en este equipo y su resultado quedó archi
 
 ---
 
-## 12. Referencias
+## 13. Referencias
 
 - [`README_desarrollo_20261026.md`](README_desarrollo_20261026.md) — primeros 7 bloques de la jornada.
 - [`README_DESARROLLO.md`](README_DESARROLLO.md) — auditoría amplia del estado de `src/`.
@@ -398,4 +455,4 @@ El reinicio de cuenta sí se ejecutó en este equipo y su resultado quedó archi
 
 ---
 
-*Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. Binarios publicados el mismo día: 2.5.6 (ver §9) y 2.5.7 (ver §10).*
+*Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. Binarios publicados el mismo día: 2.5.6 (ver §9), 2.5.7 (ver §10) y 2.5.8 (ver §11).*

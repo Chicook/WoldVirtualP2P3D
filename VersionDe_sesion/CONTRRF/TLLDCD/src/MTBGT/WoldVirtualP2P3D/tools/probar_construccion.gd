@@ -261,6 +261,7 @@ func _probar_construccion() -> void:
 	_check(not avatar.control_avatar, "el avatar suelto no responde a flechas")
 	c._bloquear_avatar(false)
 	_check(not avatar.get_meta("construccion_activa", true), "al salir se retira la marca")
+	_check(avatar.control_avatar, "al salir se devuelve el control sin otro clic")
 
 	_check(c._validar_remitente(99, root.multiplayer.get_unique_id()), "el anfitrion puede editar")
 	_check(not c._validar_remitente(99, 777), "un peer ajeno no puede editar")

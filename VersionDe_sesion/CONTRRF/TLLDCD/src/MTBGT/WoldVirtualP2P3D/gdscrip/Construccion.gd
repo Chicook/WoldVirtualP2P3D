@@ -271,8 +271,9 @@ func _bloquear_avatar(activo: bool) -> void:
 	if ub == null:
 		return
 	ub.set_meta("construccion_activa", activo)
+	# Al cerrar el modo se devuelve el control sin exigir otro clic.
 	if "control_avatar" in ub:
-		ub.set("control_avatar", false)
+		ub.set("control_avatar", not activo)
 	if ub is CharacterBody3D:
 		var cuerpo := ub as CharacterBody3D
 		cuerpo.velocity.x = 0.0
