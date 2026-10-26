@@ -47,6 +47,7 @@ var nivel_agua := NIVEL_AGUA_DEFECTO
 
 var vertices := PackedVector3Array()
 var vertices_base := PackedVector3Array()
+var colores_base := PackedColorArray()
 var normales := PackedVector3Array()
 var tangentes := PackedFloat32Array()
 var uvs := PackedVector2Array()
@@ -56,6 +57,7 @@ var colores := PackedColorArray()
 
 var _vecinos: Array = []
 var _hash_base := 0
+var _editado := false
 var _espaciado := 0.02
 var _malla_actual: ArrayMesh = null
 
@@ -111,6 +113,8 @@ func configurar(nodo_isla: Node3D, idx: int) -> bool:
 		colores.fill(COLOR_SIN_ARENA)
 	vertices_base = vertices.duplicate()
 	_hash_base = hash(vertices_base)
+	colores_base = colores.duplicate()
+	_editado = false
 
 	# TERRENO_EDITABLE conserva la textura original y superpone el color por
 	# vértice (arena). Se clona por isla para no alterar el recurso compartido.
@@ -240,6 +244,8 @@ func aplicar_pincel(centro_mundo: Vector3, radio_m: float, fuerza_m: float,
 	# alfa perdido en el borde para que la tierra arrastrada no palidezca.
 	if herramienta == MOVER:
 		_equilibrar_alfa(afectados, alfa_antes)
+	if not afectados.is_empty():
+		_editado = true
 	_recalcular_normales()
 	_reconstruir_malla()
 	return afectados.size()
@@ -255,6 +261,26 @@ func actualizar_colision() -> void:
 	for i in indices.size():
 		caras[i] = vertices[indices[i]]
 	forma.set_faces(caras)
+
+
+## Devuelve la isla al estado del mundo exportado: alturas, colores, malla y
+## colisión originales. Es la operación del botón «Deshacer».
+func restablecer() -> bool:
+	if vertices_base.is_empty() or vertices_base.size() != vertices.size():
+		return false
+	vertices = vertices_base.duplicate()
+	colores = colores_base.duplicate() if colores_base.size() == vertices.size() \
+			else PackedColorArray()
+	_editado = false
+	_recalcular_normales()
+	_reconstruir_malla()
+	actualizar_colision()
+	return true
+
+
+## True si el terreno tiene algún cambio respecto al estado exportado.
+func esta_editado() -> bool:
+	return _editado
 
 
 ## Blob binario (cabecera + alturas float32 + color RGBA8) para disco y túnel.
@@ -326,6 +352,7 @@ func cargar(datos: PackedByteArray) -> bool:
 			off += 4
 	else:
 		colores.fill(COLOR_SIN_ARENA)
+	_editado = vertices != vertices_base or colores != colores_base
 	_recalcular_normales()
 	_reconstruir_malla()
 	actualizar_colision()

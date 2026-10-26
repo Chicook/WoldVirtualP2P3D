@@ -567,3 +567,36 @@ extrae `runtime\2.5.9\`.
 ---
 
 *Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. Binarios publicados el mismo día: 2.5.6 (ver §9), 2.5.7 (ver §10), 2.5.8 (ver §11) y 2.5.9 (ver §12). La 2.5.9 es la release vigente; quedan por ejecutar el OTA real desde GitHub y las pruebas de dos o tres equipos.*
+
+---
+
+## 15. Preparación de la v2.6.0 (2026-10-27)
+
+Trabajo hecho sobre el árbol del 2026-10-26, **sin publicar release**: sigue vigente la v2.5.9 y no se ha creado el tag `v2.6.0` (R16).
+
+### Cambios
+
+| Área | Cambio | Estado |
+|---|---|---|
+| Nombre y versión | `AssemblyName` = `DMWoldVirtualP2P3Dv2.6.0`; `Version`/`AssemblyVersion`/`FileVersion` = `2.6.0`/`2.6.0.0` | Implementado |
+| Persistencia de usuario | `Seguridad/PerfilUsuario.cs` centraliza `%LOCALAPPDATA%\WoldVirtualP2P3D` (perfil, credenciales y llave), migra desde `WoldVirtual` y `TieneIdentidad` cubre perfil/credenciales/sello | Implementado, sin migración probada en un equipo real |
+| Una cuenta por PC | El registro automático por versión desaparece: sólo se reinicia la base con `--reset-cuenta`; el formulario y la bienvenida bloquean un segundo registro | Implementado, sin prueba automatizada de doble registro |
+| Chat | El panel lateral derecho pasa a **barra inferior** de 226 px a todo el ancho, en una fila propia debajo del `HwndHost`; se conservan amigos, privados, voz, webcam y estado | Implementado, sin verificación visual con sesión real |
+| Deshacer | Botón «Deshacer isla» con confirmación: restaura terreno base, borra los prims de la isla y difunde el estado (autoridad del anfitrión) | Implementado y cubierto en headless |
+| Inventario | Botón «Guardar en inventario» y pestaña «Inventario»: lista la isla actual (terreno/assets) y las instantáneas guardadas | Implementado; restaurar queda **Planificado** |
+| PCK | Exportado del árbol actual: **537.840.220 B**, SHA-256 `360baf40…00f78a`; copiado a `VSC#/wvp3d.pck` | Implementado |
+
+### Evidencia
+
+| Prueba | Comando | Resultado |
+|---|---|---|
+| Construcción, voxel, deshacer e inventario | `godot --headless --path . --script res://tools/probar_construccion.gd` | **201 OK, 0 fallos**, exit 0 |
+| Compilación | `dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true` | **0 errores, 0 avisos**; `DMWoldVirtualP2P3Dv2.6.0.exe` de **788.230.009 B** (751,8 MiB), SHA-256 `29644fdd…502347` |
+| Arranque del binario 2.6.0 | `DMWoldVirtualP2P3Dv2.6.0.exe --startup-selftest` | **15/15 OK**, exit 0; `.extracted` = `2.6.0`; PCK extraído = embebido (512,9 MiB); motor con isla y WebSocket 8911, sin `ERROR` |
+| Aislamiento de la prueba | La primera pasada falló sólo en «Motor arranca desde el PCK» porque `user://p2p_session.json` forzaba modo cliente; apartando el fichero pasó 15/15 y se restauró | Documentado como sensibilidad al entorno en `REGLAS_DE_ACTUALIZACION.md` §9 |
+
+### Deuda abierta
+
+Registrada en el issue [#19](https://github.com/Chicook/WoldVirtualP2P3D/issues/19): restaurar desde el inventario, deshacer incremental, migración real 2.5.9 → 2.6.0, recuperación de la llave ante cambio de hardware, prueba visual de la barra de chat, aislamiento de `--startup-selftest` y OTA real 2.5.9 → 2.6.0.
+
+*La v2.6.0 queda compilada en local y pendiente de confirmación para publicar; los metadatos `release.json`/`SHA256SUMS` de 2.6.0 no se han generado todavía.*

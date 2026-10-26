@@ -189,6 +189,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="42"/>  <!-- Barra superior de sesión -->
                 <RowDefinition Height="*"/>   <!-- Viewport / HUD 3D -->
+                <RowDefinition Height="Auto"/> <!-- Barra inferior de chat -->
             </Grid.RowDefinitions>
 
             <!-- Barra superior de sesión autenticada (zona WPF pura: aquí vive todo lo flotante) -->
@@ -406,41 +407,35 @@
                 </Grid>
             </Grid>
 
-            <!-- Área Central 3D + panel de chat acoplado -->
+            <!-- Área Central 3D -->
             <Grid Grid.Row="1">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <!-- Ancho 0 = chat oculto; al abrirlo el viewport 3D se reduce. -->
-                    <ColumnDefinition x:Name="ColChat" Width="0"/>
-                </Grid.ColumnDefinitions>
-
                 <!-- Contenedor del HwndHost de Godot. OJO: es un HWND nativo y se pinta
-                     SIEMPRE por encima del resto de WPF de esta región (airspace). Por eso
-                     el chat vive en una columna propia y nunca se superpone al motor. -->
-                <Grid x:Name="ContenedorGodotMain" Grid.Column="0" Background="#000000"
+                     SIEMPRE por encima del resto de WPF de esta fila (airspace). Por eso
+                     el chat vive en una fila propia, debajo del motor, a todo el ancho. -->
+                <Grid x:Name="ContenedorGodotMain" Background="#000000"
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+            </Grid>
 
-                <!-- ═══════════════════════════════════════════════════════════ -->
-                <!-- PANEL DE CHAT (texto + voz + webcam)                        -->
-                <!-- ═══════════════════════════════════════════════════════════ -->
-                <Border x:Name="PanelChat" Grid.Column="1"
-                        Visibility="Collapsed"
-                        Background="#0A0F1D"
-                        BorderBrush="#163B67"
-                        BorderThickness="1,0,0,0">
-                    <Grid Margin="10,10,10,8">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!-- BARRA INFERIOR DE CHAT (texto + voz + webcam)               -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <Border x:Name="PanelChat" Grid.Row="2"
+                    Visibility="Collapsed"
+                    Height="226"
+                    Background="#0A0F1D"
+                    BorderBrush="#163B67"
+                    BorderThickness="0,1,0,0">
+                <Grid Margin="10,8,10,8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
                         <!-- Cabecera -->
-                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -448,8 +443,14 @@
                             <TextBlock Text="💬 Chat del metaverso"
                                        Foreground="#00D9FF" FontSize="12.5" FontWeight="Bold"
                                        VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <Button x:Name="BtnAmigos" Grid.Column="1"
+                                       Margin="0,0,12,0"/>
+                            <TextBlock x:Name="TxtChatEstado" Grid.Column="1"
+                                       Text="Chat desconectado"
+                                       Foreground="#64748B" FontSize="9.5"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="Estado de la conexión de chat, voz y cámara"/>
+                            <Button x:Name="BtnAmigos" Grid.Column="2"
                                     Content="👥 Amigos"
                                     Height="22" Padding="6,0" Margin="0,0,6,0"
                                     FontSize="10" FontWeight="SemiBold"
@@ -462,7 +463,7 @@
                                     </Style>
                                 </Button.Resources>
                             </Button>
-                            <Button x:Name="BtnChatCerrar" Grid.Column="2"
+                            <Button x:Name="BtnChatCerrar" Grid.Column="3"
                                     Content="✕" Width="22" Height="22" Padding="0"
                                     FontSize="11" FontWeight="Bold"
                                     Foreground="#94A3B8" Background="#111A2C"
@@ -476,16 +477,23 @@
                             </Button>
                         </Grid>
 
-                        <!-- Amigos, solicitudes y personas conectadas en la sesión -->
-                        <Border x:Name="PanelAmigos" Grid.Row="1"
-                                Visibility="Collapsed"
-                                Background="#0D1424"
-                                BorderBrush="#1D3A5C" BorderThickness="1"
-                                CornerRadius="5" Padding="8"
-                                Margin="0,0,0,8">
-                            <ScrollViewer MaxHeight="300"
-                                          VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
+                        <!-- Contenido: lista de amigos + historial + vídeos -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Amigos, solicitudes y personas conectadas en la sesión -->
+                            <Border x:Name="PanelAmigos" Grid.Column="0"
+                                    Visibility="Collapsed"
+                                    Width="260"
+                                    Background="#0D1424"
+                                    BorderBrush="#1D3A5C" BorderThickness="1"
+                                    CornerRadius="5" Padding="8"
+                                    Margin="0,0,8,0">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel>
                                     <Grid Margin="0,0,0,5">
                                         <Grid.ColumnDefinitions>
@@ -583,41 +591,48 @@
                             </ScrollViewer>
                         </Border>
 
-                        <!-- Vídeos remotos + mensajes -->
-                        <Grid Grid.Row="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
+                            <!-- Historial de mensajes + vídeos remotos -->
+                            <Grid Grid.Column="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Row="0" Margin="0,0,0,8">
-                                <Border x:Name="MarcoCamLocal" Visibility="Collapsed"
-                                        Background="#050811" BorderBrush="#2DD4BF" BorderThickness="1"
-                                        CornerRadius="5" HorizontalAlignment="Left" Margin="0,0,0,6">
+                                <ListBox x:Name="ListaChat" Grid.Column="0"
+                                         Background="#080C16" BorderBrush="#163B67" BorderThickness="1"
+                                         Foreground="#E2E8F0" FontSize="11.5"
+                                         HorizontalContentAlignment="Stretch"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+
+                                <ScrollViewer Grid.Column="1" Width="176" Margin="8,0,0,0"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
                                     <StackPanel>
-                                        <TextBlock Text="TU CÁMARA" Foreground="#2DD4BF" FontSize="9"
-                                                   FontWeight="Bold" Margin="5,3,5,0"/>
-                                        <Image x:Name="ImgCamLocal" Width="160" Height="90"
-                                               Stretch="UniformToFill" Margin="4"/>
+                                        <Border x:Name="MarcoCamLocal" Visibility="Collapsed"
+                                                Background="#050811" BorderBrush="#2DD4BF" BorderThickness="1"
+                                                CornerRadius="5" HorizontalAlignment="Left" Margin="0,0,0,6">
+                                            <StackPanel>
+                                                <TextBlock Text="TU CÁMARA" Foreground="#2DD4BF" FontSize="9"
+                                                           FontWeight="Bold" Margin="5,3,5,0"/>
+                                                <Image x:Name="ImgCamLocal" Width="160" Height="90"
+                                                       Stretch="UniformToFill" Margin="4"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <WrapPanel x:Name="PanelVideos" Orientation="Horizontal"/>
                                     </StackPanel>
-                                </Border>
-                                <WrapPanel x:Name="PanelVideos" Orientation="Horizontal"/>
-                            </StackPanel>
-
-                            <ListBox x:Name="ListaChat" Grid.Row="1"
-                                     Background="#080C16" BorderBrush="#163B67" BorderThickness="1"
-                                     Foreground="#E2E8F0" FontSize="11.5"
-                                     HorizontalContentAlignment="Stretch"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                                </ScrollViewer>
+                            </Grid>
                         </Grid>
 
-                        <!-- Controles de voz y cámara -->
-                        <Grid Grid.Row="3" Margin="0,8,0,0">
+                        <!-- Voz, cámara y entrada de texto -->
+                        <Grid Grid.Row="2" Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="110"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Button x:Name="BtnChatMic" Grid.Column="0"
                                     Content="🎙 Voz"
@@ -649,20 +664,13 @@
                             </Button>
                             <ProgressBar x:Name="BarraMic" Grid.Column="2"
                                          Height="5" Minimum="0" Maximum="100" Value="0"
+                                         Margin="0,0,4,0"
                                          VerticalAlignment="Center"
                                          Foreground="#2DD4BF" Background="#111A2C"
                                          BorderThickness="0"/>
-                        </Grid>
-
-                        <!-- Entrada de texto -->
-                        <Grid Grid.Row="4" Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
                             <!-- Al hacer clic (o al abrir el chat) el cuadro se
                                  enciende: fondo más claro y borde turquesa. -->
-                            <TextBox x:Name="TxtChat" Grid.Column="0"
+                            <TextBox x:Name="TxtChat" Grid.Column="3"
                                      Height="28" Padding="6,3"
                                      MaxLength="500"
                                      FontSize="11.5"
@@ -685,7 +693,7 @@
                                     </Style>
                                 </TextBox.Style>
                             </TextBox>
-                            <Button x:Name="BtnChatEnviar" Grid.Column="1"
+                            <Button x:Name="BtnChatEnviar" Grid.Column="4"
                                     Content="Enviar"
                                     Height="28" Padding="10,1" Margin="6,0,0,0"
                                     FontSize="10.5" FontWeight="Bold"
@@ -699,15 +707,8 @@
                                 </Button.Resources>
                             </Button>
                         </Grid>
-
-                        <!-- Estado del chat -->
-                        <TextBlock x:Name="TxtChatEstado" Grid.Row="5"
-                                   Text="Chat desconectado"
-                                   Foreground="#64748B" FontSize="9.5"
-                                   TextWrapping="Wrap" Margin="0,6,0,0"/>
                     </Grid>
                 </Border>
-            </Grid>
         </Grid>
 
         <!-- ═══════════════════════════════════════════════════════════ -->

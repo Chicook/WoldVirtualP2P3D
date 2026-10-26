@@ -37,6 +37,14 @@ namespace Visor3D
         {
             TxtError.Visibility = Visibility.Collapsed;
 
+            // Última barrera: ni con el formulario abierto se permite una
+            // segunda cuenta si el PC ya tiene identidad guardada.
+            if (Visor3D.Seguridad.PerfilUsuario.TieneIdentidad)
+            {
+                MostrarError("Este equipo ya tiene una cuenta. Sólo se permite UNA cuenta por PC.");
+                return;
+            }
+
             string nombre = TxtNombre.Text.Trim();
             string pass = TxtPassword.Password;
             string passRep = TxtPasswordRepetir.Password;
