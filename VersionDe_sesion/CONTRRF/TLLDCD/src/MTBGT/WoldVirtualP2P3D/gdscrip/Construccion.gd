@@ -17,7 +17,7 @@ const BLOQUE_BYTES := 6000
 const RADIO_ISLA := 95.0
 const PASO_PINCEL := 0.05
 
-enum Herramienta { SELECCION, SUBIR, BAJAR, SUAVIZAR, APLANAR }
+enum Herramienta { SELECCION, SUBIR, BAJAR, SUAVIZAR, APLANAR, MOVER, PLAYA }
 
 var _panel = null
 var _islas := {}          # indice -> Node3D de la isla
@@ -38,6 +38,7 @@ var _color_actual: Color = Prims.COLORES[0]
 var _pincelando := false
 var _pincel_isla := -1
 var _ultimo_impacto := Vector3.ZERO
+var _impacto_previo := Vector3.ZERO
 var _mira: MeshInstance3D = null
 var _resalte: MeshInstance3D = null
 var _recibiendo := {}
@@ -81,6 +82,12 @@ func _exit_tree() -> void:
 func registrar_isla(idx: int, nodo_isla: Node3D) -> void:
 	if nodo_isla == null or _islas.has(idx):
 		return
+	# Un mismo nodo no puede representar dos islas: compartiría terreno y
+	# colisión, y esculpir una modificaría la otra.
+	for otro in _islas:
+		if _islas[otro] == nodo_isla:
+			push_warning("[Construccion] La isla %d ya estaba registrada como %s" % [idx, str(otro)])
+			return
 	_islas[idx] = nodo_isla
 	var terreno := Terreno.new()
 	if terreno.configurar(nodo_isla, idx):
@@ -230,10 +237,11 @@ func _puedo_editar(idx: int) -> bool:
 	return false
 
 
+## Un cambio remoto solo vale si lo firma el dueño actual de esa isla. No hay
+## excepción para el propio id ni para remitentes sin identificar: así ningún
+## peer puede esculpir el terreno de otro aunque manipule el RPC.
 func _validar_remitente(idx: int, remitente: int) -> bool:
-	if remitente == 0 or remitente == multiplayer.get_unique_id():
-		return true
-	if idx < 0:
+	if remitente <= 0 or idx < 0:
 		return false
 	var cm := get_parent()
 	if cm == null:
@@ -409,6 +417,7 @@ func _iniciar_pincel() -> void:
 	_pincelando = true
 	_pincel_isla = idx
 	_ultimo_impacto = hit["position"]
+	_impacto_previo = _ultimo_impacto
 	_pincel_t = 0.0
 	_tick_pincel()
 
@@ -424,16 +433,28 @@ func _tick_pincel() -> void:
 	if not hit.is_empty():
 		_ultimo_impacto = hit["position"]
 	var herramienta_terreno := _herramienta - 1
-	var afectados: int = terreno.aplicar_pincel(_ultimo_impacto, _radio, _fuerza, PASO_PINCEL, herramienta_terreno)
+	var delta := Vector3.ZERO
+	if herramienta_terreno == Terreno.MOVER:
+		delta = _ultimo_impacto - _impacto_previo
+		delta.y = 0.0
+		var largo := delta.length()
+		var tope := maxf(2.0, _radio * 0.5)
+		if largo > tope:
+			delta = delta / largo * tope
+	_impacto_previo = _ultimo_impacto
+	var afectados: int = terreno.aplicar_pincel(_ultimo_impacto, _radio, _fuerza, PASO_PINCEL,
+			herramienta_terreno, delta)
 	if afectados <= 0:
 		return
 	_colision_pendiente[_pincel_isla] = true
 	_sucio[_pincel_isla] = true
 	_col_t = 0.0
 	if multiplayer.is_server():
-		_difundir_pincel(_pincel_isla, _ultimo_impacto, _radio, _fuerza, PASO_PINCEL, herramienta_terreno)
+		_difundir_pincel(_pincel_isla, _ultimo_impacto, _radio, _fuerza, PASO_PINCEL,
+				herramienta_terreno, delta)
 	else:
-		rpc_id(1, "_solicitar_pincel", _pincel_isla, _ultimo_impacto, _radio, _fuerza, PASO_PINCEL, herramienta_terreno)
+		rpc_id(1, "_solicitar_pincel", _pincel_isla, _ultimo_impacto, _radio, _fuerza,
+				PASO_PINCEL, herramienta_terreno, delta)
 
 
 func _terminar_pincel() -> void:
@@ -448,14 +469,16 @@ func _terminar_pincel() -> void:
 	_pincel_isla = -1
 
 
-func _difundir_pincel(idx: int, centro: Vector3, radio: float, fuerza: float, dt: float, herramienta: int) -> void:
+func _difundir_pincel(idx: int, centro: Vector3, radio: float, fuerza: float, dt: float,
+		herramienta: int, delta: Vector3) -> void:
 	if multiplayer.get_peers().is_empty():
 		return
-	rpc("_pincel_remoto", idx, centro, radio, fuerza, dt, herramienta)
+	rpc("_pincel_remoto", idx, centro, radio, fuerza, dt, herramienta, delta)
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _solicitar_pincel(idx: int, centro: Vector3, radio: float, fuerza: float, dt: float, herramienta: int) -> void:
+func _solicitar_pincel(idx: int, centro: Vector3, radio: float, fuerza: float, dt: float,
+		herramienta: int, delta: Vector3) -> void:
 	if not multiplayer.is_server():
 		return
 	var remitente := multiplayer.get_remote_sender_id()
@@ -465,21 +488,22 @@ func _solicitar_pincel(idx: int, centro: Vector3, radio: float, fuerza: float, d
 	var terreno = _terrenos.get(idx)
 	if terreno == null:
 		return
-	terreno.aplicar_pincel(centro, radio, fuerza, dt, herramienta)
+	terreno.aplicar_pincel(centro, radio, fuerza, dt, herramienta, delta)
 	_colision_pendiente[idx] = true
 	_sucio[idx] = true
 	_col_t = 0.0
 	for peer in multiplayer.get_peers():
 		if peer != remitente:
-			rpc_id(peer, "_pincel_remoto", idx, centro, radio, fuerza, dt, herramienta)
+			rpc_id(peer, "_pincel_remoto", idx, centro, radio, fuerza, dt, herramienta, delta)
 
 
 @rpc("authority", "call_remote", "reliable")
-func _pincel_remoto(idx: int, centro: Vector3, radio: float, fuerza: float, dt: float, herramienta: int) -> void:
+func _pincel_remoto(idx: int, centro: Vector3, radio: float, fuerza: float, dt: float,
+		herramienta: int, delta: Vector3) -> void:
 	var terreno = _terrenos.get(idx)
 	if terreno == null:
 		return
-	terreno.aplicar_pincel(centro, radio, fuerza, dt, herramienta)
+	terreno.aplicar_pincel(centro, radio, fuerza, dt, herramienta, delta)
 	_colision_pendiente[idx] = true
 	_sucio[idx] = true
 	_col_t = 0.0
@@ -1171,13 +1195,15 @@ func _crear_mira() -> void:
 	add_child(_mira)
 
 
-func _actualizar_mira() -> void:
+## `impacto` permite fijar el acierto desde una prueba; en juego se calcula
+## con el rayo del ratón.
+func _actualizar_mira(impacto := {}) -> void:
 	if _mira == null:
 		return
 	if not _modo or _herramienta == Herramienta.SELECCION:
 		_mira.visible = false
 		return
-	var hit := _rayo_raton()
+	var hit: Dictionary = impacto if not impacto.is_empty() else _rayo_raton()
 	if hit.is_empty():
 		_mira.visible = false
 		return
@@ -1185,13 +1211,23 @@ func _actualizar_mira() -> void:
 	_mira.global_position = (hit["position"] as Vector3) + Vector3(0.0, 0.25, 0.0)
 	_mira.scale = Vector3(_radio, 1.0, _radio)
 	var mat := _mira.material_override as StandardMaterial3D
-	if mat != null:
-		match _herramienta:
-			Herramienta.SUBIR:
-				mat.albedo_color = Color(0.3, 1.0, 0.55, 0.95)
-			Herramienta.BAJAR:
-				mat.albedo_color = Color(1.0, 0.42, 0.35, 0.95)
-			Herramienta.SUAVIZAR:
-				mat.albedo_color = Color(0.35, 0.85, 1.0, 0.95)
-			Herramienta.APLANAR:
-				mat.albedo_color = Color(1.0, 0.85, 0.3, 0.95)
+	if mat == null:
+		return
+	# Vista previa de permisos: sobre una isla ajena la mira se vuelve roja en
+	# lugar de ofrecer un pincel que el anfitrión va a rechazar.
+	if not _puedo_editar(_isla_del_impacto(hit)):
+		mat.albedo_color = Color(1.0, 0.32, 0.32, 0.9)
+		return
+	match _herramienta:
+		Herramienta.SUBIR:
+			mat.albedo_color = Color(0.3, 1.0, 0.55, 0.95)
+		Herramienta.BAJAR:
+			mat.albedo_color = Color(1.0, 0.42, 0.35, 0.95)
+		Herramienta.SUAVIZAR:
+			mat.albedo_color = Color(0.35, 0.85, 1.0, 0.95)
+		Herramienta.APLANAR:
+			mat.albedo_color = Color(1.0, 0.85, 0.3, 0.95)
+		Herramienta.MOVER:
+			mat.albedo_color = Color(0.85, 0.72, 1.0, 0.95)
+		Herramienta.PLAYA:
+			mat.albedo_color = Color(0.98, 0.9, 0.62, 0.95)

@@ -15,7 +15,16 @@ signal escala_solicitada(metros: float)
 signal snap_cambiada(activo: bool)
 
 const Prims = preload("res://gdscrip/Prims.gd")
-const HERRAMIENTAS := ["Seleccionar", "Subir", "Bajar", "Suavizar", "Aplanar"]
+const HERRAMIENTAS := ["Seleccionar", "Subir", "Bajar", "Suavizar", "Aplanar", "Mover", "Playa"]
+const AYUDAS_HERRAMIENTA := [
+	"Selecciona objetos (clic)",
+	"Levanta el terreno",
+	"Hunde el terreno",
+	"Redondea el relieve",
+	"Aplana a la altura del clic",
+	"Arrastra: desplaza el montículo en la dirección del ratón",
+	"Aplana a ~1 m sobre el agua y tiñe de arena",
+]
 
 var _panel: PanelContainer = null
 var _btn_abrir: Button = null
@@ -155,8 +164,10 @@ func _construir() -> void:
 	caja.add_child(HSeparator.new())
 
 	caja.add_child(_etiqueta("TERRENO", 14, Color(0.45, 0.9, 0.8)))
-	var fila_herr := HBoxContainer.new()
-	fila_herr.add_theme_constant_override("separation", 3)
+	var rejilla_herr := GridContainer.new()
+	rejilla_herr.columns = 4
+	rejilla_herr.add_theme_constant_override("h_separation", 3)
+	rejilla_herr.add_theme_constant_override("v_separation", 3)
 	_grupo = ButtonGroup.new()
 	for i in HERRAMIENTAS.size():
 		var b := Button.new()
@@ -164,18 +175,19 @@ func _construir() -> void:
 		b.toggle_mode = true
 		b.button_group = _grupo
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(58, 28)
+		b.custom_minimum_size = Vector2(72, 26)
 		b.add_theme_font_size_override("font_size", 11)
+		b.tooltip_text = AYUDAS_HERRAMIENTA[i]
 		b.pressed.connect(_on_herramienta.bind(i))
-		fila_herr.add_child(b)
+		rejilla_herr.add_child(b)
 		_botones_herr.append(b)
-	caja.add_child(fila_herr)
+	caja.add_child(rejilla_herr)
 	_botones_herr[0].button_pressed = true
 
 	_slider_radio = _deslizador(caja, "Radio", 2.0, 30.0, 1.0, 8.0, _on_radio)
 	_slider_fuerza = _deslizador(caja, "Fuerza", 0.2, 4.0, 0.1, 1.2, _on_fuerza)
 
-	var pista := _etiqueta("Arrastra con clic izquierdo sobre tu isla para esculpir.", 11, Color(0.55, 0.65, 0.75))
+	var pista := _etiqueta("Arrastra con clic izquierdo sobre tu isla para esculpir. Mover empuja el montículo en la dirección del arrastre; Playa aplana la costa a ~1 m sobre el agua y la tiñe de arena.", 11, Color(0.55, 0.65, 0.75))
 	pista.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	caja.add_child(pista)
 	caja.add_child(HSeparator.new())

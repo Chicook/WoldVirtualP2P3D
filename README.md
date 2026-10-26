@@ -105,7 +105,7 @@ Economía y blockchain, token WCVcoin, validación de identidad única anti-Sybi
 - La red es **P2P solo en el transporte**: cada sesión tiene un **anfitrión con autoridad** y el resto de nodos se conecta a él por WebSocket. No hay replicación descentralizada sin servidor de confianza.
 - La red y el mundo **no persisten** más allá de la sesión: los túneles son efímeros y las islas se reconstruyen al reconectar.
 - La "billetera DeFi" del visor está **en construcción**: la semilla BIP-39 y sus derivaciones son reales, pero no se conecta a ninguna blockchain ni gestiona fondos.
-- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/Visor3D.csproj) coincide con el binario publicado vigente (**2.5.8**) y con su `AssemblyName`.
+- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/Visor3D.csproj) coincide con el binario **en preparación (2.5.9)** y con su `AssemblyName`; el binario **publicado vigente** sigue siendo la **2.5.8** hasta que se suba la release v2.5.9.
 
 ---
 
@@ -720,15 +720,15 @@ Estos ficheros describen el entorno de trabajo del autor y no afectan a la compi
 
 | Documento | Contenido | Cubre | Vigencia |
 |---|---|---|---|
-| [`README.md`](README.md) | Este documento | v2.5.8 | Vigente |
-| [`REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md) | Flujo obligatorio y checklist de publicación | v2.5.8 | Vigente |
+| [`README.md`](README.md) | Este documento | v2.5.9 en preparación (2.5.8 publicada) | Vigente |
+| [`REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md) | Flujo obligatorio y checklist de publicación | v2.5.9 en preparación | Vigente |
 | [`src/HOJA_DE_RUTA.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/HOJA_DE_RUTA.md) | Plan F0–F7 + L1–L6 con casillas | transición 0.0.20 → 0.1.0 | Parcial (fases F2–F5 ya ejecutadas) |
 | [`src/README_DESARROLLO.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/README_DESARROLLO.md) | Análisis profundo del visor, updater, deuda D1–D16 | v0.0.2 → 0.1.0 | Histórico (base del plan) |
 | [`src/ref_info.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/ref_info.md) | Plan maestro LucIA (límites de diseño) | 2026-10-12 | Vigente para LucIA |
 | [`src/MTBGT/WoldVirtualP2P3D/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/MTBGT/WoldVirtualP2P3D/README.md) | Doc técnica del mundo Godot | 2026-10 | Vigente con erratas (documenta ENet/8910 descartado) |
 | [`src/MTBGT/RESUMEN_SESION.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/MTBGT/RESUMEN_SESION.md) | Resumen de una sesión de trabajo del mundo | 2026-10-18 | Histórico |
 | [`src/VSC#/README_TUNELES_P2P.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/README_TUNELES_P2P.md) | Diseño y estado de los túneles efímeros | 0.0.20 | Vigente (implementación actual) |
-| [`src/VSC#/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/README.md) | Doc del visor C# y WebNodo | v2.5.8 (auditoría histórica incluida) | Parcial: la cabecera y las secciones de chat/control están al día; las fases antiguas aún hablan de Node.js/Express, que no existe |
+| [`src/VSC#/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/README.md) | Doc del visor C# y WebNodo | v2.5.9 en preparación (auditoría histórica incluida) | Parcial: la cabecera y las secciones de chat/control están al día; las fases antiguas aún hablan de Node.js/Express, que no existe |
 | [`src/VSC#/webnodo/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/webnodo/README.md) | Doc de un servidor Express no versionado | — | **Obsoleto** (no hay `server.js` ni npm) |
 | [`src/STM_DOC/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/README.md) | Plan de desarrollo y hoja de ruta LucIA | 2026-09-25 | Parcial |
 | [`src/STM_DOC/desarrollo.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/desarrollo.md) | Registro de desarrollo (`ds ialocal`) | 2026-09-24 | Histórico |

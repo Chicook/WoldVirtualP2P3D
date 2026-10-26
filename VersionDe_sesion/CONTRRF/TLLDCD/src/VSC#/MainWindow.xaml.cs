@@ -57,6 +57,8 @@ namespace Visor3D
         private string _urlPublica = "";
         private string _enlaceCompartible = "";
         private string _hostSesionUrl = "";
+        private List<string> _nodosRedLan = new();
+        private bool _consultaRedEnCurso;
         private string _hostInicial = "";
         private readonly DateTime _arranqueUtc = DateTime.UtcNow;
         private string _llaveHashActual = "";
@@ -130,6 +132,8 @@ namespace Visor3D
             BtnCopiarUrlP2P.Click += OnCopiarUrlP2PClicked;
             TxtUrlP2P.MouseLeftButtonDown += (s, e) => OnCopiarUrlP2PClicked(s, e);
             BtnConectarAmigo.Click += OnConectarAmigoClicked;
+            BtnBuscarRed.Click += OnBuscarRedClicked;
+            BtnUsarNodoRed.Click += OnUsarNodoRedClicked;
 
             // WebNodo — portal de descarga y conexión para amigos en el metaverso
             BtnWebNodo.Click += OnWebNodoClicked;
@@ -478,6 +482,9 @@ namespace Visor3D
             bool estaRegistrado = (File.Exists(UserProfilePath) || File.Exists(CredentialsPath)) &&
                 File.Exists(Path.Combine(TestUserDataDir, "user", "llave_acceso.json"));
             BtnCrearCuenta.Visibility = estaRegistrado ? Visibility.Collapsed : Visibility.Visible;
+
+            // Antes de registrarse o entrar: ¿hay alguien en la red P2P?
+            _ = ActualizarEstadoRedAsync();
         }
 
         public void ActivarModoLogin(string username = "")
@@ -520,6 +527,84 @@ namespace Visor3D
         private void OnVolverBienvenidaClicked(object sender, RoutedEventArgs e)
         {
             MostrarPantallaBienvenida();
+        }
+
+        private void OnBuscarRedClicked(object sender, RoutedEventArgs e)
+        {
+            // El motor puede seguir cerrando y liberar el 8912 tarde: se reintenta.
+            _ = ActualizarEstadoRedAsync();
+        }
+
+        /// <summary>Si el nodo lo detectó la baliza LAN, deja el destino listo para entrar.</summary>
+        private void OnUsarNodoRedClicked(object sender, RoutedEventArgs e)
+        {
+            if (_nodosRedLan.Count == 0) return;
+            string ip = _nodosRedLan[0];
+            ActivarModoLogin();
+            TxtUrlAmigo.Text = $"{ip}:{DescubrimientoP2P.PuertoGodot}";
+            TxtEstadoRed.Text = $"🔗 Nodo seleccionado: {ip}";
+            TxtDetalleRed.Text = "Pulsa «Conectar» para comprobarlo y después inicia sesión.";
+            TxtLoginUser.Focus();
+        }
+
+        /// <summary>
+        /// Refleja en la pantalla previa si el metaverso está vacío u ocupado.
+        /// Prioriza la baliza LAN (anfitrión con el mismo puerto UDP que usa Godot)
+        /// y, si no hay nadie en la red local, consulta el portal del enlace de
+        /// invitación. No abre el WebSocket del juego.
+        /// </summary>
+        private async Task ActualizarEstadoRedAsync()
+        {
+            if (_consultaRedEnCurso) return;
+            _consultaRedEnCurso = true;
+            string? errorLan = null;
+            try
+            {
+                TxtEstadoRed.Text = "Buscando nodos en tu red…";
+                TxtDetalleRed.Text = "Escuchando la baliza del metaverso (UDP 8912).";
+                BtnBuscarRed.IsEnabled = false;
+                BtnUsarNodoRed.Visibility = Visibility.Collapsed;
+
+                var lan = await DescubrimientoP2P.BuscarEnLanAsync();
+                _nodosRedLan = lan.Nodos;
+                errorLan = lan.Error;
+
+                string enlace = !string.IsNullOrWhiteSpace(_hostInicial) ? _hostInicial : _urlAmigoPendiente;
+                bool enlaceResponde = _nodosRedLan.Count == 0 && !string.IsNullOrWhiteSpace(enlace)
+                    && await DescubrimientoP2P.ConsultarNodoAsync(enlace);
+
+                if (_nodosRedLan.Count > 0)
+                {
+                    TxtEstadoRed.Text = _nodosRedLan.Count == 1
+                        ? "● Metaverso ocupado: 1 nodo en tu red"
+                        : $"● Metaverso ocupado: {_nodosRedLan.Count} nodos en tu red";
+                    TxtDetalleRed.Text =
+                        $"{string.Join(", ", _nodosRedLan)} · Pulsa «Usar este nodo» o pega su enlace al entrar.";
+                    BtnUsarNodoRed.Visibility = Visibility.Visible;
+                }
+                else if (enlaceResponde)
+                {
+                    TxtEstadoRed.Text = "● El nodo de tu enlace está en línea";
+                    TxtDetalleRed.Text =
+                        $"{enlace} responde. Pulsa «Acceder», comprueba el enlace y luego inicia sesión.";
+                }
+                else
+                {
+                    TxtEstadoRed.Text = "○ Metaverso vacío: serás el primero";
+                    TxtDetalleRed.Text = errorLan
+                        ?? "No se detectaron nodos. Al entrar se creará la sesión y podrás copiar tu enlace para invitar.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TxtEstadoRed.Text = "○ Metaverso vacío: serás el primero";
+                TxtDetalleRed.Text = $"No se pudo completar la búsqueda: {ex.Message}";
+            }
+            finally
+            {
+                _consultaRedEnCurso = false;
+                BtnBuscarRed.IsEnabled = true;
+            }
         }
 
         private void OnLoginClicked(object sender, RoutedEventArgs e)
@@ -711,11 +796,22 @@ namespace Visor3D
                     string rolLog = "";
                     if (!string.IsNullOrWhiteSpace(_urlAmigoPendiente))
                     {
-                        if (TryParseConnectionTarget(_urlAmigoPendiente, out string targetHost, out int targetPort))
+                        // Todos los invitados convergen en el anfitrión raíz. Un enlace
+                        // reenviado por un invitado es `<portal del invitado>?host=<raíz>`;
+                        // conectarse al portal del invitado no funciona (su 8911 no
+                        // escucha) y dejaría al tercer usuario fuera de la sesión.
+                        string destino = !string.IsNullOrWhiteSpace(_hostSesionUrl)
+                            ? _hostSesionUrl
+                            : _urlAmigoPendiente;
+                        if (TryParseConnectionTarget(destino, out string targetHost, out int targetPort))
                         {
                             // Inyectar rol explícito de cliente hacia el destino remoto
-                            userArgs = $"--client --ip={targetHost} --port={targetPort} --peer-url=\"{_urlAmigoPendiente}\"";
-                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO -> {targetHost}:{targetPort} (peer-url={_urlAmigoPendiente})";
+                            userArgs = $"--client --ip={targetHost} --port={targetPort} --peer-url=\"{destino}\"";
+                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO -> {targetHost}:{targetPort} (peer-url={destino})";
+                            if (!destino.Equals(_urlAmigoPendiente, StringComparison.OrdinalIgnoreCase))
+                            {
+                                rolLog += $" | raíz de la sesión; el enlace apuntaba a {_urlAmigoPendiente}";
+                            }
                             Console.WriteLine($"[Visor3D -> Godot] Parámetros inyectados: {userArgs}");
                             System.Diagnostics.Debug.WriteLine($"[Visor3D -> Godot] Parámetros inyectados: {userArgs}");
 
@@ -729,8 +825,8 @@ namespace Visor3D
                         }
                         else
                         {
-                            userArgs = $"--peer-url=\"{_urlAmigoPendiente}\"";
-                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO (URL sin parsear: {_urlAmigoPendiente})";
+                            userArgs = $"--peer-url=\"{destino}\"";
+                            rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO (URL sin parsear: {destino})";
                             Console.WriteLine($"[Visor3D -> Godot] Parámetros inyectados (URL sin parsear): {userArgs}");
                             System.Diagnostics.Debug.WriteLine($"[Visor3D -> Godot] Parámetros inyectados (URL sin parsear): {userArgs}");
                         }
@@ -1051,9 +1147,12 @@ namespace Visor3D
             {
                 bool hasTarget = TryParseConnectionTarget(_urlAmigoPendiente, out string targetHost, out int targetPort);
                 bool esClienteRemoto = hasTarget && targetHost != "127.0.0.1" && targetHost != "localhost" && !string.IsNullOrEmpty(targetHost);
+                // misma raíz que la línea de órdenes del motor, para que el fichero de
+                // sesión no vuelva a apuntar al portal del invitado que compartió el enlace
+                string peerUrl = !string.IsNullOrWhiteSpace(_hostSesionUrl) ? _hostSesionUrl : (_urlAmigoPendiente ?? "");
                 var sessionData = new
                 {
-                    peerUrl = _urlAmigoPendiente ?? "",
+                    peerUrl,
                     remoteIp = hasTarget ? targetHost : "",
                     remotePort = hasTarget ? targetPort : 8911,
                     esCliente = esClienteRemoto,
@@ -2724,7 +2823,9 @@ namespace Visor3D
             BtnConectarAmigo.Content = "⏳ Probando...";
             BtnConectarAmigo.IsEnabled = false;
 
-            bool responde = await P2PNodo.PingParAsync(url);
+            // El enlace compartido es el portal WebNodo del anfitrión; un ip:8911
+            // de la LAN se comprueba con una conexión TCP al WebSocket del motor.
+            bool responde = await DescubrimientoP2P.SondearAsync(_hostSesionUrl);
             BtnConectarAmigo.Content = "🔗 Conectar";
             BtnConectarAmigo.IsEnabled = true;
 

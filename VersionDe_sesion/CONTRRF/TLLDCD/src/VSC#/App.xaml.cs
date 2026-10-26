@@ -26,6 +26,14 @@ namespace Visor3D
                 return;
             }
 
+            // Prueba del descubrimiento P2P: baliza LAN y presencia del portal,
+            // sin motor ni PCK. Es la que valida la pantalla previa de ocupación.
+            if (Array.Exists(e.Args, a => a.Equals("--red-selftest", StringComparison.OrdinalIgnoreCase)))
+            {
+                Environment.Exit(RedSelfTest.Run());
+                return;
+            }
+
             // ── REINICIO DE LA BASE DE USUARIOS LOCAL (una vez por versión) ──────
             // Archiva cuenta y estado de sesión para que el equipo vuelva a
             // registrarse desde cero. Nunca se ejecuta en las pruebas automáticas.

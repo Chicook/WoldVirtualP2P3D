@@ -87,7 +87,60 @@
                                FontSize="13"
                                HorizontalAlignment="Center"
                                TextAlignment="Center"
-                               Margin="0,0,0,32"/>
+                               Margin="0,0,0,24"/>
+
+                    <!-- Estado de la red P2P antes de entrar: vacío u ocupado -->
+                    <Border x:Name="BordeEstadoRed"
+                            Background="#0A1524"
+                            BorderBrush="#1D3A5C"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="14,10"
+                            Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock x:Name="TxtEstadoRed"
+                                       Text="Buscando nodos en tu red…"
+                                       Foreground="#7ECFFF"
+                                       FontSize="12.5"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock x:Name="TxtDetalleRed"
+                                       Text="Si no hay nadie, entrarás como primero de la sesión."
+                                       Foreground="#8892B0"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button x:Name="BtnBuscarRed"
+                                        Content="Buscar de nuevo"
+                                        Width="130" Height="24"
+                                        FontSize="10.5"
+                                        Foreground="#8892B0"
+                                        Background="#101A2A"
+                                        BorderBrush="#1D3A5C"
+                                        BorderThickness="1"
+                                        Cursor="Hand"/>
+                                <Button x:Name="BtnUsarNodoRed"
+                                        Content="Usar este nodo"
+                                        Width="122" Height="24"
+                                        FontSize="10.5"
+                                        FontWeight="SemiBold"
+                                        Foreground="#00D9FF"
+                                        Background="#0A1E30"
+                                        BorderBrush="#00D9FF"
+                                        BorderThickness="1"
+                                        Cursor="Hand"
+                                        Visibility="Collapsed"
+                                        Margin="8,0,0,0">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Botón Crear Cuenta -->
                     <Button x:Name="BtnCrearCuenta"

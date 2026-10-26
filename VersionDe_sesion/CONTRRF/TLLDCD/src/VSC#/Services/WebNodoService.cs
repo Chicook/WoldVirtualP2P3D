@@ -61,9 +61,9 @@ namespace Visor3D.Services
         public bool ChatEnabled { get; set; }
 
         public static readonly int Port = 3030;
-        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.8.exe";
+        private const string ExeNameFallback = "DMWoldVirtualp2pCNXv2.5.9.exe";
         private const string ExeUrlFallback =
-            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.8/DMWoldVirtualp2pCNXv2.5.8.exe";
+            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.9/DMWoldVirtualp2pCNXv2.5.9.exe";
 
         // Valor de arranque: el release.json empaquetado junto al .exe. En cuanto el
         // nodo arranca, RefrescarReleaseVigente() lo sustituye por la release vigente
@@ -598,7 +598,12 @@ namespace Visor3D.Services
                 }
 
                 // /api/* exige el token de esta sesión (evita llamadas cruzadas desde webs ajenas).
-                if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) &&
+                // Excepción: /api/p2p-status es la señal de presencia que otro visor consulta
+                // antes de entrar. Solo devuelve si el nodo está en línea y su propio túnel,
+                // que su página ya publica; no expone la API de descarga.
+                bool consultaPresencia = path.Equals("/api/p2p-status", StringComparison.OrdinalIgnoreCase);
+                if (!consultaPresencia &&
+                    path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(req.QueryString["token"], _apiToken, StringComparison.Ordinal))
                 {
                     res.StatusCode = 403;

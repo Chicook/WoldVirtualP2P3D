@@ -48,11 +48,11 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualp2pCNXv2.5.8`, que corresponde al exe
-`DMWoldVirtualp2pCNXv2.5.8.exe`.
+extensión: hoy `DMWoldVirtualp2pCNXv2.5.9`, que corresponde al exe
+`DMWoldVirtualp2pCNXv2.5.9.exe` (compilado el 2026-10-26, aún sin publicar).
 
-**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.8`) ↔
-nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.8.exe`) ↔ `release.json` (`version`, `tag`,
+**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.9`) ↔
+nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.9.exe`) ↔ `release.json` (`version`, `tag`,
 `exe`, `url`). El actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación

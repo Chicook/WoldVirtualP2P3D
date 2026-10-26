@@ -6,7 +6,7 @@
 > **Repositorio:** `https://github.com/Chicook/WoldVirtualP2P3D.git`
 > **Alcance:** `src/` — visor C# (`VSC#`) y mundo Godot (`MTBGT/WoldVirtualP2P3D`).
 > **Documento hermano:** [`README_desarrollo_20261026.md`](README_desarrollo_20261026.md) cubre los 7 bloques previos de la jornada (cuenta única, llave de hardware, barrera de login, animaciones, foco, optimización de texturas y retirada de `test_user_data`). Este archivo **no repite** ese contenido: documenta el resto del trabajo del día, con prioridad en el sistema de terreno y construcción.
-> **Estado del árbol:** correcciones de la 2.5.8 sin commit al empezar esta edición. Binarios publicados el 2026-10-26: 2.5.6 (§9), 2.5.7 (§10) y 2.5.8 (§11). El OTA entre versiones sigue sin ejecutar.
+> **Estado del árbol:** la 2.5.9 está compilada y probada en local; **no publicada**. Binarios publicados el 2026-10-26: 2.5.6 (§9), 2.5.7 (§10) y 2.5.8 (§11); la versión vigente en GitHub sigue siendo la 2.5.8 hasta que se suba la 2.5.9 (§12). El OTA entre versiones sigue sin ejecutar.
 
 ---
 
@@ -101,13 +101,17 @@ Implementado en [`VSC#/Chat/`](VSC%23/Chat) y acoplado a la derecha del visor. E
 Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable.gd), orquestado por [`Construccion.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/Construccion.gd) y activado con <kbd>B</kbd>.
 
 - **Horneado único por isla:** `bake_mesh_from_current_blend_shape_mix()` convierte el morph en geometría real y deja una malla propia por instancia. Antes se captura el material de superficie (`surface_override` → `material_override` → material de la malla original), porque el horneado lo descarta.
+- **Aislamiento por isla:** `ChunkManager` duplica las islas con `duplicate()`, que comparte malla, colisión y material; `configurar()` copia los arrays de superficie (vértices, normales, índices, UVs, tangentes y colores) y clona material y `ConcavePolygonShape3D`. Esculpir una isla no toca a las demás ni la malla horneada del `.gltf`, y una isla instanciada **después** de editar otra nace intacta. `Construccion.registrar_isla()` rechaza que el mismo nodo se registre bajo dos índices.
 - **Geometría medida:** **10 920 vértices y 64 272 índices** por isla; rango base de altura `0,0–0,5584 m`. Los límites del pincel son `0,0–0,95 m`.
-- **Pincel:** radio en metros, caída *smoothstep*, cuatro herramientas (subir, bajar, suavizar, aplanar). Recalcula normales con el producto vectorial de la cara y reconstruye el `ArrayMesh`.
+- **Pincel:** radio en metros, caída *smoothstep*, seis herramientas: subir, bajar, suavizar, aplanar, **mover** y **playa**. Recalcula normales con el producto vectorial de la cara y reconstruye el `ArrayMesh`.
+- **Mover:** advección *upwind* de las alturas (`-v·∇h`) con solo los vecinos de barlovento y avance máximo de media celda por paso. Con diferencias centradas el montículo se aplanaba en lugar de desplazarse. El centro del exceso se mueve **+7,4 m** en la suite headless y **+4,8 m** en la captura visual, y la huella original baja de 0,532 a 0,507 (vuelve a la meseta).
+- **Mover conserva el color:** el mismo estencil transporta el color del vértice, así que la arena viaja con la tierra en vez de quedarse atrás. El upwind de primer orden difumina la máscara y `_equilibrar_alfa()` devuelve a los vértices afectados el alfa perdido. Medido: centroide de arena **+4,08 m** (0,5073 → 0,5481), masa 126 → 110 (**−12,7 %**) y alfa 1,00 en la tierra movida; capturas `11a_antes_mover_color.png` y `11_mover_color.png`.
+- **Playa:** aplana hacia `nivel_agua + MARGEN_PLAYA_M` (1 m sobre el agua) y pinta arena por vértice. La máscara va en `COLOR.a` y el shader [`TERRENO_EDITABLE.gdshader`](MTBGT/WoldVirtualP2P3D/gdshader/TERRENO_EDITABLE.gdshader) mezcla textura y albedo de arena; es un material **opaco** a propósito, porque con transparencia las caras traseras de la isla tapaban el relieve. El albedo de arena es lineal (~0,24/0,17/0,09): con la luz de la isla, valores mayores saturan a blanco.
 - **Colisión:** `ConcavePolygonShape3D.set_faces` con las 64 272 caras. Se regenera con *debounce* de 0,5 s tras el último cambio para no repetirla en cada fotograma.
-- **Formato propio `WVPT` v1:** magia + versión `u16` + recuento `u32` + hash `s64` de la geometría base + alturas `float32`. `cargar()` rechaza magia, versión, recuento o hash incorrectos y avisa si la geometría base cambió.
+- **Formato propio `WVPT` v2:** magia + versión `u16` + recuento `u32` + hash `s64` de la geometría base + alturas `float32` + color RGBA8 por vértice. `cargar()` rechaza magia, versión, recuento o hash incorrectos, avisa si la geometría base cambió y sigue aceptando blobs v1 (solo alturas).
 - **Persistencia:** `user://construccion/terreno_<idx>_<uuid>.bin` y `prims_<idx>_<uuid>.json`. Al salir se guarda lo pendiente que este peer pueda escribir.
 
-**Rendimiento medido en headless (2026-10-26):** paso de pincel con 29 vértices afectados en **6,75 ms**; reconstrucción de colisión en **19,29 ms**; blob de terreno de **43 698 B** que comprime a **17 388 B** con zstd. El coste del pincel es lineal con el total de vértices, no con el radio.
+**Rendimiento medido en headless (2026-10-26):** paso de pincel con 29 vértices afectados en **5,76–5,96 ms**; reconstrucción de colisión en **20–27 ms** (varía entre ejecuciones); blob de terreno v2 de **87 378 B** que comprime a **17 719 B** con zstd. El coste del pincel es lineal con el total de vértices, no con el radio.
 
 ### 3.6 Construcción y edición de prims (Godot)
 
@@ -115,7 +119,7 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 - **Rezado** desde la cámara sobre la superficie; **selección** con clic; movimiento con flechas/WASD; altura con <kbd>RePág</kbd>/<kbd>AvPág</kbd>; rotación de 15° con <kbd>Q</kbd>/<kbd>E</kbd>; escala proporcional con <kbd>+</kbd>/<kbd>−</kbd>; duplicado con <kbd>Ctrl</kbd>+<kbd>D</kbd>; borrado con <kbd>Supr</kbd>. Rejilla de 0,5 m (1 m con <kbd>Shift</kbd>).
 - Panel en [`ConstructorPanel.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/ConstructorPanel.gd): herramienta, radio, fuerza, tipo, color, escala, snap y estado de la isla. Se coloca debajo de la barra del explorador para no taparlo.
 - **Autoridad:** solo el dueño de la isla edita. El anfitrión valida `island_owners` (peer id/UUID), difunde por RPC fiable y los clientes suben su estado al entrar. El estado viaja troceado en bloques de **6000 B** con zstd.
-- **Permisos:** seleccionar o esculpir una isla ajena se rechaza con aviso; el cliente no aplica cambios optimistas sobre islas que no puede guardar.
+- **Permisos:** seleccionar o esculpir una isla ajena se rechaza con aviso; el cliente no aplica cambios optimistas sobre islas que no puede guardar. `_validar_remitente()` exige que el remitente coincida con el `island_owners` de esa isla, sin excepción para el propio peer id ni para remitentes sin identificar, y la mira se pinta roja sobre islas ajenas como vista previa del rechazo del anfitrión.
 - **Límites:** sin deshacer/rehacer ni selección múltiple; las prims no tienen física propia; la colisión del cilindro/cono es aproximada y el toro usa trimesh; la colisión del terreno va 0,5 s por detrás durante el trazo.
 
 ### 3.7 Integración en el mundo
@@ -127,13 +131,36 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 
 ---
 
+### 3.8 Convergencia de invitados (topología P2P)
+
+La topología es una **estrella sobre un único anfitrión** (`WebSocketMultiplayerPeer`, TCP 8911). El anfitrión releva el tráfico de todos los pares (`SceneMultiplayer.server_relay` activo por defecto), reenvía las islas ya existentes a cada recién llegado (`ChunkManager.gd:424-433`) y cada peer crea un proxy por peer presente (`PlayerSync.gd:31-33`). Con todos conectados al mismo anfitrión, **todos ven a todos** y sus islas.
+
+- **Enlace de invitación:** el visor compone `<portal propio>?host=<anfitrión raíz>` (`MainWindow.xaml.cs:1000-1002`) y `NormalizarUrlSesion` separa base y raíz (`MainWindow.xaml.cs:885-908`).
+- **Defecto corregido (2026-10-26):** el motor se lanzaba con la **base** del enlace —el portal de quien lo compartía— en lugar de con la raíz. Un tercer usuario que abría el enlace reenviado por un invitado conectaba contra el túnel de ese invitado, cuyo WebNodo reenvía el WebSocket a su `localhost:8911` (`WebNodoService.cs:595`), donde un cliente no escucha; el handshake fallaba y el tercero no entraba. Ahora `IniciarGodotMain` usa `_hostSesionUrl` (raíz) para `--ip`, `--port` y `--peer-url` (`MainWindow.xaml.cs:718-737`) y `p2p_session.json` guarda la misma raíz. Sin `?host` en el enlace, el destino es idéntico al anterior.
+- **Límite conocido:** el botón «Copiar Enlace de Invitado» del **portal web** de un invitado copia `window.location.href` sin `?host=` (`WebNodoService.cs:241`); por ahí se propaga un enlace que apunta al invitado. El banner del visor sí compone la raíz.
+- *Estado: Implementado, sin prueba real de tres equipos.*
+
+### 3.9 Presencia de red antes de entrar (visor)
+
+La pantalla de bienvenida muestra, antes del registro o del login, si el metaverso está **vacío u ocupado** y qué hacer en cada caso.
+
+- **Detección LAN:** escucha la baliza UDP **8912** que el anfitrión emite cada 2 s (`ChunkManager.gd:978-983`), con la misma marca `WOLDVIRTUAL_HOST` que ya usa `Red.buscar_host_en_lan` (`gdscrip/Red.gd:177-197`). Con uno o varios nodos, la tarjeta muestra sus IP y el botón **«Usar este nodo»** prepara el destino `ip:8911`.
+- **Detección remota:** si no hay nadie en la red local y hay enlace de invitación, consulta `<portal>/api/p2p-status`. Esa ruta queda **exenta de token** (`Services/WebNodoService.cs:600-606`) porque es la señal de presencia que otro visor necesita; solo devuelve `online` y el túnel que la propia página ya publica, y el resto de `/api/*` sigue exigiendo token.
+- **Sin invitado fantasma:** no se abre el WebSocket del juego. Un handshake real contra el motor crearía un peer en la sesión; para `ip:8911` se usa una conexión TCP que se cierra sin completar el upgrade.
+- **Botón «Conectar»:** deja de usar `/ping` (solo existe en el nodo 7890, no en el portal del enlace) y sondea el destino real con `DescubrimientoP2P.SondearAsync`, que elige entre presencia del portal y TCP 8911.
+- **Flujo del usuario:** vacío → entra como primero y copia su enlace; ocupado → pega el enlace, «Conectar», contraseña, «Iniciar Sesión» y clave de acceso.
+- **Archivos:** `Services/DescubrimientoP2P.cs`, `Services/RedSelfTest.cs`, tarjeta `BordeEstadoRed` en `MainWindow.xaml` y manejadores `OnBuscarRedClicked` / `OnUsarNodoRedClicked` / `ActualizarEstadoRedAsync` en `MainWindow.xaml.cs`.
+- *Estado: Implementado y validado en local (autoprueba `--red-selftest` 6/6 y captura del estado vacío); sin prueba real entre dos equipos.*
+
 ## 4. Validación ejecutada (2026-10-26)
 
 | Comprobación | Comando | Resultado |
 |---|---|---|
-| Compilación del visor | `dotnet build VSC#/Visor3D.csproj -p:SkipGodotAssets=true -c Debug` | **0 errores, 0 avisos** (1,16 s incremental) |
+| Compilación del visor | `dotnet build VSC#/Visor3D.csproj -p:SkipGodotAssets=true -c Debug` | **0 errores, 0 avisos** (1,86 s incremental con la pantalla de presencia) |
+| Descubrimiento P2P | `DMWoldVirtualp2pCNXv2.5.9.exe --red-selftest` | **6 OK, 0 fallos**; baliza detectada, paquete ajeno ignorado, presencia sin token y `/api/info` sigue en 403 |
 | Chat, amigos y proxy | `DMWoldVirtualp2pCNXv2.5.6.exe --chat-selftest` | **24/24 OK, 0 fallos**; micrófonos=1, webcams=1; mismo binario publicado |
-| Terreno y prims | `Godot --headless --path . --script res://tools/probar_construccion.gd` | **85 OK, 0 fallos**; pincel 6,75 ms, colisión 19,29 ms, blob 43 698 → 17 388 B |
+| Terreno y prims | `Godot --headless --path . --script res://tools/probar_construccion.gd` | **128 OK, 0 fallos**; pincel 5,96 ms, colisión 27,07 ms, blob 87 378 → 17 719 B; aislamiento y color al mover incluidos |
+| Mover y playa (visual) | Captura de escena con ventana sobre `ISLA3Dblock.tscn` | **25 OK, 0 fallos**; montículo +4,82 m; playa a 0,500 con arena en la costa; arena arrastrada +4,08 m |
 | Control de avatar | `Godot --headless --path . --script res://tools/probar_control_clic.gd` | **35/35 OK, 0 fallos** |
 | Registro de islas | `Godot --headless --path . --script res://tools/probar_registro_islas.gd` | **23/23 OK, 0 fallos** |
 | Escena de construcción | `Godot --headless --path . --script res://tools/sonda_escena_construccion.gd` | `Constructor=true`, script `res://gdscrip/Construccion.gd`, **OK** |
@@ -147,14 +174,22 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 | Reinicio de cuenta | Arranque real de `DMWoldVirtualp2pCNXv2.5.7.exe` con la cuenta del 16:39 | Archivo en `respaldo_cuenta/20261026-170512`; `credentials.json`, `pc_sello.json`, `registro.cfg` y `p2p_session.json` ya no están en su sitio; marcador `reset_cuenta.txt` = `2.5.7` |
 | Portal con la 2.5.7 | `GET /`, `/api/info?token=…` y `/descargar` con el visor abierto | Log: `release vigente → DMWoldVirtualp2pCNXv2.5.7.exe (751,7 MB)`; `/api/info` anuncia `2.5.7` y `751,7`; `/descargar` **200**, `Content-Length: 788180863`, `filename="DMWoldVirtualp2pCNXv2.5.7.exe"` |
 | Asset 2.5.7 publicado | `gh api repos/…/releases/tags/v2.5.7` | digest `sha256:d21a1fab…e9fbe` = SHA-256 local; `release.json` `c1b85344…59ce` y `SHA256SUMS` `f575b7a0…376b` también coinciden; tag → commit `154a3a5` |
+| PCK 2.5.9 | `godot --headless --path . --export-pack "Windows Desktop" wvp3d.pck` | **537.811.448 B** (512,9 MiB), SHA-256 `ca7b7436f82e26a8be9b964544cebba93e9e29d1086005c561fd8ba5be2d2e2a`; exportado el 2026-10-26 20:54 y copiado a `VSC#/wvp3d.pck` |
+| Compilación 2.5.9 | `dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true` | **0 errores, 0 avisos**; `DMWoldVirtualp2pCNXv2.5.9.exe` de **788.201.343 B** (751,7 MiB), SHA-256 `96c1cf98fac799ce9058f9846757d0b5743ed0c96aa9a98493cab5f3ec187798` |
+| Arranque del binario 2.5.9 | `DMWoldVirtualp2pCNXv2.5.9.exe --startup-selftest` | **15/15 OK**, exit 0; `.extracted` = `2.5.9`; PCK extraído idéntico al embebido (`ca7b7436…d2e2a`); motor isla+WS 8911 sin `ERROR` |
+| Chat con el binario 2.5.9 | `DMWoldVirtualp2pCNXv2.5.9.exe --chat-selftest` | **24/24 OK, 0 fallos**, exit 0; micrófonos=1, webcams=1 |
+| Red con el binario 2.5.9 | `DMWoldVirtualp2pCNXv2.5.9.exe --red-selftest` | **6 OK, 0 fallos**, exit 0 |
+| OTA local con los componentes reales | Cliente 2.5.8 publicado + `UpdateDownloader` + `UpdateApplier` contra HTTP local | **OK**: digest falso rechazado; descarga de 788.201.343 B con SHA-256 verificado; `state.json` con `apply=true`; el `.bat` sustituyó el exe y relanzó; el cliente quedó con `FileVersion 2.5.9.0` y re-extrajo `runtime\2.5.9` con el PCK `ca7b7436…d2e2a`; sin `ERROR`/`EXCEPTION` |
 
 **No ejecutado (y por tanto no acreditado):**
 
 - Sesión real de dos máquinas con construcción, chat, voz y webcam a través del túnel.
 - Latencia, pérdida de paquetes y reconexión del túnel HTTP.
 - Interacción visual completa en el visor WPF embebido (foco, clic y resaltado).
-- OTA de punta a punta 2.5.7 → 2.5.8 en un equipo con la versión anterior.
+- OTA de punta a punta **a través de GitHub** (UpdateChecker + CDN) 2.5.7 → 2.5.8 ni 2.5.8 → 2.5.9 en un equipo con la versión anterior. La prueba OTA local de la tabla cubre descarga, SHA-256, reemplazo, relanzamiento y re-extracción, pero no la selección de release ni el asset remoto.
 - Prueba de migración de anfitrión con permisos de construcción y chat.
+- Publicación de la 2.5.9: no hay tag, asset ni `release.json` en GitHub; `/api/info` del binario en ejecución anuncia el exe nuevo pero con tamaño «—» mientras la release vigente siga siendo la 2.5.8.
+- Estado «ocupado» de la pantalla de presencia con un segundo equipo real (en local se filtra la propia baliza a propósito).
 
 ---
 
@@ -219,8 +254,10 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 | [`gdscrip/ChunkManager.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/ChunkManager.gd) | Modificado | Registro de islas y llamada a `registrar_isla()`. |
 | [`gdscrip/TeleportManager.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TeleportManager.gd) y [`TeleportPanel.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TeleportPanel.gd) | Modificados | Explorador, botón de registro y señal `isla_registrada`. |
 | `gdscrip/userbase.gd`, `.../userbaseh_1.gd`, `.../AVMJ1Ch3D.gd` | Modificados | Clic de selección y bloqueo en modo construcción. |
-| [`tools/probar_construccion.gd`](MTBGT/WoldVirtualP2P3D/tools/probar_construccion.gd) | Nuevo | Suite de 84 comprobaciones. |
-| [`tools/probar_control_clic.gd`](MTBGT/WoldVirtualP2P3D/tools/probar_control_clic.gd) | Nuevo | Suite de 25 comprobaciones. |
+| [`tools/probar_construccion.gd`](MTBGT/WoldVirtualP2P3D/tools/probar_construccion.gd) | Nuevo | Suite de **128** comprobaciones (incluye aislamiento por isla y color al mover). |
+| [`tools/capturar_construccion.gd`](MTBGT/WoldVirtualP2P3D/tools/capturar_construccion.gd) | Nuevo | Suite visual de **25** comprobaciones y capturas de pinceles (Mover, Playa). |
+| [`tools/probar_control_clic.gd`](MTBGT/WoldVirtualP2P3D/tools/probar_control_clic.gd) | Nuevo | Suite de **35** comprobaciones. |
+| [`gdshader/TERRENO_EDITABLE.gdshader`](MTBGT/WoldVirtualP2P3D/gdshader/TERRENO_EDITABLE.gdshader) | Nuevo | Material del terreno editable con vértices y color por punto. |
 | [`tools/probar_registro_islas.gd`](MTBGT/WoldVirtualP2P3D/tools/probar_registro_islas.gd) | Nuevo | Suite de 23 comprobaciones. |
 | [`tools/sonda_escena_construccion.gd`](MTBGT/WoldVirtualP2P3D/tools/sonda_escena_construccion.gd) | Nuevo | Comprueba el montaje del nodo `Constructor`. |
 | [`README.md`](MTBGT/WoldVirtualP2P3D/README.md) | Modificado | Sección 10, deuda de construcción y roadmap. |
@@ -236,7 +273,10 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 | [`Services/WebNodoService.cs`](VSC%23/Services/WebNodoService.cs) | Modificado | Ruta `/chat` hacia el relay. |
 | [`Visor3D.csproj`](VSC%23/Visor3D.csproj) | Modificado | NAudio 2.3.0, AForge.Video 2.2.5 y AForge.Video.DirectShow 2.2.5. |
 | [`Seguridad/Seguridad_sesion_unica/ReinicioCuenta.cs`](VSC%23/Seguridad/Seguridad_sesion_unica/ReinicioCuenta.cs) | Nuevo | Reinicio único por versión de la base de usuarios local, con archivo en `respaldo_cuenta\`. |
-| [`App.xaml.cs`](VSC%23/App.xaml.cs) | Modificado | Llama a `ReinicioCuenta` antes de WebNodo y del extractor. |
+| [`App.xaml.cs`](VSC%23/App.xaml.cs) | Modificado | Llama a `ReinicioCuenta` antes de WebNodo y del extractor; modo `--red-selftest`. |
+| [`Services/DescubrimientoP2P.cs`](VSC%23/Services/DescubrimientoP2P.cs) | Nuevo | Baliza UDP 8912, presencia `/api/p2p-status` y sondeo TCP 8911 sin handshake. |
+| [`Services/RedSelfTest.cs`](VSC%23/Services/RedSelfTest.cs) | Nuevo | Autoprueba de descubrimiento y presencia (6 comprobaciones). |
+| [`Services/StartupSelfTest.cs`](VSC%23/Services/StartupSelfTest.cs) | Modificado | Delega la red en `RedSelfTest` y comprueba la presencia en el portal. |
 | [`README.md`](VSC%23/README.md) | Modificado | Secciones 7, 8 y 9 (chat, clic y amigos). |
 
 ---
@@ -261,10 +301,13 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 E:/Program\ Files/dotnet/dotnet.exe build "VSC#/Visor3D.csproj" -p:SkipGodotAssets=true -c Debug
 
 # Selftest del chat (el ejecutable compilado)
-"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.8.exe" --chat-selftest
+"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.9.exe" --chat-selftest
 
 # Prueba de arranque previa a publicar
-"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.8.exe" --startup-selftest
+"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.9.exe" --startup-selftest
+
+# Descubrimiento de nodos y presencia
+"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.9.exe" --red-selftest
 
 # Godot (desde MTBGT/WoldVirtualP2P3D)
 "C:/Users/User/Desktop/Godot_v4.7.2-stable_win64_console.exe" --headless --path . \
@@ -389,7 +432,7 @@ cambian de comportamiento.
 
 | Dato | Valor |
 |---|---|
-| Release | [`v2.5.8`](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.8), tag sobre el commit de publicación de esta rama |
+| Release | [`v2.5.8`](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.8), marcada como *Latest*; tag anotado sobre el commit `78a1dd0` (tag objeto `4f2fd1e`) |
 | Asset | `DMWoldVirtualp2pCNXv2.5.8.exe` |
 | Tamaño | 788.180.863 B (751,7 MiB) |
 | SHA-256 local | `44dea928130f65977f71746a7579d9f2255edb7271b4e85f219af09ee3b1f609` |
@@ -434,7 +477,71 @@ a la publicación.
 
 ---
 
-## 12. Reglas para continuar esta fase
+## 12. Versión 2.5.9 preparada (2026-10-26)
+
+La 2.5.9 agrupa el trabajo posterior a la 2.5.8: aislamiento del terreno por isla,
+conservación del color al mover la tierra, convergencia de invitados contra la raíz de la
+sesión y pantalla de presencia en la bienvenida. **El binario está compilado y probado en
+local; la release no se ha subido a GitHub.**
+
+| Dato | Valor |
+|---|---|
+| Estado | Compilada y probada en local el 2026-10-26 20:55; **sin tag ni asset en GitHub** |
+| Asset local | `DMWoldVirtualp2pCNXv2.5.9.exe` |
+| Tamaño | 788.201.343 B (751,7 MiB) |
+| SHA-256 local | `96c1cf98fac799ce9058f9846757d0b5743ed0c96aa9a98493cab5f3ec187798` |
+| PCK embebido | 537.811.448 B (512,9 MiB), SHA-256 `ca7b7436f82e26a8be9b964544cebba93e9e29d1086005c561fd8ba5be2d2e2a`; exportado del árbol de este commit el 2026-10-26 20:54 |
+| `release.json` local | version `2.5.9`, tag `v2.5.9`, exe y URL del asset nuevo, `size_mb` 751.7; SHA-256 `065ccb2da75fe64a5acde361f19c06427035f0478061849deae1b0c6634eb6b8` |
+| `SHA256SUMS` local | exe + `release.json`, junto al binario en `bin/Release/…/publish/`; no versionado (R17) |
+| Arranque | **15/15 OK**, exit 0; `.extracted` = `2.5.9`; PCK extraído idéntico al embebido |
+| Chat | **24/24 OK**, exit 0 |
+| Red | **6 OK, 0 fallos**, exit 0 |
+| Terreno | **128 OK, 0 fallos**; aislamiento y color al mover incluidos |
+| Prueba visual | **25 OK, 0 fallos**; arena arrastrada conserva el tono |
+| OTA local | **OK** con los componentes reales: digest falso rechazado, descarga de 788.201.343 B con SHA-256 verificado, reemplazo por `.bat`, relanzamiento y `runtime\2.5.9` re-extraído con el PCK nuevo |
+
+### 12.1 Qué cambia en el PCK y en el visor
+
+- **Terreno por isla:** `TerrenoEditable.configurar()` copia las mallas de superficie y clona
+  material y `ConcavePolygonShape3D`; `Construccion.registrar_isla()` rechaza el mismo nodo bajo
+  dos índices y `_validar_remitente()` exige que el remitente sea el dueño registrado, sin
+  excepción para el propio id ni para el remitente 0. La mira se pinta en rojo sobre islas ajenas.
+- **Mover conserva el color:** el pincel MOVER advecta altura **y** color con el mismo flujo
+  ascendente y `_equilibrar_alfa()` renormaliza la máscara de arena (masa 126 → 110, −12,7 %).
+- **Convergencia de invitados:** `IniciarGodotMain` usa `_hostSesionUrl` (raíz de la sesión) para
+  `--ip`, `--port` y `--peer-url`; un enlace reenviado por un invitado ya no apunta al túnel de ese
+  invitado. Sin `?host`, el destino es idéntico al de la 2.5.8.
+- **Presencia antes de entrar:** tarjeta `BordeEstadoRed` en la bienvenida (vacío/ocupado, nodos LAN,
+  botón «Usar este nodo»), `Services/DescubrimientoP2P.cs` y ruta `/api/p2p-status` exenta de token.
+- **C#:** además de lo anterior, `<Version>`, `<AssemblyVersion>`, `<FileVersion>`,
+  `<AssemblyName>` y la descripción del `.csproj`, más `ExeNameFallback` y `ExeUrlFallback` de
+  `WebNodoService` pasan a `2.5.9`.
+- **PCK:** nuevo (`ca7b7436…d2e2a`) porque cambian `TerrenoEditable.gd`, `Construccion.gd`,
+  `ConstructorPanel.gd` y se añade el shader `TERRENO_EDITABLE.gdshader`.
+
+### 12.2 Por qué es una versión nueva y no un reemplazo
+
+Recompilar bajo `v2.5.8` habría dejado a los equipos ya actualizados con `runtime\2.5.8\`
+extraído antes (R1), y renombrar un tag publicado está prohibido (R4, §8.2). La 2.5.9 es un
+tag nuevo: el actualizador elige la versión mayor del nombre del asset y el primer arranque
+extrae `runtime\2.5.9\`.
+
+### 12.3 Lo que falta antes de publicar
+
+1. **Confirmación del responsable** para crear el tag `v2.5.9` y subir exe + `release.json` +
+   `SHA256SUMS` (R16).
+2. **Portal:** con la release publicada, comprobar `/api/info` con el tamaño real y
+   `/descargar` con `Content-Length` igual al asset (R12, §7). Hoy el binario en ejecución
+   anuncia el exe nuevo pero el tamaño queda en «—» mientras la vigente sea la 2.5.8.
+3. **OTA real vía GitHub 2.5.8 → 2.5.9** en un equipo con la versión anterior (R13, §7).
+   La prueba local ya cubrió descarga, SHA-256, reemplazo, relanzamiento y re-extracción,
+   pero no la selección de release ni la CDN de GitHub.
+4. **Dos equipos reales** para la convergencia de invitados y el estado «ocupado» de la
+   pantalla de presencia.
+
+---
+
+## 13. Reglas para continuar esta fase
 
 1. **No publicar** binario, PCK ni OTA sin completar el checklist de [`REGLAS_DE_ACTUALIZACION.md`](../../../../REGLAS_DE_ACTUALIZACION.md) §7.
 2. **No afirmar** que existe túnel SSH: el sistema usa túneles HTTP/WebSocket. Si se quiere SSH, es trabajo pendiente con diseño propio.
@@ -445,7 +552,7 @@ a la publicación.
 
 ---
 
-## 13. Referencias
+## 14. Referencias
 
 - [`README_desarrollo_20261026.md`](README_desarrollo_20261026.md) — primeros 7 bloques de la jornada.
 - [`README_DESARROLLO.md`](README_DESARROLLO.md) — auditoría amplia del estado de `src/`.
@@ -455,4 +562,4 @@ a la publicación.
 
 ---
 
-*Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. Binarios publicados el mismo día: 2.5.6 (ver §9), 2.5.7 (ver §10) y 2.5.8 (ver §11).*
+*Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. Binarios publicados el mismo día: 2.5.6 (ver §9), 2.5.7 (ver §10) y 2.5.8 (ver §11). La 2.5.9 está compilada y probada en local, pendiente de publicación (ver §12).*

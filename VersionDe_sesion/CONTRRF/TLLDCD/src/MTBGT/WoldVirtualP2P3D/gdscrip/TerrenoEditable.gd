@@ -7,10 +7,34 @@ extends RefCounted
 ## demás. La colisión también se duplica para no compartir el recurso.
 
 const MAGIA := "WVPT"
-const VERSION := 1
+## v1: solo alturas. v2: alturas + color RGBA8 por vértice (arena de playa).
+const VERSION := 2
 ## Alturas locales (la malla mide 2x1x2 con escala ~99.92 -> 1 unidad = ~100 m).
 const ALTURA_MIN := 0.0
 const ALTURA_MAX := 0.95
+
+## Índices de herramienta que viajan en el pincel (Parámetro `herramienta`).
+const SUBIR := 0
+const BAJAR := 1
+const SUAVIZAR := 2
+const APLANAR := 3
+## Desplaza el montículo en la dirección del arrastre (advección de alturas).
+const MOVER := 4
+## Aplana hacia ~1 m sobre el agua y tiñe de arena.
+const PLAYA := 5
+
+## Nivel del agua en la escena de isla (malla local). Se detecta del nodo
+## Oceano; si no existe (glTF suelto en pruebas) se usa el valor del mundo.
+const NIVEL_AGUA_DEFECTO := 0.4897
+const MARGEN_PLAYA_M := 1.0
+## COLOR.a funciona como máscara de superposición en TERRENO_EDITABLE: 0 deja
+## la textura original, 1 pinta el color del vértice (arena). Es albedo lineal
+## (~#8A7550 en sRGB); con la luz de la isla (cielo + sol) el valor final ronda
+## #E4CD99, así que no se sube o la playa se quema a blanco.
+const COLOR_PLAYA := Color(0.24, 0.17, 0.09, 1.0)
+## Mismo RGB que la arena y alfa 0: al interpolar solo cambia la máscara, sin el
+## halo claro que aparece si el color sin arena fuese blanco.
+const COLOR_SIN_ARENA := Color(COLOR_PLAYA.r, COLOR_PLAYA.g, COLOR_PLAYA.b, 0.0)
 
 var indice := -1
 var isla: Node3D = null
@@ -19,6 +43,7 @@ var cuerpo: StaticBody3D = null
 var forma: ConcavePolygonShape3D = null
 var material: Material = null
 var escala := 1.0
+var nivel_agua := NIVEL_AGUA_DEFECTO
 
 var vertices := PackedVector3Array()
 var vertices_base := PackedVector3Array()
@@ -27,9 +52,11 @@ var tangentes := PackedFloat32Array()
 var uvs := PackedVector2Array()
 var uv2s := PackedVector2Array()
 var indices := PackedInt32Array()
+var colores := PackedColorArray()
 
 var _vecinos: Array = []
 var _hash_base := 0
+var _espaciado := 0.02
 var _malla_actual: ArrayMesh = null
 
 
@@ -63,18 +90,39 @@ func configurar(nodo_isla: Node3D, idx: int) -> bool:
 		anim.stop()
 		anim.active = false
 
+	# Copia propia de los arrays: editar una isla no debe poder tocar la malla
+	# horneada que sirve de base a esta misma isla en futuros reinicios.
 	var arrays := horneada.surface_get_arrays(0)
-	vertices = arrays[Mesh.ARRAY_VERTEX]
-	normales = arrays[Mesh.ARRAY_NORMAL]
-	indices = arrays[Mesh.ARRAY_INDEX]
+	vertices = (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).duplicate()
+	normales = (arrays[Mesh.ARRAY_NORMAL] as PackedVector3Array).duplicate()
+	indices = (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).duplicate()
 	var uv_raw = arrays[Mesh.ARRAY_TEX_UV]
-	uvs = uv_raw if uv_raw is PackedVector2Array else PackedVector2Array()
+	uvs = uv_raw.duplicate() if uv_raw is PackedVector2Array else PackedVector2Array()
 	var uv2_raw = arrays[Mesh.ARRAY_TEX_UV2]
-	uv2s = uv2_raw if uv2_raw is PackedVector2Array else PackedVector2Array()
+	uv2s = uv2_raw.duplicate() if uv2_raw is PackedVector2Array else PackedVector2Array()
 	var tan_raw = arrays[Mesh.ARRAY_TANGENT]
-	tangentes = tan_raw if tan_raw is PackedFloat32Array else PackedFloat32Array()
+	tangentes = tan_raw.duplicate() if tan_raw is PackedFloat32Array else PackedFloat32Array()
+	var col_raw = arrays[Mesh.ARRAY_COLOR]
+	if col_raw is PackedColorArray and col_raw.size() == vertices.size():
+		colores = col_raw.duplicate()
+	else:
+		colores = PackedColorArray()
+		colores.resize(vertices.size())
+		colores.fill(COLOR_SIN_ARENA)
 	vertices_base = vertices.duplicate()
 	_hash_base = hash(vertices_base)
+
+	# TERRENO_EDITABLE conserva la textura original y superpone el color por
+	# vértice (arena). Se clona por isla para no alterar el recurso compartido.
+	var original := material as BaseMaterial3D
+	if original != null:
+		var shader_mat := ShaderMaterial.new()
+		shader_mat.shader = preload("res://gdshader/TERRENO_EDITABLE.gdshader")
+		if original.albedo_texture != null:
+			shader_mat.set_shader_parameter("albedo_tex", original.albedo_texture)
+		shader_mat.set_shader_parameter("roughness_val", original.roughness)
+		shader_mat.set_shader_parameter("metallic_val", original.metallic)
+		material = shader_mat
 
 	cuerpo = malla.get_node_or_null("StaticBody3D") as StaticBody3D
 	var colision := cuerpo.get_node_or_null("CollisionShape3D") as CollisionShape3D if cuerpo != null else null
@@ -84,24 +132,63 @@ func configurar(nodo_isla: Node3D, idx: int) -> bool:
 
 	var s := malla.global_transform.basis.get_scale()
 	escala = maxf(0.001, (absf(s.x) + absf(s.y) + absf(s.z)) / 3.0)
+	nivel_agua = _detectar_nivel_agua()
 	_construir_vecinos()
 	_reconstruir_malla()
 	return true
 
 
+## Altura local de la superficie del océano. El agua de cada isla es un
+## duplicado hermano de la isla; si no hay océano (glTF suelto) se usa el valor
+## del mundo de ISLA3Dblock.
+func _detectar_nivel_agua() -> float:
+	var malla_agua := _buscar_malla_oceano(isla.get_parent() if isla.get_parent() != null else isla, 0)
+	if malla_agua == null:
+		malla_agua = _buscar_malla_oceano(isla, 0)
+	if malla_agua == null or malla_agua.mesh == null:
+		return NIVEL_AGUA_DEFECTO
+	var caja: AABB = malla_agua.global_transform * malla_agua.mesh.get_aabb()
+	return malla.to_local(Vector3(0.0, caja.end.y, 0.0)).y
+
+
+func _buscar_malla_oceano(nodo: Node, profundidad: int) -> MeshInstance3D:
+	if nodo == null or profundidad > 3:
+		return null
+	if nodo is MeshInstance3D and str(nodo.name).begins_with("Oceano"):
+		return nodo as MeshInstance3D
+	for hijo in nodo.get_children():
+		var hallado := _buscar_malla_oceano(hijo, profundidad + 1)
+		if hallado != null:
+			return hallado
+	return null
+
+
 ## Aplica un paso de pincel. `centro_mundo` viene del raycast, `radio_m` y
-## `fuerza_m` en metros. Devuelve cuántos vértices cambiaron.
+## `fuerza_m` en metros. `delta_mundo` es el arrastre del ratón desde el paso
+## anterior y solo lo usa MOVER. Devuelve cuántos vértices cambiaron.
 func aplicar_pincel(centro_mundo: Vector3, radio_m: float, fuerza_m: float,
-		dt: float, herramienta: int) -> int:
+		dt: float, herramienta: int, delta_mundo := Vector3.ZERO) -> int:
 	if malla == null or vertices.is_empty():
 		return 0
 	var centro := malla.to_local(centro_mundo)
 	var radio_local := maxf(radio_m, 0.5) / maxf(escala, 0.001)
 	var r2 := radio_local * radio_local
 	var paso := clampf(fuerza_m * dt / maxf(escala, 0.001), -0.02, 0.02)
-	if herramienta == 2: # suavizar
+	if herramienta == SUAVIZAR:
 		paso = clampf(absf(fuerza_m) * dt * 0.5, 0.0, 0.35)
+	var dir_mover := Vector2.ZERO
+	var avance_mover := 0.0
+	if herramienta == MOVER:
+		var arrastre := Vector2(delta_mundo.x, delta_mundo.z) / maxf(escala, 0.001)
+		# Un paso mayor que media celda rompe el esquema upwind; el resto se
+		# recupera en los siguientes ticks.
+		avance_mover = minf(arrastre.length(), _espaciado * 0.5)
+		if avance_mover < 0.000001:
+			return 0
+		dir_mover = arrastre.normalized()
+	var objetivo_playa := nivel_agua + MARGEN_PLAYA_M / maxf(escala, 0.001)
 	var afectados: Array[int] = []
+	var alfa_antes := 0.0
 	for i in vertices.size():
 		var v := vertices[i]
 		var dx := v.x - centro.x
@@ -112,22 +199,47 @@ func aplicar_pincel(centro_mundo: Vector3, radio_m: float, fuerza_m: float,
 		var caida := 1.0 - sqrt(d2 / r2)
 		caida = caida * caida * (3.0 - 2.0 * caida) # smoothstep
 		match herramienta:
-			0: # subir
+			SUBIR:
 				v.y = minf(ALTURA_MAX, v.y + paso * caida)
-			1: # bajar
+			BAJAR:
 				v.y = maxf(ALTURA_MIN, v.y - paso * caida)
-			2: # suavizar
+			SUAVIZAR:
 				var promedio := _promedio_vecinos(i)
 				v.y = lerpf(v.y, promedio, clampf(paso * caida, 0.0, 0.5))
-			3: # aplanar hacia la altura del impacto
+			APLANAR:
 				var delta := clampf(paso * caida * 2.0, -0.05, 0.05)
 				v.y = move_toward(v.y, clampf(centro.y, ALTURA_MIN, ALTURA_MAX), absf(delta))
+			MOVER:
+				# Advección upwind: cada vértice toma la altura y el color de
+				# donde venía la tierra. La arena viaja con el montículo en vez
+				# de quedarse atrás. El borde del pincel se mueve menos para no
+				# dejar un escalón.
+				var flujo := _flujo_ascendente(i, dir_mover)
+				if flujo.is_empty():
+					continue
+				var salto := -avance_mover * float(flujo["pendiente"]) * caida
+				v.y = clampf(v.y + clampf(salto, -0.02, 0.02), ALTURA_MIN, ALTURA_MAX)
+				var mezcla := caida * minf(1.0, avance_mover / maxf(_espaciado, 1e-6))
+				alfa_antes += colores[i].a
+				colores[i] = colores[i].lerp(flujo["color"], clampf(mezcla, 0.0, 1.0))
+			PLAYA:
+				# Objetivo mezclado con la altura actual según la caída: el
+				# centro llega a agua+1 m y el borde apenas cambia.
+				var destino := lerpf(v.y, objetivo_playa, caida)
+				var mezcla := clampf(absf(fuerza_m) * dt * 1.2, 0.0, 0.45) * caida
+				var nuevo := lerpf(v.y, destino, mezcla)
+				v.y = clampf(move_toward(v.y, nuevo, 0.02), ALTURA_MIN, ALTURA_MAX)
+				colores[i] = colores[i].lerp(COLOR_PLAYA, clampf(caida * 0.4, 0.0, 0.4))
 			_:
 				continue
 		vertices[i] = v
 		afectados.append(i)
 	if afectados.is_empty():
 		return 0
+	# El upwind de primer orden difumina la máscara de arena. Se le devuelve el
+	# alfa perdido en el borde para que la tierra arrastrada no palidezca.
+	if herramienta == MOVER:
+		_equilibrar_alfa(afectados, alfa_antes)
 	_recalcular_normales()
 	_reconstruir_malla()
 	return afectados.size()
@@ -145,10 +257,10 @@ func actualizar_colision() -> void:
 	forma.set_faces(caras)
 
 
-## Blob binario (cabecera + alturas float32) para disco y para el túnel.
+## Blob binario (cabecera + alturas float32 + color RGBA8) para disco y túnel.
 func serializar() -> PackedByteArray:
 	var datos := PackedByteArray()
-	var total := 4 + 2 + 4 + 8 + vertices.size() * 4
+	var total := 18 + vertices.size() * 8
 	datos.resize(total)
 	var off := 0
 	var magia := MAGIA.to_utf8_buffer()
@@ -164,11 +276,19 @@ func serializar() -> PackedByteArray:
 	for i in vertices.size():
 		datos.encode_float(off, vertices[i].y)
 		off += 4
+	for i in colores.size():
+		var c := colores[i]
+		datos[off] = clampi(roundi(c.r * 255.0), 0, 255)
+		datos[off + 1] = clampi(roundi(c.g * 255.0), 0, 255)
+		datos[off + 2] = clampi(roundi(c.b * 255.0), 0, 255)
+		datos[off + 3] = clampi(roundi(c.a * 255.0), 0, 255)
+		off += 4
 	return datos
 
 
 ## Carga un blob. Devuelve false si la geometría base no coincide (el mundo
 ## cambió de versión y las alturas guardadas ya no se pueden aplicar).
+## Acepta v1 (solo alturas) y v2 (alturas + colores).
 func cargar(datos: PackedByteArray) -> bool:
 	if datos.size() < 18 or vertices.is_empty():
 		return false
@@ -179,22 +299,33 @@ func cargar(datos: PackedByteArray) -> bool:
 		return false
 	var version := datos.decode_u16(off)
 	off += 2
-	if version != VERSION:
+	if version < 1 or version > VERSION:
 		return false
 	var cuenta := datos.decode_u32(off)
 	off += 4
-	if cuenta != vertices.size() or datos.size() < 18 + cuenta * 4:
+	var cargado := 4 if version == 1 else 8
+	if cuenta != vertices.size() or datos.size() < 18 + cuenta * cargado:
 		return false
 	var hash_guardado := datos.decode_s64(off)
 	off += 8
 	if hash_guardado != _hash_base:
 		push_warning("[Terreno] Geometría base distinta en isla %d; se descartan alturas" % indice)
 		return false
+	if colores.size() != vertices.size():
+		colores.resize(vertices.size())
+		colores.fill(COLOR_SIN_ARENA)
+	# El blob guarda primero todas las alturas y después todos los colores.
 	for i in cuenta:
 		var v := vertices[i]
 		v.y = clampf(datos.decode_float(off), ALTURA_MIN, ALTURA_MAX)
 		off += 4
 		vertices[i] = v
+	if version >= 2:
+		for i in cuenta:
+			colores[i] = Color8(datos[off], datos[off + 1], datos[off + 2], datos[off + 3])
+			off += 4
+	else:
+		colores.fill(COLOR_SIN_ARENA)
 	_recalcular_normales()
 	_reconstruir_malla()
 	actualizar_colision()
@@ -217,6 +348,56 @@ func _promedio_vecinos(i: int) -> float:
 	for j in lista:
 		suma += vertices[j].y
 	return suma / float(lista.size())
+
+
+## Devuelve al conjunto `afectados` el alfa total que tenía antes del paso,
+## sin pasar de 1 por vértice. Solo actúa si el transporte perdió máscara.
+func _equilibrar_alfa(afectados: Array[int], objetivo: float) -> void:
+	if objetivo <= 0.0:
+		return
+	var actual := 0.0
+	for i in afectados:
+		actual += colores[i].a
+	if actual >= objetivo * 0.999 or actual <= 1e-6:
+		return
+	var factor := objetivo / actual
+	for i in afectados:
+		var c := colores[i]
+		c.a = minf(1.0, c.a * factor)
+		colores[i] = c
+
+
+## Flujo de barlovento: media de altura y color de los vecinos que quedan
+## contra el arrastre. Un gradiente centrado es inestable para advectar:
+## difumina el montículo en vez de trasladarlo. Devuelve {} si no hay vecinos
+## de barlovento (borde de la malla o arrastre nulo).
+func _flujo_ascendente(i: int, dir: Vector2) -> Dictionary:
+	if i < 0 or i >= _vecinos.size():
+		return {}
+	var v := vertices[i]
+	var suma := 0.0
+	var color := Color(0.0, 0.0, 0.0, 0.0)
+	var n := 0
+	var distancia := 0.0
+	for j in _vecinos[i]:
+		var w := vertices[j]
+		var off := Vector2(w.x - v.x, w.z - v.z)
+		var largo := off.length()
+		if largo < 1e-6:
+			continue
+		var alineacion := (off.x * dir.x + off.y * dir.y) / largo
+		if alineacion < -0.45:
+			suma += w.y
+			color += colores[j]
+			n += 1
+			distancia += largo
+	if n == 0:
+		return {}
+	var paso := maxf(distancia / float(n), 1e-6)
+	return {
+		"pendiente": (v.y - suma / float(n)) / paso,
+		"color": color / float(n),
+	}
 
 
 func _recalcular_normales() -> void:
@@ -250,6 +431,8 @@ func _reconstruir_malla() -> void:
 		arrays[Mesh.ARRAY_TEX_UV] = uvs
 	if uv2s.size() == vertices.size():
 		arrays[Mesh.ARRAY_TEX_UV2] = uv2s
+	if colores.size() == vertices.size():
+		arrays[Mesh.ARRAY_COLOR] = colores
 	arrays[Mesh.ARRAY_INDEX] = indices
 	var nueva := ArrayMesh.new()
 	nueva.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
@@ -270,6 +453,15 @@ func _construir_vecinos() -> void:
 		_agregar_arista(listas, vistos, indices[t + 1], indices[t + 2])
 		_agregar_arista(listas, vistos, indices[t + 2], indices[t])
 	_vecinos = listas
+	var suma := 0.0
+	var cuenta := 0
+	for i in listas.size():
+		var lista: PackedInt32Array = listas[i]
+		if lista.is_empty():
+			continue
+		suma += vertices[i].distance_to(vertices[lista[0]])
+		cuenta += 1
+	_espaciado = maxf(0.001, suma / float(maxi(cuenta, 1)))
 
 
 func _agregar_arista(listas: Array, vistos: Dictionary, a: int, b: int) -> void:

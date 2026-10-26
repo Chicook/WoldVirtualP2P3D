@@ -67,6 +67,7 @@ namespace Visor3D.Services
                       $"marcador='{versionMarcador}' esperado='{AppExtractor.Version}'");
 
                 ComprobarPortal(Check);
+                ComprobarDescubrimiento(Check);
 
                 if (File.Exists(AppExtractor.GodotExePath))
                     ComprobarMotor(Check);
@@ -103,6 +104,13 @@ namespace Visor3D.Services
                                   .GetAwaiter().GetResult();
                 bool disponible = info.Contains("\"disponible\":true") && info.Contains(".exe");
                 check("/api/info anuncia un .exe", disponible, info.Trim());
+
+                // Presencia pública: otro visor debe poder saber si el nodo está en
+                // línea sin conocer el token de esta sesión.
+                nodo.PublicTunnelUrl = "https://nodo.invalid";
+                bool presencia = DescubrimientoP2P.ConsultarNodoAsync(baseUrl)
+                                                    .GetAwaiter().GetResult();
+                check("/api/p2p-status sin token (presencia)", presencia, baseUrl);
             }
             catch (Exception ex)
             {
@@ -113,6 +121,13 @@ namespace Visor3D.Services
                 try { nodo.Dispose(); } catch { }
             }
         }
+
+        /// <summary>
+        /// Comprueba la escucha de la baliza LAN sin depender de otro equipo: el
+        /// propio test inyecta un paquete válido y otro ajeno por loopback.
+        /// </summary>
+        private static void ComprobarDescubrimiento(Action<string, bool, string> check)
+            => RedSelfTest.ComprobarDescubrimiento(check);
 
         private static void ComprobarMotor(Action<string, bool, string> check)
         {
