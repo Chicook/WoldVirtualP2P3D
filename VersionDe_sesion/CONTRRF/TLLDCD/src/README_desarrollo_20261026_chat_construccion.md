@@ -6,7 +6,7 @@
 > **Repositorio:** `https://github.com/Chicook/WoldVirtualP2P3D.git`
 > **Alcance:** `src/` — visor C# (`VSC#`) y mundo Godot (`MTBGT/WoldVirtualP2P3D`).
 > **Documento hermano:** [`README_desarrollo_20261026.md`](README_desarrollo_20261026.md) cubre los 7 bloques previos de la jornada (cuenta única, llave de hardware, barrera de login, animaciones, foco, optimización de texturas y retirada de `test_user_data`). Este archivo **no repite** ese contenido: documenta el resto del trabajo del día, con prioridad en el sistema de terreno y construcción.
-> **Estado del árbol:** la 2.5.9 está **publicada** en GitHub (tag `v2.5.9`, marcada como *Latest*) con los tres assets verificados por API y el portal sirviendo el binario nuevo (§12). Binarios publicados el 2026-10-26: 2.5.6 (§9), 2.5.7 (§10), 2.5.8 (§11) y 2.5.9 (§12). El OTA **desde GitHub** en un equipo con la versión anterior sigue sin ejecutar; el OTA local con los componentes reales sí se ejecutó (§4).
+> **Estado del árbol:** la 2.5.9 está **publicada** en GitHub (tag `v2.5.9`) con los tres assets verificados por API y el portal sirviendo el binario nuevo (§12). Binarios publicados el 2026-10-26: 2.5.6 (§9), 2.5.7 (§10), 2.5.8 (§11) y 2.5.9 (§12). El **2026-10-27** se publicó la **v2.6.0** (tag `v2.6.0`, *Latest*) sobre el commit `760c597` de `DevQoderIA`, con los tres assets verificados por API (§15). El OTA **desde GitHub** en un equipo con la versión anterior sigue sin ejecutar; el OTA local con los componentes reales sí se ejecutó (§4).
 
 ---
 
@@ -570,9 +570,9 @@ extrae `runtime\2.5.9\`.
 
 ---
 
-## 15. Preparación de la v2.6.0 (2026-10-27)
+## 15. Publicación de la v2.6.0 (2026-10-27)
 
-Trabajo hecho sobre el árbol del 2026-10-26, **sin publicar release**: sigue vigente la v2.5.9 y no se ha creado el tag `v2.6.0` (R16).
+Trabajo hecho sobre el árbol del 2026-10-26 y publicado el 2026-10-27 como release **v2.6.0** (*Latest*) desde el commit `760c597` de `DevQoderIA`. La v2.5.9 sigue publicada con sus assets.
 
 ### Cambios
 
@@ -593,10 +593,13 @@ Trabajo hecho sobre el árbol del 2026-10-26, **sin publicar release**: sigue vi
 | Construcción, voxel, deshacer e inventario | `godot --headless --path . --script res://tools/probar_construccion.gd` | **201 OK, 0 fallos**, exit 0 |
 | Compilación | `dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true` | **0 errores, 0 avisos**; `DMWoldVirtualP2P3Dv2.6.0.exe` de **788.230.009 B** (751,8 MiB), SHA-256 `29644fdd…502347` |
 | Arranque del binario 2.6.0 | `DMWoldVirtualP2P3Dv2.6.0.exe --startup-selftest` | **15/15 OK**, exit 0; `.extracted` = `2.6.0`; PCK extraído = embebido (512,9 MiB); motor con isla y WebSocket 8911, sin `ERROR` |
+| Portal con la 2.6.0 | `--startup-selftest` | `/api/info` → `{"disponible":true,"nombre":"DMWoldVirtualP2P3Dv2.6.0.exe","tamano_mb":"751,8","url_descarga":"/descargar"}` |
+| Release v2.6.0 | `gh release create v2.6.0 …` + `gh api …/releases/tags/v2.6.0` | `draft=false`, `prerelease=false`, *Latest*; tag sobre `760c597`; exe 788.230.009 B con digest `29644fdd…502347`; `release.json` 215 B (`a471899d…32306`) y `SHA256SUMS` 174 B (`042b6959…516ab`), iguales a los locales |
+| Descarga del asset | `curl -I …/download/v2.6.0/DMWoldVirtualP2P3Dv2.6.0.exe` | **200** con `Content-Length: 788230009` |
 | Aislamiento de la prueba | La primera pasada falló sólo en «Motor arranca desde el PCK» porque `user://p2p_session.json` forzaba modo cliente; apartando el fichero pasó 15/15 y se restauró | Documentado como sensibilidad al entorno en `REGLAS_DE_ACTUALIZACION.md` §9 |
 
 ### Deuda abierta
 
 Registrada en el issue [#19](https://github.com/Chicook/WoldVirtualP2P3D/issues/19): restaurar desde el inventario, deshacer incremental, migración real 2.5.9 → 2.6.0, recuperación de la llave ante cambio de hardware, prueba visual de la barra de chat, aislamiento de `--startup-selftest` y OTA real 2.5.9 → 2.6.0.
 
-*La v2.6.0 queda compilada en local y pendiente de confirmación para publicar; los metadatos `release.json`/`SHA256SUMS` de 2.6.0 no se han generado todavía.*
+*La v2.6.0 está publicada en GitHub con `release.json` y `SHA256SUMS` verificados por API. Queda pendiente el OTA real desde GitHub en un equipo con la 2.5.9 y la prueba visual de la barra de chat con una sesión autenticada.*

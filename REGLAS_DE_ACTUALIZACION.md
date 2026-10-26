@@ -48,16 +48,14 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualP2P3Dv2.6.0`, que corresponde al exe
-`DMWoldVirtualP2P3Dv2.6.0.exe` (compilado en local el 2026-10-27; **todavía sin publicar**). La
-última release publicada sigue siendo la v2.5.9 con `DMWoldVirtualp2pCNXv2.5.9.exe`, de modo que
-tag, asset y `release.json` de 2.6.0 se crearán juntos en el momento de publicar (R16).
+extensión: hoy `DMWoldVirtualP2P3Dv2.6.0`, que corresponde al exe `DMWoldVirtualP2P3Dv2.6.0.exe`,
+publicado el 2026-10-27 como release v2.6.0 (tag sobre `760c597`, assets verificados por API). La
+release anterior v2.5.9 sigue publicada con su propio asset.
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
 fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
-los cuatro planos son `2.5.9` / `v2.5.9` / `DMWoldVirtualp2pCNXv2.5.9.exe` / `2.5.9`. El binario
-2.6.0 sólo tiene hoy el plano del csproj: los otros tres se crean al publicar, no antes. El
-actualizador lee
+los cuatro planos son `2.6.0` / `v2.6.0` / `DMWoldVirtualP2P3Dv2.6.0.exe` / `2.6.0`; la v2.5.9
+sigue publicada bajo su propio tag con sus planos alineados. El actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación
 hace que un visor se crea "al día" teniendo binario nuevo por instalar.
