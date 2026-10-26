@@ -144,6 +144,8 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 | Chat con el binario 2.5.7 | `DMWoldVirtualp2pCNXv2.5.7.exe --chat-selftest` | **24/24 OK, 0 fallos**, exit 0 |
 | Arranque del binario 2.5.7 | `DMWoldVirtualp2pCNXv2.5.7.exe --startup-selftest` | **11/11 OK, exit 0**; marcador `.extracted` = `2.5.7`; PCK extraído idéntico al embebido (`9a5e2a06…baf4f`) |
 | Reinicio de cuenta | Arranque real de `DMWoldVirtualp2pCNXv2.5.7.exe` con la cuenta del 16:39 | Archivo en `respaldo_cuenta/20261026-170512`; `credentials.json`, `pc_sello.json`, `registro.cfg` y `p2p_session.json` ya no están en su sitio; marcador `reset_cuenta.txt` = `2.5.7` |
+| Portal con la 2.5.7 | `GET /`, `/api/info?token=…` y `/descargar` con el visor abierto | Log: `release vigente → DMWoldVirtualp2pCNXv2.5.7.exe (751,7 MB)`; `/api/info` anuncia `2.5.7` y `751,7`; `/descargar` **200**, `Content-Length: 788180863`, `filename="DMWoldVirtualp2pCNXv2.5.7.exe"` |
+| Asset 2.5.7 publicado | `gh api repos/…/releases/tags/v2.5.7` | digest `sha256:d21a1fab…e9fbe` = SHA-256 local; `release.json` `c1b85344…59ce` y `SHA256SUMS` `f575b7a0…376b` también coinciden; tag → commit `154a3a5` |
 
 **No ejecutado (y por tanto no acreditado):**
 
@@ -304,14 +306,17 @@ el reinicio de la base de usuarios local y fuerza un `runtime\2.5.7\` propio.
 
 | Dato | Valor |
 |---|---|
+| Release | [`v2.5.7`](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.7), tag sobre el commit `154a3a5` |
 | Asset | `DMWoldVirtualp2pCNXv2.5.7.exe` |
 | Tamaño | 788 180 863 B (751,7 MiB) |
 | SHA-256 local | `d21a1fab652711cc154a3b49ad808bfd284125f9630d0e1564cc2cdc857e9fbe` |
 | PCK embebido | Sin cambios: 537 803 740 B (512,9 MiB), SHA-256 `9a5e2a06662e937dd5f89ca7e240a858fe96fb0acd521009a6c1e7cd6d0baf4f` |
-| `release.json` | version `2.5.7`, tag `v2.5.7`, exe y URL del asset nuevo, `size_mb` 751.7 |
-| `SHA256SUMS` | exe + `release.json` |
+| `release.json` | version `2.5.7`, tag `v2.5.7`, exe y URL del asset nuevo, `size_mb` 751.7; SHA-256 `c1b85344…59ce` |
+| `SHA256SUMS` | exe + `release.json`; SHA-256 `f575b7a0…376b` |
+| Verificación por API | Los tres `digest` de `gh api …/releases/tags/v2.5.7` coinciden con los locales |
 | Prueba de arranque | 11/11 OK, exit 0 |
 | Chat | 24/24 OK, exit 0 |
+| Portal | `release vigente → DMWoldVirtualp2pCNXv2.5.7.exe (751,7 MB)`; `/descargar` 200 con 788 180 863 B |
 
 ### 10.1 Qué hace el reinicio de cuenta
 
