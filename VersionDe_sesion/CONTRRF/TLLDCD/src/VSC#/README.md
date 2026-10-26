@@ -1,7 +1,7 @@
 # 🌐 Wold Virtual P2P 3D — Visor C# (.NET 8 WPF) & WebNodo
 
 > **Ubicación:** `VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#`  
-> **Versión Actual:** `2.5.6` — EXE: `DMWoldVirtualp2pCNXv2.5.6.exe`  
+> **Versión Actual:** `2.5.7` — EXE: `DMWoldVirtualp2pCNXv2.5.7.exe`  
 > **Tecnologías:** C# 12, .NET 8 WPF, Win32 P/Invoke (`HwndHost`), Godot Engine 4 (incrustado), Node.js / Express (WebNodo), WMI (`System.Management`).
 
 ---

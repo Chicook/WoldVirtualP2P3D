@@ -1,7 +1,7 @@
 using System;
-using System.IO;
 using System.Windows;
 using Visor3D.Chat;
+using Visor3D.Seguridad.SesionUnica;
 using Visor3D.Services;
 
 namespace Visor3D
@@ -26,9 +26,10 @@ namespace Visor3D
                 return;
             }
 
-            // ── RESET COMPLETO DE SESIÓN ─────────────────────────────────────────
-            // Comentado para preservar la cuenta del usuario entre sesiones y actualizaciones.
-            // LimpiarDatosDeUsuario();
+            // ── REINICIO DE LA BASE DE USUARIOS LOCAL (una vez por versión) ──────
+            // Archiva cuenta y estado de sesión para que el equipo vuelva a
+            // registrarse desde cero. Nunca se ejecuta en las pruebas automáticas.
+            ReinicioCuenta.EjecutarSiProcede(AppExtractor.Version);
 
             // ── Procesar argumentos de conexión remota (CLI / Enlace de Invitado) ──
             string? initialConnectionUrl = ParseCommandLineArgs(e.Args);
@@ -101,48 +102,6 @@ namespace Visor3D
                 }
             }
             return connectionUrl;
-        }
-
-        /// <summary>
-        /// Elimina los datos de sesión del usuario guardados en
-        /// %LocalAppData%\WoldVirtualP2P3D\ (credenciales, perfil, llave)
-        /// y también el archivo registro.cfg del directorio user:// de Godot,
-        /// garantizando un estado completamente limpio en cada arranque.
-        /// </summary>
-        private static void LimpiarDatosDeUsuario()
-        {
-            try
-            {
-                // 1. Borrar datos del visor C# de la carpeta de perfil del SO
-                string visorDataDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "WoldVirtualP2P3D");
-                if (Directory.Exists(visorDataDir))
-                    Directory.Delete(visorDataDir, recursive: true);
-
-                // 2. Borrar registro de Godot (user://registro.cfg) en app_userdata
-                string godotUserDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "Godot", "app_userdata", "WoldVirtualP2P3D");
-                string registroCfg = Path.Combine(godotUserDir, "registro.cfg");
-                if (File.Exists(registroCfg))
-                    File.Delete(registroCfg);
-
-                // 3. Borrar p2p_session.json de Godot para no retomar sesiones viejas
-                string p2pSession = Path.Combine(godotUserDir, "p2p_session.json");
-                if (File.Exists(p2pSession))
-                    File.Delete(p2pSession);
-
-                // 4. Escribir flag para que Boot.gd sepa que debe iniciar como usuario nuevo
-                if (!Directory.Exists(godotUserDir))
-                    Directory.CreateDirectory(godotUserDir);
-                File.WriteAllText(Path.Combine(godotUserDir, "reset_flag.txt"),
-                    "reset_" + DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
-            }
-            catch
-            {
-                // Silencioso: si no puede borrar, el visor abre igual
-            }
         }
     }
 }

@@ -140,6 +140,10 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 | Prueba de arranque del binario | `DMWoldVirtualp2pCNXv2.5.6.exe --startup-selftest` | **11/11 OK, exit 0**; PCK extraído = embebido; motor headless isla+WS 8911 sin `ERROR` |
 | Descarga del portal | `GET http://127.0.0.1:3030/descargar` con el visor abierto | **200**, `Content-Length: 788176767`, `filename="DMWoldVirtualp2pCNXv2.5.6.exe"` |
 | Asset publicado | `gh api repos/…/releases/tags/v2.5.6` | digest `sha256:b028d5…7633` = SHA-256 local |
+| Compilación 2.5.7 | `dotnet publish Visor3D.csproj -c Release -r win-x64 --self-contained true -o E:/out_v257` | **0 errores, 0 avisos**; exe de 788 180 863 B |
+| Chat con el binario 2.5.7 | `DMWoldVirtualp2pCNXv2.5.7.exe --chat-selftest` | **24/24 OK, 0 fallos**, exit 0 |
+| Arranque del binario 2.5.7 | `DMWoldVirtualp2pCNXv2.5.7.exe --startup-selftest` | **11/11 OK, exit 0**; marcador `.extracted` = `2.5.7`; PCK extraído idéntico al embebido (`9a5e2a06…baf4f`) |
+| Reinicio de cuenta | Arranque real de `DMWoldVirtualp2pCNXv2.5.7.exe` con la cuenta del 16:39 | Archivo en `respaldo_cuenta/20261026-170512`; `credentials.json`, `pc_sello.json`, `registro.cfg` y `p2p_session.json` ya no están en su sitio; marcador `reset_cuenta.txt` = `2.5.7` |
 
 **No ejecutado (y por tanto no acreditado):**
 
@@ -228,6 +232,8 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 | [`GodotHwndHost.cs`](VSC%23/GodotHwndHost.cs) | Modificado | Reenvío de teclado y foco con `WM_PARENTNOTIFY`. |
 | [`Services/WebNodoService.cs`](VSC%23/Services/WebNodoService.cs) | Modificado | Ruta `/chat` hacia el relay. |
 | [`Visor3D.csproj`](VSC%23/Visor3D.csproj) | Modificado | NAudio 2.3.0, AForge.Video 2.2.5 y AForge.Video.DirectShow 2.2.5. |
+| [`Seguridad/Seguridad_sesion_unica/ReinicioCuenta.cs`](VSC%23/Seguridad/Seguridad_sesion_unica/ReinicioCuenta.cs) | Nuevo | Reinicio único por versión de la base de usuarios local, con archivo en `respaldo_cuenta\`. |
+| [`App.xaml.cs`](VSC%23/App.xaml.cs) | Modificado | Llama a `ReinicioCuenta` antes de WebNodo y del extractor. |
 | [`README.md`](VSC%23/README.md) | Modificado | Secciones 7, 8 y 9 (chat, clic y amigos). |
 
 ---
@@ -252,10 +258,10 @@ Núcleo en [`TerrenoEditable.gd`](MTBGT/WoldVirtualP2P3D/gdscrip/TerrenoEditable
 E:/Program\ Files/dotnet/dotnet.exe build "VSC#/Visor3D.csproj" -p:SkipGodotAssets=true -c Debug
 
 # Selftest del chat (el ejecutable compilado)
-"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.6.exe" --chat-selftest
+"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.7.exe" --chat-selftest
 
 # Prueba de arranque previa a publicar
-"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.6.exe" --startup-selftest
+"VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv2.5.7.exe" --startup-selftest
 
 # Godot (desde MTBGT/WoldVirtualP2P3D)
 "C:/Users/User/Desktop/Godot_v4.7.2-stable_win64_console.exe" --headless --path . \
@@ -288,7 +294,85 @@ Decisiones y límites que deben quedar escritos:
 
 ---
 
-## 10. Reglas para continuar esta fase
+## 10. Publicación v2.5.7 (2026-10-26)
+
+La 2.5.6 no cambiaba lo que ve un equipo que ya tenía datos: seguía entrando con la
+cuenta anterior y, si arrancaba un ejecutable viejo (`bin\Debug\...v2.5.5.exe`,
+`bin\Release\...v2.5.5.exe` o `Lanzar.bat` con una build anterior), Godot usaba
+`runtime\2.5.5\wvp3d.pck` y reaparecía el error de `Personalizacion.gd`. La 2.5.7 añade
+el reinicio de la base de usuarios local y fuerza un `runtime\2.5.7\` propio.
+
+| Dato | Valor |
+|---|---|
+| Asset | `DMWoldVirtualp2pCNXv2.5.7.exe` |
+| Tamaño | 788 180 863 B (751,7 MiB) |
+| SHA-256 local | `d21a1fab652711cc154a3b49ad808bfd284125f9630d0e1564cc2cdc857e9fbe` |
+| PCK embebido | Sin cambios: 537 803 740 B (512,9 MiB), SHA-256 `9a5e2a06662e937dd5f89ca7e240a858fe96fb0acd521009a6c1e7cd6d0baf4f` |
+| `release.json` | version `2.5.7`, tag `v2.5.7`, exe y URL del asset nuevo, `size_mb` 751.7 |
+| `SHA256SUMS` | exe + `release.json` |
+| Prueba de arranque | 11/11 OK, exit 0 |
+| Chat | 24/24 OK, exit 0 |
+
+### 10.1 Qué hace el reinicio de cuenta
+
+`ReinicioCuenta.EjecutarSiProcede()` se llama en `App.OnStartup`, después de las pruebas
+automáticas y antes de WebNodo y del extractor. Se ejecuta **una vez por versión**: el
+marcador `%LOCALAPPDATA%\WoldVirtualP2P3D\reset_cuenta.txt` guarda la versión que ya lo hizo.
+
+Archiva —no borra— en `%LOCALAPPDATA%\WoldVirtualP2P3D\respaldo_cuenta\<fecha>\`:
+
+- **Críticos** (sin ellos el PC deja de estar registrado): `credentials.json`,
+  `user\user_profile.json`, `user\llave_acceso.json`, `Seguridad\pc_sello.json`.
+- **Resto de `user\`:** `semilla_wallet.json`, `hardware_id.json`, `friends_*.json`,
+  `p2p_session.json`.
+- **Godot:** `registro.cfg`, `p2p_session.json`, `session_host.txt`, `islas_registro.cfg`,
+  `isla_propiedad.cfg`, `avatar_hash.json`, `avatar.sha256`, `sesion_islas_snapshot.json`
+  y la carpeta `carrusel\`.
+- Escribe `reset_flag.txt` en el `user://` de Godot como red de seguridad para que
+  `Boot.gd` borre un `registro.cfg` que se hubiera quedado bloqueado.
+
+Si algún fichero crítico no se puede mover, **no escribe el marcador**: el siguiente
+arranque reintenta y el aviso queda en `logs\visor-<fecha>.log` con el prefijo `[cuenta]`.
+No toca `runtime\`, `logs\`, `cloudflared.exe`, `internal_storage\` ni el PCK.
+
+Efecto visible: la pantalla de bienvenida vuelve a ofrecer **«Crear cuenta»**
+(`MainWindow.MostrarPantallaBienvenida` sólo la oculta si existen perfil y llave) y el motor
+arranca en carrusel + registro de nick. La semilla de la wallet anterior queda en el
+respaldo; la cuenta nueva genera otra.
+
+### 10.2 Por qué es una versión nueva y no un reemplazo de la 2.5.6
+
+Recompilar bajo la etiqueta `v2.5.6` habría dejado a los equipos ya actualizados con el
+`runtime\2.5.6\` extraído antes (R1), y borrar o mover un tag publicado está prohibido
+(R4, §8.2). La 2.5.7 es un tag nuevo, el actualizador elige la versión mayor del nombre
+del asset y el primer arranque extrae `runtime\2.5.7\`.
+
+### 10.3 Diagnóstico del informe «siguen los mismos errores»
+
+Los logs del 2026-10-26 lo sitúan en un ejecutable viejo, no en el binario publicado:
+
+- `logs\godot2026-10-26T16.40.54.log` contiene el error de `Personalizacion.gd:841/842`,
+  **no** muestra `[OptimizadorAvatares]` y su PCK es el de la 2.5.5 (537 728 852 B).
+- `logs\godot2026-10-26T16.44.33.log` arranca con el PCK nuevo, registra
+  `OptimizadorAvatares`, prepara la isla 0 con 10 920 vértices y **no tiene ningún `ERROR`**.
+- `runtime\2.5.6\wvp3d.pck` (16:24) es idéntico al embebido en la 2.5.6
+  (`9a5e2a06…baf4f`), así que el binario publicado sí llevaba la corrección.
+- `bin\Debug\...DMWoldVirtualp2pCNXv2.5.5.exe` (15:28) y
+  `bin\Release\...DMWoldVirtualp2pCNXv2.5.5.exe` (14:59) siguen existiendo, y
+  `Lanzar.bat` compila y ejecuta la configuración **Debug**. Cualquiera de los dos
+  resuelve `runtime\2.5.5\`.
+
+Para arrancar la versión nueva hay que ejecutar el `.exe` publicado (o el de
+`E:\out_v257\`), no `Lanzar.bat` ni un `bin\...v2.5.5.exe`.
+
+### 10.4 Límite no acreditado
+
+No se ejecutó el OTA 2.5.6 → 2.5.7 en un equipo distinto ni una sesión de dos máquinas.
+El reinicio de cuenta sí se ejecutó en este equipo y su resultado quedó archivado.
+
+---
+
+## 11. Reglas para continuar esta fase
 
 1. **No publicar** binario, PCK ni OTA sin completar el checklist de [`REGLAS_DE_ACTUALIZACION.md`](../../../../REGLAS_DE_ACTUALIZACION.md) §7.
 2. **No afirmar** que existe túnel SSH: el sistema usa túneles HTTP/WebSocket. Si se quiere SSH, es trabajo pendiente con diseño propio.
@@ -299,7 +383,7 @@ Decisiones y límites que deben quedar escritos:
 
 ---
 
-## 11. Referencias
+## 12. Referencias
 
 - [`README_desarrollo_20261026.md`](README_desarrollo_20261026.md) — primeros 7 bloques de la jornada.
 - [`README_DESARROLLO.md`](README_DESARROLLO.md) — auditoría amplia del estado de `src/`.
@@ -309,4 +393,4 @@ Decisiones y límites que deben quedar escritos:
 
 ---
 
-*Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. El binario 2.5.6 se publicó el mismo día; ver §9.*
+*Documento generado el 2026-10-26 a partir del código y de las ejecuciones de prueba de la sesión. Binarios publicados el mismo día: 2.5.6 (ver §9) y 2.5.7 (ver §10).*
