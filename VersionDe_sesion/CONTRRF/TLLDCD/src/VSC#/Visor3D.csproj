@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <Platforms>x64</Platforms>
+
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+
+    <AssemblyName>DMWoldVirtualp2pCNXv2.5.5</AssemblyName>
+    <RootNamespace>Visor3D</RootNamespace>
+
+    <Version>2.5.5</Version>
+    <AssemblyVersion>2.5.5.0</AssemblyVersion>
+    <FileVersion>2.5.5.0</FileVersion>
+
+    <Title>Wold Virtual p2p 3D</Title>
+    <Description>Visor 3D — DMWoldVirtualp2pCNX v2.5.5 (corrige el arranque como cliente de un túnel caducado; 24 avatares a 2K, carrusel con turnos y ocupación, aspecto persistente, mundo en PCK, actualizador con SHA-256 y reanudación)</Description>
+  </PropertyGroup>
+
+  <!--
+    Fase 0: solo estructura WPF + login.
+    El motor 3D (Godot incrustado / Silk.NET) y la red P2P se añaden en fases posteriores.
+  -->
+
+  <!-- Excluir subcarpetas que son proyectos hermanos o carpetas de descargas -->
+  <ItemGroup>
+    <Compile Remove="version_prueba\**" />
+    <EmbeddedResource Remove="version_prueba\**" />
+    <None Remove="version_prueba\**" />
+    <Page Remove="version_prueba\**" />
+    <Compile Remove="webnodo\descargas\**" />
+    <EmbeddedResource Remove="webnodo\descargas\**" />
+    <None Remove="webnodo\descargas\**" />
+    <Compile Remove="webnodo\node_modules\**" />
+    <EmbeddedResource Remove="webnodo\node_modules\**" />
+    <None Remove="webnodo\node_modules\**" />
+  </ItemGroup>
+
+  <!-- Dependencias -->
+  <ItemGroup>
+    <!-- WMI: lectura de hardware (CPU, placa base, SO) -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- Recursos web (para fases posteriores y WebNodo) -->
+  <ItemGroup>
+    <None Update="webnodo\public\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="www\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Recursos embebidos para distribución standalone en un único .exe -->
+  <ItemGroup>
+    <EmbeddedResource Include="Seguridad\bip39-english.txt" />
+    <EmbeddedResource Include="webnodo\public\index.html" />
+    <EmbeddedResource Include="webnodo\public\metaverso.jpg" />
+    <!-- Interruptor de desarrollo: -p:SkipGodotAssets=true compila la UI sin el motor ni el mundo.
+         La build de distribución NO define la propiedad, así que los incluye. -->
+    <EmbeddedResource Include="godot_exe.zip" Condition="'$(SkipGodotAssets)' != 'true'" />
+    <EmbeddedResource Include="wvp3d.pck" Condition="'$(SkipGodotAssets)' != 'true'" />
+  </ItemGroup>
+
+</Project>
