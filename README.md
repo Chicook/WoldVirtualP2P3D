@@ -185,6 +185,10 @@ El riesgo es el **ataque Sybil**: una sola persona crea 1.000 cuentas para manip
 
 El jugador ya puede **esculpir el terreno** de su isla con seis herramientas (subir, bajar, suavizar, aplanar, mover y playa) y **crear y editar prims** (cubo, esfera, cilindro, cono y toro) con color, escala, rotación, duplicado y borrado. La edición está aislada por isla y el pincel «mover» transporta el color de la arena junto con la altura. Solo el dueño de la isla edita; el estado se guarda en `user://construccion/` y se sincroniza por el túnel durante la sesión. La implementación está validada en headless (128/128) y con capturas visuales (26/26), **sin prueba real entre dos máquinas**. Queda **Planificado**: deshacer/rehacer, selección múltiple, física de prims, edición del aspecto de la isla y persistencia en un servidor más allá de la sesión. **Estado: Implementado, sin prueba real entre dos máquinas.**
 
+| Vista general de la isla | Pincel Aplanar | Playa desde la costa |
+|:---:|:---:|:---:|
+| [![Vista general de la isla antes de editar](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/10_construccion_isla.png)](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/10_construccion_isla.png) | [![Pincel Aplanar con su disco de influencia sobre el terreno](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/11_construccion_aplanar.png)](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/11_construccion_aplanar.png) | [![Playa aplanada y teñida de arena vista desde la costa](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/12_construccion_playa_costa.png)](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/12_construccion_playa_costa.png) |
+
 ### 3.5 Chat de texto, voz y webcam
 
 El visor incorpora **chat de texto** con relay WebSocket propio, **amigos y chat privado**, y **captura de voz y webcam** que se reenvía a los demás participantes de la sesión. El selftest del chat supera 24/24 comprobaciones; **no** se ha probado con dos visores en máquinas distintas. Queda **Planificado**: autenticación del chat, cola offline, historial privado persistente, selector de micrófono/cámara y reproducción de vídeo/audio en el mundo 3D. LucIA conserva sus módulos de voz en Python (`src/SBSTM/voice_engine.py`, `voice_helpers.py`), que son parte del subsistema cognitivo y no del canal entre jugadores. **Estado: Implementado, sin prueba real entre dos máquinas.**
@@ -193,7 +197,7 @@ El visor incorpora **chat de texto** con relay WebSocket propio, **amigos y chat
 
 ## 4. Mapa del repositorio
 
-El repositorio versiona **846 ficheros** con **278.210.325 B (≈265 MiB)** de contenido. Por lenguajes: **69.674 líneas de Python** (235 ficheros), **20.395 líneas de C#** (73), **16.925 líneas de GDScript** (93, incluidos los scripts de escenas y herramientas) y **2.962 líneas de XAML** (15).
+El repositorio versiona **849 ficheros** con **280.271.173 B (≈267 MiB)** de contenido. Por lenguajes: **69.674 líneas de Python** (235 ficheros), **20.395 líneas de C#** (73), **16.925 líneas de GDScript** (93, incluidos los scripts de escenas y herramientas) y **2.962 líneas de XAML** (15).
 
 ### Modelo de versionado
 
@@ -532,7 +536,7 @@ Reconstruirlos en otra máquina exige: 1) descargar Godot 4.7.2, y 2) abrir el p
 | Exe publicado (v2.5.9) | 788.201.343 B (≈751,7 MiB) |
 | PCK embebido | 537.811.448 B (512,9 MiB) |
 | Extracción en disco por versión | 718.662.713 B (≈685,4 MiB) |
-| Contenido versionado del repositorio | 846 ficheros, 278.210.325 B (≈265 MiB) |
+| Contenido versionado del repositorio | 849 ficheros, 280.271.173 B (≈267 MiB) |
 
 ### Pipeline completo
 
@@ -720,7 +724,7 @@ Se dejaron de versionar los artefactos de ejecución de LucIA que quedaban en un
 
 ### Tamaño y ramas
 
-- Contenido versionado: **846 ficheros, 278.210.325 B (≈265 MiB)**.
+- Contenido versionado: **849 ficheros, 280.271.173 B (≈267 MiB)**.
 - Ramas remotas: `main` (integración) más una familia de ramas de trabajo por asistente (`DevAntigravityIA`, `DevChatGPTIA`, `DevCursorIA`, `DevDeepSeekHarnessIA`, `DevOpencodeIA`, `DevQoderIA`, `DevTraeIA`).
 
 ### Ficheros de configuración de agentes
