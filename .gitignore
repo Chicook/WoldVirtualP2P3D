@@ -232,3 +232,27 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 **/nonexistent_ledger.json
 **/purgador_informe.json
 
+# ──────────────────────────────────────────────────────────────────────────
+# 17. ARTEFACTOS DE COMPILACIÓN, RESPALDOS Y CAPTURAS
+# ──────────────────────────────────────────────────────────────────────────
+# Visual Studio
+.vs/
+
+# Descargas parciales del actualizador/portal
+*.part
+*.download
+*.crdownload
+
+# Copia de la cuenta movida al reiniciar sesión (datos personales)
+**/respaldo_cuenta/
+
+# Capturas de las pruebas visuales de construcción (se regeneran con tools/)
+**/capturas_construccion/
+
+# Metadatos de release: se regeneran al publicar y viajan como asset
+**/release.json
+**/SHA256SUMS
+
+# Restos de herramientas de despliegue externas
+.vercel/
+

@@ -13,6 +13,10 @@
 |:---:|:---:|:---:|:---:|
 | [![Carrusel de avatares en 3 turnos](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/01_carrusel_avatares.png)](#7-el-mundo-3d-godot) | [![Registro de jugador con personalización](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/02_registro_jugador.png)](#6-registro-e-identidad) | [![Hangar cyberpunk con portal](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/03_hangar_portal.png)](#7-el-mundo-3d-godot) | [![Isla procedural con nodos P2P](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/04_metaverso_isla_p2p.png)](#8-red-p2p-webnodo-y-t%C3%BAneles-ef%C3%ADmeros) |
 
+| Construcción: pincel Playa | Prims y edición | Isla ajena: solo lectura |
+|:---:|:---:|:---:|
+| [![Pincel Playa aplanando la costa y tiñéndola de arena](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/07_construccion_playa.png)](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas) | [![Cubo, esfera, cilindro, cono y toro con el cubo seleccionado](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/08_construccion_prims.png)](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas) | [![Isla ajena con la mira en rojo: no editable](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/09_isla_ajena.png)](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas) |
+
 > **Esta fase es una prueba de conexión P2P 3D.** El objetivo es validar que varias personas puedan encontrarse en el mundo, elegir avatar, personalizarlo y compartir sesión por túnel o LAN. **No es todavía un metaverso completo:** no hay economía ni blockchain, y LucIA no está integrada. Desde la 2.5.6 hay chat de texto (con captura de voz y webcam), amigos, y edición de terreno y prims; desde la 2.5.9 la edición queda aislada en la isla propia, un invitado conecta contra la raíz de la sesión y la bienvenida muestra si el metaverso está vacío u ocupado. Su sincronización entre dos máquinas sigue **sin prueba real**. Todo lo demás está en la hoja de ruta con estado **Planificado** (ver [§3](#3-visi%C3%B3n-del-metaverso-alcance-planificado)).
 
 ## Índice
@@ -179,7 +183,7 @@ El riesgo es el **ataque Sybil**: una sola persona crea 1.000 cuentas para manip
 
 ### 3.4 Construcción y edición de islas
 
-El jugador ya puede **esculpir el terreno** de su isla con seis herramientas (subir, bajar, suavizar, aplanar, mover y playa) y **crear y editar prims** (cubo, esfera, cilindro, cono y toro) con color, escala, rotación, duplicado y borrado. La edición está aislada por isla y el pincel «mover» transporta el color de la arena junto con la altura. Solo el dueño de la isla edita; el estado se guarda en `user://construccion/` y se sincroniza por el túnel durante la sesión. La implementación está validada en headless (128/128) y con capturas visuales (25/25), **sin prueba real entre dos máquinas**. Queda **Planificado**: deshacer/rehacer, selección múltiple, física de prims, edición del aspecto de la isla y persistencia en un servidor más allá de la sesión. **Estado: Implementado, sin prueba real entre dos máquinas.**
+El jugador ya puede **esculpir el terreno** de su isla con seis herramientas (subir, bajar, suavizar, aplanar, mover y playa) y **crear y editar prims** (cubo, esfera, cilindro, cono y toro) con color, escala, rotación, duplicado y borrado. La edición está aislada por isla y el pincel «mover» transporta el color de la arena junto con la altura. Solo el dueño de la isla edita; el estado se guarda en `user://construccion/` y se sincroniza por el túnel durante la sesión. La implementación está validada en headless (128/128) y con capturas visuales (26/26), **sin prueba real entre dos máquinas**. Queda **Planificado**: deshacer/rehacer, selección múltiple, física de prims, edición del aspecto de la isla y persistencia en un servidor más allá de la sesión. **Estado: Implementado, sin prueba real entre dos máquinas.**
 
 ### 3.5 Chat de texto, voz y webcam
 
@@ -189,7 +193,7 @@ El visor incorpora **chat de texto** con relay WebSocket propio, **amigos y chat
 
 ## 4. Mapa del repositorio
 
-El repositorio versiona **850 ficheros** con **275.683.115 B (≈263 MiB)** de contenido. Por lenguajes: **69.674 líneas de Python** (235 ficheros), **19.964 líneas de C#** (71), **15.829 líneas de GDScript** (92, incluidos los scripts de escenas y herramientas) y **2.909 líneas de XAML** (15).
+El repositorio versiona **846 ficheros** con **278.210.325 B (≈265 MiB)** de contenido. Por lenguajes: **69.674 líneas de Python** (235 ficheros), **20.395 líneas de C#** (73), **16.925 líneas de GDScript** (93, incluidos los scripts de escenas y herramientas) y **2.962 líneas de XAML** (15).
 
 ### Modelo de versionado
 
@@ -528,7 +532,7 @@ Reconstruirlos en otra máquina exige: 1) descargar Godot 4.7.2, y 2) abrir el p
 | Exe publicado (v2.5.9) | 788.201.343 B (≈751,7 MiB) |
 | PCK embebido | 537.811.448 B (512,9 MiB) |
 | Extracción en disco por versión | 718.662.713 B (≈685,4 MiB) |
-| Contenido versionado del repositorio | 850 ficheros, 275.683.115 B (≈263 MiB) |
+| Contenido versionado del repositorio | 846 ficheros, 278.210.325 B (≈265 MiB) |
 
 ### Pipeline completo
 
@@ -611,8 +615,8 @@ Por la política del proyecto (fases L5–L6): el **avatar 3D de LucIA, sus anim
 ### Pruebas
 
 - **LucIA** (`src/tests/`, 10 ficheros): pruebas pytest de voz, memoria, emoción, comandos, conocimiento, perfil, escucha, regresión y sistema, más un script de diagnóstico de voz (`diag_voz.py`). Configuración en `src/pytest.ini` / `pyproject.toml` (`testpaths=["tests"]`). Ejecución: `python -m pytest` desde `src/`.
-- **Visor C#**: **no hay pruebas automatizadas** (deuda D15). Cada release se valida manualmente.
-- **Mundo Godot**: scripts de comprobación en `src/MTBGT/WoldVirtualP2P3D/tools/` (`probar_turnos.gd`, `probar_carrusel_ocupado.gd`, `probar_red.gd`, `probar_sonda_*.gd`, `probar_personalizacion.gd`…), ejecutados a mano en headless.
+- **Visor C#**: no hay suite unitaria ni CI (deuda D15), pero el ejecutable incluye autopruebas de línea de comandos que se pasan antes de publicar: `--startup-selftest` (15/15), `--chat-selftest` (24/24) y `--red-selftest` (6/6). Cada release se valida además a mano.
+- **Mundo Godot**: scripts de comprobación en `src/MTBGT/WoldVirtualP2P3D/tools/` (`probar_turnos.gd`, `probar_carrusel_ocupado.gd`, `probar_red.gd`, `probar_sonda_*.gd`, `probar_personalizacion.gd`, `probar_construccion.gd`…), ejecutados a mano en headless. La prueba visual `capturar_construccion.gd` esculpe y reza prims en una ventana real, guarda 18 capturas y comprueba 26 condiciones (26/26 en la ejecución de referencia del 2026-10-26).
 
 ### CI
 
@@ -642,7 +646,7 @@ Fuente: [`HOJA_DE_RUTA.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/HOJA_DE_RUTA.md)
 | F6 | LucIA, WebNodo y observabilidad | Parcial: portal, token, logs y límites por IP hechos; empaquetado de LucIA pendiente |
 | F7 | Continuidad de sesión | Implementado, **sin prueba real** con 3 instancias |
 
-### Fases del metaverso (Planificado, sin código)
+### Fases del metaverso
 
 | Área | Objetivo | Estado |
 |---|---|---|
@@ -650,8 +654,8 @@ Fuente: [`HOJA_DE_RUTA.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/HOJA_DE_RUTA.md)
 | Blockchain | Cadena propia para identidad, reputación y token | Planificado |
 | WCVcoin | 30.000.000 WCV, 3 decimales, 0 distribución el día 1 | Planificado |
 | Anti-Sybil | Identidad única en red y reparto solo a humanidad verificada ([§3.3](#33-validaci%C3%B3n-segura-y-defensa-contra-cuentas-falsas)) | Planificado |
-| Construcción | Edición y persistencia de islas por el jugador | Planificado |
-| Comunicación | Chat de texto, voz y webcam dentro del mundo | Planificado |
+| Construcción | Edición y persistencia de islas por el jugador ([§3.4](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas)) | Implementado, sin prueba real entre dos máquinas |
+| Comunicación | Chat de texto, voz y webcam dentro del mundo ([§3.5](#35-chat-de-texto-voz-y-webcam)) | Implementado, sin prueba real entre dos máquinas |
 
 ### Métricas de la v0.1.0 (histórico)
 
@@ -666,7 +670,7 @@ Fuente: [`HOJA_DE_RUTA.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/HOJA_DE_RUTA.md)
 
 ### Deuda técnica más relevante
 
-Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/README_DESARROLLO.md) (D1–D16) y en los issues [#11](https://github.com/Chicook/WoldVirtualP2P3D/issues/11) (nits del actualizador) y [#12](https://github.com/Chicook/WoldVirtualP2P3D/issues/12) (deuda del ciclo 2.5.4/2.5.5). Las más relevantes hoy:
+Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/README_DESARROLLO.md) (D1–D16) y en los issues [#11](https://github.com/Chicook/WoldVirtualP2P3D/issues/11) (nits del actualizador), [#12](https://github.com/Chicook/WoldVirtualP2P3D/issues/12) (deuda del ciclo 2.5.4/2.5.5) y [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17) (deuda de la jornada 2026-10-26, 2.5.6 → 2.5.9). Las más relevantes hoy:
 
 | ID | Deuda |
 |---|---|
@@ -682,6 +686,22 @@ Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/
 | — | El portal solo refresca la release al arrancar, sin reintento si GitHub falla |
 | — | El PCK embebido no se valida por hash al extraer |
 
+### Pendientes inmediatos (2026-10-26)
+
+Seguimiento detallado en el issue [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17). Los que bloquean dar por cerrada la fase:
+
+| Prioridad | Pendiente | Qué falta |
+|---|---|---|
+| P0 | OTA real desde GitHub 2.5.8 → 2.5.9 | El OTA local está probado; falta la descarga y el reemplazo contra la release publicada |
+| P0 | Chat, amigos, voz/webcam y presencia con **dos y tres visores** en máquinas distintas | Los selftests locales (24/24 y 6/6) no sustituyen la prueba entre máquinas |
+| P0 | Flujo de identidad completo | Sesión vacía → llave + avatar; sesión ocupada → enlace de invitado, con el `?host=` del portal |
+| P1 | Firma de código | SmartScreen sigue avisando en 2.5.4–2.5.9 |
+| P1 | CI y suite unitaria del visor | Hoy solo hay autopruebas de arranque del ejecutable |
+| P1 | Recolección de runtimes antiguos | 8,0 GB en 15 carpetas, sin limpieza automática |
+| P2 | `release.json` / `SHA256SUMS` siempre firmados y verificados por hash | Verificación manual por `gh api`, sin automatizar |
+
+Checklist de publicación: [§7 de `REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md).
+
 ---
 
 ## 16. Política del repositorio
@@ -690,17 +710,17 @@ Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/
 
 Resumen de [`/.gitignore`](.gitignore):
 
-- **Nunca se versionan** (bloqueados): ejecutables (`*.exe`), librerías (`*.dll`, `*.so`, `*.dylib`), paquetes (`*.zip`, `*.pck`), compilaciones (`bin/`, `obj/`, `publish*`), cachés de Godot (`.godot/`), datos de usuario (`datos_usuario/`, `llave_acceso.json`, `semilla_wallet*`, `test_user_data/`, `registro.cfg`, `p2p_session.json`), IPFS local (`.ipfs/`), y una **"zona sensible"** con credenciales, certificados (`*.pfx`, `*.pem`, `*.key`, `*.token`) y descargas del actualizador (`update-pending/`, `state.json`).
+- **Nunca se versionan** (bloqueados): ejecutables (`*.exe`), librerías (`*.dll`, `*.so`, `*.dylib`), paquetes (`*.zip`, `*.pck`), compilaciones (`bin/`, `obj/`, `publish*`), cachés de Godot (`.godot/`), datos de usuario (`datos_usuario/`, `llave_acceso.json`, `semilla_wallet*`, `test_user_data/`, `registro.cfg`, `p2p_session.json`), copias de cuenta (`respaldo_cuenta/`), capturas de las pruebas visuales (`capturas_construccion/`), metadatos de release (`release.json`, `SHA256SUMS`), IPFS local (`.ipfs/`) y una **"zona sensible"** con credenciales, certificados (`*.pfx`, `*.pem`, `*.key`, `*.token`) y descargas del actualizador (`update-pending/`, `state.json`, `*.part`).
 - **Los binarios se distribuyen solo por [GitHub Releases](https://github.com/Chicook/WoldVirtualP2P3D/releases)**, nunca por el repositorio.
 - Los assets del mundo que no pueden versionarse (texturas y modelos de `avtrnCRS/`, `.blend`, `wvp3d.pck`) se documentan como insumos locales; ver [§11](#11-compilar-y-publicar).
 
-### Pendiente de limpieza
+### Limpieza aplicada (2026-10-26)
 
-El repositorio aún versiona artefactos de ejecución de LucIA que convendría desvincular: 3 ficheros `.ldb` y un `LOG` de un datastore IPFS (`src/STM_CH/ipfs_datastore/`), 2 copias de `blockchain_ledger.json` y un `.npz` de pesos (`src/STM_CH/`), una memoria de sesión (`src/STM_CH/PSNRL/memoria_LUCIA_*.json`) y `.vercel/project.json` (resto de otra herramienta de despliegue).
+Se dejaron de versionar los artefactos de ejecución de LucIA que quedaban en una instantánea antigua (`actualizacion_f7bfd9ba/src/STM_CH/`): un datastore IPFS (`.ldb`, `CURRENT`, `LOCK`, `LOG`, `MANIFEST`), dos copias de `blockchain_ledger.json`, el `.npz` de pesos y una memoria de sesión `memoria_LUCIA_*.json`. También se destrackeó `.vercel/project.json`, resto de otra herramienta de despliegue. Los ficheros siguen en el historial de git, pero ya no forman parte del árbol actual; los patrones que los excluyen están en [`.gitignore`](.gitignore).
 
 ### Tamaño y ramas
 
-- Contenido versionado: **850 ficheros, 275.683.115 B (≈263 MiB)**.
+- Contenido versionado: **846 ficheros, 278.210.325 B (≈265 MiB)**.
 - Ramas remotas: `main` (integración) más una familia de ramas de trabajo por asistente (`DevAntigravityIA`, `DevChatGPTIA`, `DevCursorIA`, `DevDeepSeekHarnessIA`, `DevOpencodeIA`, `DevQoderIA`, `DevTraeIA`).
 
 ### Ficheros de configuración de agentes
