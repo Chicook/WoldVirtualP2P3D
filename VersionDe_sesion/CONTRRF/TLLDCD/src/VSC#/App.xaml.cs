@@ -34,10 +34,18 @@ namespace Visor3D
                 return;
             }
 
-            // ── REINICIO DE LA BASE DE USUARIOS LOCAL (una vez por versión) ──────
-            // Archiva cuenta y estado de sesión para que el equipo vuelva a
-            // registrarse desde cero. Nunca se ejecuta en las pruebas automáticas.
-            ReinicioCuenta.EjecutarSiProcede(AppExtractor.Version);
+            // ── PERSISTENCIA DE USUARIO ─────────────────────────────────────────
+            // El perfil vive fuera de runtime\<versión>, así que una actualización
+            // NO debe borrarlo. El reinicio de la base local sólo se ejecuta si se
+            // pide expresamente con --reset-cuenta (soporte / reinstalación).
+            if (Array.Exists(e.Args, a => a.Equals("--reset-cuenta", StringComparison.OrdinalIgnoreCase)))
+            {
+                ReinicioCuenta.EjecutarSiProcede(
+                    "manual-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+            }
+
+            // Equipos que vienen de instalaciones anteriores conservan su cuenta.
+            Visor3D.Seguridad.PerfilUsuario.MigrarSiProcede();
 
             // ── Procesar argumentos de conexión remota (CLI / Enlace de Invitado) ──
             string? initialConnectionUrl = ParseCommandLineArgs(e.Args);

@@ -48,12 +48,14 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualp2pCNXv2.5.9`, que corresponde al exe
-`DMWoldVirtualp2pCNXv2.5.9.exe` (compilado y publicado el 2026-10-26).
+extensión: hoy `DMWoldVirtualP2P3Dv2.6.0`, que corresponde al exe `DMWoldVirtualP2P3Dv2.6.0.exe`,
+publicado el 2026-10-27 como release v2.6.0 (tag sobre `760c597`, assets verificados por API). La
+release anterior v2.5.9 sigue publicada con su propio asset.
 
-**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub (`v2.5.9`) ↔
-nombre del fichero del asset (`DMWoldVirtualp2pCNXv2.5.9.exe`) ↔ `release.json` (`version`, `tag`,
-`exe`, `url`). El actualizador lee
+**R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
+fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
+los cuatro planos son `2.6.0` / `v2.6.0` / `DMWoldVirtualP2P3Dv2.6.0.exe` / `2.6.0`; la v2.5.9
+sigue publicada bajo su propio tag con sus planos alineados. El actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación
 hace que un visor se crea "al día" teniendo binario nuevo por instalar.
@@ -225,3 +227,8 @@ Con evidencia en el log, no "me parece que va". El visor escribe en
 - **El PCK embebido no se valida por hash** en tiempo de ejecución: `AppExtractor` se guía por la
   versión del ensamblado, no por el contenido. Un PCK corrupto en el `.exe` sólo se detecta al
   arrancar Godot. *Estado: Planificado.*
+- **`--startup-selftest` depende de la sesión persistida de Godot (2026-10-27).** Si existe
+  `user://p2p_session.json` con una sesión de cliente, el motor arranca como cliente remoto, no
+  genera isla ni abre el WebSocket, y la prueba falla aunque el PCK sea correcto (`isla=False
+  red=False`, exit 0). El 2026-10-27 pasó **15/15** apartando ese fichero; la prueba debería aislar
+  el estado de sesión en lugar de depender del entorno. *Estado: Implementado, sensible al entorno.*

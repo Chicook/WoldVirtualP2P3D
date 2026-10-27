@@ -3,6 +3,8 @@ extends RefCounted
 ## Inspirado en el rezado de Second Life/OpenSim, sin copiar su implementación:
 ## primitivas procedurales, color plano y edición por transformación.
 
+const VoxelSuave := preload("res://gdscrip/VoxelSuave.gd")
+
 const TIPOS := ["cubo", "esfera", "cilindro", "cono", "toro"]
 const NOMBRES := {
 	"cubo": "Cubo",
@@ -10,7 +12,10 @@ const NOMBRES := {
 	"cilindro": "Cilindro",
 	"cono": "Cono",
 	"toro": "Toro",
+	"voxel": "Terreno voxel",
 }
+## El terreno voxel no va en el desplegable «Rez»: se crea con su propio botón.
+const TIPO_VOXEL := "voxel"
 const COLORES := [
 	Color(0.85, 0.85, 0.88),
 	Color(0.93, 0.32, 0.31),
@@ -21,6 +26,10 @@ const COLORES := [
 	Color(0.95, 0.55, 0.78),
 	Color(0.15, 0.17, 0.22),
 ]
+
+
+static func es_tipo_valido(tipo: String) -> bool:
+	return TIPOS.has(tipo) or tipo == TIPO_VOXEL
 
 
 static func tamano_por_defecto(tipo: String) -> Vector3:
@@ -35,10 +44,15 @@ static func tamano_por_defecto(tipo: String) -> Vector3:
 			return Vector3(1.6, 2.4, 1.6)
 		"toro":
 			return Vector3(2.0, 2.0, 2.0)
+		"voxel":
+			return Vector3.ONE
 	return Vector3.ONE
 
 
-static func crear_malla(tipo: String) -> Mesh:
+static func crear_malla(tipo: String, params := {}) -> Mesh:
+	if tipo == TIPO_VOXEL:
+		var voxel := VoxelSuave.new()
+		return voxel.generar(params)
 	match tipo:
 		"esfera":
 			var esfera := SphereMesh.new()
@@ -73,15 +87,19 @@ static func crear_malla(tipo: String) -> Mesh:
 	return caja
 
 
-static func crear_material(color: Color) -> StandardMaterial3D:
+static func crear_material(color: Color, vertice := false) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
-	mat.roughness = 0.62
+	mat.roughness = 0.86 if vertice else 0.62
 	mat.metallic = 0.0
+	mat.vertex_color_use_as_albedo = vertice
 	return mat
 
 
-static func crear_forma(tipo: String) -> Shape3D:
+static func crear_forma(tipo: String, params := {}) -> Shape3D:
+	if tipo == TIPO_VOXEL:
+		var malla := crear_malla(TIPO_VOXEL, params)
+		return malla.create_trimesh_shape()
 	match tipo:
 		"esfera":
 			var esfera := SphereShape3D.new()
@@ -106,7 +124,7 @@ static func a_dict(datos: Dictionary) -> Dictionary:
 	var rot: Vector3 = datos.get("rot", Vector3.ZERO)
 	var esc: Vector3 = datos.get("escala", Vector3.ONE)
 	var color: Color = datos.get("color", COLORES[0])
-	return {
+	var salida := {
 		"id": int(datos.get("id", 0)),
 		"tipo": str(datos.get("tipo", "cubo")),
 		"pos": [pos.x, pos.y, pos.z],
@@ -114,13 +132,21 @@ static func a_dict(datos: Dictionary) -> Dictionary:
 		"escala": [esc.x, esc.y, esc.z],
 		"color": color.to_html(true),
 	}
+	var params = datos.get("params", {})
+	if params is Dictionary and not params.is_empty():
+		salida["params"] = VoxelSuave.normalizar_params(params)
+	return salida
 
 
 ## Diccionario JSON -> diccionario interno, con saneado de valores.
 static func desde_dict(d: Dictionary) -> Dictionary:
 	var tipo := str(d.get("tipo", "cubo"))
-	if not TIPOS.has(tipo):
+	if not es_tipo_valido(tipo):
 		tipo = "cubo"
+	var params := {}
+	if tipo == TIPO_VOXEL:
+		var crudo = d.get("params", {})
+		params = VoxelSuave.normalizar_params(crudo if crudo is Dictionary else {})
 	return {
 		"id": int(d.get("id", 0)),
 		"tipo": tipo,
@@ -129,6 +155,7 @@ static func desde_dict(d: Dictionary) -> Dictionary:
 		"escala": _leer_vec3(d.get("escala", []), tamano_por_defecto(tipo)).clamp(
 				Vector3(0.15, 0.15, 0.15), Vector3(40.0, 40.0, 40.0)),
 		"color": Color.html(str(d.get("color", "#d9d9e0"))),
+		"params": params,
 	}
 
 

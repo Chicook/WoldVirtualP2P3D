@@ -26,6 +26,10 @@ const REGISTRO_ISLAS := "user://islas_registro.cfg"
 ## Constructor opcional: si la escena no lo incluye, la isla no es editable.
 @onready var _constructor = get_node_or_null("Constructor")
 
+# La plantilla oculta no debe interceptar rayos: guardamos las capas de sus
+# cuerpos para devolvérselas a cada isla duplicada.
+var _capas_plantilla: Array = []
+
 ## Transporte de red único: WebSocket (TCP). Es el único canal que atraviesa los
 ## túneles efímeros (cloudflared / serveo / localhost.run) que levanta el Visor C#,
 ## y también funciona en LAN. ENet (UDP 8910) queda descartado porque ningún
@@ -286,6 +290,7 @@ func _ready():
 	# Escondemos la isla original hasta saber si somos host o cliente
 	original_island.hide()
 	original_ocean.hide()
+	_desactivar_colision_plantilla()
 	_mi_nick = _leer_nick()
 	_mi_uuid = Identidad.asegurar_identidad()
 	_mi_isla_guardada = Identidad.leer_mi_isla(_mi_uuid)
@@ -902,6 +907,7 @@ func _spawn_island_for_player(id: int, index: int, nick: String = "", uuid: Stri
 		add_child(new_island)
 		new_island.position.x += centro.x
 		new_island.position.z += centro.y
+		_reactivar_colision_isla(new_island)
 		var new_ocean = original_ocean.duplicate()
 		new_ocean.show()
 		add_child(new_ocean)
@@ -914,6 +920,38 @@ func _spawn_island_for_player(id: int, index: int, nick: String = "", uuid: Stri
 		_constructor.registrar_isla(index, new_island)
 	if id == multiplayer.get_unique_id():
 		_activar_mi_isla(index)
+
+
+func _cuerpos_colision(raiz: Node, base: Node = null) -> Array:
+	if base == null:
+		base = raiz
+	var salida: Array = []
+	for hijo in raiz.get_children():
+		if hijo is CollisionObject3D:
+			salida.append({
+				"ruta": base.get_path_to(hijo),
+				"capa": hijo.collision_layer,
+				"mascara": hijo.collision_mask,
+			})
+		salida.append_array(_cuerpos_colision(hijo, base))
+	return salida
+
+
+func _desactivar_colision_plantilla() -> void:
+	_capas_plantilla = _cuerpos_colision(original_island)
+	for c in _capas_plantilla:
+		var cuerpo := original_island.get_node_or_null(c["ruta"]) as CollisionObject3D
+		if cuerpo != null:
+			cuerpo.collision_layer = 0
+			cuerpo.collision_mask = 0
+
+
+func _reactivar_colision_isla(nodo_isla: Node) -> void:
+	for c in _capas_plantilla:
+		var cuerpo := nodo_isla.get_node_or_null(c["ruta"]) as CollisionObject3D
+		if cuerpo != null:
+			cuerpo.collision_layer = int(c["capa"])
+			cuerpo.collision_mask = int(c["mascara"])
 
 
 func _centro_isla(index: int) -> Vector2:

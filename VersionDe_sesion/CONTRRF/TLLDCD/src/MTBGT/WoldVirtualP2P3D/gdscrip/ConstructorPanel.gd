@@ -8,13 +8,18 @@ signal herramienta_cambiada(herramienta: int)
 signal radio_cambiada(metros: float)
 signal fuerza_cambiada(metros: float)
 signal rez_solicitado(tipo: String)
+signal terreno_solicitado(forma: String)
 signal duplicar_solicitado
 signal borrar_solicitado
 signal color_solicitado(color: Color)
 signal escala_solicitada(metros: float)
 signal snap_cambiada(activo: bool)
+signal deshacer_solicitado
+signal inventario_guardado_solicitado
+signal inventario_mostrado
 
 const Prims = preload("res://gdscrip/Prims.gd")
+const VoxelSuave = preload("res://gdscrip/VoxelSuave.gd")
 const HERRAMIENTAS := ["Seleccionar", "Subir", "Bajar", "Suavizar", "Aplanar", "Mover", "Playa"]
 const AYUDAS_HERRAMIENTA := [
 	"Selecciona objetos (clic)",
@@ -27,6 +32,13 @@ const AYUDAS_HERRAMIENTA := [
 ]
 
 var _panel: PanelContainer = null
+var _scroll: ScrollContainer = null
+var _tabs: TabContainer = null
+var _lista_actual: VBoxContainer = null
+var _lista_guardado: VBoxContainer = null
+var _btn_deshacer: Button = null
+var _btn_inventario: Button = null
+var _dialogo_deshacer: ConfirmationDialog = null
 var _btn_abrir: Button = null
 var _lbl_isla: Label = null
 var _lbl_estado: Label = null
@@ -36,6 +48,8 @@ var _slider_fuerza: HSlider = null
 var _slider_escala: HSlider = null
 var _snap: CheckButton = null
 var _tipo: OptionButton = null
+var _forma_voxel: OptionButton = null
+var _btn_terreno: Button = null
 var _grupo: ButtonGroup = null
 var _botones_herr: Array[Button] = []
 var _valores := {} # HSlider -> Label con el valor formateado
@@ -80,6 +94,12 @@ func tipo() -> String:
 	if _tipo == null or _tipo.selected < 0:
 		return "cubo"
 	return Prims.TIPOS[_tipo.selected]
+
+
+func forma_voxel() -> String:
+	if _forma_voxel == null or _forma_voxel.selected < 0:
+		return "isla"
+	return VoxelSuave.FORMAS[_forma_voxel.selected]
 
 
 ## Refleja el tamaño real del objeto seleccionado en el deslizador.
@@ -145,10 +165,17 @@ func _construir() -> void:
 	_panel.offset_bottom = 682.0
 	add_child(_panel)
 
+	_tabs = TabContainer.new()
+	_tabs.custom_minimum_size = Vector2(336, 570)
+	_tabs.tab_changed.connect(_on_tab_cambiada)
+	_panel.add_child(_tabs)
+
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(336, 570)
+	scroll.name = "Construir"
+	scroll.custom_minimum_size = Vector2(320, 540)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_panel.add_child(scroll)
+	_tabs.add_child(scroll)
+	_scroll = scroll
 
 	var caja := VBoxContainer.new()
 	caja.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -190,6 +217,32 @@ func _construir() -> void:
 	var pista := _etiqueta("Arrastra con clic izquierdo sobre tu isla para esculpir. Mover empuja el montículo en la dirección del arrastre; Playa aplana la costa a ~1 m sobre el agua y la tiñe de arena.", 11, Color(0.55, 0.65, 0.75))
 	pista.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	caja.add_child(pista)
+
+	_btn_deshacer = _boton("Deshacer isla")
+	_btn_deshacer.tooltip_text = "Deja la isla como recién exportada: borra el relieve esculpido y todos los objetos"
+	_btn_deshacer.add_theme_color_override("font_color", Color(1.0, 0.72, 0.62))
+	_btn_deshacer.pressed.connect(_on_deshacer)
+	caja.add_child(_btn_deshacer)
+	caja.add_child(HSeparator.new())
+
+	caja.add_child(_etiqueta("TERRENO VOXEL", 14, Color(0.45, 0.9, 0.8)))
+	var fila_voxel := HBoxContainer.new()
+	fila_voxel.add_theme_constant_override("separation", 6)
+	_forma_voxel = OptionButton.new()
+	_forma_voxel.focus_mode = Control.FOCUS_NONE
+	_forma_voxel.tooltip_text = "Forma del relieve suave que se va a generar"
+	for f in VoxelSuave.FORMAS:
+		_forma_voxel.add_item(VoxelSuave.NOMBRES[f])
+	_forma_voxel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fila_voxel.add_child(_forma_voxel)
+	_btn_terreno = _boton("Crear terreno")
+	_btn_terreno.tooltip_text = "Genera una elevación de malla suave dentro de la tierra firme"
+	_btn_terreno.pressed.connect(func(): terreno_solicitado.emit(forma_voxel()))
+	fila_voxel.add_child(_btn_terreno)
+	caja.add_child(fila_voxel)
+	var pista_voxel := _etiqueta("La elevación se recorta al contorno de la isla. Si nace junto a la orilla, la arena avanza lo justo para tocar el agua.", 11, Color(0.55, 0.65, 0.75))
+	pista_voxel.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	caja.add_child(pista_voxel)
 	caja.add_child(HSeparator.new())
 
 	caja.add_child(_etiqueta("OBJETOS", 14, Color(0.45, 0.9, 0.8)))
@@ -239,6 +292,11 @@ func _construir() -> void:
 		paleta.add_child(bc)
 	caja.add_child(paleta)
 
+	_btn_inventario = _boton("Guardar en inventario")
+	_btn_inventario.tooltip_text = "Guarda una copia del terreno y de los objetos de tu isla para no perder el progreso"
+	_btn_inventario.pressed.connect(func(): inventario_guardado_solicitado.emit())
+	caja.add_child(_btn_inventario)
+
 	_slider_escala = _deslizador(caja, "Tamaño", 0.4, 12.0, 0.1, 2.0, _on_escala)
 	_snap = CheckButton.new()
 	_snap.text = "Rejilla de 0,5 m"
@@ -258,6 +316,115 @@ func _construir() -> void:
 	var btn_salir := _boton("Salir del modo construcción")
 	btn_salir.pressed.connect(func(): salir_solicitado.emit())
 	caja.add_child(btn_salir)
+
+	_construir_inventario()
+
+
+## Pestaña «Inventario»: todo lo construido en la isla y las copias guardadas.
+func _construir_inventario() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Inventario"
+	scroll.custom_minimum_size = Vector2(320, 540)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_tabs.add_child(scroll)
+
+	var caja := VBoxContainer.new()
+	caja.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	caja.add_theme_constant_override("separation", 6)
+	scroll.add_child(caja)
+
+	caja.add_child(_etiqueta("INVENTARIO", 18, Color(0.55, 0.92, 1.0)))
+	var pista := _etiqueta("Aquí está todo lo construido en tu isla: el terreno esculpido y cada objeto (asset). «Guardar en inventario» conserva una copia del progreso.", 11, Color(0.55, 0.65, 0.75))
+	pista.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	caja.add_child(pista)
+
+	var btn_guardar := _boton("Guardar en inventario")
+	btn_guardar.tooltip_text = "Copia el terreno y los objetos de tu isla a user://inventario"
+	btn_guardar.pressed.connect(func(): inventario_guardado_solicitado.emit())
+	caja.add_child(btn_guardar)
+	caja.add_child(HSeparator.new())
+
+	caja.add_child(_etiqueta("EN LA ISLA", 14, Color(0.45, 0.9, 0.8)))
+	_lista_actual = VBoxContainer.new()
+	_lista_actual.add_theme_constant_override("separation", 2)
+	caja.add_child(_lista_actual)
+	caja.add_child(HSeparator.new())
+
+	caja.add_child(_etiqueta("GUARDADO", 14, Color(0.45, 0.9, 0.8)))
+	_lista_guardado = VBoxContainer.new()
+	_lista_guardado.add_theme_constant_override("separation", 2)
+	caja.add_child(_lista_guardado)
+
+	_dialogo_deshacer = ConfirmationDialog.new()
+	_dialogo_deshacer.title = "Deshacer isla"
+	_dialogo_deshacer.dialog_text = "Se restaurará el terreno original de tu isla y se borrarán todos los objetos.\n\n¿Quieres volver a empezar?"
+	_dialogo_deshacer.ok_button_text = "Deshacer"
+	_dialogo_deshacer.cancel_button_text = "Cancelar"
+	_dialogo_deshacer.confirmed.connect(func(): deshacer_solicitado.emit())
+	add_child(_dialogo_deshacer)
+
+
+## Refleja en la pestaña lo que hay en la isla y las copias ya guardadas.
+func set_inventario(actual: Dictionary, guardadas: Array) -> void:
+	if _lista_actual == null or _lista_guardado == null:
+		return
+	_limpiar(_lista_actual)
+	_limpiar(_lista_guardado)
+
+	var isla := int(actual.get("isla", -1))
+	if isla < 0:
+		_lista_actual.add_child(_fila_inv("Sin isla seleccionada.", Color(0.6, 0.7, 0.8)))
+	else:
+		_lista_actual.add_child(_fila_inv("Isla %d" % isla, Color(0.82, 0.92, 1.0)))
+		_lista_actual.add_child(_fila_inv(
+			"TERRENO · %s" % ("esculpido" if bool(actual.get("terreno", false)) else "original"),
+			Color(0.68, 0.9, 0.8)))
+		var assets: Array = actual.get("assets", [])
+		if assets.is_empty():
+			_lista_actual.add_child(_fila_inv("ASSET · sin objetos", Color(0.6, 0.68, 0.78)))
+		else:
+			for a in assets:
+				_lista_actual.add_child(_fila_inv(
+					"ASSET · %s · #%d" % [str(a.get("tipo", "—")), int(a.get("id", 0))],
+					Color(0.78, 0.86, 0.95)))
+
+	if guardadas.is_empty():
+		_lista_guardado.add_child(_fila_inv("Todavía no hay copias guardadas.", Color(0.6, 0.68, 0.78)))
+		return
+	for entrada in guardadas:
+		if not (entrada is Dictionary):
+			continue
+		_lista_guardado.add_child(_fila_inv(
+			"● %s · isla %d" % [str(entrada.get("fecha", "—")), int(entrada.get("isla", -1))],
+			Color(0.55, 0.9, 0.85)))
+		_lista_guardado.add_child(_fila_inv(
+			"   TERRENO · %s" % ("sí" if bool(entrada.get("terreno", false)) else "no"),
+			Color(0.62, 0.72, 0.82)))
+		_lista_guardado.add_child(_fila_inv(
+			"   ASSET · %d" % int(entrada.get("assets", 0)),
+			Color(0.62, 0.72, 0.82)))
+
+
+func _fila_inv(texto: String, color: Color) -> Label:
+	var l := _etiqueta(texto, 11, color)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return l
+
+
+func _limpiar(nodo: Node) -> void:
+	for hijo in nodo.get_children():
+		nodo.remove_child(hijo)
+		hijo.queue_free()
+
+
+func _on_tab_cambiada(indice: int) -> void:
+	if indice == 1:
+		inventario_mostrado.emit()
+
+
+func _on_deshacer() -> void:
+	if _dialogo_deshacer != null:
+		_dialogo_deshacer.popup_centered()
 
 
 func _deslizador(padre: VBoxContainer, titulo: String, minimo: float, maximo: float,

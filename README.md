@@ -5,7 +5,7 @@
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](LICENSE)
 [![.NET 8 WPF](https://img.shields.io/badge/.NET-8.0%20WPF-512bd4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
 [![Godot 4.7.2](https://img.shields.io/badge/Godot-4.7.2-478cbf?logo=godotengine&logoColor=white)](https://godotengine.org)
-[![Release v2.5.9](https://img.shields.io/badge/Release-v2.5.9-green.svg)](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.9)
+[![Release v2.6.0](https://img.shields.io/badge/Release-v2.6.0-green.svg)](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.6.0)
 [![Plataforma](https://img.shields.io/badge/Plataforma-Windows%20x64-blue)](#5-descarga-y-primer-arranque)
 [![Fase](https://img.shields.io/badge/Fase-prueba%20de%20conexi%C3%B3n%20P2P%203D-orange)](#2-estado-del-proyecto-y-fase-actual)
 
@@ -17,7 +17,7 @@
 |:---:|:---:|:---:|
 | [![Pincel Playa aplanando la costa y tiñéndola de arena](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/07_construccion_playa.png)](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas) | [![Cubo, esfera, cilindro, cono y toro con el cubo seleccionado](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/08_construccion_prims.png)](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas) | [![Isla ajena con la mira en rojo: no editable](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/docs/img/09_isla_ajena.png)](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas) |
 
-> **Esta fase es una prueba de conexión P2P 3D.** El objetivo es validar que varias personas puedan encontrarse en el mundo, elegir avatar, personalizarlo y compartir sesión por túnel o LAN. **No es todavía un metaverso completo:** no hay economía ni blockchain, y LucIA no está integrada. Desde la 2.5.6 hay chat de texto (con captura de voz y webcam), amigos, y edición de terreno y prims; desde la 2.5.9 la edición queda aislada en la isla propia, un invitado conecta contra la raíz de la sesión y la bienvenida muestra si el metaverso está vacío u ocupado. Su sincronización entre dos máquinas sigue **sin prueba real**. Todo lo demás está en la hoja de ruta con estado **Planificado** (ver [§3](#3-visi%C3%B3n-del-metaverso-alcance-planificado)).
+> **Esta fase es una prueba de conexión P2P 3D.** El objetivo es validar que varias personas puedan encontrarse en el mundo, elegir avatar, personalizarlo y compartir sesión por túnel o LAN. **No es todavía un metaverso completo:** no hay economía ni blockchain, y LucIA no está integrada. Desde la 2.5.6 hay chat de texto (con captura de voz y webcam), amigos, y edición de terreno y prims; desde la 2.5.9 la edición queda aislada en la isla propia, un invitado conecta contra la raíz de la sesión y la bienvenida muestra si el metaverso está vacío u ocupado. La **2.6.0**, publicada el 2026-10-27, añade perfil de usuario persistente entre actualizaciones con una sola cuenta por PC, chat en barra inferior, «Deshacer isla» y «Guardar en inventario». Su sincronización entre dos máquinas sigue **sin prueba real**. Todo lo demás está en la hoja de ruta con estado **Planificado** (ver [§3](#3-visi%C3%B3n-del-metaverso-alcance-planificado)).
 
 ## Índice
 
@@ -43,7 +43,7 @@
 > Convención de rutas: en este documento `src/` es la abreviatura de
 > `VersionDe_sesion/CONTRRF/TLLDCD/src/`, el árbol que se exporta y compila. La copia
 > `VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/` es la última instantánea RFPRMN y está congelada en la 2.5.5.
-> **Convención de estado:** cada capacidad se etiqueta como **Implementado**, **Implementado, sin prueba real**, **Parcial**, **Planificado** o **Fuera del repo**. La fuente de verdad es el código; las cifras de este documento se recalcularon el 2026-10-26 sobre la rama `DevQoderIA` (versión 2.5.9).
+> **Convención de estado:** cada capacidad se etiqueta como **Implementado**, **Implementado, sin prueba real**, **Parcial**, **Planificado** o **Fuera del repo**. La fuente de verdad es el código; las cifras de este documento se recalcularon el 2026-10-27 sobre la rama `DevQoderIA` (versión 2.6.0).
 
 ---
 
@@ -105,12 +105,12 @@ Economía y blockchain, token WCVcoin, validación de identidad única anti-Sybi
 
 **Honestidad técnica — lee esto antes de usar el proyecto:**
 
-- Es un prototipo alpha, no un producto. Los binarios v2.5.4 a v2.5.9 se publican **sin firmar** (versiones anteriores usaron un certificado de desarrollo autofirmado): Windows SmartScreen mostrará un aviso.
+- Es un prototipo alpha, no un producto. Los binarios v2.5.4 a v2.6.0 se publican **sin firmar** (versiones anteriores usaron un certificado de desarrollo autofirmado): Windows SmartScreen mostrará un aviso.
 - Solo funciona en **Windows x64**.
 - La red es **P2P solo en el transporte**: cada sesión tiene un **anfitrión con autoridad** y el resto de nodos se conecta a él por WebSocket. No hay replicación descentralizada sin servidor de confianza.
 - La red y el mundo **no persisten** más allá de la sesión: los túneles son efímeros y las islas se reconstruyen al reconectar.
 - La "billetera DeFi" del visor está **en construcción**: la semilla BIP-39 y sus derivaciones son reales, pero no se conecta a ninguna blockchain ni gestiona fondos.
-- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/Visor3D.csproj) coincide con el **binario publicado vigente (2.5.9)** y con su `AssemblyName`; el asset, `release.json` y `SHA256SUMS` de la release v2.5.9 están verificados por API.
+- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/Visor3D.csproj) está en **2.6.0**, igual que su `AssemblyName` (`DMWoldVirtualP2P3Dv2.6.0`): coincide con el **binario publicado vigente** (`v2.6.0`), cuyo asset, `release.json` y `SHA256SUMS` están verificados por API.
 
 ---
 
@@ -141,7 +141,7 @@ Economía y blockchain, token WCVcoin, validación de identidad única anti-Sybi
 | Chat de texto, voz y webcam | Implementado, sin prueba real entre dos máquinas | [`Chat/`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/Chat), [`MainWindow.xaml.cs`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/MainWindow.xaml.cs) |
 | CI (integración continua) | Roto (ver [§14](#14-calidad-y-pruebas)) | `src/STM_HRTS/.github/workflows/ci.yml` |
 
-**Verificado en esta fase:** carrusel y personalización tras un reset limpio; persistencia de avatar/nick/aspecto; arranque como anfitrión tras un OTA (corrección 2.5.5); chat y amigos con 24/24 comprobaciones headless; control del avatar con 35/35; construcción con 128/128 y capturas visuales 26/26; descubrimiento P2P con 6/6; prueba de arranque del binario 2.5.9 con 15/15 y el motor leyendo el PCK embebido; portal sirviendo el asset 2.5.9 con `Content-Length` correcto; OTA local con los componentes reales (digest falso rechazado, descarga verificada, reemplazo y re-extracción). **Pendiente de verificar:** el OTA completo **desde GitHub** en un equipo con la versión anterior (2.5.8 → 2.5.9), la continuidad de sesión con tres instancias reales y el chat/construcción entre dos máquinas.
+**Verificado en esta fase:** carrusel y personalización tras un reset limpio; persistencia de avatar/nick/aspecto; arranque como anfitrión tras un OTA (corrección 2.5.5); chat y amigos con 24/24 comprobaciones headless; control del avatar con 35/35; construcción con **201/201** (incluye terreno voxel, deshacer la isla e inventario) y capturas visuales del terreno; descubrimiento P2P con 6/6; prueba de arranque del binario 2.5.9 con 15/15 y del binario 2.6.0 con **15/15** leyendo el PCK reexportado; portal anunciando el asset 2.6.0 por `/api/info` (`751,8`); URL de descarga de GitHub con **200** y `Content-Length` 788.230.009; digest del asset igual al local por API; OTA local con los componentes reales (digest falso rechazado, descarga verificada, reemplazo y re-extracción). **Pendiente de verificar:** el OTA completo **desde GitHub** en un equipo con la versión anterior (2.5.8 → 2.5.9 y 2.5.9 → 2.6.0), la continuidad de sesión con tres instancias reales, el chat/construcción entre dos máquinas y la barra de chat con una sesión autenticada real.
 
 ---
 
@@ -183,7 +183,7 @@ El riesgo es el **ataque Sybil**: una sola persona crea 1.000 cuentas para manip
 
 ### 3.4 Construcción y edición de islas
 
-El jugador ya puede **esculpir el terreno** de su isla con seis herramientas (subir, bajar, suavizar, aplanar, mover y playa) y **crear y editar prims** (cubo, esfera, cilindro, cono y toro) con color, escala, rotación, duplicado y borrado. La edición está aislada por isla y el pincel «mover» transporta el color de la arena junto con la altura. Solo el dueño de la isla edita; el estado se guarda en `user://construccion/` y se sincroniza por el túnel durante la sesión. La implementación está validada en headless (128/128) y con capturas visuales (26/26), **sin prueba real entre dos máquinas**. Queda **Planificado**: deshacer/rehacer, selección múltiple, física de prims, edición del aspecto de la isla y persistencia en un servidor más allá de la sesión. **Estado: Implementado, sin prueba real entre dos máquinas.**
+El jugador ya puede **esculpir el terreno** de su isla con seis herramientas (subir, bajar, suavizar, aplanar, mover y playa), **crear un terreno voxel suave** con el botón «Crear terreno» (siempre dentro del contorno de la isla, con una franja mínima de playa) y **crear y editar prims** (cubo, esfera, cilindro, cono y toro) con color, escala, rotación, duplicado y borrado. La edición está aislada por isla y el pincel «mover» transporta el color de la arena junto con la altura. Solo el dueño de la isla edita; el estado se guarda en `user://construccion/` y se sincroniza por el túnel durante la sesión. La 2.6.0 añade **«Deshacer isla»** (restaura el terreno original y elimina todos los prims, con confirmación y autoridad del anfitrión) y **«Guardar en inventario»** (instantánea del terreno y los prims, listada en una pestaña «Inventario»; todavía no se puede restaurar desde ella). La implementación está validada en headless (201/201) y con capturas visuales del terreno, **sin prueba real entre dos máquinas**. Queda **Planificado**: rehacer incremental, restaurar desde el inventario, selección múltiple, física de prims, edición del aspecto de la isla y persistencia en un servidor más allá de la sesión. **Estado: Implementado, sin prueba real entre dos máquinas.**
 
 | Vista general de la isla | Pincel Aplanar | Playa desde la costa |
 |:---:|:---:|:---:|
@@ -197,7 +197,7 @@ El visor incorpora **chat de texto** con relay WebSocket propio, **amigos y chat
 
 ## 4. Mapa del repositorio
 
-El repositorio versiona **849 ficheros** con **280.271.173 B (≈267 MiB)** de contenido. Por lenguajes: **69.674 líneas de Python** (235 ficheros), **20.395 líneas de C#** (73), **16.925 líneas de GDScript** (93, incluidos los scripts de escenas y herramientas) y **2.962 líneas de XAML** (15).
+El repositorio versiona **852 ficheros** con **280.338.160 B (≈267,3 MiB)** de contenido. Por lenguajes: **69.674 líneas de Python** (235 ficheros), **20.518 líneas de C#** (74), **18.381 líneas de GDScript** (94, incluidos los scripts de escenas y herramientas) y **2.963 líneas de XAML** (15).
 
 ### Modelo de versionado
 
@@ -218,7 +218,7 @@ WoldVirtualP2P3D/
 └── VersionDe_sesion/
     ├── CONTRRF/                # Herramienta RFPRMN (STM_RFC + TLLDCD)
     │   └── TLLDCD/
-    │       └── src/            # ← árbol activo (2.5.9)
+    │       └── src/            # ← árbol activo (2.6.0)
     │           ├── VSC#/       # Visor C# (.NET 8 WPF)
     │           ├── MTBGT/      # Mundo Godot 4.7.2
     │           ├── LC_STM/     # Red neuronal LucIA
@@ -269,20 +269,21 @@ WoldVirtualP2P3D/
 
 ### Descarga
 
-- **Release vigente**: [v2.5.9](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.9) — marcada como *Latest*. Es una versión nueva (no se renombró ningún tag, R4) que aísla las ediciones de terreno por isla, conserva el color de la arena al moverla, hace que un invitado conecte contra la raíz de la sesión (todos ven a todos) y añade la pantalla de presencia vacío/ocupado antes del registro; conserva el control del avatar, el chat, los amigos y la construcción de la 2.5.8 y el reinicio de usuarios de la 2.5.7. Los tags `v2.5.8`, `v2.5.7`, `v2.5.6`, `v2.5.4` y anteriores siguen publicados con sus assets históricos.
-- **Ejecutable recomendado**: [`DMWoldVirtualp2pCNXv2.5.9.exe`](https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.5.9/DMWoldVirtualp2pCNXv2.5.9.exe) — **788.201.343 bytes (≈751,7 MiB)**, portable, autocontenido. SHA-256 `96c1cf98fac799ce9058f9846757d0b5743ed0c96aa9a98493cab5f3ec187798`, idéntico al `digest` publicado por la API de GitHub.
+- **Release vigente**: [v2.6.0](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.6.0) — marcada como *Latest* y publicada el 2026-10-27 desde el commit `760c597` de `DevQoderIA`. Añade perfil persistente entre actualizaciones con una sola cuenta por PC, chat en barra inferior, «Deshacer isla», «Guardar en inventario», terreno voxel suave y el PCK reexportado. Conserva el control del avatar, amigos y construcción de las versiones anteriores.
+- **Ejecutable recomendado**: [`DMWoldVirtualP2P3Dv2.6.0.exe`](https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.6.0/DMWoldVirtualP2P3Dv2.6.0.exe) — **788.230.009 bytes (≈751,8 MiB)**, portable, autocontenido. SHA-256 `29644fddd5bca3bab4bdea2a2f51b702319c964e430ac504abe0f2bef9502347`, idéntico al `digest` publicado por la API de GitHub.
 - La release vigente incluye también `release.json` y `SHA256SUMS`, con digests verificados contra la API. Los binarios históricos permanecen colgados de etiquetas anteriores (algunos, como el de 2.5.3, bajo el tag `v2.5.4`), así que **descarga siempre por el enlace de la versión vigente**, no por búsqueda de fichero.
+- **Release anterior**: [v2.5.9](https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.5.9) — `DMWoldVirtualp2pCNXv2.5.9.exe`, 788.201.343 B, SHA-256 `96c1cf98…187798`; sigue publicada con sus assets para quien necesite volver atrás.
 
 **Requisitos**: Windows 10/11 x64. El ejecutable es autocontenido (incluye el runtime de .NET 8, el motor Godot y el mundo 3D): no hay nada que instalar, no necesita permisos de administrador y no escribe en el registro.
 
-**Aviso de SmartScreen**: el binario v2.5.9 se publica **sin firmar** (no había certificado de firma disponible en el equipo de compilación), así que Windows puede mostrar "Windows protegió tu equipo" → *Más información* → *Ejecutar de todas formas*. El estado real de cualquier descarga se comprueba con `Get-AuthenticodeSignature`.
+**Aviso de SmartScreen**: el binario v2.6.0 se publica **sin firmar** (no había certificado de firma disponible en el equipo de compilación), así que Windows puede mostrar "Windows protegió tu equipo" → *Más información* → *Ejecutar de todas formas*. El estado real de cualquier descarga se comprueba con `Get-AuthenticodeSignature`.
 
 **Verificación**: descarga `SHA256SUMS` de la misma release y comprueba el digest. Desde el 2026-10-23 `SHA256SUMS` y `release.json` están alineados con el binario de cada release; históricamente estuvieron desalineados (apuntaban al binario `v0.3`, ver [§10](#10-actualizador-ota)), así que conviene comprobar que el `exe` declarado en `release.json` coincide con la primera línea de `SHA256SUMS`.
 
 ### Qué ocurre al arrancarlo
 
 1. El visor se valida a sí mismo y muestra el flujo de identidad (ver [§6](#6-registro-e-identidad)).
-2. En el primer arranque extrae sus recursos embebidos en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\` (medido en la v2.5.8: **718.662.713 bytes ≈ 685,4 MiB** por versión — 512,9 MiB de PCK + 172,5 MiB de motor ya extraído; la 2.5.9 lleva un PCK 7.628 B mayor y esa extracción no se ha vuelto a medir). El marcador que decide si hay que re-extraer es la **versión del ensamblado** (`AssemblyInformationalVersion`), no una constante a mano: así un OTA que cambia el `wvp3d.pck` embebido fuerza la re-extracción del mundo. La variable de entorno `WOLD_RUNTIME_DIR` permite redirigir la extracción.
+2. En el primer arranque extrae sus recursos embebidos en `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\` (medido en la v2.5.8: **718.662.713 bytes ≈ 685,4 MiB** por versión — 512,9 MiB de PCK + 172,5 MiB de motor ya extraído; la 2.6.0 lleva un PCK 28.772 B mayor). El marcador que decide si hay que re-extraer es la **versión del ensamblado** (`AssemblyInformationalVersion`), no una constante a mano: así un OTA que cambia el `wvp3d.pck` embebido fuerza la re-extracción del mundo. La variable de entorno `WOLD_RUNTIME_DIR` permite redirigir la extracción.
 3. Lanza el motor Godot incrustado y activa en segundo plano la API P2P local y el WebNodo.
 
 **Limitaciones conocidas**: cada versión publicada extrae su propia carpeta de runtime (no hay limpieza automática de versiones antiguas); el primer arranque tarda unos segundos por la extracción, y **el primer arranque tras un OTA también vuelve a extraer ~686 MiB**. Medido el 2026-10-24: **8,0 GB en 15 carpetas** de runtime en la máquina de desarrollo (deuda registrada en el issue [#12](https://github.com/Chicook/WoldVirtualP2P3D/issues/12)).
@@ -395,7 +396,7 @@ Nota: `Boot.gd` contiene un comentario antiguo que habla de "3 chicas / 3 chicos
 | Entrar o salir de construcción | **B** (o **Esc** para salir) |
 | Confirmar avatar en el carrusel | **ENTER** |
 
-**Limitaciones conocidas**: las fuentes de Blender (`.blend`) de los avatares no se versionan; solo hay un `.blend` de prueba (`hm1.blend`). Los 16 avatares nuevos viven en `avtrnCRS/` (**≈4,2 GB** de GLB y PNG, también fuera de Git); sus `.import` llevan `process/size_limit=2048` y el `export_presets.cfg` excluye las copias duplicadas. Reconstruir los modelos exige las fuentes originales del autor. La **construcción** permite esculpir el terreno y editar prims de la isla propia ([§3.4](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas)); no hay deshacer/rehacer, selección múltiple ni física de prims, y la sincronización entre dos máquinas no se ha probado.
+**Limitaciones conocidas**: las fuentes de Blender (`.blend`) de los avatares no se versionan; solo hay un `.blend` de prueba (`hm1.blend`). Los 16 avatares nuevos viven en `avtrnCRS/` (**≈4,2 GB** de GLB y PNG, también fuera de Git); sus `.import` llevan `process/size_limit=2048` y el `export_presets.cfg` excluye las copias duplicadas. Reconstruir los modelos exige las fuentes originales del autor. La **construcción** permite esculpir el terreno, generar terreno voxel y editar prims de la isla propia ([§3.4](#34-construcci%C3%B3n-y-edici%C3%B3n-de-islas)); desde la 2.6.0 hay «Deshacer isla» (por isla completa, no por pasos) y guardado en inventario (sin restauración todavía). No hay rehacer incremental, selección múltiple ni física de prims, y la sincronización entre dos máquinas no se ha probado.
 
 ---
 
@@ -525,7 +526,7 @@ El interruptor de desarrollo `-p:SkipGodotAssets=true` compila solo la UI sin el
 | Insumo | Tamaño | Origen |
 |---|---:|---|
 | `godot_exe.zip` | 86 MB (82 MiB) | Distribución oficial de Godot 4.7.2 win64 (`Godot_v4.7.2-stable_win64.exe`), empaquetada en ZIP |
-| `wvp3d.pck` | 537.811.448 B (512,9 MiB) | Exportación PCK del proyecto Godot de `src/MTBGT/WoldVirtualP2P3D/` con el `export_presets.cfg` versionado (24 avatares a 2K; sin copias duplicadas); el de la 2.5.9 se exportó el 2026-10-26 20:54 y su SHA-256 es `ca7b7436…d2e2a` |
+| `wvp3d.pck` | 537.840.220 B (512,9 MiB) | Exportación PCK del proyecto Godot de `src/MTBGT/WoldVirtualP2P3D/` con el `export_presets.cfg` versionado (24 avatares a 2K; sin copias duplicadas); el de la 2.6.0 se exportó el 2026-10-27 00:32 y su SHA-256 es `360baf40…00f78a` |
 
 Reconstruirlos en otra máquina exige: 1) descargar Godot 4.7.2, y 2) abrir el proyecto MTBGT una vez (`--headless --path . --import`) y exportar con `--export-pack "Windows Desktop"`; el preset ya está versionado y fija el filtro de recursos. Las fuentes `.blend` de los avatares no están versionadas (ver [§7](#7-el-mundo-3d-godot)).
 
@@ -533,10 +534,11 @@ Reconstruirlos en otra máquina exige: 1) descargar Godot 4.7.2, y 2) abrir el p
 
 | Artefacto | Tamaño |
 |---|---:|
-| Exe publicado (v2.5.9) | 788.201.343 B (≈751,7 MiB) |
-| PCK embebido | 537.811.448 B (512,9 MiB) |
+| Exe publicado (v2.6.0) | 788.230.009 B (≈751,8 MiB) |
+| Exe anterior (v2.5.9) | 788.201.343 B (≈751,7 MiB) |
+| PCK embebido (v2.6.0) | 537.840.220 B (512,9 MiB) |
 | Extracción en disco por versión | 718.662.713 B (≈685,4 MiB) |
-| Contenido versionado del repositorio | 849 ficheros, 280.271.173 B (≈267 MiB) |
+| Contenido versionado del repositorio | 852 ficheros, 280.338.160 B (≈267,3 MiB) |
 
 ### Pipeline completo
 
@@ -643,7 +645,7 @@ Fuente: [`HOJA_DE_RUTA.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/HOJA_DE_RUTA.md)
 |---|---|---|
 | F0 | Congelar el taller aislado (snapshots, build reproducible) | Parcial: reglas de exclusión hechas; scripts del taller pendientes |
 | F1 | Botón de actualización en la barra | Implementado; falta probar 1280×720 y DPI 125/150 % |
-| F2 | Release portable y verificable | Implementado (exe portable, PCK, `release.json`, `SHA256SUMS`); **firma no aplicada** en 2.5.4–2.5.9 |
+| F2 | Release portable y verificable | Implementado (exe portable, PCK, `release.json`, `SHA256SUMS`); **firma no aplicada** en 2.5.4–2.6.0 |
 | F3 | Updater robusto | Implementado y probado (hash, reanudación, carpeta escribible); falta canal beta, *changelog* y reintento del portal |
 | F4 | Puente Godot/WPF | Implementado (DPI, reinicio del motor, overlays solo en la barra); falta medir 60 fps |
 | F5 | Identidad PBKDF2/BIP-39 | Implementado y probado (10/10); DPAPI descartado; rotación atómica pendiente |
@@ -670,11 +672,11 @@ Fuente: [`HOJA_DE_RUTA.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/HOJA_DE_RUTA.md)
 | Extracción en frío | Rápida | 344 MB en 3,3 s |
 | Identidad | PBKDF2 + BIP-39 | 10/10 pruebas en entorno aislado |
 
-*(Cifras de la fase F2 para la v0.1.0; el binario vigente v2.5.9 incorpora 24 avatares a 2K en un PCK de 512,9 MiB y un exe de ≈751,7 MiB.)*
+*(Cifras de la fase F2 para la v0.1.0; el binario vigente v2.6.0 incorpora 24 avatares a 2K en un PCK de 512,9 MiB y un exe de ≈751,8 MiB.)*
 
 ### Deuda técnica más relevante
 
-Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/README_DESARROLLO.md) (D1–D16) y en los issues [#11](https://github.com/Chicook/WoldVirtualP2P3D/issues/11) (nits del actualizador), [#12](https://github.com/Chicook/WoldVirtualP2P3D/issues/12) (deuda del ciclo 2.5.4/2.5.5) y [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17) (deuda de la jornada 2026-10-26, 2.5.6 → 2.5.9). Las más relevantes hoy:
+Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/README_DESARROLLO.md) (D1–D16) y en los issues [#11](https://github.com/Chicook/WoldVirtualP2P3D/issues/11) (nits del actualizador), [#12](https://github.com/Chicook/WoldVirtualP2P3D/issues/12) (deuda del ciclo 2.5.4/2.5.5), [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17) (deuda de la jornada 2026-10-26, 2.5.6 → 2.5.9) y [#19](https://github.com/Chicook/WoldVirtualP2P3D/issues/19) (deuda de la 2.6.0). Las más relevantes hoy:
 
 | ID | Deuda |
 |---|---|
@@ -696,10 +698,10 @@ Seguimiento detallado en el issue [#17](https://github.com/Chicook/WoldVirtualP2
 
 | Prioridad | Pendiente | Qué falta |
 |---|---|---|
-| P0 | OTA real desde GitHub 2.5.8 → 2.5.9 | El OTA local está probado; falta la descarga y el reemplazo contra la release publicada |
+| P0 | OTA real desde GitHub 2.5.9 → 2.6.0 | El OTA local está probado; falta la descarga y el reemplazo contra la release publicada |
 | P0 | Chat, amigos, voz/webcam y presencia con **dos y tres visores** en máquinas distintas | Los selftests locales (24/24 y 6/6) no sustituyen la prueba entre máquinas |
 | P0 | Flujo de identidad completo | Sesión vacía → llave + avatar; sesión ocupada → enlace de invitado, con el `?host=` del portal |
-| P1 | Firma de código | SmartScreen sigue avisando en 2.5.4–2.5.9 |
+| P1 | Firma de código | SmartScreen sigue avisando en 2.5.4–2.6.0 |
 | P1 | CI y suite unitaria del visor | Hoy solo hay autopruebas de arranque del ejecutable |
 | P1 | Recolección de runtimes antiguos | 8,0 GB en 15 carpetas, sin limpieza automática |
 | P2 | `release.json` / `SHA256SUMS` publicados y verificados por hash | Hoy la verificación es manual con `gh api`, sin automatizar |
@@ -745,15 +747,15 @@ Estos ficheros describen el entorno de trabajo del autor y no afectan a la compi
 
 | Documento | Contenido | Cubre | Vigencia |
 |---|---|---|---|
-| [`README.md`](README.md) | Este documento | v2.5.9 publicada | Vigente |
-| [`REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md) | Flujo obligatorio y checklist de publicación | v2.5.9 publicada | Vigente |
+| [`README.md`](README.md) | Este documento | 2.6.0 publicada | Vigente |
+| [`REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md) | Flujo obligatorio y checklist de publicación | 2.6.0 publicada | Vigente |
 | [`src/HOJA_DE_RUTA.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/HOJA_DE_RUTA.md) | Plan F0–F7 + L1–L6 con casillas | transición 0.0.20 → 0.1.0 | Parcial (fases F2–F5 ya ejecutadas) |
 | [`src/README_DESARROLLO.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/README_DESARROLLO.md) | Análisis profundo del visor, updater, deuda D1–D16 | v0.0.2 → 0.1.0 | Histórico (base del plan) |
 | [`src/ref_info.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/ref_info.md) | Plan maestro LucIA (límites de diseño) | 2026-10-12 | Vigente para LucIA |
 | [`src/MTBGT/WoldVirtualP2P3D/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/MTBGT/WoldVirtualP2P3D/README.md) | Doc técnica del mundo Godot | 2026-10 | Vigente con erratas (documenta ENet/8910 descartado) |
 | [`src/MTBGT/RESUMEN_SESION.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/MTBGT/RESUMEN_SESION.md) | Resumen de una sesión de trabajo del mundo | 2026-10-18 | Histórico |
 | [`src/VSC#/README_TUNELES_P2P.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/README_TUNELES_P2P.md) | Diseño y estado de los túneles efímeros | 0.0.20 | Vigente (implementación actual) |
-| [`src/VSC#/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/README.md) | Doc del visor C# y WebNodo | v2.5.9 publicada (auditoría histórica incluida) | Parcial: la cabecera y las secciones de chat/control están al día; las fases antiguas aún hablan de Node.js/Express, que no existe |
+| [`src/VSC#/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/README.md) | Doc del visor C# y WebNodo | 2.6.0 publicada (auditoría histórica incluida) | Parcial: la cabecera, el chat y la barra inferior están al día; las fases antiguas aún hablan de Node.js/Express, que no existe |
 | [`src/VSC#/webnodo/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/webnodo/README.md) | Doc de un servidor Express no versionado | — | **Obsoleto** (no hay `server.js` ni npm) |
 | [`src/STM_DOC/README.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/README.md) | Plan de desarrollo y hoja de ruta LucIA | 2026-09-25 | Parcial |
 | [`src/STM_DOC/desarrollo.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/STM_DOC/desarrollo.md) | Registro de desarrollo (`ds ialocal`) | 2026-09-24 | Histórico |
