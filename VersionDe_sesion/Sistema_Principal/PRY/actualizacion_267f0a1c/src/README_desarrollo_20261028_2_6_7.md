@@ -53,6 +53,12 @@ Valores por defecto de `SmtplcPolicy` (`Seguridad/SMTPLC/SmtplcModels.cs`):
 | Bloqueo de máquinas virtuales | `BlockVirtualMachines = true`, umbral `0.50` |
 | Bloqueo de VPN/proxy | `BlockVpnAndProxies = true`, umbral `0.40` |
 
+El flag `HypervisorPresent` de `Win32_ComputerSystem` puntúa **0,25** desde la prueba del
+2026-10-28 (antes 0,50): Windows lo activa con VBS, Credential Guard, Hyper-V, WSL2 o el sandbox,
+también en equipos físicos, y con 0,50 marcaba «VM» por sí solo. Ahora sólo corrobora las demás
+señales (modelo/fabricante, BIOS, OUI de MAC, controladores, procesos, registro); un invitado real
+sigue superando el umbral por esas vías.
+
 La ubicación se firma con IP pública WAN, MAC del gateway (ARP), hash del clúster Wi-Fi y
 `MachineGuid`. La evaluación **no** abre el WebSocket del juego y no altera el sello de sesión única
 si deniega: se ejecuta antes de escribir nada.
@@ -117,6 +123,45 @@ Sonda en vivo al cerrar la 2.6.7 (mismo equipo):
 Conclusión de la sonda: ahora mismo no hay ningún nodo activo, así que la bienvenida mostraría
 «Metaverso vacío: serás el primero»; la detección en sí queda probada por la autoprueba.
 
+## Prueba de registro con SMTPLC: aprobación y denegación
+
+Arnés fuera del repositorio en `E:/areadetrabajo/wvp267/smtplc_test/` (`SmtplcHarness.csproj` +
+`Program.cs`, `net8.0-windows`, `System.Management 8.0.0`). Compila **los mismos** `.cs` de
+`VSC#/Seguridad/SMTPLC/` del snapshot y crea cada libro mayor en
+`%TEMP%\smtplc_prueba_<guid>\<caso>\ledger.dat`, así que el libro real
+(`%LOCALAPPDATA%\WoldVirtualP2P3D\security\smtplc_location_ledger.dat`) nunca se abre: al terminar
+la prueba esa carpeta **no existe**.
+
+`dotnet run -c Release` sobre el hardware real de este equipo (MSI MS-7C95, Ryzen 5 5500):
+
+| # | Caso | Resultado observado | Veredicto |
+|---|---|---|---|
+| 1 | Registro en hardware físico, `SmtplcPolicy` por defecto | `IsAllowed=True`, `Code=Allowed`; VM `IsVm=False` confianza `0,25`; VPN confianza `0,00`; firma con gateway `94:00:B0:7F:3A:97` y cluster `AF3603D0…9465371` | **Aprobado** |
+| 1b | `CommitRegistration` tras crear el UUID | el libro mayor pasa a tener **1** cuenta en esa ubicación | **Anotado** |
+| 2 | Segunda cuenta en la misma ubicación (cuota `1`) | `MultipleAccountsInSameLocation`, «Límite de Cuentas por Ubicación Alcanzado», motivo con `'cuenta_aprobada'` | **Denegado** |
+| 2b | Cuenta en conflicto en `ConflictingAccounts` | `cuenta_aprobada` presente | **Correcto** |
+| 3 | Cuota 2 y enfriamiento 72 h con una cuenta previa | `LocationCooldownActive`, «Tiempo restante aproximado: 72 horas» | **Denegado** |
+| 4 | Anti-VM con `VmConfidenceThreshold=0.0` | `VmDetected`, «Entorno Virtualizado No Permitido»; **el libro mayor no se crea** | **Denegado** |
+| 5 | Anti-VPN con `VpnConfidenceThreshold=0.0` | `VpnOrProxyDetected`, «Conexión VPN / Proxy Detectada»; **el libro mayor no se crea** | **Denegado** |
+| 6 | `GenerateFullAuditReport` | informe de la aprobación con `[APROBADO]` y de la denegación con `[DENEGADO]` | **Correcto** |
+
+Resultado final del arnés: **11/11 comprobaciones OK**, `RESULTADO SMTPLC: OK`, exit 0.
+
+### Defecto encontrado y corregido
+
+La primera pasada (2026-10-28) dio **6 fallos**: todos los casos, incluido el de aprobación,
+salían denegados con `VmDetected`. Causa: este PC es físico pero tiene `HypervisorPresent=True`
+(VBS/Hyper-V de Windows); `VmDetector` puntuaba ese flag aislado con 0,50, `IsVm` se calcula con
+`>= 0,40` y el umbral por defecto es `0,50`, de modo que **ningún equipo con VBS podía registrar
+cuenta**. Corrección en `Seguridad/SMTPLC/VmDetector.cs`: el flag aislado pasa a 0,25 y se documenta
+como señal corroborante. Tras la corrección el arnés sale verde y `dotnet build -c Release` del
+visor da **0 avisos y 0 errores**.
+
+**Aviso de vigencia:** el exe publicado `DMWoldVirtualP2P3Dv2.6.7.exe`
+(SHA-256 `902d5f43…a80fe71a`) se compiló **antes** de esta corrección, así que en un PC con
+VBS/Hyper-V activo seguiría denegando el registro. La siguiente compilación debe incluir el cambio.
+La v2.6.7 publicada no se retoca: el tag `v2.6.7` queda sobre `aecbc84`.
+
 ## Seguridad de las pruebas
 
 - Perfil real intacto: `%LOCALAPPDATA%\WoldVirtualP2P3D\` (cuenta, sello, estado) y
@@ -131,7 +176,8 @@ Conclusión de la sonda: ahora mismo no hay ningún nodo activo, así que la bie
 |---|---|
 | Publicar la `v2.6.7` (tag, release con `exe` + `release.json` + `SHA256SUMS`) | **Pendiente de confirmación (R16)** |
 | OTA real 2.6.4/2.6.6 → 2.6.7 en el PC real | Sin prueba real |
-| Registro real con SMTPLC aprobando en hardware físico (sin VM ni VPN) y denegando en VM/VPN | Sin prueba real; la lógica viene de la rama Antigravity |
+| Registro real con SMTPLC aprobando en hardware físico (sin VM ni VPN) y denegando en VM/VPN | **Probado el 2026-10-28 con arnés de código real: 11/11**, aprobación con política por defecto y denegaciones por cuota, enfriamiento, VM y VPN. Corregido el falso positivo de `HypervisorPresent` (ver arriba). El exe publicado, sin embargo, es anterior a la corrección |
+| Recompilar y publicar una versión que incluya la corrección de `VmDetector` | Pendiente (requiere decisión de versión y publicación) |
 | Sesión real entre dos máquinas (chat, voz, webcam, construcción) sobre la 2.6.7 | Sin prueba real |
 | Firma de código | Planificado |
 
