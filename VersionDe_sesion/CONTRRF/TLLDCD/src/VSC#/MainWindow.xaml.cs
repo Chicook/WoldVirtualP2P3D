@@ -35,18 +35,13 @@ namespace Visor3D
         // Versión local, leída del propio ensamblado (definida en Visor3D.csproj <Version>).
         private static readonly string CurrentVersion = ObtenerVersionLocal();
 
-        // Carpeta de datos del usuario en el perfil local del SO (%LocalAppData%\WoldVirtualP2P3D\)
-        // Se usa LocalApplicationData para que no aparezca ninguna carpeta junto al .exe descargado.
-        private static readonly string TestUserDataDir =
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "WoldVirtualP2P3D");
+        // Carpeta de datos del usuario en el perfil local del SO (%LocalAppData%\WoldVirtualP2P3D\).
+        // Es estable entre versiones: AppExtractor sólo borra runtime\<versión>.
+        private static readonly string TestUserDataDir = PerfilUsuario.BaseDir;
 
-        private static readonly string CredentialsPath =
-            Path.Combine(TestUserDataDir, "credentials.json");
+        private static readonly string CredentialsPath = PerfilUsuario.CredencialesPath;
 
-        private static readonly string UserProfilePath =
-            Path.Combine(TestUserDataDir, "user", "user_profile.json");
+        private static readonly string UserProfilePath = PerfilUsuario.PerfilPath;
 
         private GodotHwndHost? _godotHostMain;
         private RedP2PServicio? _p2pServicio;
@@ -69,7 +64,6 @@ namespace Visor3D
         private System.Windows.Threading.DispatcherTimer? _timerMigracion;
 
         // ── Chat del metaverso (texto + voz + webcam) ─────────────────
-        private const double AnchoPanelChat = 340;
         private ChatRelayServer? _chatServer;
         private ChatClient? _chatClient;
         private ChatVoice? _chatVoice;
@@ -478,10 +472,13 @@ namespace Visor3D
             PanelMundo3D.Visibility = Visibility.Collapsed;
             BarraInferiorLogin.Visibility = Visibility.Collapsed;
 
-            // Si el usuario ya tiene cuenta local creada y llave, solo mostrar Acceder
-            bool estaRegistrado = (File.Exists(UserProfilePath) || File.Exists(CredentialsPath)) &&
-                File.Exists(Path.Combine(TestUserDataDir, "user", "llave_acceso.json"));
+            // Si el usuario ya tiene identidad en este PC, sólo se ofrece Acceder.
+            // El perfil sobrevive a las actualizaciones (no vive en runtime\<versión>).
+            bool estaRegistrado = PerfilUsuario.TieneIdentidad;
             BtnCrearCuenta.Visibility = estaRegistrado ? Visibility.Collapsed : Visibility.Visible;
+
+            string nombreGuardado = estaRegistrado ? PerfilUsuario.NombreGuardado() : "";
+            if (!string.IsNullOrEmpty(nombreGuardado)) TxtLoginUser.Text = nombreGuardado;
 
             // Antes de registrarse o entrar: ¿hay alguien en la red P2P?
             _ = ActualizarEstadoRedAsync();
@@ -514,6 +511,20 @@ namespace Visor3D
             // ── Sesión única por PC: bloquear si ya existe una cuenta ──────────
             if (!Visor3D.Seguridad.SesionUnica.SesionUnicaGuarda.ComprobarAntesDeRegistro(this))
                 return; // El guard ya mostró el mensaje al usuario
+
+            // El sello puede faltar en cuentas antiguas; el perfil o las
+            // credenciales también demuestran que este PC ya está registrado.
+            if (PerfilUsuario.TieneIdentidad)
+            {
+                MessageBox.Show(
+                    "Este equipo ya tiene una cuenta de Wold Virtual P2P 3D.\n\n" +
+                    "Sólo se permite UNA cuenta por PC. Usa «Acceder» con tu\n" +
+                    "usuario y tu archivo «La Llave».",
+                    "PC ya registrado — Acceso Bloqueado",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
 
             var registro = new RegistroWindow();
             registro.Show();
@@ -1385,7 +1396,6 @@ namespace Visor3D
             _chatNoLeidos = 0;
             _chatAbierto = false;
             PanelChat.Visibility = Visibility.Collapsed;
-            ColChat.Width = new GridLength(0);
             ActualizarBotonChat();
 
             PanelAmigos.Visibility = Visibility.Collapsed;
@@ -1816,7 +1826,6 @@ namespace Visor3D
 
             _chatAbierto = true;
             PanelChat.Visibility = Visibility.Visible;
-            ColChat.Width = new GridLength(AnchoPanelChat);
             _chatNoLeidos = 0;
             ActualizarBotonChat();
             ActualizarEstadoChat();
@@ -1834,7 +1843,6 @@ namespace Visor3D
 
             _chatAbierto = false;
             PanelChat.Visibility = Visibility.Collapsed;
-            ColChat.Width = new GridLength(0);
             ActualizarBotonChat();
             _godotHostMain?.ActivateGodotFocus();
         }

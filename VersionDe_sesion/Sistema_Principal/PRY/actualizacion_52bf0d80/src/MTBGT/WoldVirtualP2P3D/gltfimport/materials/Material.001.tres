@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://cu6tw2e83bpps"]
+
+[ext_resource type="Texture2D" uid="uid://de4pb4y05t1gt" path="res://gltfimport/terrenoblok/ISLA3DCHUNK_rocky_terrain_02_diff_4k.png" id="1_sfpbu"]
+
+[resource]
+resource_name = "Material.001"
+transparency = 4
+cull_mode = 2
+albedo_texture = ExtResource("1_sfpbu")
+roughness = 0.5
+metadata/_gltf_primary_texture_coord = 0

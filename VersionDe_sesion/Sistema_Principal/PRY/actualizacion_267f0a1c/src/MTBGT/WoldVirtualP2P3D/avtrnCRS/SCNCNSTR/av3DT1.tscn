@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://fv2y1out7j14"]
+
+[ext_resource type="PackedScene" uid="uid://buvc1eojxgtcf" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj3.glb" id="1_8wtkg"]
+[ext_resource type="PackedScene" uid="uid://b1k2g2arifn3g" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm1.glb" id="2_e2m1y"]
+[ext_resource type="PackedScene" uid="uid://c2520gd87t6up" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm2.glb" id="3_la6nk"]
+[ext_resource type="PackedScene" uid="uid://clpvfx6lgp2b5" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj1.glb" id="4_v0hjs"]
+[ext_resource type="PackedScene" uid="uid://h7x84ch8qlv7" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj2.glb" id="5_okch1"]
+[ext_resource type="PackedScene" uid="uid://btvkep24myq0g" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm3.glb" id="6_rga1e"]
+[ext_resource type="PackedScene" uid="uid://cfxhmcf1pj7s7" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm4.glb" id="7_nskik"]
+[ext_resource type="PackedScene" uid="uid://bd6qocihs3nvp" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVMJ/avhm5.glb" id="8_iuui2"]
+
+[node name="av3DT1" type="Node3D" unique_id=1074034813]
+
+[node name="avmj3" parent="." unique_id=609262143 instance=ExtResource("1_8wtkg")]
+transform = Transform3D(-0.12743622, 0, 0.99184674, 0, 1, 0, -0.99184674, 0, -0.12743622, 0, 0, 4.4443083)
+
+[node name="avhm1" parent="." unique_id=870204524 instance=ExtResource("2_e2m1y")]
+transform = Transform3D(0.08638924, 0, 0.9962615, 0, 1, 0, -0.9962615, 0, 0.08638924, 0, 0, 2.6427565)
+
+[node name="avhm2" parent="." unique_id=553286863 instance=ExtResource("3_la6nk")]
+transform = Transform3D(-0.0059048533, 0, 0.9999827, 0, 1, 0, -0.9999827, 0, -0.0059048533, 0, 0, -0.81024647)
+
+[node name="avmj1" parent="." unique_id=1001497215 instance=ExtResource("4_v0hjs")]
+transform = Transform3D(0.21397233, 0, 0.9768397, 0, 1, 0, -0.9768397, 0, 0.21397233, 0, 0, -2.7629693)
+
+[node name="avmj2" parent="." unique_id=775407905 instance=ExtResource("5_okch1")]
+transform = Transform3D(-0.06572422, 0, 0.99783784, 0, 1, 0, -0.99783784, 0, -0.06572422, 0, 0, 0.86856186)
+
+[node name="avhm3" parent="." unique_id=145032415 instance=ExtResource("6_rga1e")]
+transform = Transform3D(0.07958202, 0, 0.9968283, 0, 1, 0, -0.9968283, 0, 0.07958202, 0, 0, -4.736299)
+
+[node name="avhm4" parent="." unique_id=327028461 instance=ExtResource("7_nskik")]
+transform = Transform3D(-0.0178489, 0, 0.9998407, 0, 1, 0, -0.9998407, 0, -0.0178489, 0, 0, -6.533437)
+
+[node name="avhm5" parent="." unique_id=442293283 instance=ExtResource("8_iuui2")]
+transform = Transform3D(-0.03569171, 0, 0.9993628, 0, 1, 0, -0.9993628, 0, -0.03569171, 0, 0, 6.204458)

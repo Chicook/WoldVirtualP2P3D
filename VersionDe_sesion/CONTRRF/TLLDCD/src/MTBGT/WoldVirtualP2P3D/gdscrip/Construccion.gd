@@ -8,9 +8,11 @@ extends Node3D
 
 const Terreno := preload("res://gdscrip/TerrenoEditable.gd")
 const Prims := preload("res://gdscrip/Prims.gd")
+const VoxelSuave := preload("res://gdscrip/VoxelSuave.gd")
 const PanelConstruccion := preload("res://gdscrip/ConstructorPanel.gd")
 
 const CARPETA := "user://construccion"
+const CARPETA_INVENTARIO := "user://inventario"
 const TIPO_TERRENO := 0
 const TIPO_PRIMS := 1
 const BLOQUE_BYTES := 6000
@@ -51,6 +53,8 @@ var _mira_t := 0.0
 var _pincel_t := 0.0
 var _ultimo_envio_ms := 0
 var _ultimo_aviso := ""
+# Carpeta del inventario; las pruebas la redirigen para no tocar datos reales.
+var _carpeta_inventario := CARPETA_INVENTARIO
 
 
 func _ready() -> void:
@@ -64,10 +68,14 @@ func _ready() -> void:
 	_panel.fuerza_cambiada.connect(func(v): _fuerza = v)
 	_panel.snap_cambiada.connect(func(v): _snap = v)
 	_panel.rez_solicitado.connect(_rez)
+	_panel.terreno_solicitado.connect(_crear_terreno_voxel)
 	_panel.duplicar_solicitado.connect(_duplicar)
 	_panel.borrar_solicitado.connect(_borrar)
 	_panel.color_solicitado.connect(_aplicar_color)
 	_panel.escala_solicitada.connect(_aplicar_escala)
+	_panel.deshacer_solicitado.connect(_deshacer_isla)
+	_panel.inventario_guardado_solicitado.connect(_guardar_en_inventario)
+	_panel.inventario_mostrado.connect(_refrescar_inventario)
 	_crear_mira()
 	set_process(true)
 
@@ -272,6 +280,7 @@ func _activar_modo(activo: bool) -> void:
 			_mira.visible = false
 	else:
 		_avisar("Modo construcción activo. El avatar queda suelto hasta cerrar (B).")
+		_refrescar_inventario()
 
 
 func _bloquear_avatar(activo: bool) -> void:
@@ -467,6 +476,7 @@ func _terminar_pincel() -> void:
 		if _guardar_isla(_pincel_isla):
 			_sucio.erase(_pincel_isla)
 	_pincel_isla = -1
+	_refrescar_inventario()
 
 
 func _difundir_pincel(idx: int, centro: Vector3, radio: float, fuerza: float, dt: float,
@@ -532,30 +542,159 @@ func _rez(tipo: String) -> void:
 	_rez_con_datos(idx, tipo, pos, rot, tam, _color_actual)
 
 
-func _rez_con_datos(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3, color: Color) -> void:
+## Crea una elevación de terreno voxel suave. El borde se mide contra la costa
+## real: en tierra firme queda medio metro dentro; junto al agua avanza como
+## MARGEN_MAR para que la arena toque la orilla, nunca para invadir el mar.
+func _crear_terreno_voxel(forma: String) -> void:
+	var hit := _rayo_raton()
+	if hit.is_empty():
+		_avisar("Apunta a tu isla para crear el terreno.")
+		return
+	var idx := _isla_del_impacto(hit)
+	if idx < 0 or not _puedo_editar(idx):
+		_avisar("Solo puedes crear terreno en tu propia isla.")
+		return
+	var isla_nodo: Node3D = _islas.get(idx)
+	var terreno = _terrenos.get(idx)
+	if isla_nodo == null or terreno == null:
+		return
+	var impacto: Vector3 = hit["position"]
+	var agua_y := _nivel_agua_mundo(terreno)
+	var altura_sobre_agua := impacto.y - agua_y
+	var tocar_mar := altura_sobre_agua <= 2.0
+	var prm := VoxelSuave.params_por_defecto(forma)
+	var disponible := _disponible_voxel(idx, isla_nodo.to_local(impacto),
+			float(prm["borde"]), tocar_mar)
+	if disponible <= 0.0:
+		_avisar("No se pudo medir el contorno de la isla.")
+		return
+	var ajustado := VoxelSuave.ajustar_a_borde(prm, disponible, tocar_mar)
+	if ajustado.is_empty():
+		_avisar("No hay tierra firme suficiente en ese punto (%.1f m)." % disponible)
+		return
+	ajustado["semilla"] = randi()
+	if tocar_mar:
+		# El faldón nace a la altura de la orilla y muere en el nivel del mar.
+		ajustado["playa"] = clampf(altura_sobre_agua + 0.15, 0.45, 1.2)
+	var base := impacto
+	base.y = (agua_y - 0.15) if tocar_mar else (impacto.y - 0.25)
+	var pos := isla_nodo.to_local(base)
+	if _snap:
+		pos.x = snappedf(pos.x, 0.5)
+		pos.z = snappedf(pos.z, 0.5)
+	pos.x = clampf(pos.x, -RADIO_ISLA, RADIO_ISLA)
+	pos.z = clampf(pos.z, -RADIO_ISLA, RADIO_ISLA)
+	_rez_con_datos(idx, Prims.TIPO_VOXEL, pos, Vector3(0.0, _giro_camara(), 0.0),
+			Vector3.ONE, _color_actual, ajustado)
+	_avisar("%s creada: radio %.1f m%s." % [
+		VoxelSuave.NOMBRES.get(forma, forma), float(ajustado["radio"]),
+		" con playa" if tocar_mar else ""])
+
+
+func _nivel_agua_mundo(terreno) -> float:
+	return terreno.malla.to_global(Vector3(0.0, terreno.nivel_agua, 0.0)).y
+
+
+## Radio útil para una elevación. En tierra firme es el último punto que sigue
+## seco; junto al mar es el contorno real de la isla (aunque el fondo ya esté
+## sumergido), sin pasar de MARGEN_MAR más allá de la orilla. Así una playa
+## puede llegar al agua sin colgarse fuera de la isla.
+func _disponible_voxel(idx: int, centro: Vector3, borde: float, tocar_mar: bool) -> float:
+	var maximo := borde + VoxelSuave.MARGEN_MAR
+	var seco := _radio_tierra(idx, centro, maximo)
+	if not tocar_mar:
+		return seco
+	var contorno := _radio_tierra(idx, centro, maximo, true)
+	return minf(contorno, seco + VoxelSuave.MARGEN_MAR)
+
+
+## Mayor círculo de tierra que cabe alrededor de `centro` (local de la isla).
+## Se lanza un rayo desde arriba en 40 direcciones y se acepta el último punto
+## cuya superficie sea del terreno propio. Con `permitir_sumergido` también
+## cuenta el fondo ya bajo el agua, para medir el contorno de la isla.
+func _radio_tierra(idx: int, centro: Vector3, maximo: float,
+		permitir_sumergido := false) -> float:
+	var terreno = _terrenos.get(idx)
+	if terreno == null or terreno.malla == null:
+		return 0.0
+	var agua_y := _nivel_agua_mundo(terreno)
+	var excluir: Array[RID] = []
+	var ub := get_parent().get_node_or_null("USERBASE") if get_parent() != null else null
+	if ub is CollisionObject3D:
+		excluir.append((ub as CollisionObject3D).get_rid())
+	for isla in _nodos.values():
+		for nodo in isla.values():
+			if nodo is CollisionObject3D and is_instance_valid(nodo):
+				excluir.append((nodo as CollisionObject3D).get_rid())
+	var radio := clampf(maximo, 1.0, RADIO_ISLA)
+	var menor := radio
+	var pasos := 40
+	for a in pasos:
+		var angulo := TAU * float(a) / float(pasos)
+		var dir := Vector2(cos(angulo), sin(angulo))
+		var limite := 0.0
+		var r := radio
+		while r >= 0.75:
+			# `centro` y `r` van en metros de isla; la malla del glTF está
+			# escalada ~100x, así que se convierte antes de to_global().
+			var local: Vector3 = Vector3(
+					(centro.x + dir.x * r) / terreno.escala, 0.0,
+					(centro.z + dir.y * r) / terreno.escala)
+			var mundo: Vector3 = terreno.malla.to_global(local)
+			var consulta := PhysicsRayQueryParameters3D.create(
+					Vector3(mundo.x, agua_y + 240.0, mundo.z),
+					Vector3(mundo.x, agua_y - 90.0, mundo.z))
+			consulta.collide_with_areas = false
+			consulta.exclude = excluir
+			var golpe := get_world_3d().direct_space_state.intersect_ray(consulta)
+			if not golpe.is_empty():
+				var col = golpe["collider"]
+				var es_terreno := false
+				if col is Node:
+					var nodo := col as Node
+					es_terreno = nodo.has_meta("terreno_editable") \
+							and int(nodo.get_meta("isla", -1)) == idx
+				if es_terreno and (permitir_sumergido \
+						or (golpe["position"] as Vector3).y >= agua_y - 0.18):
+					limite = r
+					break
+			r -= 0.5
+		if limite <= 0.0:
+			return 0.0
+		menor = minf(menor, limite)
+	return menor
+
+
+func _rez_con_datos(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3,
+		color: Color, params := {}) -> void:
 	if multiplayer.is_server():
-		var id := _host_crear_prim(idx, tipo, pos, rot, esc, color)
+		var id := _host_crear_prim(idx, tipo, pos, rot, esc, color, params)
 		_difundir_prim_creado(idx, id)
 	else:
-		rpc_id(1, "_solicitar_rez", idx, tipo, pos, rot, esc, color)
+		rpc_id(1, "_solicitar_rez", idx, tipo, pos, rot, esc, color, params)
 
 
-func _host_crear_prim(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3, color: Color) -> int:
+func _host_crear_prim(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3,
+		color: Color, params := {}) -> int:
 	if not _prims.has(idx):
 		return 0
 	var id := int(_siguiente.get(idx, 1))
 	_siguiente[idx] = id + 1
+	var tipo_final := tipo if Prims.es_tipo_valido(tipo) else "cubo"
 	var datos := {
 		"id": id,
-		"tipo": tipo if Prims.TIPOS.has(tipo) else "cubo",
+		"tipo": tipo_final,
 		"pos": pos,
 		"rot": rot,
 		"escala": esc.clamp(Vector3(0.15, 0.15, 0.15), Vector3(40.0, 40.0, 40.0)),
 		"color": color,
 	}
+	if tipo_final == Prims.TIPO_VOXEL:
+		datos["params"] = VoxelSuave.normalizar_params(params)
 	_prims[idx][id] = datos
 	_instanciar_prim(idx, datos)
 	_sucio[idx] = true
+	_refrescar_inventario()
 	return id
 
 
@@ -563,32 +702,40 @@ func _difundir_prim_creado(idx: int, id: int) -> void:
 	if id <= 0 or multiplayer.get_peers().is_empty():
 		return
 	var d: Dictionary = _prims[idx][id]
-	rpc("_prim_creado", idx, id, d["tipo"], d["pos"], d["rot"], d["escala"], d["color"])
+	rpc("_prim_creado", idx, id, d["tipo"], d["pos"], d["rot"], d["escala"], d["color"],
+			d.get("params", {}))
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _solicitar_rez(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3, color: Color) -> void:
+func _solicitar_rez(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3,
+		color: Color, params: Dictionary) -> void:
 	if not multiplayer.is_server():
 		return
 	var remitente := multiplayer.get_remote_sender_id()
 	if not _validar_remitente(idx, remitente):
 		_avisar_remoto(remitente, "No puedes construir en otra isla.")
 		return
-	var id := _host_crear_prim(idx, tipo, pos, rot, esc, color)
+	var id := _host_crear_prim(idx, tipo, pos, rot, esc, color, params)
 	if id > 0 and not multiplayer.get_peers().is_empty():
-		rpc("_prim_creado", idx, id, tipo, pos, rot, esc, color)
+		rpc("_prim_creado", idx, id, tipo, pos, rot, esc, color, params)
 
 
 @rpc("authority", "call_remote", "reliable")
-func _prim_creado(idx: int, id: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3, color: Color) -> void:
+func _prim_creado(idx: int, id: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3,
+		color: Color, params: Dictionary) -> void:
 	if not _prims.has(idx) or _prims[idx].has(id):
 		return
-	var datos := {"id": id, "tipo": tipo, "pos": pos, "rot": rot, "escala": esc, "color": color}
+	var tipo_final := tipo if Prims.es_tipo_valido(tipo) else "cubo"
+	var datos := {"id": id, "tipo": tipo_final, "pos": pos, "rot": rot, "escala": esc,
+			"color": color}
+	if tipo_final == Prims.TIPO_VOXEL:
+		datos["params"] = VoxelSuave.normalizar_params(params)
 	_prims[idx][id] = datos
 	# El contador del cliente también avanza para no reutilizar ids al guardar.
 	_siguiente[idx] = maxi(int(_siguiente.get(idx, 1)), id + 1)
 	_instanciar_prim(idx, datos)
 	_sucio[idx] = true
+	_refrescar_inventario()
 
 
 func _instanciar_prim(idx: int, datos: Dictionary) -> void:
@@ -600,14 +747,19 @@ func _instanciar_prim(idx: int, datos: Dictionary) -> void:
 	cuerpo.name = "Prim_%d" % id
 	cuerpo.set_meta("isla", idx)
 	cuerpo.set_meta("prim_id", id)
+	var tipo := str(datos["tipo"])
+	var params: Dictionary = datos.get("params", {})
+	var malla_mesh := Prims.crear_malla(tipo, params)
 	var malla := MeshInstance3D.new()
 	malla.name = "Malla"
-	malla.mesh = Prims.crear_malla(str(datos["tipo"]))
-	malla.material_override = Prims.crear_material(datos["color"])
+	malla.mesh = malla_mesh
+	malla.material_override = Prims.crear_material(datos["color"], tipo == Prims.TIPO_VOXEL)
 	cuerpo.add_child(malla)
 	var colision := CollisionShape3D.new()
 	colision.name = "Colision"
-	colision.shape = Prims.crear_forma(str(datos["tipo"]))
+	# El voxel ya tiene su malla: reutilizarla evita regenerar el SDF dos veces.
+	colision.shape = (malla_mesh.create_trimesh_shape() if tipo == Prims.TIPO_VOXEL
+			else Prims.crear_forma(tipo, params))
 	cuerpo.add_child(colision)
 	_posicionar_prim(cuerpo, datos)
 	contenedor.add_child(cuerpo)
@@ -733,6 +885,7 @@ func _host_borrar_prim(idx: int, id: int) -> bool:
 	_nodos.get(idx, {}).erase(id)
 	_prims.get(idx, {}).erase(id)
 	_sucio[idx] = true
+	_refrescar_inventario()
 	return true
 
 
@@ -746,12 +899,167 @@ func _prim_borrado(idx: int, id: int) -> void:
 	_nodos.get(idx, {}).erase(id)
 	_prims.get(idx, {}).erase(id)
 	_sucio[idx] = true
+	_refrescar_inventario()
 
 
 func _difundir_prim_borrado(idx: int, id: int) -> void:
 	if multiplayer.get_peers().is_empty():
 		return
 	rpc("_prim_borrado", idx, id)
+
+
+# ------------------------------------------------- deshacer / inventario
+
+## Restaura la isla al estado exportado y vacía los objetos construidos.
+func _deshacer_isla() -> void:
+	var idx := _isla_actual()
+	if idx < 0 or not _puedo_editar(idx):
+		_avisar("Solo puedes deshacer la isla que estás editando.")
+		return
+	if multiplayer.is_server():
+		_host_deshacer_isla(idx)
+		for peer in multiplayer.get_peers():
+			_enviar_estado(idx, peer)
+	else:
+		rpc_id(1, "_solicitar_deshacer", idx)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _solicitar_deshacer(idx: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var remitente := multiplayer.get_remote_sender_id()
+	if not _validar_remitente(idx, remitente):
+		_avisar_remoto(remitente, "No puedes deshacer la isla de otro jugador.")
+		return
+	_host_deshacer_isla(idx)
+	for peer in multiplayer.get_peers():
+		if peer != remitente:
+			_enviar_estado(idx, peer)
+
+
+func _host_deshacer_isla(idx: int) -> void:
+	var terreno = _terrenos.get(idx)
+	if terreno != null:
+		terreno.restablecer()
+	_seleccionar(null)
+	for id in _nodos.get(idx, {}).keys():
+		var nodo = _nodos[idx][id]
+		if nodo != null and is_instance_valid(nodo):
+			nodo.queue_free()
+	_nodos.get(idx, {}).clear()
+	_prims.get(idx, {}).clear()
+	_siguiente[idx] = 1
+	_sucio[idx] = true
+	_guardar_isla(idx)
+	_refrescar_estado_ui()
+	_refrescar_inventario()
+	_avisar("Isla restaurada: terreno original y sin objetos.")
+
+
+func _ruta_entradas_inventario() -> String:
+	return _carpeta_inventario.path_join("inventario.json")
+
+
+func _leer_entradas_inventario() -> Array:
+	var ruta := _ruta_entradas_inventario()
+	if not FileAccess.file_exists(ruta):
+		return []
+	var f := FileAccess.open(ruta, FileAccess.READ)
+	if f == null:
+		return []
+	var texto := f.get_as_text()
+	f.close()
+	var leido = JSON.parse_string(texto)
+	if leido is Dictionary and leido.get("entradas") is Array:
+		return leido["entradas"]
+	return []
+
+
+## Guarda una copia del terreno propio y de sus objetos. La copia completa
+## (blob del terreno + prims) permite futuras restauraciones; la pestaña lista
+## la entrada con sus tipos «TERRENO» y «ASSET».
+func _guardar_en_inventario() -> void:
+	var idx := _isla_actual()
+	if idx < 0 or not _puedo_editar(idx):
+		_avisar("Solo puedes guardar en inventario la isla que estás editando.")
+		return
+
+	var terreno = _terrenos.get(idx)
+	var blob := PackedByteArray()
+	if terreno != null and terreno.esta_editado():
+		blob = terreno.serializar()
+
+	var texto_prims := Prims.serializar_isla(_prims.get(idx, {}),
+			int(_siguiente.get(idx, 1)), _uuid_dueno(idx))
+	var leido = JSON.parse_string(texto_prims)
+	var assets: Array = leido.get("prims", []) if leido is Dictionary else []
+	if blob.is_empty() and assets.is_empty():
+		_avisar("No hay nada construido que guardar en el inventario.")
+		return
+
+	var sello := Time.get_datetime_string_from_system()
+	var id := "%s-%d" % [sello.replace("-", "").replace(":", "").replace("T", "-"),
+			Time.get_ticks_msec()]
+	var archivo := "inv_%s_isla%d.json" % [id, idx]
+
+	var dir := DirAccess.open("user://")
+	if dir != null:
+		dir.make_dir_recursive(_carpeta_inventario.trim_prefix("user://"))
+
+	var contenido := {
+		"version": 1,
+		"id": id,
+		"fecha": sello,
+		"isla": idx,
+		"uuid": _uuid_dueno(idx),
+		"terreno": not blob.is_empty(),
+		"terreno_b64": Marshalls.raw_to_base64(blob) if not blob.is_empty() else "",
+		"prims": assets,
+	}
+	var f := FileAccess.open(_carpeta_inventario.path_join(archivo), FileAccess.WRITE)
+	if f == null:
+		_avisar("No se pudo escribir la copia del inventario.")
+		return
+	f.store_string(JSON.stringify(contenido, "\t"))
+	f.close()
+
+	var entradas := _leer_entradas_inventario()
+	entradas.append({
+		"id": id,
+		"fecha": sello,
+		"isla": idx,
+		"terreno": not blob.is_empty(),
+		"assets": assets.size(),
+		"archivo": archivo,
+	})
+	var fi := FileAccess.open(_ruta_entradas_inventario(), FileAccess.WRITE)
+	if fi == null:
+		_avisar("No se pudo actualizar el índice del inventario.")
+		return
+	fi.store_string(JSON.stringify({"version": 1, "entradas": entradas}, "\t"))
+	fi.close()
+
+	_refrescar_inventario()
+	_avisar("Guardado en inventario: %s (isla %d)." % [sello, idx])
+
+
+## Vuelca en la pestaña lo construido ahora y las copias guardadas.
+func _refrescar_inventario() -> void:
+	if _panel == null:
+		return
+	var idx := _isla_actual()
+	var actual := {"isla": idx, "terreno": false, "assets": []}
+	if idx >= 0:
+		var terreno = _terrenos.get(idx)
+		actual["terreno"] = terreno != null and terreno.esta_editado()
+		var lista: Array = []
+		for id in _prims.get(idx, {}).keys():
+			var datos = _prims[idx][id]
+			lista.append({"id": int(id), "tipo": str(datos.get("tipo", "—"))})
+		lista.sort_custom(func(a, b): return int(a["id"]) < int(b["id"]))
+		actual["assets"] = lista
+	_panel.set_inventario(actual, _leer_entradas_inventario())
 
 
 func _duplicar() -> void:
@@ -764,7 +1072,8 @@ func _duplicar() -> void:
 	var pos: Vector3 = datos["pos"] + Vector3(1.0, 0.0, 1.0)
 	pos.x = clampf(pos.x, -RADIO_ISLA, RADIO_ISLA)
 	pos.z = clampf(pos.z, -RADIO_ISLA, RADIO_ISLA)
-	_rez_con_datos(_sel_isla, str(datos["tipo"]), pos, datos["rot"], datos["escala"], datos["color"])
+	_rez_con_datos(_sel_isla, str(datos["tipo"]), pos, datos["rot"], datos["escala"],
+			datos["color"], datos.get("params", {}))
 
 
 func _aplicar_color(color: Color) -> void:
