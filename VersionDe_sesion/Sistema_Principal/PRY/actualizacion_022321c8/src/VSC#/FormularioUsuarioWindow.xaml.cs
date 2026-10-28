@@ -30,7 +30,7 @@ namespace Visor3D
             TxtNombre.Focus();
         }
 
-        private void OnCrearUsuarioClicked(object sender, RoutedEventArgs e)
+        private async void OnCrearUsuarioClicked(object sender, RoutedEventArgs e)
         {
             TxtError.Visibility = Visibility.Collapsed;
 
@@ -59,15 +59,25 @@ namespace Visor3D
                 return;
             }
 
-            // Generar UUID único para el usuario
-            _uuid = Guid.NewGuid().ToString();
-
-            // Hash de contraseña (PBKDF2-SHA256 con sal)
-            string passHash = Visor3D.Seguridad.PasswordHasher.Hash(pass);
-
-            // Guardar perfil en test_user_data/user/user_profile.json
+            // Evaluación de Seguridad SMTPLC (Anti-VM, Anti-VPN y Anti-Multicuenta en la misma ubicación)
+            BtnCrearUsuario.IsEnabled = false;
             try
             {
+                var evaluacion = await Visor3D.Seguridad.SMTPLC.SmtplcSecurityService.Instance.EvaluateRegistrationAsync(nombre, _hardwareHash);
+                if (!evaluacion.IsAllowed)
+                {
+                    MostrarError($"{evaluacion.DenialTitle}:\n{evaluacion.DenialReason}");
+                    BtnCrearUsuario.IsEnabled = true;
+                    return;
+                }
+
+                // Generar UUID único para el usuario
+                _uuid = Guid.NewGuid().ToString();
+
+                // Hash de contraseña (PBKDF2-SHA256 con sal)
+                string passHash = Visor3D.Seguridad.PasswordHasher.Hash(pass);
+
+                // Guardar perfil en test_user_data/user/user_profile.json
                 var perfil = new
                 {
                     uuid        = _uuid,
@@ -91,6 +101,9 @@ namespace Visor3D
                 var creds = new { username = nombre, passwordHash = passHash };
                 File.WriteAllText(credsPath, JsonSerializer.Serialize(creds), Encoding.UTF8);
 
+                // Registrar en el Libro Mayor SMTPLC de la ubicación
+                Visor3D.Seguridad.SMTPLC.SmtplcSecurityService.Instance.CommitRegistration(_uuid, nombre, evaluacion, _hardwareHash);
+
                 // Pasar a la siguiente pantalla: Frase Semilla de la Wallet DeFi
                 var semillaWin = new SemillaWalletWindow(_uuid, nombre, passHash, _hardwareHash);
                 semillaWin.Show();
@@ -99,6 +112,7 @@ namespace Visor3D
             catch (Exception ex)
             {
                 MostrarError($"No se pudo guardar el perfil:\n{ex.Message}");
+                BtnCrearUsuario.IsEnabled = true;
             }
         }
 

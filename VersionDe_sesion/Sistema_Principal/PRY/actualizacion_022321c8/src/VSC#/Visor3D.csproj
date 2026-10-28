@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualp2pCNXv2.5.5</AssemblyName>
+    <AssemblyName>DMWoldVirtualP2P3Dv2.6.5</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.5.5</Version>
-    <AssemblyVersion>2.5.5.0</AssemblyVersion>
-    <FileVersion>2.5.5.0</FileVersion>
+    <Version>2.6.5</Version>
+    <AssemblyVersion>2.6.5.0</AssemblyVersion>
+    <FileVersion>2.6.5.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualp2pCNX v2.5.5 (corrige el arranque como cliente de un túnel caducado; 24 avatares a 2K, carrusel con turnos y ocupación, aspecto persistente, mundo en PCK, actualizador con SHA-256 y reanudación)</Description>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.6.5 (integra sistema de seguridad SMTPLC: prevención de múltiples cuentas en diferentes dispositivos en la misma ubicación, detección de VPNs/proxies y detección profunda de máquinas virtuales; motor 3D y mundo en PCK intactos)</Description>
   </PropertyGroup>
 
   <!--
