@@ -1,7 +1,7 @@
 # 🌐 Wold Virtual P2P 3D — Visor C# (.NET 8 WPF) & WebNodo
 
 > **Ubicación:** `VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#`  
-> **Versión Actual:** `2.6.2` — EXE: `DMWoldVirtualP2P3Dv2.6.2.exe` (publicada como v2.6.2 el 2026-10-28, *Latest*; la v2.6.1 sigue publicada como release anterior).
+> **Versión Actual:** `2.6.3` — EXE: `DMWoldVirtualP2P3Dv2.6.3.exe` (publicada como v2.6.3 el 2026-10-28, *Latest*; la v2.6.2 sigue publicada como release anterior).
 > **Tecnologías:** C# 12, .NET 8 WPF, Win32 P/Invoke (`HwndHost`), Godot Engine 4 (incrustado), WebNodo nativo en C# (`HttpListener`), WMI (`System.Management`).
 
 ---
@@ -41,6 +41,7 @@ La carpeta `src/VSC#` implementa la capa de escritorio del cliente-visor del met
 - Incrustar la ventana gráfica de **Godot 4** (`WoldVirtual3DP2P.tscn`) dentro del marco WPF mediante manipulación de ventanas nativas Win32.
 - Iniciar un micro-servidor HTTP local y un túnel inverso SSH para compartir la sesión P2P con amigos sin requerir apertura manual de puertos (NAT traversal).
 - Exponer un portal web de descarga (`WebNodo`) para que otros usuarios descarguen el visor directamente desde la máquina anfitriona.
+- Al arrancar (2.6.3), comprobar si el PC tiene una cuenta local utilizable: si sólo quedan restos a medias, archivarlos en `respaldo_cuenta` y arrancar el ciclo de registro completo (`Seguridad/Seguridad_sesion_unica/ArranqueCuenta.cs`).
 
 ---
 
@@ -388,6 +389,8 @@ desplazamiento horizontal y dentro del propio marco; la franja se oculta sola cu
 La **2.6.2** corrige la vista local: al iniciar la sesión se vaciaba `PanelVideos` y con ello se
 expulsaba del árbol el tile `MarcoCamLocal` definido en XAML, así que la franja aparecía pero sin
 imagen; ahora la limpieza conserva el tile local y, al encender la cámara, se reinserta si faltara.
+La **2.6.3** añade el diagnóstico de cuenta al arrancar (ver §6): con restos a medias archiva en
+`respaldo_cuenta` y vuelve al ciclo de registro completo.
 Debajo quedan el historial y, al final, los controles de voz, cámara y envío. No usa un túnel propio:
 reutiliza el túnel público del WebNodo con la ruta `/chat`.
 
