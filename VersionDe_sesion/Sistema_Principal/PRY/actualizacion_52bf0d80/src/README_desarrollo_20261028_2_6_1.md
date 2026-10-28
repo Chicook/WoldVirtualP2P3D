@@ -4,11 +4,11 @@ Trabajo hecho sobre el árbol del 2026-10-27/28 (`VersionDe_sesion/Sistema_Princ
 rama `DevQoderIA`. **Estado de la release: publicada como v2.6.1 el 2026-10-28** (tag sobre
 `e98b4f4`, marcada *Latest*; asset `DMWoldVirtualP2P3Dv2.6.1.exe`, 788.230.009 B, SHA-256
 `86d9cb6e1b8db4d21330d85b22d3e34168f591044ebd073ca8adb7be430a88fc`; `release.json` y
-`SHA256SUMS` verificados por API). Sustituye a la v2.6.0 como release vigente.
+`SHA256SUMS` verificados por API). Sustituyó a la v2.6.0 como release vigente.
 
-> **Nota (2026-10-28):** la **2.6.2** corrige la vista local de la webcam de esta franja (el tile
-> XAML se perdía al limpiar `PanelVideos`); ver
-> [`README_desarrollo_20261028_2_6_2.md`](README_desarrollo_20261028_2_6_2.md).
+> **Nota (2026-10-28):** la *Latest* es desde el mismo día la **v2.6.2**, que corrige la vista local
+> de la webcam de esta franja (el tile XAML se perdía al limpiar `PanelVideos`); la v2.6.1 sigue
+> publicada. Ver [`README_desarrollo_20261028_2_6_2.md`](README_desarrollo_20261028_2_6_2.md).
 
 ---
 

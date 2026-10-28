@@ -50,17 +50,16 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión. El árbol local está hoy en `DMWoldVirtualP2P3Dv2.6.2` (compilado y probado el 2026-10-28,
-sin tag ni release); la release vigente sigue siendo la v2.6.1 (2026-10-28, tag sobre `e98b4f4`,
-assets verificados por API), y las anteriores v2.6.0 y v2.5.9 siguen publicadas con su propio asset.
-Árbol local y release vigente **no** están alineados hasta que la 2.6.2 se publique.
+extensión: hoy `DMWoldVirtualP2P3Dv2.6.2`, que corresponde al exe `DMWoldVirtualP2P3Dv2.6.2.exe`,
+publicado el 2026-10-28 como release v2.6.2 (tag sobre `d14e3b5`, assets verificados por API). Las
+releases anteriores v2.6.1, v2.6.0 y v2.5.9 siguen publicadas con su propio asset. El árbol local y
+la release vigente están, por tanto, alineados en la 2.6.2.
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
 fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
-los cuatro planos son `2.6.1` / `v2.6.1` / `DMWoldVirtualP2P3Dv2.6.1.exe` / `2.6.1`; la v2.6.0 y la
-v2.5.9 siguen publicadas bajo su propio tag con sus planos alineados. El árbol local y los metadatos
-de `E:/out_v262/` ya están en la 2.6.2 en sus cuatro planos, pero no se publican hasta que el dueño
-lo autorice. El actualizador lee la versión del tag **y** del nombre del asset y toma la mayor
+los cuatro planos son `2.6.2` / `v2.6.2` / `DMWoldVirtualP2P3Dv2.6.2.exe` / `2.6.2`; la v2.6.1, la
+v2.6.0 y la v2.5.9 siguen publicadas bajo su propio tag con sus planos alineados. El actualizador lee
+la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación
 hace que un visor se crea "al día" teniendo binario nuevo por instalar.
 

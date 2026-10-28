@@ -2,8 +2,9 @@
 
 Trabajo sobre el árbol del 2026-10-28
 (`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_52bf0d80`), rama `DevQoderIA`.
-**Estado de la release: compilada y probada localmente; pendiente de publicación.** La release
-vigente sigue siendo la **v2.6.1**.
+**Estado de la release: publicada como v2.6.2 el 2026-10-28.** Tag `v2.6.2` sobre el commit
+`d14e3b5` de `DevQoderIA`, marcada *Latest*, con `exe` + `release.json` + `SHA256SUMS` verificados
+por API. La v2.6.1 sigue publicada como release anterior.
 
 ---
 
@@ -50,6 +51,9 @@ R1 aunque el mundo sea el mismo.
 | `release.json` | 215 B | SHA-256 `9966950c21d5cf2f24f06132109097d564fa87fee3c9c379cef61541caea8ff7` |
 | `SHA256SUMS` | 174 B | SHA-256 `320f74a30f86bcaa1c5649b4a3225e0860be30022fbd158b6a1760ca7db85fa9` |
 | Extracción en disco | `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\2.6.2\` | **718.695.417 B (≈685,4 MiB)** |
+| Publicación | `gh release create v2.6.2` sobre `d14e3b5`, tres assets en el mismo gesto | `draft=false`, `prerelease=false`, *Latest* |
+| Digests publicados | `gh api repos/…/releases/tags/v2.6.2 --jq '.assets[]'` | exe `bb176468…47b6c` (788.230.009 B), `release.json` `9966950c…`, `SHA256SUMS` `320f74a3…`; los tres coinciden con los locales |
+| Descarga | `HEAD` de `…/download/v2.6.2/DMWoldVirtualP2P3Dv2.6.2.exe` | `200`, `Content-Length: 788230009`, `application/octet-stream` |
 
 ---
 
@@ -57,10 +61,10 @@ R1 aunque el mundo sea el mismo.
 
 - **Prueba visual** de la franja con una sesión autenticada y la cámara encendida: la regresión cubre
   la estructura del panel, no el render real de WPF.
-- **Publicación de la v2.6.2** (`exe` + `release.json` + `SHA256SUMS`) con confirmación del
-  responsable (R14–R16).
+- **Portal contra la release publicada**: `/api/info` se midió con el fallback local de la 2.6.2, no
+  contra la release ya subida a GitHub.
 - **Prueba entre dos equipos** de la webcam remota a través del túnel y del relay.
 - **OTA real** desde GitHub y re-extracción del runtime en un equipo con la versión anterior.
 
-*La 2.6.2 corrige la vista local de la webcam y mantiene todo lo de la 2.6.1; su publicación queda
-pendiente de confirmación.*
+*La 2.6.2 corrige la vista local de la webcam y mantiene todo lo de la 2.6.1; está publicada como
+*Latest* desde el 2026-10-28.*
