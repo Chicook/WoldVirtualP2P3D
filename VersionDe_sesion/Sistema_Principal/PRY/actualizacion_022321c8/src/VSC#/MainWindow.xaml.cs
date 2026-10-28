@@ -48,6 +48,8 @@ namespace Visor3D
         private string _urlPublica = "";
         private string _enlaceCompartible = "";
         private string _hostSesionUrl = "";
+        private List<string> _nodosRedLan = new();
+        private bool _consultaRedEnCurso;
         private string _hostInicial = "";
         private readonly DateTime _arranqueUtc = DateTime.UtcNow;
         private string _llaveHashActual = "";
@@ -93,6 +95,8 @@ namespace Visor3D
             BtnCopiarUrlP2P.Click += OnCopiarUrlP2PClicked;
             TxtUrlP2P.MouseLeftButtonDown += (s, e) => OnCopiarUrlP2PClicked(s, e);
             BtnConectarAmigo.Click += OnConectarAmigoClicked;
+            BtnBuscarRed.Click += OnBuscarRedClicked;
+            BtnUsarNodoRed.Click += OnUsarNodoRedClicked;
 
             // WebNodo — portal de descarga y conexión para amigos en el metaverso
             BtnWebNodo.Click += OnWebNodoClicked;
@@ -427,6 +431,9 @@ namespace Visor3D
             bool estaRegistrado = (File.Exists(UserProfilePath) || File.Exists(CredentialsPath)) &&
                 File.Exists(Path.Combine(TestUserDataDir, "user", "llave_acceso.json"));
             BtnCrearCuenta.Visibility = estaRegistrado ? Visibility.Collapsed : Visibility.Visible;
+
+            // Antes de registrarse o entrar: ¿hay alguien en la red P2P?
+            _ = ActualizarEstadoRedAsync();
         }
 
         public void ActivarModoLogin(string username = "")
@@ -465,6 +472,84 @@ namespace Visor3D
         private void OnVolverBienvenidaClicked(object sender, RoutedEventArgs e)
         {
             MostrarPantallaBienvenida();
+        }
+
+        private void OnBuscarRedClicked(object sender, RoutedEventArgs e)
+        {
+            // El motor puede seguir cerrando y liberar el 8912 tarde: se reintenta.
+            _ = ActualizarEstadoRedAsync();
+        }
+
+        /// <summary>Si el nodo lo detectó la baliza LAN, deja el destino listo para entrar.</summary>
+        private void OnUsarNodoRedClicked(object sender, RoutedEventArgs e)
+        {
+            if (_nodosRedLan.Count == 0) return;
+            string ip = _nodosRedLan[0];
+            ActivarModoLogin();
+            TxtUrlAmigo.Text = $"{ip}:{DescubrimientoP2P.PuertoGodot}";
+            TxtEstadoRed.Text = $"🔗 Nodo seleccionado: {ip}";
+            TxtDetalleRed.Text = "Pulsa «Conectar» para comprobarlo y después inicia sesión.";
+            TxtLoginUser.Focus();
+        }
+
+        /// <summary>
+        /// Refleja en la pantalla previa si el metaverso está vacío u ocupado.
+        /// Prioriza la baliza LAN (anfitrión con el mismo puerto UDP que usa Godot)
+        /// y, si no hay nadie en la red local, consulta el portal del enlace de
+        /// invitado. No abre el WebSocket del juego.
+        /// </summary>
+        private async Task ActualizarEstadoRedAsync()
+        {
+            if (_consultaRedEnCurso) return;
+            _consultaRedEnCurso = true;
+            string? errorLan = null;
+            try
+            {
+                TxtEstadoRed.Text = "Buscando nodos en tu red…";
+                TxtDetalleRed.Text = "Escuchando la baliza del metaverso (UDP 8912).";
+                BtnBuscarRed.IsEnabled = false;
+                BtnUsarNodoRed.Visibility = Visibility.Collapsed;
+
+                var lan = await DescubrimientoP2P.BuscarEnLanAsync();
+                _nodosRedLan = lan.Nodos;
+                errorLan = lan.Error;
+
+                string enlace = !string.IsNullOrWhiteSpace(_hostInicial) ? _hostInicial : _urlAmigoPendiente;
+                bool enlaceResponde = _nodosRedLan.Count == 0 && !string.IsNullOrWhiteSpace(enlace)
+                    && await DescubrimientoP2P.ConsultarNodoAsync(enlace);
+
+                if (_nodosRedLan.Count > 0)
+                {
+                    TxtEstadoRed.Text = _nodosRedLan.Count == 1
+                        ? "● Metaverso ocupado: 1 nodo en tu red"
+                        : $"● Metaverso ocupado: {_nodosRedLan.Count} nodos en tu red";
+                    TxtDetalleRed.Text =
+                        $"{string.Join(", ", _nodosRedLan)} · Pulsa «Usar este nodo» o pega su enlace al entrar.";
+                    BtnUsarNodoRed.Visibility = Visibility.Visible;
+                }
+                else if (enlaceResponde)
+                {
+                    TxtEstadoRed.Text = "● El nodo de tu enlace está en línea";
+                    TxtDetalleRed.Text =
+                        $"{enlace} responde. Pulsa «Acceder», comprueba el enlace y luego inicia sesión.";
+                }
+                else
+                {
+                    TxtEstadoRed.Text = "○ Metaverso vacío: serás el primero";
+                    TxtDetalleRed.Text = errorLan
+                        ?? "No se detectaron nodos. Al entrar se creará la sesión y podrás copiar tu enlace para invitar.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TxtEstadoRed.Text = "○ Metaverso vacío: serás el primero";
+                TxtDetalleRed.Text = $"No se pudo completar la búsqueda: {ex.Message}";
+            }
+            finally
+            {
+                _consultaRedEnCurso = false;
+                BtnBuscarRed.IsEnabled = true;
+            }
         }
 
         private void OnLoginClicked(object sender, RoutedEventArgs e)

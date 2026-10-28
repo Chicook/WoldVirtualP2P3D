@@ -149,3 +149,11 @@ Para emitir un reporte instantáneo en pantalla o consola de desarrollo:
 string reporte = await Visor3D.Seguridad.SMTPLC.SmtplcDiagnostics.RunFullDiagnosticAsync();
 System.Diagnostics.Debug.WriteLine(reporte);
 ```
+
+---
+
+## 🚀 7. Hoja de Ruta y Mejoras Planificadas (v2.7+)
+
+Para consultar la auditoría técnica, la resolución de deuda técnica y las 8 nuevas mejoras arquitecturales (prevención de falsos positivos en Windows 11 VBS, similitud de Jaccard en clúster Wi-Fi, tolerancia a CGNAT/IPv6 y persistencia DPAPI), consulta el documento maestro:
+👉 **[README_MEJORAS.md](file:///E:/WoldVirtualP2P3D/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_022321c8/src/VSC#/Seguridad/SMTPLC/README_MEJORAS.md)**
+
