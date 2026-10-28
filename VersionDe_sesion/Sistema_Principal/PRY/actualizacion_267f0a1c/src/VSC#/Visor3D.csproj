@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualP2P3Dv2.6.7</AssemblyName>
+    <AssemblyName>DMWoldVirtualP2P3Dv2.6.8</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.6.7</Version>
-    <AssemblyVersion>2.6.7.0</AssemblyVersion>
-    <FileVersion>2.6.7.0</FileVersion>
+    <Version>2.6.8</Version>
+    <AssemblyVersion>2.6.8.0</AssemblyVersion>
+    <FileVersion>2.6.8.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualP2P3D v2.6.7 (restaura el chat completo de la 2.6.4 —texto, amigos, voz y webcam en la franja del chat— y mantiene el perfil persistente, una cuenta por PC, el diagnóstico de cuenta, el reset total único y el registro directo cuando el PC está vacío; integra el sistema de seguridad SMTPLC de la 2.6.5 —anti-VM, anti-VPN y anti-multicuenta por ubicación— con la detección de presencia P2P en la bienvenida; motor 3D y mundo en PCK intactos)</Description>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.6.8 (regresa sobre la 2.6.7 con el chat completo de la 2.6.4 —texto, amigos, voz y webcam—, el perfil persistente, una cuenta por PC, el reset total único, el registro directo cuando el PC está vacío y la bienvenida con presencia P2P; corrige el falso positivo de SMTPLC que bloqueaba el registro en equipos físicos con VBS/Hyper-V activo; motor 3D y mundo en PCK intactos)</Description>
   </PropertyGroup>
 
   <!--
