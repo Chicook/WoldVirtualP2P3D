@@ -36,9 +36,10 @@
 13. [Herramienta RFPRMN (CONTRRF)](#13-herramienta-rfprmn-contrrf)
 14. [Calidad y pruebas](#14-calidad-y-pruebas)
 15. [Hoja de ruta y deuda técnica](#15-hoja-de-ruta-y-deuda-t%C3%A9cnica)
-16. [Política del repositorio](#16-pol%C3%ADtica-del-repositorio)
-17. [Documentación interna](#17-documentaci%C3%B3n-interna)
-18. [Contribuir y licencia](#18-contribuir-y-licencia)
+16. [Tareas pendientes](#16-tareas-pendientes)
+17. [Política del repositorio](#17-pol%C3%ADtica-del-repositorio)
+18. [Documentación interna](#18-documentaci%C3%B3n-interna)
+19. [Contribuir y licencia](#19-contribuir-y-licencia)
 
 > Convención de rutas: en este documento `src/` es la abreviatura de
 > `VersionDe_sesion/CONTRRF/TLLDCD/src/`, el árbol que se exporta y compila. La copia
@@ -151,7 +152,7 @@ Economía y blockchain, token WCVcoin, validación de identidad única anti-Sybi
 | Chat de texto, voz y webcam | Implementado, sin prueba real entre dos máquinas | [`Chat/`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/Chat), [`MainWindow.xaml.cs`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/MainWindow.xaml.cs) |
 | CI (integración continua) | Roto (ver [§14](#14-calidad-y-pruebas)) | `src/STM_HRTS/.github/workflows/ci.yml` |
 
-**Verificado en esta fase:** carrusel y personalización tras un reset limpio; persistencia de avatar/nick/aspecto; arranque como anfitrión tras un OTA (corrección 2.5.5); chat y amigos con 24/24 comprobaciones headless; control del avatar con 35/35; construcción con **201/201** (incluye terreno voxel, deshacer la isla e inventario) y capturas visuales del terreno; descubrimiento P2P con 6/6; prueba de arranque del binario 2.5.9 con 15/15 y del binario 2.6.1 con **15/15** leyendo el PCK reexportado (14/15 sin perfil previo por el carrusel de arranque; 15/15 con perfil aislado); portal anunciando el asset vigente por `/api/info` (probado en la 2.6.0 con `751,8`; la 2.6.1 usa el mismo `RefrescarReleaseVigente`); URL de descarga de GitHub con **200** y `Content-Length` 788.230.009; digest del asset igual al local por API (`86d9cb6e…a88fc`); OTA local con los componentes reales (digest falso rechazado, descarga verificada, reemplazo y re-extracción). Para la 2.6.1: invitación con token **7/7**, islas sin usuarios **7/7**, animaciones **24/24** avatares y **16/16** GLB importables, chat **25/25**, instancia única verificada (segunda ejecución sale `0` en ~1,05 s y enfoca la ventana existente). Para la 2.6.2: chat **26/26** (incluye la regresión «la limpieza de tiles conserva la vista local del XAML» y detecta la webcam), red **7/7**, arranque **15/15** con `runtime\2.6.2\` y `.extracted` = `2.6.2`, PCK extraído idéntico al de origen, y los tres `digest` de la release coincidentes con los SHA-256 locales (`bb176468…47b6c`, `9966950c…`, `320f74a3…`). Para la 2.6.3: cuenta **12/12** sobre directorios temporales (diagnóstico de siete estados, archivo de restos con copia en `respaldo_cuenta`, cuenta completa intacta y limpieza del motor sin cuenta), chat **26/26**, red **7/7**, arranque **15/15** con `runtime\2.6.3\` y `.extracted` = `2.6.3`, y los tres `digest` de la release coincidentes con los SHA-256 locales (`9794cdb4…b03e62`, `16f113b1…`, `abb37c5a…`). Para la 2.6.4: cuenta **19/19** sobre directorios temporales (incluye el reset total único, la conservación de runtime/logs/cachés, el estado global vacío → registro completo y cuenta registrada → acceso), chat **26/26**, red **7/7**, arranque **15/15** con `runtime\2.6.4\` y `.extracted` = `2.6.4`, PCK extraído idéntico al embebido (SHA-256 `9d5c15e7…a69ac94`, reutilizado), y los tres `digest` de la release coincidentes con los SHA-256 locales (`8ec5d19c…576b9f`, `e5c12374…`, `61329a80…`). **Pendiente de verificar:** el OTA completo **desde GitHub** en un equipo con la versión anterior (2.5.8 → 2.5.9, 2.5.9 → 2.6.0, 2.6.0 → 2.6.1, 2.6.1 → 2.6.2, 2.6.2 → 2.6.3 y 2.6.3 → 2.6.4), la continuidad de sesión con tres instancias reales, el chat/construcción entre dos máquinas, la franja de webcams con una sesión autenticada real y dos cámaras, el reset total único y el registro completo en un PC real, y el portal anunciando por `/api/info` el asset publicado de la 2.6.4.
+**Verificado en esta fase:** carrusel y personalización tras un reset limpio; persistencia de avatar/nick/aspecto; arranque como anfitrión tras un OTA (corrección 2.5.5); chat y amigos con 24/24 comprobaciones headless; control del avatar con 35/35; construcción con **201/201** (incluye terreno voxel, deshacer la isla e inventario) y capturas visuales del terreno; descubrimiento P2P con 6/6; prueba de arranque del binario 2.5.9 con 15/15 y del binario 2.6.1 con **15/15** leyendo el PCK reexportado (14/15 sin perfil previo por el carrusel de arranque; 15/15 con perfil aislado); portal anunciando el asset vigente por `/api/info` (probado en la 2.6.0 con `751,8`; la 2.6.1 usa el mismo `RefrescarReleaseVigente`); URL de descarga de GitHub con **200** y `Content-Length` 788.230.009; digest del asset igual al local por API (`86d9cb6e…a88fc`); OTA local con los componentes reales (digest falso rechazado, descarga verificada, reemplazo y re-extracción). Para la 2.6.1: invitación con token **7/7**, islas sin usuarios **7/7**, animaciones **24/24** avatares y **16/16** GLB importables, chat **25/25**, instancia única verificada (segunda ejecución sale `0` en ~1,05 s y enfoca la ventana existente). Para la 2.6.2: chat **26/26** (incluye la regresión «la limpieza de tiles conserva la vista local del XAML» y detecta la webcam), red **7/7**, arranque **15/15** con `runtime\2.6.2\` y `.extracted` = `2.6.2`, PCK extraído idéntico al de origen, y los tres `digest` de la release coincidentes con los SHA-256 locales (`bb176468…47b6c`, `9966950c…`, `320f74a3…`). Para la 2.6.3: cuenta **12/12** sobre directorios temporales (diagnóstico de siete estados, archivo de restos con copia en `respaldo_cuenta`, cuenta completa intacta y limpieza del motor sin cuenta), chat **26/26**, red **7/7**, arranque **15/15** con `runtime\2.6.3\` y `.extracted` = `2.6.3`, y los tres `digest` de la release coincidentes con los SHA-256 locales (`9794cdb4…b03e62`, `16f113b1…`, `abb37c5a…`). Para la 2.6.4: cuenta **19/19** sobre directorios temporales (incluye el reset total único, la conservación de runtime/logs/cachés, el estado global vacío → registro completo y cuenta registrada → acceso), chat **26/26**, red **7/7**, arranque **15/15** con `runtime\2.6.4\` y `.extracted` = `2.6.4`, PCK extraído idéntico al embebido (SHA-256 `9d5c15e7…a69ac94`, reutilizado), y los tres `digest` de la release coincidentes con los SHA-256 locales (`8ec5d19c…576b9f`, `e5c12374…`, `61329a80…`). **Verificado en el PC real el 2026-10-28:** el OTA **desde GitHub** 2.5.4 → 2.6.4 (el exe resultante es idéntico al asset publicado, el anterior se conservó como `.old` y la app relanzó con `FileVersion 2.6.4.0`) y el reset total único con registro completo (14 elementos archivados en `respaldo_cuenta\reset-total-20261028-024605`, `reset_total.txt` = `2.6.4`, registro abierto a las 02:46:10 y cuenta persistida). **Pendiente de verificar:** el OTA literal 2.6.3 → 2.6.4 y el OTA sin sesión iniciada, el segundo arranque tras el reset, la continuidad de sesión con tres instancias reales, el chat/construcción entre dos máquinas, la franja de webcams con una sesión autenticada real y dos cámaras, y el portal anunciando por `/api/info` el asset publicado de la 2.6.4. Detalle en [§16](#16-tareas-pendientes).
 
 ---
 
@@ -693,7 +694,7 @@ Fuente: [`HOJA_DE_RUTA.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/HOJA_DE_RUTA.md)
 
 ### Deuda técnica más relevante
 
-Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/README_DESARROLLO.md) (D1–D16) y en los issues [#11](https://github.com/Chicook/WoldVirtualP2P3D/issues/11) (nits del actualizador), [#12](https://github.com/Chicook/WoldVirtualP2P3D/issues/12) (deuda del ciclo 2.5.4/2.5.5), [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17) (deuda de la jornada 2026-10-26, 2.5.6 → 2.5.9) y [#19](https://github.com/Chicook/WoldVirtualP2P3D/issues/19) (deuda de la 2.6.0). Las más relevantes hoy:
+Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/CONTRRF/TLLDCD/src/README_DESARROLLO.md) (D1–D16) y en los issues [#11](https://github.com/Chicook/WoldVirtualP2P3D/issues/11) (nits del actualizador), [#12](https://github.com/Chicook/WoldVirtualP2P3D/issues/12) (deuda del ciclo 2.5.4/2.5.5), [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17) (deuda de la jornada 2026-10-26, 2.5.6 → 2.5.9), [#19](https://github.com/Chicook/WoldVirtualP2P3D/issues/19) (deuda de la 2.6.0), [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) (deuda de la jornada 2026-10-28, 2.6.1 → 2.6.4), [#23](https://github.com/Chicook/WoldVirtualP2P3D/issues/23) (actualizador sin sesión), [#24](https://github.com/Chicook/WoldVirtualP2P3D/issues/24) (bienvenida y `estado.json`) y [#25](https://github.com/Chicook/WoldVirtualP2P3D/issues/25) (nits del OTA y del perfil). Las más relevantes hoy:
 
 | ID | Deuda |
 |---|---|
@@ -709,27 +710,55 @@ Inventario completo con evidencias en [`README_DESARROLLO.md`](VersionDe_sesion/
 | — | El portal solo refresca la release al arrancar, sin reintento si GitHub falla |
 | — | El PCK embebido no se valida por hash al extraer |
 
-### Pendientes inmediatos (2026-10-28)
+### Pendientes inmediatos
 
-Seguimiento detallado en el issue [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17). Los que bloquean dar por cerrada la fase:
+La lista viva de tareas, priorizada y enlazada a su issue, está en [§16](#16-tareas-pendientes); aquí queda el inventario histórico de la hoja de ruta.
 
-| Prioridad | Pendiente | Qué falta |
-|---|---|---|
-| P0 | OTA real desde GitHub hasta la 2.6.4 | El OTA local está probado; falta la descarga y el reemplazo contra la release publicada (2.5.9 → 2.6.0 → 2.6.1 → 2.6.2 → 2.6.3 → 2.6.4) |
-| P0 | Reset total único y registro completo en un PC real | El reset está probado sobre directorios temporales (19/19), pero el primer arranque real de la 2.6.4 —borrado único, `respaldo_cuenta` y registro completo con el motor— todavía no se ha ejecutado en un equipo |
-| P0 | Chat, amigos, voz/webcam y presencia con **dos y tres visores** en máquinas distintas | Los selftests locales (24/24 y 6/6) no sustituyen la prueba entre máquinas |
-| P0 | Flujo de identidad completo | Sesión vacía → llave + avatar; sesión ocupada → enlace de invitado, con el `?host=` del portal; el reinicio automático de cuenta sólo está probado sobre directorios temporales |
-| P0 | Franja de webcams del chat y portal de la 2.6.4 | La franja está validada en XAML/headless (26/26, incluida la vista local) pero no con una sesión autenticada real ni dos cámaras; el portal aún no se ha visto anunciando por `/api/info` el asset publicado de la 2.6.4 |
-| P1 | Firma de código | SmartScreen sigue avisando en 2.5.4–2.6.4 |
-| P1 | CI y suite unitaria del visor | Hoy solo hay autopruebas de arranque del ejecutable |
-| P1 | Recolección de runtimes antiguos | 8,0 GB en 15 carpetas, sin limpieza automática |
-| P2 | `release.json` / `SHA256SUMS` publicados y verificados por hash | Publicados desde la 2.6.1 hasta la 2.6.4; la verificación sigue siendo manual con `gh api`, sin automatizar |
+Checklist de publicación: [§7 de `REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md).
 
 Checklist de publicación: [§7 de `REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md).
 
 ---
 
-## 16. Política del repositorio
+## 16. Tareas pendientes
+
+> **Sección viva, actualizada el 2026-10-28** al cerrar la 2.6.4 y fusionar `DevQoderIA` en `main`. La fuente de verdad es el código y el [rastreador de issues](https://github.com/Chicook/WoldVirtualP2P3D/issues); cada fila apunta a su issue. Las etiquetas de estado siguen la convención de la cabecera.
+
+### 16.1 Cerrado en la jornada 2026-10-28
+
+| Tarea | Evidencia |
+|---|---|
+| OTA real desde GitHub 2.5.4 → 2.6.4 | El exe resultante es idéntico al asset publicado (SHA-256 `8ec5d19c…576b9f`, 788.250.489 B), el anterior se conservó como `.old` (787.264.673 B), `STM_actualizar` quedó limpio y la app relanzó con `FileVersion 2.6.4.0` / `ProductVersion 2.6.4+a5f84b1…` |
+| Reset total único y registro completo en el PC real | 14 elementos archivados en `respaldo_cuenta\reset-total-20261028-024605`, conservados `runtime`, `logs`, `cloudflared.exe` y `respaldo_cuenta`; `reset_total.txt` = `2.6.4`; `estado.json` en `vacio`/`registro-completo`; registro abierto a las 02:46:10 y cuenta persistida con sesión y túnel |
+| Suite de la jornada | `--cuenta-selftest` **19/19**, `--chat-selftest` **26/26**, `--red-selftest` **7/7** y `--startup-selftest` **15/15** con `runtime\2.6.4`; PCK reutilizado (`9d5c15e7…a69ac94`) y los tres `digest` de la release coincidentes con los SHA-256 locales |
+| Integración en `main` | PR [#21](https://github.com/Chicook/WoldVirtualP2P3D/pull/21), commit de merge `17a7b94`, sin binarios ni los borrados del flujo RFPRMN |
+
+Detalle y evidencias completas de la versión: [`README_desarrollo_20261028_2_6_4.md`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_52bf0d80/src/README_desarrollo_20261028_2_6_4.md).
+
+### 16.2 Pendiente, por prioridad
+
+| Prioridad | Tarea | Qué falta | Estado | Issue |
+|---|---|---|---|---|
+| P0 | Segundo arranque tras el reset total | Comprobar que `reset_total.txt` impide repetirlo y que la cuenta se reconoce (`Completa` → `acceso`). No se cerró la sesión del usuario para no cortar el túnel | Implementado, sin prueba real | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
+| P0 | OTA literal 2.6.3 → 2.6.4 y OTA sin sesión | Hoy se validó 2.5.4 → 2.6.4 con el mismo actualizador (`STM_actualizar` idéntico en `a5f84b1..5f23b8c`); falta un equipo con la 2.6.3 y un arranque sin sesión iniciada | Implementado, sin prueba real | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22), [#23](https://github.com/Chicook/WoldVirtualP2P3D/issues/23) |
+| P0 | Sesión real entre dos máquinas | Chat, amigos, voz/webcam y construcción entre dos equipos, por LAN y por túnel; los selftests locales (26/26 y 7/7) no lo sustituyen | Implementado, sin prueba real entre dos máquinas | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22), [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17) |
+| P0 | Flujo de identidad completo en equipos reales | Sesión vacía → llave + avatar; sesión ocupada → enlace de invitado con el `?host=` del portal; el reinicio automático de cuenta sólo está probado sobre directorios temporales | Implementado, sin prueba real | [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17) |
+| P0 | Webcams con dos cámaras y sesión autenticada | La franja está validada en XAML/headless (26/26, incluida la vista local de la 2.6.2) pero no con dos cámaras reales | Implementado, sin prueba real | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
+| P0 | Portal `/api/info` contra la release 2.6.4 | La última medición usó el fallback local; falta ver el portal anunciando el asset publicado de la 2.6.4 | Implementado, sin prueba real | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
+| P1 | Actualizador accesible sin sesión | El botón sólo existe en la vista del mundo (`PanelMundo3D`); faltan un indicador en la bienvenida y una prueba `--update-selftest` sin cuenta | Parcial | [#23](https://github.com/Chicook/WoldVirtualP2P3D/issues/23) |
+| P1 | Bienvenida y `estado.json` tras registrarse | La bienvenida queda detrás del registro automático y `estado.json` sigue en `vacio` después de registrarse (evidencia 02:46:05 frente a 02:46:42) | Parcial | [#24](https://github.com/Chicook/WoldVirtualP2P3D/issues/24) |
+| P1 | Firma de código | 2.5.4–2.6.4 se publican sin firmar y SmartScreen sigue avisando | Planificado | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
+| P1 | CI y suite unitaria del visor | Sólo hay autopruebas del ejecutable (D15); el workflow anidado de `src/STM_HRTS/.github/workflows/ci.yml` nunca se dispara ([§14](#14-calidad-y-pruebas)) | Planificado | — |
+| P1 | Recolección de runtimes antiguos | Sin recolector: medido 8,0 GB en 15 carpetas el 2026-10-24; hoy conviven `0.1.0`, `2.5.4` y `2.6.0`–`2.6.4` | Planificado | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
+| P2 | Nits del OTA y del perfil | El exe conserva el nombre anterior tras la OTA, `reset_total.txt` y `reset_cuenta.txt` duplican el marcador y los JSON de perfil llevan BOM | Implementado | [#25](https://github.com/Chicook/WoldVirtualP2P3D/issues/25) |
+| P2 | `release.json` / `SHA256SUMS` verificados por hash | Publicados desde la 2.6.1 hasta la 2.6.4; la verificación sigue siendo manual con `gh api`, sin automatizar | Parcial | [#19](https://github.com/Chicook/WoldVirtualP2P3D/issues/19) |
+| P2 | Deuda anterior vigente | Inventario D1–D16 y nits del actualizador, del ciclo 2.5.4/2.5.5 y de la 2.6.0 | — | [#11](https://github.com/Chicook/WoldVirtualP2P3D/issues/11), [#12](https://github.com/Chicook/WoldVirtualP2P3D/issues/12), [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17), [#19](https://github.com/Chicook/WoldVirtualP2P3D/issues/19) |
+
+**Regla de cierre:** una tarea sólo pasa a cerrada cuando su evidencia queda en este README o en el issue correspondiente; mientras tanto conserva la etiqueta de estado que refleje el código. Publicar una release, fusionar en `main` o cerrar issues requiere confirmación del dueño (R16 de [`REGLAS_DE_ACTUALIZACION.md`](REGLAS_DE_ACTUALIZACION.md)).
+
+---
+
+## 17. Política del repositorio
 
 ### Qué se versiona y qué no
 
@@ -760,7 +789,7 @@ Estos ficheros describen el entorno de trabajo del autor y no afectan a la compi
 
 ---
 
-## 17. Documentación interna
+## 18. Documentación interna
 
 **44 documentos Markdown** versionados. "Vigencia" según su contenido frente al código actual.
 
@@ -787,9 +816,9 @@ Estos ficheros describen el entorno de trabajo del autor y no afectan a la compi
 
 ---
 
-## 18. Contribuir y licencia
+## 19. Contribuir y licencia
 
 - **Licencia**: [MIT](LICENSE) — `Copyright (c) 2026 WoldVirtualP2P3D Contributors`.
 - **Issues y PR**: usa el [rastreador de GitHub](https://github.com/Chicook/WoldVirtualP2P3D/issues). El proyecto trabaja con ramas por asistente (`Dev*IA`) que se integran en `main` mediante pull request; cualquier PR debería seguir ese patrón.
-- **Qué NO subir**: binarios, cachés de Godot, datos de usuario, credenciales ni artefactos de ejecución (ver [§16](#16-pol%C3%ADtica-del-repositorio)).
+- **Qué NO subir**: binarios, cachés de Godot, datos de usuario, credenciales ni artefactos de ejecución (ver [§17](#17-pol%C3%ADtica-del-repositorio)).
 - **Alcance de esta fase**: prueba de conexión P2P 3D. Las propuestas de economía, token, anti-Sybil, construcción y chat se debaten como diseño antes de abrir código.
