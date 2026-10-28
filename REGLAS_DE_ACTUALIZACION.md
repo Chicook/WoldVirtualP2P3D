@@ -8,9 +8,11 @@ no pasa el checklist de §7, **no se publica**.
 sustentan. Si el código cambia y esta página no, gana el código y esta página es un defecto.
 
 Rutas relativas a la raíz del repositorio. El proyecto que se compila y exporta está bajo
-`VersionDe_sesion/CONTRRF/TLLDCD/src/`; en lo que sigue, `<src/>` = esa carpeta `src/`. La copia
-`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_f7bfd9ba/src/` es la última instantánea
-RFPRMN y está congelada en la 2.5.5: no es el árbol del que sale un binario nuevo.
+`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_52bf0d80/src/`; en lo que sigue, `<src/>` = esa
+carpeta `src/`. Es una instantánea RFPRMN: la sincronización del sistema de comandos deja
+`VersionDe_sesion/CONTRRF/TLLDCD/src/` vacío, y los borrados de esa ruta en Git son el efecto normal
+del flujo, no una señal de que el árbol activo haya desaparecido. Las instantáneas anteriores
+(`actualizacion_f7bfd9ba`, congelada en la 2.5.5) no son el árbol del que sale un binario nuevo.
 
 ---
 
@@ -48,14 +50,16 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualP2P3Dv2.6.0`, que corresponde al exe `DMWoldVirtualP2P3Dv2.6.0.exe`,
-publicado el 2026-10-27 como release v2.6.0 (tag sobre `760c597`, assets verificados por API). La
-release anterior v2.5.9 sigue publicada con su propio asset.
+extensión: hoy `DMWoldVirtualP2P3Dv2.6.4`, que corresponde al exe `DMWoldVirtualP2P3Dv2.6.4.exe`,
+publicado el 2026-10-28 como release v2.6.4 (tag sobre `5f23b8c`, assets verificados por API). Las
+releases anteriores v2.6.3, v2.6.2, v2.6.1, v2.6.0 y v2.5.9 siguen publicadas con su propio asset. El árbol
+local y la release vigente están, por tanto, alineados en la 2.6.4.
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
 fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
-los cuatro planos son `2.6.0` / `v2.6.0` / `DMWoldVirtualP2P3Dv2.6.0.exe` / `2.6.0`; la v2.5.9
-sigue publicada bajo su propio tag con sus planos alineados. El actualizador lee
+los cuatro planos son `2.6.4` / `v2.6.4` / `DMWoldVirtualP2P3Dv2.6.4.exe` / `2.6.4`; la v2.6.3, la v2.6.2,
+la v2.6.1, la v2.6.0 y la v2.5.9 siguen publicadas bajo su propio tag con sus planos alineados. El
+actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación
 hace que un visor se crea "al día" teniendo binario nuevo por instalar.
@@ -95,6 +99,10 @@ carrusel usa el mismo descubrimiento y la misma URL que el mundo: si tocas el pa
 **Cambiar una bandera exige tocar los dos lados en el mismo commit.** Sin `--userArgs`, Godot arranca
 como `SERVIDOR_LOCAL` por defecto (`GodotHwndHost.cs:252`): no es un error, pero un binario que deba
 conectar y no conecta se manifiesta así.
+Desde la 2.6.1 el contenido de `--peer-url` puede incluir `?invitacion=<token>`: no es
+una bandera nueva, es la misma URL con la credencial de sesión que exige el proxy del WebNodo
+(`<src/>MTBGT/WoldVirtualP2P3D/gdscrip/Red.gd:153-180`). El visor la compone en
+`MainWindow.UrlTunelConInvitacion` (`MainWindow.xaml.cs:1073`) y Godot la aplica sólo a `wss://`.
 
 **R9 — El proyecto Godot y el PCK no conviven en Git.** `*.pck` y `*.zip` están excluidos
 (`.gitignore:59-60`). Lo que se versiona es el **proyecto** (`<src/>MTBGT/WoldVirtualP2P3D/`) y el
@@ -111,6 +119,12 @@ de una build anterior.
 (`<src/>VSC#/Services/WebNodoService.cs:63,275-276,286`); WebSocket del motor **TCP 8911**
 (`WebNodoService.cs:575`, `MainWindow.xaml.cs:726`). **No hay ENet**: cualquier doc que mencione
 ENet/8910 está obsoleto.
+
+**Invitación (2.6.1).** El proxy del WebNodo exige `?invitacion=<token>` en todo
+handshake WebSocket —motor y `/chat`— antes de enrutar (`WebNodoService.cs:595-601`); el token es de
+32 hex en minúsculas y se genera por sesión (`WebNodoService.cs:132`). Un enlace de invitación sin
+token recibe `403`. La LAN directa (`ws://<ip>:8911`) y el relay (`:8920`) **no** atraviesan ese
+proxy: no se anuncian como protegidos por el token.
 
 **R11 — El portal anuncia la release vigente real, nunca una etiqueta fija.**
 Al arrancar, `RefrescarReleaseVigente()` (`WebNodoService.cs:86,266`) consulta GitHub con el **mismo**
@@ -230,5 +244,22 @@ Con evidencia en el log, no "me parece que va". El visor escribe en
 - **`--startup-selftest` depende de la sesión persistida de Godot (2026-10-27).** Si existe
   `user://p2p_session.json` con una sesión de cliente, el motor arranca como cliente remoto, no
   genera isla ni abre el WebSocket, y la prueba falla aunque el PCK sea correcto (`isla=False
-  red=False`, exit 0). El 2026-10-27 pasó **15/15** apartando ese fichero; la prueba debería aislar
-  el estado de sesión en lugar de depender del entorno. *Estado: Implementado, sensible al entorno.*
+  red=False`, exit 0). El 2026-10-27 pasó **15/15** apartando ese fichero.
+  **Segundo caso, comprobado el 2026-10-28:** sin `user://registro.cfg` el motor se queda en el
+  carrusel esperando la sonda y tampoco instancia isla ni abre el 8911, así que la 2.6.1 dio 14/15 en
+  la primera pasada; el PCK de la 2.6.0 en el mismo estado produce el mismo recorte, y con un
+  `APPDATA` aislado y un perfil de prueba la prueba pasa **15/15**. No es una regresión del PCK.
+  La prueba debería aislar ambos estados en lugar de depender del entorno.
+  *Estado: Implementado, sensible al entorno.*
+- **Alcance del token de invitación (2026-10-28).** El token protege la ruta pública (túnel y proxy
+  `/chat`) y se propaga por enlace, `--peer-url`, `p2p_session.json` y el endpoint del chat. Una
+  conexión directa en LAN (`ws://<ip>:8911`) o al relay (`:8920`) no atraviesa el WebNodo: queda
+  fuera del control por diseño. *Estado: Implementado; sin prueba real entre dos equipos.*
+- **Instancia única (2026-10-28).** `InstanciaUnica` usa un mutex por nombre de proceso y, en la
+  segunda ejecución, restaura y enfoca la ventana existente (adjuntando la entrada al hilo en primer
+  plano). El nombre incluye el `ProcessName`, que ya lleva la versión: dos versiones distintas no se
+  enfocan entre sí. Probado en el equipo de compilación (segunda ejecución: código 0 en ~1 s, un
+  solo proceso, ventana restaurada y en primer plano). *Estado: Implementado y probado en un equipo.*
+- **Prueba visual del chat con webcams (2026-10-28).** La franja horizontal de vídeos dentro del marco
+  del chat compila y la suite headless del chat pasa, pero no se ha visto con una sesión autenticada
+  real ni con dos cámaras. *Estado: Implementado, sin prueba visual.*
