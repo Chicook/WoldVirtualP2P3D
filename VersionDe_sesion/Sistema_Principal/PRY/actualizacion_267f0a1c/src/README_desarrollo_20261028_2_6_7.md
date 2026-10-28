@@ -2,8 +2,10 @@
 
 Trabajo sobre el árbol del 2026-10-28
 (`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c`), rama `DevQoderIA`.
-**Estado de la release: construida y probada en local; NO publicada.** No hay tag ni *release* en
-GitHub: publicar sigue requiriendo confirmación del dueño (R16 de `REGLAS_DE_ACTUALIZACION.md`).
+**Estado de la release: publicada como v2.6.7 el 2026-10-28.** Tag `v2.6.7` sobre el commit
+`aecbc84` de `main`, marcada *Latest*, con `exe` + `release.json` + `SHA256SUMS` verificados por API
+(`digest` coincidentes con los SHA-256 locales); la descarga responde `200` con `Content-Length`
+788.303.737. La v2.6.6 sigue publicada como release anterior.
 
 ---
 
@@ -129,7 +131,7 @@ Conclusión de la sonda: ahora mismo no hay ningún nodo activo, así que la bie
 
 | Tarea | Estado |
 |---|---|
-| Publicar la `v2.6.7` (tag, release con `exe` + `release.json` + `SHA256SUMS`) | **Pendiente de confirmación (R16)** |
+| Publicar la `v2.6.7` (tag, release con `exe` + `release.json` + `SHA256SUMS`) | **Publicada el 2026-10-28** (tag `v2.6.7` sobre `aecbc84` de `main`, *Latest*; `digest` del exe `902d5f43…a80fe71a`, `release.json` `212f7a28…c0bff2b` y `SHA256SUMS` `a67e3cde…ad7ecc4`; descarga `200` con `Content-Length` 788.303.737) |
 | OTA real 2.6.4/2.6.6 → 2.6.7 en el PC real | Sin prueba real |
 | Registro real con SMTPLC aprobando en hardware físico (sin VM ni VPN) y denegando en VM/VPN | Sin prueba real; la lógica viene de la rama Antigravity |
 | Sesión real entre dos máquinas (chat, voz, webcam, construcción) sobre la 2.6.7 | Sin prueba real |
