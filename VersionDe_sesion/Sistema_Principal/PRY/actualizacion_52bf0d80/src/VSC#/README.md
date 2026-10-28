@@ -1,7 +1,7 @@
 # 🌐 Wold Virtual P2P 3D — Visor C# (.NET 8 WPF) & WebNodo
 
 > **Ubicación:** `VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#`  
-> **Versión Actual:** `2.6.3` — EXE: `DMWoldVirtualP2P3Dv2.6.3.exe` (publicada como v2.6.3 el 2026-10-28, *Latest*; la v2.6.2 sigue publicada como release anterior).
+> **Versión Actual:** `2.6.4` — EXE: `DMWoldVirtualP2P3Dv2.6.4.exe` (publicada como v2.6.4 el 2026-10-28, *Latest*; la v2.6.3 sigue publicada como release anterior).
 > **Tecnologías:** C# 12, .NET 8 WPF, Win32 P/Invoke (`HwndHost`), Godot Engine 4 (incrustado), WebNodo nativo en C# (`HttpListener`), WMI (`System.Management`).
 
 ---
@@ -42,6 +42,7 @@ La carpeta `src/VSC#` implementa la capa de escritorio del cliente-visor del met
 - Iniciar un micro-servidor HTTP local y un túnel inverso SSH para compartir la sesión P2P con amigos sin requerir apertura manual de puertos (NAT traversal).
 - Exponer un portal web de descarga (`WebNodo`) para que otros usuarios descarguen el visor directamente desde la máquina anfitriona.
 - Al arrancar (2.6.3), comprobar si el PC tiene una cuenta local utilizable: si sólo quedan restos a medias, archivarlos en `respaldo_cuenta` y arrancar el ciclo de registro completo (`Seguridad/Seguridad_sesion_unica/ArranqueCuenta.cs`).
+- Al primer arranque de la (2.6.4), archivar **una sola vez** toda la base local en `respaldo_cuenta\reset-total-<fecha>` y dejar el equipo sin identidad; después anotar el estado global en `estado.json` (`Seguridad/EstadoGlobal.cs`) y, si no hay nada de lo necesario, abrir el ciclo de registro completo sin pasar por la bienvenida (`MainWindow.AbrirRegistroInicial`).
 
 ---
 
@@ -390,7 +391,10 @@ La **2.6.2** corrige la vista local: al iniciar la sesión se vaciaba `PanelVide
 expulsaba del árbol el tile `MarcoCamLocal` definido en XAML, así que la franja aparecía pero sin
 imagen; ahora la limpieza conserva el tile local y, al encender la cámara, se reinserta si faltara.
 La **2.6.3** añade el diagnóstico de cuenta al arrancar (ver §6): con restos a medias archiva en
-`respaldo_cuenta` y vuelve al ciclo de registro completo.
+`respaldo_cuenta` y vuelve al ciclo de registro completo. La **2.6.4** da un paso más: el primer
+arranque archiva toda la base local (una sola vez, con marcador permanente `reset_total.txt`), y si
+el PC no tiene nada de lo necesario abre directamente el registro completo; desde ese registro en
+adelante la cuenta persiste en esta y futuras versiones.
 Debajo quedan el historial y, al final, los controles de voz, cámara y envío. No usa un túnel propio:
 reutiliza el túnel público del WebNodo con la ruta `/chat`.
 
