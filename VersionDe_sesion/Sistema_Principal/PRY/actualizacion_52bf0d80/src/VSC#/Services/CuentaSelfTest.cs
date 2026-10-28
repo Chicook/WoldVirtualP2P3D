@@ -98,6 +98,73 @@ namespace Visor3D.Services
                       !File.Exists(Path.Combine(motorNueva, "avatar_hash.json")) &&
                       File.Exists(Path.Combine(motorNueva, "reset_flag.txt")),
                       motorNueva);
+
+                // ── Reset total único (2.6.4): deja la base vacía una sola vez ─
+                string raizTotal = NuevaRaiz(raizBase, "reset-total");
+                string motorTotal = Path.Combine(raizTotal, "godot");
+                EscribirCredenciales(Path.Combine(raizTotal, "credentials.json"), "username", "lucia", true);
+                Escribir(Path.Combine(raizTotal, "user", "user_profile.json"), "{\"nombre\":\"lucia\",\"passwordHash\":\"x\"}");
+                Escribir(Path.Combine(raizTotal, "user", "friends_abc.json"), "{}");
+                Escribir(Path.Combine(raizTotal, "Seguridad", "pc_sello.json"), "{}");
+                Escribir(Path.Combine(raizTotal, "runtime", "2.6.4", ".extracted"), "2.6.4");
+                Escribir(Path.Combine(raizTotal, "logs", "visor.log"), "log");
+                Escribir(Path.Combine(raizTotal, "cloudflared.exe"), "bin");
+                Escribir(Path.Combine(motorTotal, "registro.cfg"), "[jugador]");
+                Escribir(Path.Combine(motorTotal, "construccion", "isla_0.json"), "{}");
+                Escribir(Path.Combine(motorTotal, "shader_cache", "cache.bin"), "cache");
+                Escribir(Path.Combine(motorTotal, "logs", "godot.log"), "log");
+
+                bool total = ReinicioCuenta.EjecutarResetTotal("2.6.4", raizTotal, motorTotal);
+
+                Check("reset total: vacía la base de usuario",
+                      total &&
+                      !File.Exists(Path.Combine(raizTotal, "credentials.json")) &&
+                      !Directory.Exists(Path.Combine(raizTotal, "user")) &&
+                      !Directory.Exists(Path.Combine(raizTotal, "Seguridad")),
+                      raizTotal);
+                Check("reset total: vacía el estado del jugador en el motor",
+                      !File.Exists(Path.Combine(motorTotal, "registro.cfg")) &&
+                      !Directory.Exists(Path.Combine(motorTotal, "construccion")) &&
+                      File.Exists(Path.Combine(motorTotal, "reset_flag.txt")),
+                      motorTotal);
+                Check("reset total: conserva runtime, logs y cachés",
+                      File.Exists(Path.Combine(raizTotal, "runtime", "2.6.4", ".extracted")) &&
+                      File.Exists(Path.Combine(raizTotal, "cloudflared.exe")) &&
+                      File.Exists(Path.Combine(raizTotal, "logs", "visor.log")) &&
+                      File.Exists(Path.Combine(motorTotal, "shader_cache", "cache.bin")) &&
+                      File.Exists(Path.Combine(motorTotal, "logs", "godot.log")),
+                      "");
+                Check("reset total: todo queda copiado en respaldo_cuenta",
+                      Directory.GetFiles(Path.Combine(raizTotal, "respaldo_cuenta"), "*", SearchOption.AllDirectories).Length >= 6,
+                      Path.Combine(raizTotal, "respaldo_cuenta"));
+
+                // Estado global (adaptado de Estado_Global): sin nada necesario → registro completo.
+                var estadoVacio = EstadoGlobal.Actualizar(raizTotal, motorTotal);
+                Check("estado global: sin nada necesario pide registro completo",
+                      estadoVacio.FaltaTodo &&
+                      estadoVacio.Equipo == "vacio" &&
+                      File.Exists(Path.Combine(raizTotal, EstadoGlobal.Archivo)),
+                      $"{estadoVacio.Equipo}/{estadoVacio.Accion}");
+
+                // Cuenta creada después del reset: el siguiente arranque no la toca.
+                EscribirCredenciales(Path.Combine(raizTotal, "credentials.json"), "username", "lucia", true);
+                Escribir(Path.Combine(motorTotal, "registro.cfg"), "[jugador]");
+                bool repetido = ReinicioCuenta.EjecutarResetTotal("2.6.4", raizTotal, motorTotal);
+
+                Check("reset total: no se repite y la cuenta nueva persiste",
+                      !repetido &&
+                      File.Exists(Path.Combine(raizTotal, "credentials.json")) &&
+                      File.Exists(Path.Combine(motorTotal, "registro.cfg")) &&
+                      ReinicioCuenta.ResetTotalHecho(raizTotal),
+                      raizTotal);
+
+                // Con la cuenta ya registrada, el estado global pide acceso y no reset.
+                var estadoCompleto = EstadoGlobal.Actualizar(raizTotal, motorTotal);
+                Check("estado global: cuenta registrada pide acceso",
+                      estadoCompleto.Equipo == "completo" &&
+                      !estadoCompleto.FaltaTodo &&
+                      estadoCompleto.Necesario["motor"],
+                      $"{estadoCompleto.Equipo}/{estadoCompleto.Accion}");
             }
             catch (Exception ex)
             {

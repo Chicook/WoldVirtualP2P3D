@@ -27,6 +27,15 @@ namespace Visor3D.Seguridad.SesionUnica
 
         private static string Marcador(string baseDir) => Path.Combine(baseDir, "reset_cuenta.txt");
 
+        private static string MarcadorTotal(string baseDir) => Path.Combine(baseDir, "reset_total.txt");
+
+        // Lo que no es base de datos de usuario: motor, diagnósticos, copias y herramientas.
+        private static readonly string[] ConservarLocal = { "runtime", "logs", "respaldo_cuenta" };
+        private static readonly string[] ConservarLocalArchivos = { "cloudflared.exe", "reset_total.txt", "reset_cuenta.txt" };
+
+        // Cachés del motor: se regeneran solas y no contienen identidad.
+        private static readonly string[] ConservarGodot = { "logs", "shader_cache", "vulkan", "objectdb_snapshots" };
+
         // Sin estos ficheros el equipo deja de estar registrado.
         private static readonly string[] CriticosLocal =
         {
@@ -107,6 +116,114 @@ namespace Visor3D.Seguridad.SesionUnica
                 VisorLog.Error($"[cuenta] No se pudo reiniciar la base de usuarios para {version}", ex);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Borrado total único de la base de usuarios local (2.6.4): archiva en
+        /// <c>respaldo_cuenta\reset-total-&lt;fecha&gt;</c> todo el estado de la
+        /// cuenta —perfil, credenciales, llave, semilla, amigos y sello— junto
+        /// con el estado del jugador en Godot (registro, avatar, islas,
+        /// construcción, inventario y sesión). Conserva el runtime, los logs,
+        /// las cachés del motor y cloudflared.
+        ///
+        /// Deja el marcador permanente <c>reset_total.txt</c>: se ejecuta una
+        /// sola vez, así que lo que el usuario registre después persiste en
+        /// esta y en futuras versiones.
+        /// </summary>
+        /// <returns><c>true</c> si en este arranque se vació la base.</returns>
+        public static bool EjecutarResetTotal(string version, string? baseDir = null, string? godotDir = null)
+        {
+            string raiz = baseDir ?? BaseDir;
+            string motor = godotDir ?? GodotDir;
+            string marcador = MarcadorTotal(raiz);
+
+            try
+            {
+                if (File.Exists(marcador) && !string.IsNullOrWhiteSpace(File.ReadAllText(marcador)))
+                    return false; // ya se hizo: la cuenta nueva no se vuelve a tocar
+
+                string destino = Path.Combine(
+                    raiz, "respaldo_cuenta",
+                    "reset-total-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+                string destinoLocal = Path.Combine(destino, "local");
+                string destinoMotor = Path.Combine(destino, "godot");
+                Directory.CreateDirectory(destinoLocal);
+                Directory.CreateDirectory(destinoMotor);
+
+                int archivados = 0;
+
+                if (Directory.Exists(raiz))
+                {
+                    foreach (string entrada in Directory.GetFileSystemEntries(raiz))
+                    {
+                        if (SeConserva(entrada, ConservarLocal, ConservarLocalArchivos)) continue;
+                        // El motor tiene su propio barrido; si vive dentro de la raíz no se archiva en bloque.
+                        if (string.Equals(entrada, motor, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (Archivar(entrada, destinoLocal)) archivados++;
+                    }
+                }
+
+                if (Directory.Exists(motor))
+                {
+                    foreach (string entrada in Directory.GetFileSystemEntries(motor))
+                    {
+                        if (SeConserva(entrada, ConservarGodot, Array.Empty<string>())) continue;
+                        if (Archivar(entrada, destinoMotor)) archivados++;
+                    }
+                }
+
+                // Comprobar que no quedó identidad utilizable antes de marcar.
+                var pendientes = new List<string>();
+                foreach (string relativo in CriticosLocal)
+                    if (File.Exists(Path.Combine(raiz, relativo)))
+                        pendientes.Add(relativo);
+                if (File.Exists(Path.Combine(motor, "registro.cfg")))
+                    pendientes.Add("registro.cfg");
+
+                if (pendientes.Count > 0)
+                {
+                    VisorLog.Warn(
+                        $"[cuenta] Reset total {version} incompleto; pendientes: {string.Join(", ", pendientes)}. Respaldo: {destino}");
+                    return false;
+                }
+
+                Directory.CreateDirectory(motor);
+                File.WriteAllText(Path.Combine(motor, "reset_flag.txt"), version);
+
+                // Marcador permanente: ni esta ni futuras versiones repiten el reset.
+                File.WriteAllText(marcador, version);
+                File.WriteAllText(Marcador(raiz), version);
+
+                VisorLog.Info(
+                    $"[cuenta] Reset total {version}: {archivados} elementos archivados en {destino}. Base local vacía; el registro que se haga ahora persiste.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                VisorLog.Error($"[cuenta] Reset total {version} fallido", ex);
+                return false;
+            }
+        }
+
+        /// <summary>Si ya se hizo el reset total, no se reimportan cuentas antiguas.</summary>
+        public static bool ResetTotalHecho(string? baseDir = null)
+        {
+            try
+            {
+                string marcador = MarcadorTotal(baseDir ?? BaseDir);
+                return File.Exists(marcador) && !string.IsNullOrWhiteSpace(File.ReadAllText(marcador));
+            }
+            catch { return false; }
+        }
+
+        private static bool SeConserva(string ruta, string[] carpetas, string[] archivos)
+        {
+            string nombre = Path.GetFileName(ruta);
+            if (Array.Exists(carpetas, c => nombre.Equals(c, StringComparison.OrdinalIgnoreCase)))
+                return true;
+            if (Array.Exists(archivos, c => nombre.Equals(c, StringComparison.OrdinalIgnoreCase)))
+                return true;
+            return nombre.EndsWith(".log", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

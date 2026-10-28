@@ -64,6 +64,11 @@ namespace Visor3D
         private CancellationTokenSource? _ctsDescarga;
         private System.Windows.Threading.DispatcherTimer? _timerMigracion;
 
+        // Equipo sin nada de lo necesario: se abre el ciclo de registro completo
+        // sin pasar por la pantalla de bienvenida (sólo una vez por ejecución).
+        private readonly bool _equipoVacio;
+        private bool _registroAutoLanzado;
+
         // ── Chat del metaverso (texto + voz + webcam) ─────────────────
         private ChatRelayServer? _chatServer;
         private ChatClient? _chatClient;
@@ -90,9 +95,10 @@ namespace Visor3D
         private readonly Dictionary<string, int> _privadosNoLeidos = new();
         private readonly Dictionary<string, List<MensajePrivado>> _historialPrivado = new();
 
-        public MainWindow(string? initialConnectionUrl = null)
+        public MainWindow(string? initialConnectionUrl = null, bool equipoVacio = false)
         {
             InitializeComponent();
+            _equipoVacio = equipoVacio;
             if (!string.IsNullOrWhiteSpace(initialConnectionUrl))
             {
                 // El enlace puede traer ?host=<anfitrión raíz> y la invitación de la
@@ -178,6 +184,27 @@ namespace Visor3D
 
             // Iniciar búsqueda de actualizaciones en segundo plano
             _ = Task.Run(CheckUpdatesAsync);
+
+            // Equipo vacío: saltar la bienvenida y entrar directo al registro completo.
+            if (_equipoVacio)
+                Dispatcher.BeginInvoke(new Action(AbrirRegistroInicial));
+        }
+
+        /// <summary>
+        /// Subrutina de arranque: si este PC no tiene nada de lo necesario, abre el
+        /// ciclo de registro completo (hardware → usuario → semilla → llave) en vez
+        /// de dejar al usuario en una pantalla de acceso que no puede usar.
+        /// </summary>
+        private void AbrirRegistroInicial()
+        {
+            if (_registroAutoLanzado || PerfilUsuario.TieneIdentidad) return;
+            _registroAutoLanzado = true;
+
+            if (!Visor3D.Seguridad.SesionUnica.SesionUnicaGuarda.ComprobarAntesDeRegistro(this))
+                return;
+
+            Log("[cuenta] Equipo sin nada de lo necesario: se abre el ciclo de registro completo.");
+            new RegistroWindow().Show();
         }
 
         private void Log(string message)

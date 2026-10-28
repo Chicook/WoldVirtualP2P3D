@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualP2P3Dv2.6.3</AssemblyName>
+    <AssemblyName>DMWoldVirtualP2P3Dv2.6.4</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.6.3</Version>
-    <AssemblyVersion>2.6.3.0</AssemblyVersion>
-    <FileVersion>2.6.3.0</FileVersion>
+    <Version>2.6.4</Version>
+    <AssemblyVersion>2.6.4.0</AssemblyVersion>
+    <FileVersion>2.6.4.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualP2P3D v2.6.3 (al arrancar comprueba si el PC tiene una cuenta local utilizable; si sólo hay restos a medias los archiva en respaldo_cuenta y arranca el ciclo de registro completo; mantiene la corrección de la webcam en la franja del chat, acceso por invitación, instancia única, perfil persistente y mundo Godot reexportado)</Description>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.6.4 (borra una sola vez la base local al arrancar —perfil, credenciales, llave, semilla, amigos, sello y estado del jugador en Godot— archivándola en respaldo_cuenta, para recorrer el registro completo; si el PC no tiene nada de lo necesario abre el ciclo de registro sin pasar por la bienvenida; anota el estado global del equipo en estado.json y, tras registrarse, la cuenta persiste en esta y futuras versiones; mantiene el diagnóstico de cuenta de la 2.6.3 y la corrección de la webcam en la franja del chat)</Description>
   </PropertyGroup>
 
   <!--

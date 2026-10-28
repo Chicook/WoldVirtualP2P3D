@@ -74,13 +74,26 @@ namespace Visor3D
                     "manual-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
             }
 
-            // Equipos que vienen de instalaciones anteriores conservan su cuenta.
-            Visor3D.Seguridad.PerfilUsuario.MigrarSiProcede();
+            // ── RESET TOTAL ÚNICO (2.6.4) ───────────────────────────────────────
+            // Esta versión deja la base local vacía una sola vez —archivándola en
+            // respaldo_cuenta— para que el usuario recorra el registro completo. El
+            // marcador reset_total.txt impide que se repita: lo que registre ahora persiste.
+            ReinicioCuenta.EjecutarResetTotal(AppExtractor.Version);
+
+            // Equipos que vienen de instalaciones anteriores conservan su cuenta,
+            // salvo que ya se haya hecho el reset total.
+            if (!ReinicioCuenta.ResetTotalHecho())
+                Visor3D.Seguridad.PerfilUsuario.MigrarSiProcede();
 
             // Sin una cuenta utilizable (restos a medias, datos copiados de otro
             // equipo o instalación nueva con motor viejo) se archiva lo que haya
             // en respaldo_cuenta y el visor arranca el ciclo de registro completo.
             ArranqueCuenta.AsegurarCicloRegistro();
+
+            // Estado global del equipo (adaptado de la configuración Estado_Global):
+            // si no queda nada de lo necesario, la ventana abre el registro completo.
+            var estadoGlobal = Visor3D.Seguridad.EstadoGlobal.Actualizar();
+            VisorLog.Info($"[estado] Equipo {estadoGlobal.Equipo}; acción: {estadoGlobal.Accion}.");
 
             // ── Procesar argumentos de conexión remota (CLI / Enlace de Invitado) ──
             string? initialConnectionUrl = ParseCommandLineArgs(e.Args);
@@ -106,7 +119,7 @@ namespace Visor3D
                 // (intentara buscar Godot por rutas alternativas)
             }
 
-            var mainWindow = new MainWindow(initialConnectionUrl);
+            var mainWindow = new MainWindow(initialConnectionUrl, estadoGlobal.FaltaTodo);
             mainWindow.Show();
         }
 
