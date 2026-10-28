@@ -25,7 +25,7 @@ namespace Visor3D.Seguridad.SesionUnica
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Godot", "app_userdata", "WoldVirtualP2P3D");
 
-        private static string Marcador => Path.Combine(BaseDir, "reset_cuenta.txt");
+        private static string Marcador(string baseDir) => Path.Combine(baseDir, "reset_cuenta.txt");
 
         // Sin estos ficheros el equipo deja de estar registrado.
         private static readonly string[] CriticosLocal =
@@ -53,16 +53,22 @@ namespace Visor3D.Seguridad.SesionUnica
         /// Ejecuta el reinicio si esta versión aún no lo hizo.
         /// Devuelve true sólo cuando la cuenta quedó realmente archivada.
         /// </summary>
-        public static bool EjecutarSiProcede(string version)
+        /// <param name="version">Marca del reinicio; si ya está escrita, no se repite.</param>
+        /// <param name="baseDir">Sólo para las pruebas; por defecto %LOCALAPPDATA%\WoldVirtualP2P3D.</param>
+        /// <param name="godotDir">Sólo para las pruebas; por defecto el user:// del motor.</param>
+        public static bool EjecutarSiProcede(string version, string? baseDir = null, string? godotDir = null)
         {
+            string raiz = baseDir ?? BaseDir;
+            string motor = godotDir ?? GodotDir;
             try
             {
-                if (File.Exists(Marcador) &&
-                    File.ReadAllText(Marcador).Trim() == version)
+                string marcador = Marcador(raiz);
+                if (File.Exists(marcador) &&
+                    File.ReadAllText(marcador).Trim() == version)
                     return false;
 
                 string destino = Path.Combine(
-                    BaseDir, "respaldo_cuenta",
+                    raiz, "respaldo_cuenta",
                     DateTime.Now.ToString("yyyyMMdd-HHmmss"));
                 Directory.CreateDirectory(destino);
 
@@ -70,19 +76,19 @@ namespace Visor3D.Seguridad.SesionUnica
 
                 foreach (string relativo in CriticosLocal)
                 {
-                    if (!Archivar(Path.Combine(BaseDir, relativo), destino))
+                    if (!Archivar(Path.Combine(raiz, relativo), destino))
                         fallos.Add(relativo);
                 }
 
                 // Resto del directorio de usuario (semilla, amigos, sesión P2P).
-                ArchivarRestoDeUsuario(destino);
+                ArchivarRestoDeUsuario(destino, raiz);
 
                 foreach (string nombre in EstadoGodot)
-                    Archivar(Path.Combine(GodotDir, nombre), destino);
+                    Archivar(Path.Combine(motor, nombre), destino);
 
                 // Boot.gd borra registro.cfg si el movimiento falló por bloqueo.
-                Directory.CreateDirectory(GodotDir);
-                File.WriteAllText(Path.Combine(GodotDir, "reset_flag.txt"), version);
+                Directory.CreateDirectory(motor);
+                File.WriteAllText(Path.Combine(motor, "reset_flag.txt"), version);
 
                 if (fallos.Count > 0)
                 {
@@ -92,7 +98,7 @@ namespace Visor3D.Seguridad.SesionUnica
                     return false;
                 }
 
-                File.WriteAllText(Marcador, version);
+                File.WriteAllText(marcador, version);
                 VisorLog.Info($"[cuenta] Base de usuarios reiniciada para {version}. Respaldo: {destino}");
                 return true;
             }
@@ -103,9 +109,50 @@ namespace Visor3D.Seguridad.SesionUnica
             }
         }
 
-        private static void ArchivarRestoDeUsuario(string destino)
+        /// <summary>
+        /// Archiva sólo el estado del motor cuando el equipo no tiene cuenta
+        /// (equipo nuevo o copia sin credenciales) para que el motor no entre
+        /// directo con un avatar y nick viejos y el ciclo de registro empiece
+        /// de cero. No toca nada del perfil local.
+        /// </summary>
+        /// <returns>true si había algo que archivar.</returns>
+        public static bool LimpiarEstadoGodot(string motivo, string? baseDir = null, string? godotDir = null)
         {
-            string userDir = Path.Combine(BaseDir, "user");
+            string raiz = baseDir ?? BaseDir;
+            string motor = godotDir ?? GodotDir;
+            try
+            {
+                bool hayRestos = false;
+                foreach (string nombre in EstadoGodot)
+                {
+                    string ruta = Path.Combine(motor, nombre);
+                    if (File.Exists(ruta) || Directory.Exists(ruta)) { hayRestos = true; break; }
+                }
+                if (!hayRestos) return false;
+
+                string destino = Path.Combine(
+                    raiz, "respaldo_cuenta",
+                    DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + motivo);
+                Directory.CreateDirectory(destino);
+
+                foreach (string nombre in EstadoGodot)
+                    Archivar(Path.Combine(motor, nombre), destino);
+
+                Directory.CreateDirectory(motor);
+                File.WriteAllText(Path.Combine(motor, "reset_flag.txt"), motivo);
+                VisorLog.Info($"[cuenta] Estado del motor archivado ({motivo}). Respaldo: {destino}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                VisorLog.Warn($"[cuenta] No se pudo archivar el estado del motor ({motivo}): {ex.Message}");
+                return false;
+            }
+        }
+
+        private static void ArchivarRestoDeUsuario(string destino, string baseDir)
+        {
+            string userDir = Path.Combine(baseDir, "user");
             if (!Directory.Exists(userDir)) return;
 
             foreach (string fichero in Directory.GetFiles(userDir))

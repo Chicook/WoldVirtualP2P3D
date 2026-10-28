@@ -12,6 +12,13 @@ namespace Visor3D
         public static WebNodoService WebNodo { get; } = new WebNodoService();
         private void OnStartup(object sender, StartupEventArgs e)
         {
+            // Prueba del arranque de cuenta sobre directorios temporales.
+            if (Array.Exists(e.Args, a => a.Equals("--cuenta-selftest", StringComparison.OrdinalIgnoreCase)))
+            {
+                Environment.Exit(CuentaSelfTest.Run());
+                return;
+            }
+
             // Prueba de humo del chat sin abrir ventana ni extraer el motor.
             if (Array.Exists(e.Args, a => a.Equals("--chat-selftest", StringComparison.OrdinalIgnoreCase)))
             {
@@ -69,6 +76,11 @@ namespace Visor3D
 
             // Equipos que vienen de instalaciones anteriores conservan su cuenta.
             Visor3D.Seguridad.PerfilUsuario.MigrarSiProcede();
+
+            // Sin una cuenta utilizable (restos a medias, datos copiados de otro
+            // equipo o instalación nueva con motor viejo) se archiva lo que haya
+            // en respaldo_cuenta y el visor arranca el ciclo de registro completo.
+            ArranqueCuenta.AsegurarCicloRegistro();
 
             // ── Procesar argumentos de conexión remota (CLI / Enlace de Invitado) ──
             string? initialConnectionUrl = ParseCommandLineArgs(e.Args);
