@@ -1,7 +1,7 @@
 # 🌐 Wold Virtual P2P 3D — Visor C# (.NET 8 WPF) & WebNodo
 
 > **Ubicación:** `VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#`  
-> **Versión Actual:** `2.5.9` — EXE: `DMWoldVirtualp2pCNXv2.5.9.exe` (publicada el 2026-10-26 como release *Latest*; asset, `release.json` y `SHA256SUMS` verificados por API)
+> **Versión Actual:** `2.6.0` — EXE: `DMWoldVirtualP2P3Dv2.6.0.exe` (publicada el 2026-10-27 como release *Latest*; asset, `release.json` y `SHA256SUMS` verificados por API).
 > **Tecnologías:** C# 12, .NET 8 WPF, Win32 P/Invoke (`HwndHost`), Godot Engine 4 (incrustado), WebNodo nativo en C# (`HttpListener`), WMI (`System.Management`).
 
 ---
@@ -379,9 +379,11 @@ flowchart TD
 
 ## 7. Chat del metaverso (texto, voz y webcam)
 
-Implementado en `Chat/` y expuesto como un panel acoplado a la derecha del visor
-(`💬 Chat` en la barra superior). No usa un túnel propio: reutiliza el túnel público
-del WebNodo con la ruta `/chat`.
+Implementado en `Chat/` y expuesto como **barra inferior** a todo el ancho del visor
+(`💬 Chat` en la barra superior abre y cierra la barra). La barra ocupa una fila propia
+debajo del `HwndHost` de Godot para no cruzarse con el *airspace* nativo del motor; el
+historial y los vídeos van a la izquierda y los controles de voz, cámara y envío a la
+derecha. No usa un túnel propio: reutiliza el túnel público del WebNodo con la ruta `/chat`.
 
 ```
 Invitado ──wss://host/chat──► WebNodo del anfitrión ──ws──► ChatRelayServer :8920

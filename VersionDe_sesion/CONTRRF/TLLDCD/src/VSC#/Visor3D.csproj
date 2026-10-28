@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualp2pCNXv2.5.9</AssemblyName>
+    <AssemblyName>DMWoldVirtualP2P3Dv2.6.0</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.5.9</Version>
-    <AssemblyVersion>2.5.9.0</AssemblyVersion>
-    <FileVersion>2.5.9.0</FileVersion>
+    <Version>2.6.0</Version>
+    <AssemblyVersion>2.6.0.0</AssemblyVersion>
+    <FileVersion>2.6.0.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualp2pCNX v2.5.9 (el terreno solo se edita en la isla propia y la arena conserva su color al moverla; un invitado conecta con la raíz de la sesión y todos los usuarios se ven entre sí; pantalla de presencia en la bienvenida con estado vacío/ocupado y detección del nodo del enlace; conserva el control del avatar y el reinicio de usuarios de la 2.5.8/2.5.7)</Description>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.6.0 (perfil de usuario persistente entre actualizaciones con una sola cuenta por PC; chat en barra inferior; deshacer la isla y guardar en inventario desde el menú de construcción; mundo Godot reexportado desde este árbol)</Description>
   </PropertyGroup>
 
   <!--

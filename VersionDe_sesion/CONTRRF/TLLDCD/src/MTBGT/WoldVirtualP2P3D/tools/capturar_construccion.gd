@@ -11,6 +11,7 @@ const MUNDO := "res://ESCENAS/sceneOPTM/constructor/chunk3DBLOCK/ISLA3Dblock.tsc
 const CIELO := "res://gdshader/cielo_isla_env.tres"
 const Prims := preload("res://gdscrip/Prims.gd")
 const Terreno := preload("res://gdscrip/TerrenoEditable.gd")
+const VoxelSuave := preload("res://gdscrip/VoxelSuave.gd")
 
 var _ok := 0
 var _fallos := 0
@@ -288,6 +289,8 @@ func _correr() -> void:
 	await _capturar("07_prim_editado.png")
 	_c._seleccionar(null)
 
+	await _probar_voxel_visual()
+
 	# --------------------------------------------------- aislamiento por isla
 	# Una segunda isla como las que crea ChunkManager: duplicado de la plantilla
 	# oculta, con otra isla y otro dueño.
@@ -339,8 +342,7 @@ func _correr() -> void:
 	await _capturar("10_isla_ajena.png")
 	_c._on_herramienta(0)
 
-	# --------------------------------------------------------------- cierre
-	_c._activar_modo(false)
+	# --------------------------------------------------------------- cierre	_c._activar_modo(false)
 	_c._sucio.clear()
 	_c._colision_pendiente.clear()
 	_c.set_process(false)
@@ -348,6 +350,279 @@ func _correr() -> void:
 	await process_frame
 	print("RESULTADO CONSTRUCCION VISUAL: %d OK, %d FALLOS" % [_ok, _fallos])
 	quit(1 if _fallos > 0 else 0)
+
+
+## Terreno voxel: varias elevaciones suaves en tierra firme y una playa que
+## avanza hasta el contorno sumergido de la isla, nunca más allá de MARGEN_MAR
+## sobre la orilla. El borde de cada una se comprueba con rayos contra la isla
+## real, no contra el radio declarado.
+func _probar_voxel_visual() -> void:
+	var isla := _c._islas[0] as Node3D
+	_check(_c._panel._btn_terreno != null and _c._panel._btn_terreno.text == "Crear terreno",
+			"el panel ofrece el botón Crear terreno")
+	_check(_c._panel.forma_voxel() == "isla", "el selector de forma arranca en Isla")
+
+	var agua_y: float = _c._nivel_agua_mundo(_t)
+	var costa_idx := _indice_cerca(0.50, 0.0)
+	var costa_mundo: Vector3 = _t.malla.to_global(_t.vertices[costa_idx])
+	print("VOXEL agua y=%.2f, costa de referencia en (%.1f, %.1f) m"
+			% [agua_y, costa_mundo.x, costa_mundo.z])
+	var disp_centro: float = _c._radio_tierra(0, Vector3.ZERO, 60.0)
+	print("VOXEL tierra disponible desde el centro: %.1f m" % disp_centro)
+	_check(disp_centro > 8.0,
+			"el contorno deja sitio para elevar terreno (%.1f m)" % disp_centro)
+	if disp_centro <= 8.0:
+		return
+
+	# La rejilla de prims de la prueba anterior estorba en la vista y en los
+	# rayos del contorno.
+	for id in [1, 2, 3, 4, 5]:
+		_c._host_borrar_prim(0, id)
+	await process_frame
+	await physics_frame
+
+	var xmax: float = minf(26.0, disp_centro * 0.7)
+	var xs := [-xmax, -xmax / 3.0, xmax / 3.0, xmax]
+	var formas := ["isla", "meseta", "arco", "cordillera"]
+	var colores := [
+		Color(0.43, 0.57, 0.32),
+		Color(0.50, 0.58, 0.35),
+		Color(0.46, 0.50, 0.38),
+		Color(0.38, 0.47, 0.30),
+	]
+	var nodos: Array[Node3D] = []
+
+	# Vista amplia para que el ratón alcance el primer hueco.
+	_cam.global_position = _objetivo + Vector3(0.0, 55.0, 95.0)
+	_cam.look_at(_objetivo + Vector3(0.0, 4.0, 0.0), Vector3.UP)
+	await process_frame
+	await physics_frame
+
+	# El primer montículo nace pulsando el botón del panel: cubre la ruta
+	# completa (señal -> raycast -> medición de contorno -> rez).
+	var h0: float = _altura_local(float(xs[0]) / _t.escala, 0.0) * _t.escala
+	await _apuntar(isla.to_global(Vector3(float(xs[0]), h0, 0.0)))
+	var ids_antes: Array = _c._prims[0].keys()
+	_c._color_actual = colores[0]
+	_c._panel._forma_voxel.selected = 0
+	_c._panel._btn_terreno.pressed.emit()
+	await process_frame
+	await physics_frame
+	var nodo_boton: Node3D = null
+	var id_boton := 0
+	for id in _c._prims[0].keys():
+		if not ids_antes.has(id):
+			id_boton = int(id)
+			nodo_boton = _c._nodos[0].get(id) as Node3D
+			break
+	_check(nodo_boton != null, "el botón Crear terreno reza una elevación")
+	if nodo_boton != null:
+		var prm_boton: Dictionary = _c._prims[0][id_boton]["params"]
+		_check(str(_c._prims[0][id_boton]["tipo"]) == "voxel", "el botón crea un prim voxel")
+		_check(str(prm_boton.get("forma", "")) == "isla", "el botón respeta la forma Isla")
+		nodos.append(nodo_boton)
+		_comprobar_voxel(nodo_boton, prm_boton, false)
+
+	# Las otras tres formas, una por hueco y con semilla fija.
+	for i in range(1, 4):
+		var creado: Dictionary = await _crear_voxel_en(formas[i], float(xs[i]), 0.0,
+				colores[i], 700 + i)
+		_check(not creado.is_empty(),
+				"%s creado en x=%.1f m" % [VoxelSuave.NOMBRES[formas[i]], float(xs[i])])
+		if creado.is_empty():
+			continue
+		nodos.append(creado["nodo"] as Node3D)
+		_comprobar_voxel(creado["nodo"], creado["params"], false)
+
+	_cam.global_position = _objetivo + Vector3(0.0, 55.0, 95.0)
+	_cam.look_at(_objetivo + Vector3(0.0, 4.0, 0.0), Vector3.UP)
+	await _capturar("12_voxel_formas.png")
+
+	if nodos.size() >= 3:
+		var arco: Node3D = nodos[2]
+		_cam.global_position = arco.global_position + Vector3(-14.0, 12.0, 22.0)
+		_cam.look_at(arco.global_position + Vector3(0.0, 4.5, 0.0), Vector3.UP)
+		await _capturar("13_voxel_arco.png")
+
+	# ---------------------------------------------------------------- playa
+	var dir_costa := Vector2.RIGHT
+	var costa_x: float = _tierra_en_direccion(Vector3.ZERO, dir_costa, 70.0)
+	if costa_x < 8.0:
+		dir_costa = Vector2.LEFT
+		costa_x = _tierra_en_direccion(Vector3.ZERO, dir_costa, 70.0)
+	_check(costa_x > 8.0, "se localiza la orilla para la playa (%.1f m)" % costa_x)
+	if costa_x > 8.0:
+		var centro_playa := dir_costa * maxf(5.0, costa_x - 5.0)
+		var playa: Dictionary = await _crear_voxel_en("isla", centro_playa.x,
+				centro_playa.y, Color(0.80, 0.72, 0.50), 4242, true)
+		_check(not playa.is_empty(), "la playa se crea junto a la orilla")
+		if not playa.is_empty():
+			var prm_playa: Dictionary = playa["params"]
+			var nodo_playa: Node3D = playa["nodo"]
+			var disp_playa: float = float(playa["disponible"])
+			_check(float(prm_playa["borde"]) <= disp_playa + 0.001,
+					"la playa no sale del contorno medido (borde %.2f, tierra %.2f)"
+					% [float(prm_playa["borde"]), disp_playa])
+			_check(float(prm_playa["playa"]) >= 0.4,
+					"la playa lleva faldón de arena (%.2f m)"
+					% float(prm_playa["playa"]))
+			_check(absf(nodo_playa.global_position.y - (agua_y - 0.15)) < 0.05,
+					"la base de la playa nace a 15 cm bajo el agua")
+			_comprobar_voxel(nodo_playa, prm_playa, true)
+			_cam.global_position = nodo_playa.global_position + Vector3(22.0, 12.0, 20.0)
+			_cam.look_at(nodo_playa.global_position + Vector3(-4.0, 0.8, 0.0), Vector3.UP)
+			await _capturar("14_voxel_playa.png")
+
+	# ---------------------------------------------------------- panel voxel
+	_c._panel._scroll.scroll_vertical = 250
+	await process_frame
+	await _capturar("15_panel_voxel.png")
+	_c._panel._scroll.scroll_vertical = 0
+	_c._color_actual = Prims.COLORES[0]
+	await process_frame
+
+
+## Crea un prim voxel encajado al contorno medido, con semilla fija y la base
+## enterrada bajo la superficie. Devuelve {nodo, params, disponible}.
+func _crear_voxel_en(forma: String, x: float, z: float, color: Color, semilla: int,
+		tocar_mar := false) -> Dictionary:
+	var isla := _c._islas[0] as Node3D
+	var prm := VoxelSuave.params_por_defecto(forma)
+	prm["semilla"] = semilla
+	var disponible: float = _c._disponible_voxel(0, Vector3(x, 0.0, z),
+			float(prm["borde"]), tocar_mar)
+	if disponible <= 0.0:
+		return {}
+	var ajustado := VoxelSuave.ajustar_a_borde(prm, disponible, tocar_mar)
+	if ajustado.is_empty():
+		return {}
+	var agua_y: float = _c._nivel_agua_mundo(_t)
+	var h_m: float = _altura_local(x / _t.escala, z / _t.escala) * _t.escala
+	var y_local := h_m - 0.25
+	if tocar_mar:
+		y_local = agua_y - isla.global_position.y - 0.15
+		var altura_sobre_agua: float = isla.global_position.y + h_m - agua_y
+		ajustado["playa"] = clampf(altura_sobre_agua + 0.15, 0.45, 1.2)
+	var ids_antes: Array = _c._prims[0].keys()
+	_c._rez_con_datos(0, Prims.TIPO_VOXEL, Vector3(x, y_local, z), Vector3.ZERO,
+			Vector3.ONE, color, ajustado)
+	await process_frame
+	await physics_frame
+	for id in _c._prims[0].keys():
+		if ids_antes.has(id):
+			continue
+		var nodo := _c._nodos[0].get(id) as Node3D
+		if nodo != null:
+			return {"nodo": nodo, "params": _c._prims[0][id]["params"],
+					"disponible": disponible}
+	return {}
+
+
+## Comprueba malla y contorno de un voxel. `permitir_agua` deja tocar la orilla
+## (playa); sin él, todo el borde debe seguir en tierra firme.
+func _comprobar_voxel(nodo: Node3D, params: Dictionary, permitir_agua: bool) -> void:
+	var forma := str(params.get("forma", "isla"))
+	var malla := nodo.get_node_or_null("Malla") as MeshInstance3D
+	_check(malla != null and malla.mesh != null, "el voxel %s tiene malla" % forma)
+	if malla == null or malla.mesh == null:
+		return
+	var verts := malla.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array
+	_check(verts.size() > 100, "la malla de %s tiene %d vértices" % [forma, verts.size()])
+	var radio_malla := 0.0
+	for v in verts:
+		radio_malla = maxf(radio_malla, Vector2(v.x, v.z).length())
+	_check(radio_malla <= float(params["borde"]) + 0.01,
+			"la malla de %s cabe en su borde (%.2f <= %.2f m)"
+			% [forma, radio_malla, float(params["borde"])])
+	var frente := _frontera_en_tierra(nodo, radio_malla, permitir_agua)
+	_check(bool(frente["ok"]),
+			"%s no sale del contorno (%d fallos, cota mínima %.2f m)"
+			% [VoxelSuave.NOMBRES.get(forma, forma), int(frente["fallos"]),
+			float(frente["peor"])])
+
+
+## Último radio (metros de isla) que sigue siendo tierra firme en una
+## dirección. La costa se mide con el terreno real, no con la caja de la malla.
+func _tierra_en_direccion(centro: Vector3, dir: Vector2, maximo: float) -> float:
+	var agua_y: float = _c._nivel_agua_mundo(_t)
+	var isla := _c._islas[0] as Node3D
+	var excluir := _exclusiones_rayos()
+	var ultimo := 0.0
+	var r := 0.5
+	while r <= maximo:
+		var mundo: Vector3 = isla.to_global(Vector3(centro.x + dir.x * r, 0.0,
+				centro.z + dir.y * r))
+		var consulta := PhysicsRayQueryParameters3D.create(
+				Vector3(mundo.x, agua_y + 240.0, mundo.z),
+				Vector3(mundo.x, agua_y - 90.0, mundo.z))
+		consulta.collide_with_areas = false
+		consulta.exclude = excluir
+		var golpe: Dictionary = (_mundo as Node3D).get_world_3d().direct_space_state.intersect_ray(consulta)
+		if golpe.is_empty():
+			break
+		var col = golpe["collider"]
+		if not (col is Node):
+			break
+		var nodo := col as Node
+		if not nodo.has_meta("terreno_editable") or int(nodo.get_meta("isla", -1)) != 0:
+			break
+		if (golpe["position"] as Vector3).y <= agua_y:
+			break
+		ultimo = r
+		r += 0.5
+	return ultimo
+
+
+## Lanza 32 rayos justo en el contorno real de la malla y comprueba que todos
+## caen en la isla propia. En tierra firme la cota debe seguir sobre el agua;
+## en la playa basta con que haya terreno de la isla: su borde ya se midió
+## contra el contorno, y el fondo puede estar sumergido.
+func _frontera_en_tierra(nodo: Node3D, borde: float, permitir_agua: bool) -> Dictionary:
+	var agua_y: float = _c._nivel_agua_mundo(_t)
+	var tolerancia := 1e9 if permitir_agua else 0.05
+	var excluir := _exclusiones_rayos()
+	var fallos := 0
+	var peor := 1e9
+	var radio := borde
+	for a in 32:
+		var angulo := TAU * float(a) / 32.0
+		var punto: Vector3 = nodo.global_position \
+				+ Vector3(cos(angulo), 0.0, sin(angulo)) * radio
+		var consulta := PhysicsRayQueryParameters3D.create(
+				Vector3(punto.x, agua_y + 240.0, punto.z),
+				Vector3(punto.x, agua_y - 90.0, punto.z))
+		consulta.collide_with_areas = false
+		consulta.exclude = excluir
+		var golpe: Dictionary = (_mundo as Node3D).get_world_3d().direct_space_state.intersect_ray(consulta)
+		var cota := -1e9
+		if not golpe.is_empty():
+			var col = golpe["collider"]
+			if col is Node:
+				var n := col as Node
+				if n.has_meta("terreno_editable") and int(n.get_meta("isla", -1)) == 0:
+					cota = (golpe["position"] as Vector3).y - agua_y
+		if cota >= -tolerancia:
+			peor = minf(peor, cota)
+		else:
+			fallos += 1
+	return {"ok": fallos == 0, "fallos": fallos,
+			"peor": peor if peor < 1e8 else -999.0}
+
+
+## Cuerpos que no deben tapar la medición del contorno: todo lo que no sea
+## terreno editable (océano, avatar, prims, plantilla oculta). Así el rayo
+## atraviesa el agua y mide la isla que hay debajo.
+func _exclusiones_rayos() -> Array[RID]:
+	var excluir: Array[RID] = []
+	_excluir_sin_terreno(_mundo, excluir)
+	return excluir
+
+
+func _excluir_sin_terreno(nodo: Node, excluir: Array[RID]) -> void:
+	if nodo is CollisionObject3D and not nodo.has_meta("terreno_editable"):
+		excluir.append((nodo as CollisionObject3D).get_rid())
+	for hijo in nodo.get_children():
+		_excluir_sin_terreno(hijo, excluir)
 
 
 func _pincel(herramienta: int, ticks: int, destino: Vector3) -> void:

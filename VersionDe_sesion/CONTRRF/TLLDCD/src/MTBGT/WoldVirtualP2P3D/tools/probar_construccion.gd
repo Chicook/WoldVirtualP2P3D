@@ -4,6 +4,7 @@ extends SceneTree
 
 const Terreno := preload("res://gdscrip/TerrenoEditable.gd")
 const Prims := preload("res://gdscrip/Prims.gd")
+const VoxelSuave := preload("res://gdscrip/VoxelSuave.gd")
 const Construccion := preload("res://gdscrip/Construccion.gd")
 const ESCENA_ISLA := "res://gltfimport/terrenoblok/ISLA3DCHUNK.gltf"
 
@@ -35,6 +36,7 @@ func _correr() -> void:
 	_probar_aislamiento()
 	_probar_color_mover()
 	_probar_prims()
+	_probar_voxel()
 	_probar_construccion()
 	print("RESULTADO CONSTRUCCION: %d OK, %d FALLOS" % [_ok, _fallos])
 	quit(0 if _fallos == 0 else 1)
@@ -427,6 +429,81 @@ func _probar_prims() -> void:
 	_check(con_id_malo["prims"].is_empty(), "descarta ids no positivos")
 
 
+func _probar_voxel() -> void:
+	_contexto = "voxel"
+	for forma in VoxelSuave.FORMAS:
+		var prm := VoxelSuave.params_por_defecto(forma)
+		var malla := VoxelSuave.new().generar(prm)
+		_check(malla.get_surface_count() == 1, "malla voxel de %s" % forma)
+		if malla.get_surface_count() == 0:
+			continue
+		var arrays := malla.surface_get_arrays(0)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var normales: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		_check(verts.size() > 100, "%s genera geometría (%d vértices)" % [forma, verts.size()])
+		_check(indices.size() > 0 and indices.size() % 3 == 0,
+				"%s genera triángulos (%d)" % [forma, indices.size()])
+		_check(normales.size() == verts.size(), "%s tiene normales por vértice" % forma)
+		var radio_max := 0.0
+		var ymin := 1e9
+		var ymax := -1e9
+		for v in verts:
+			radio_max = maxf(radio_max, Vector2(v.x, v.z).length())
+			ymin = minf(ymin, v.y)
+			ymax = maxf(ymax, v.y)
+		_check(radio_max <= float(prm["borde"]) + 0.001,
+				"%s cabe en el borde (%.2f <= %.2f)" % [forma, radio_max, prm["borde"]])
+		_check(ymin >= -float(prm["fondo"]) - 0.001,
+				"%s respeta el fondo (%.2f)" % [forma, ymin])
+		_check(ymax <= float(prm["altura"]) * 1.16,
+				"%s respeta la altura (%.2f)" % [forma, ymax])
+		var otra := VoxelSuave.new().generar(prm)
+		var arrays2 := otra.surface_get_arrays(0)
+		_check((arrays2[Mesh.ARRAY_VERTEX] as PackedVector3Array) == verts,
+				"%s se regenera igual con la misma semilla" % forma)
+
+	var malo := VoxelSuave.normalizar_params(
+			{"forma": "castillo", "radio": -5.0, "altura": 900.0, "detalle": 999})
+	_check(malo["forma"] == "isla", "una forma desconocida cae a isla")
+	_check(float(malo["radio"]) >= VoxelSuave.RADIO_MIN, "el radio se acota")
+	_check(float(malo["altura"]) <= VoxelSuave.ALTURA_MAX, "la altura se acota")
+	_check(int(malo["detalle"]) <= VoxelSuave.DETALLE_MAX, "el detalle se acota")
+
+	var ajuste := VoxelSuave.ajustar_a_borde(VoxelSuave.params_por_defecto("isla"), 20.0, false)
+	_check(not ajuste.is_empty() and float(ajuste["borde"]) <= 19.5,
+			"en tierra firme el borde queda dentro del contorno")
+	var costa := VoxelSuave.ajustar_a_borde(VoxelSuave.params_por_defecto("isla"), 6.0, true)
+	_check(not costa.is_empty(), "junto a la costa se puede crear una playa")
+	_check(float(costa["borde"]) <= 6.0 + 0.001,
+			"la playa no se sale del contorno medido")
+	_check(float(costa["playa"]) > 0.0, "la playa activa el faldón de arena")
+	_check(VoxelSuave.ajustar_a_borde(VoxelSuave.params_por_defecto("isla"), 2.0, true).is_empty(),
+			"rechaza un punto sin tierra firme suficiente")
+
+	_check(Prims.es_tipo_valido("voxel"), "voxel es un tipo válido")
+	var prm_meseta := VoxelSuave.params_por_defecto("meseta")
+	var malla_prims := Prims.crear_malla("voxel", prm_meseta)
+	_check(malla_prims is ArrayMesh and malla_prims.get_surface_count() == 1,
+			"Prims crea la malla voxel")
+	_check(Prims.crear_forma("voxel", prm_meseta) is ConcavePolygonShape3D,
+			"Prims crea la colisión trimesh del voxel")
+	var texto := Prims.serializar_isla({1: {
+		"id": 1, "tipo": "voxel", "pos": Vector3(2, 3, 4), "rot": Vector3.ZERO,
+		"escala": Vector3.ONE, "color": Color.WHITE, "params": prm_meseta,
+	}}, 2, "UUID-VOXEL")
+	var leido := Prims.deserializar_isla(texto)
+	_check(not leido.is_empty() and leido["prims"][1]["tipo"] == "voxel",
+			"el JSON conserva el prim voxel")
+	_check(leido["prims"][1]["params"]["forma"] == "meseta",
+			"el JSON conserva la forma del terreno")
+	_check(int(leido["prims"][1]["params"]["semilla"]) == int(prm_meseta["semilla"]),
+			"el JSON conserva la semilla del terreno")
+	var sin_params := Prims.desde_dict({"id": 2, "tipo": "voxel"})
+	_check(sin_params["params"]["forma"] == "isla",
+			"un voxel sin params usa la forma por defecto")
+
+
 func _probar_construccion() -> void:
 	_contexto = "construccion"
 	var stub := StubChunk.new()
@@ -468,7 +545,7 @@ func _probar_construccion() -> void:
 
 	# Simula el aviso del anfitrion con un id creado por otro peer.
 	c._siguiente[99] = 1
-	c._prim_creado(99, 5, "cubo", Vector3.ZERO, Vector3.ZERO, Vector3.ONE, Color.WHITE)
+	c._prim_creado(99, 5, "cubo", Vector3.ZERO, Vector3.ZERO, Vector3.ONE, Color.WHITE, {})
 	_check(int(c._siguiente[99]) == 6, "el contador avanza con ids remotos")
 	_check(c._prims[99].has(5), "un prim remoto se instancia")
 	c._prim_borrado(99, 5)
@@ -518,6 +595,87 @@ func _probar_construccion() -> void:
 	c._borrar()
 	_check(not c._prims[99].has(1), "borrar elimina el prim del registro")
 	_check(not c._nodos[99].has(1), "borrar elimina el nodo")
+
+	var params_voxel := VoxelSuave.params_por_defecto("arco")
+	var id_voxel: int = c._host_crear_prim(99, "voxel", Vector3(-4.0, 1.0, 2.0),
+			Vector3.ZERO, Vector3.ONE, Color(0.66, 0.60, 0.52), params_voxel)
+	_check(id_voxel > 0 and c._nodos[99].has(id_voxel), "el anfitrión instancia un terreno voxel")
+	if id_voxel > 0:
+		var nodo_voxel: Node3D = c._nodos[99][id_voxel]
+		var malla_voxel := nodo_voxel.get_node_or_null("Malla") as MeshInstance3D
+		var colision_voxel := nodo_voxel.get_node_or_null("Colision") as CollisionShape3D
+		_check(malla_voxel != null and malla_voxel.mesh != null
+				and malla_voxel.mesh.get_surface_count() == 1, "el terreno voxel tiene malla")
+		_check(colision_voxel != null and colision_voxel.shape is ConcavePolygonShape3D,
+				"el terreno voxel tiene colisión trimesh")
+		_check(malla_voxel.material_override is StandardMaterial3D
+				and (malla_voxel.material_override as StandardMaterial3D).vertex_color_use_as_albedo,
+				"el terreno voxel usa el color por vértice")
+		_check(str(c._prims[99][id_voxel]["params"]["forma"]) == "arco",
+				"el registro conserva la forma del terreno")
+		c._seleccionar(nodo_voxel)
+		c._duplicar()
+		var copia := -1
+		for otro in c._prims[99]:
+			if int(otro) != id_voxel and c._prims[99][otro]["tipo"] == "voxel":
+				copia = int(otro)
+		_check(copia > 0, "duplicar crea otro terreno voxel")
+		if copia > 0:
+			_check(c._prims[99][copia]["params"] == c._prims[99][id_voxel]["params"],
+					"la copia conserva los parámetros del terreno")
+			c._solicitar_borrado(99, copia)
+		c._seleccionar(nodo_voxel)
+		c._borrar()
+		_check(not c._prims[99].has(id_voxel), "borrar elimina el terreno voxel")
+
+	# ── Deshacer y guardar en inventario (v2.6.0) ──────────────────────
+	_check(c._panel._btn_deshacer != null and c._panel._btn_deshacer.text == "Deshacer isla",
+			"el panel ofrece Deshacer isla")
+	_check(c._panel._lista_actual != null and c._panel._lista_guardado != null,
+			"la pestaña Inventario tiene las dos listas")
+	c._carpeta_inventario = "user://inventario_prueba"
+	var terreno99 = c._terrenos[99]
+	_check(terreno99.esta_editado(), "el pincel marca el terreno como esculpido")
+	var id_inv: int = c._host_crear_prim(99, "cubo", Vector3(2.0, 1.0, 2.0),
+			Vector3.ZERO, Vector3.ONE, Color.WHITE)
+	_check(id_inv > 0, "hay un objeto para inventariar")
+	c._guardar_en_inventario()
+	var ruta_indice := "user://inventario_prueba/inventario.json"
+	_check(FileAccess.file_exists(ruta_indice), "guardar en inventario crea el índice")
+	var entradas := c._leer_entradas_inventario()
+	_check(entradas.size() == 1, "el índice lista la copia guardada")
+	if not entradas.is_empty():
+		var entrada: Dictionary = entradas[0]
+		_check(int(entrada.get("isla", -1)) == 99, "la copia guarda la isla")
+		_check(bool(entrada.get("terreno", false)), "la copia marca el terreno")
+		_check(int(entrada.get("assets", 0)) >= 1, "la copia cuenta los assets")
+		_check(FileAccess.file_exists("user://inventario_prueba/%s" % str(entrada.get("archivo", ""))),
+				"la copia tiene su propio archivo")
+	c._refrescar_inventario()
+	_check(c._panel._lista_actual.get_child_count() >= 3,
+			"la pestaña lista el terreno y los objetos de la isla")
+	_check(c._panel._lista_guardado.get_child_count() >= 3,
+			"la pestaña lista la copia con sus etiquetas")
+
+	c._deshacer_isla()
+	_check(c._prims[99].is_empty(), "deshacer vacía los objetos")
+	_check(not terreno99.esta_editado(), "deshacer restaura el estado original del terreno")
+	_check(terreno99.vertices == terreno99.vertices_base, "deshacer devuelve las alturas base")
+	_check(terreno99.colores == terreno99.colores_base, "deshacer devuelve los colores base")
+	c._refrescar_inventario()
+	_check(c._panel._lista_actual.get_child_count() >= 2,
+			"tras deshacer la pestaña sigue describiendo la isla")
+
+	# Limpieza: sólo los artefactos de esta prueba.
+	var dir_inv := DirAccess.open("user://inventario_prueba")
+	if dir_inv != null:
+		for archivo in dir_inv.get_files():
+			dir_inv.remove(archivo)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://inventario_prueba"))
+	for ruta_tmp in ["user://construccion/terreno_99_UUID-PRUEBA.bin",
+			"user://construccion/prims_99_UUID-PRUEBA.json"]:
+		if FileAccess.file_exists(ruta_tmp):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(ruta_tmp))
 
 	c._bloquear_avatar(true)
 	_check(avatar.get_meta("construccion_activa", false), "el modo construccion marca al avatar")
