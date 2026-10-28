@@ -161,7 +161,8 @@ visor da **0 avisos y 0 errores**.
 
 **Aviso de vigencia:** el exe publicado `DMWoldVirtualP2P3Dv2.6.7.exe`
 (SHA-256 `902d5f43…a80fe71a`) se compiló **antes** de esta corrección, así que en un PC con
-VBS/Hyper-V activo seguiría denegando el registro. La siguiente compilación debe incluir el cambio.
+VBS/Hyper-V activo sigue denegando el registro. La corrección va incluida en la **2.6.8**
+(`DMWoldVirtualP2P3Dv2.6.8.exe`, ver [`README_desarrollo_20261028_2_6_8.md`](README_desarrollo_20261028_2_6_8.md)).
 La v2.6.7 publicada no se retoca: el tag `v2.6.7` queda sobre `aecbc84`.
 
 ## Seguridad de las pruebas
@@ -179,7 +180,7 @@ La v2.6.7 publicada no se retoca: el tag `v2.6.7` queda sobre `aecbc84`.
 | Publicar la `v2.6.7` (tag, release con `exe` + `release.json` + `SHA256SUMS`) | **Publicada el 2026-10-28** (tag `v2.6.7` sobre `aecbc84` de `main`, *Latest*; `digest` del exe `902d5f43…a80fe71a`, `release.json` `212f7a28…c0bff2b` y `SHA256SUMS` `a67e3cde…ad7ecc4`; descarga `200` con `Content-Length` 788.303.737) |
 | OTA real 2.6.4/2.6.6 → 2.6.7 en el PC real | Sin prueba real |
 | Registro real con SMTPLC aprobando en hardware físico (sin VM ni VPN) y denegando en VM/VPN | **Probado el 2026-10-28 con arnés de código real: 11/11**, aprobación con política por defecto y denegaciones por cuota, enfriamiento, VM y VPN. Corregido el falso positivo de `HypervisorPresent` (ver arriba). El exe publicado, sin embargo, es anterior a la corrección |
-| Recompilar y publicar una versión que incluya la corrección de `VmDetector` | Pendiente (requiere decisión de versión y publicación) |
+| Recompilar y publicar una versión que incluya la corrección de `VmDetector` | **Compilada el 2026-10-28 como 2.6.8** (`DMWoldVirtualP2P3Dv2.6.8.exe`, SHA-256 `6ab640d1…b554`, autopruebas 19/19, 7/7, 15/15 y chat sin fallos); publicación pendiente de confirmación |
 | Sesión real entre dos máquinas (chat, voz, webcam, construcción) sobre la 2.6.7 | Sin prueba real |
 | Firma de código | Planificado |
 
