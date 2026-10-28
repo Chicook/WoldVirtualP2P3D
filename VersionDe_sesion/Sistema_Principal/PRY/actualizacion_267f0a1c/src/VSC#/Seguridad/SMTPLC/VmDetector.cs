@@ -136,8 +136,11 @@ namespace Visor3D.Seguridad.SMTPLC
 
                     if (hypervisorPresent)
                     {
-                        score += 0.50;
-                        artifacts.Add("Flag HypervisorPresent en Win32_ComputerSystem está ACTIVO (CPU en hipervisor).");
+                        // Windows activa este flag con VBS, Credential Guard, Hyper-V, WSL2 o
+                        // sandboxing en equipos físicos, así que por sí solo no puede superar
+                        // el umbral de VM: sólo corrobora otras señales.
+                        score += 0.25;
+                        artifacts.Add("Flag HypervisorPresent en Win32_ComputerSystem está ACTIVO (VBS/Hyper-V de Windows; señal corroborante, no concluyente).");
                         hypervisors.Add("Hipervisor de CPU");
                     }
 
