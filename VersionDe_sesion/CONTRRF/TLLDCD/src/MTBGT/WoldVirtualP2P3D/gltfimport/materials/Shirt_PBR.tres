@@ -1,7 +1,0 @@
-[gd_resource type="StandardMaterial3D" format=3 uid="uid://dddd08gfs2v13"]
-
-[resource]
-resource_name = "Shirt_PBR"
-cull_mode = 2
-albedo_color = Color(0.48452926, 0.64995646, 0.80946815, 1)
-roughness = 0.8
