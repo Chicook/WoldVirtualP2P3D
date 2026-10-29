@@ -3,10 +3,11 @@
 Trabajo sobre el árbol del 2026-10-29
 (`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c`), rama `DevQoderIA`.
 
-**Estado: Implementado y empaquetado como v2.7.0.** Los `.gd`, escenas y pruebas están en el árbol,
-el `wvp3d.pck` se ha exportado de este mismo árbol, el visor se ha compilado como
-`DMWoldVirtualP2P3Dv2.7.0.exe` y las cuatro autopruebas del visor terminan en verde. La publicación
-en GitHub y el OTA se acreditan al final, cuando ocurren.
+**Estado: Implementado, empaquetado y publicado como v2.7.0.** Los `.gd`, escenas y pruebas están en
+el árbol, el `wvp3d.pck` se ha exportado de este mismo árbol, el visor se ha compilado como
+`DMWoldVirtualP2P3Dv2.7.0.exe`, las cuatro autopruebas del visor terminan en verde y la release
+`v2.7.0` está publicada como *Latest* con sus cuatro assets verificados por API. Lo que sigue sin
+acreditar es el OTA de punta a punta y la respuesta de `/descargar` (ver checklist de §7).
 
 ---
 
@@ -211,6 +212,35 @@ El PCK de la 2.6.9 se conserva fuera del repositorio en `E:/areadetrabajo/wvp270
 `src/VSC#/wvp3d.pck` es ahora el de la 2.7.0 (mismo MD5 que el exportado). El guión
 `STM_LBR/woldvirtual-linux.sh` lleva el tamaño y la huella nuevos.
 
+### Dónde están (y dónde no) los 16 avatares animados
+
+Búsqueda del 2026-10-29 sobre `C:`, `D:`, `E:` y `F:` (`find` sin límite de profundidad en
+`C:\Users\User`, `E:\areadetrabajo` y `F:\`, podando sólo `Windows`, `System Volume Information` y
+`$Recycle.Bin`):
+
+- **`.glb` crudos: no aparecen.** El único `*_anim.glb` de todo el equipo es
+  `C:\Users\User\AppData\Local\Temp\prubaimp\avhm9_anim.glb`, resto de una prueba de importación.
+  Los estáticos (`avhm1-9.glb`, `AVmj1-7.glb`) sí existen en
+  `F:/PersonalizacionDavatares/AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/` y en el árbol de trabajo
+  `E:/areadetrabajo/wvp270/godot/…`.
+- **Tampoco están en Git:** `git rev-list --all --objects | grep -i '\.glb$'` devuelve **0**
+  entradas. Nunca se versionaron.
+- **Sí están dentro del PCK de la 2.6.9, en forma importada.** De sus 541 entradas, **16** son las
+  escenas `res://.godot/imported/<av>_anim.glb-<hash>.scn` (361.628-1.666.682 B), **87** son los
+  `.ctex` de sus texturas y **111** son los `.import` originales
+  (`avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/{AVHM,AVMJ}/*_anim*.import`), 313.819.793 B en total. Las
+  cabeceras de las 16 escenas empiezan por `RSCC` (recurso binario de Godot 4). No hay ninguna
+  entrada `.glb` cruda: el export sólo empaqueta el resultado de la importación.
+
+Es decir: los `.glb` de origen están perdidos, pero **los esqueletos, mallas, texturas y clips
+importados de las 16 plazas se pueden reconstruir desde el PCK de la 2.6.9**. Para la 2.7.0 no hacen
+falta (las animaciones se inyectan con retarget), y por eso no se ha tocado nada; queda anotado por
+si alguna vez se quiere volver a los clips originales de esas plazas.
+
+Al extraer del PCK hay que **sumar `base` (112) al `offset`** de cada entrada del directorio. Sin esa
+suma los ficheros salen con bytes desplazados y Godot los rechaza con
+`Unrecognized binary resource file`.
+
 **El visor.** `Visor3D.csproj` pasa a `2.7.0` / `DMWoldVirtualP2P3Dv2.7.0`; el exe embebe
 `wvp3d.pck` como `EmbeddedResource` y lo extrae en streaming (`AppExtractor` usa `stream.CopyTo`), sin
 cargar el gigabyte en memoria. Publicado:
@@ -252,7 +282,8 @@ tocar el runtime instalado:
   escena con renderizado. La deformación está medida numéricamente sobre malla real y el
   `AnimationTree` se comprueba por movimiento de huesos, pero **no hay PNG** del resultado ni
   comprobación de que el panel no tape el rótulo en cada resolución.
-- **OTA de punta a punta**: necesita la release publicada; se acredita cuando se publique.
+- **OTA de punta a punta**: la release ya está publicada, pero hace falta un equipo con la 2.6.9
+  instalada para actualizar → relanzar → comprobar la re-extracción. No se ha hecho en esta sesión.
 - **`probar_registro.gd`** sigue sin poder ejecutarse aquí: necesita `importblend/hm1.blend` y
   `avhm1_anim.glb` (ausentes) y hace `save_png` con textura nula. Es previo a este trabajo.
 - **Linux**: el paquete se regenera con el motor 4.7.2 de Linux y el PCK nuevo, pero no se ejecuta
@@ -268,7 +299,23 @@ tocar el runtime instalado:
 | Cero binarios en el commit | **Sí** — `.exe`, `.pck` y `.tar.gz` quedan fuera de Git (`R17`) |
 | Arranque limpio con `runtime\<versión>` y `.extracted` | **Sí** — `runtime270/.extracted` = `2.7.0`, sin `ERROR`/`EXCEPTION` en el log |
 | El motor arranca desde el PCK | **Sí** — `isla=True red=True errores=False` |
-| Portal anuncia la release vigente y `/descargar` | **Parcial** — `/api/info` anuncia el exe correcto; el tamaño sale «—» porque en la prueba no hay `release.json` junto al binario, y `/descargar` se comprueba tras publicar |
-| OTA de punta a punta | **Pendiente** — se acredita tras publicar (`R13`) |
-| Metadatos por API (`gh api`) | **Pendiente** — tras la subida (`R15`) |
+| Portal anuncia la release vigente | **Sí** — `arranque-selftest.log` del exe publicado: `[OK] Portal WebNodo escucha — http://localhost:3030/` y `/api/info` → `{"disponible":true,"nombre":"DMWoldVirtualP2P3Dv2.7.0.exe","tamano_mb":"1243,2","url_descarga":"/descargar"}`, con `[UpdateChecker] Release vigente: v2.7.0 (DMWoldVirtualP2P3Dv2.7.0.exe)` |
+| `/descargar` responde `200` con el tamaño del asset | **Pendiente** — la autoprueba cierra el portal en milisegundos (dos sondeos externos a 30-200 ms no lo alcanzaron) y en esta sesión no se ha abierto la ventana del visor, que es la que lo mantiene vivo. El asset de GitHub sí responde `200` con `Content-Length` 1.303.543.673 |
+| OTA de punta a punta | **Pendiente** — requiere un equipo con la 2.6.9 instalada y relanzar; no se acredita sin esa prueba (`R13`) |
+| Metadatos por API (`gh api`) | **Sí** — `digest` de los cuatro assets coincide con el SHA-256 local (ver tabla siguiente) |
 | Docs en el mismo commit | **Sí** (`R18`) |
+
+## Release v2.7.0 publicada (2026-10-29)
+
+Tag `v2.7.0` sobre `5f75f6f` de `main`, marcada como *Latest*. Verificado con
+`gh api repos/Chicook/WoldVirtualP2P3D/releases/tags/v2.7.0` (`R15`) contra el SHA-256 local:
+
+| Asset | Bytes | `digest` de la API (= SHA-256 local) |
+|---|---|---|
+| `DMWoldVirtualP2P3Dv2.7.0.exe` | 1.303.543.673 | `ceea0886904017d68b99811e75d21deb8225d12667c48f9187fb529d1318b59a` |
+| `WoldVirtualP2P3Dv2.7.0-linux.tar.gz` | 1.078.177.695 | `913552a72718257c78f9b05f10e66038acf86c0f1b616f01f56edc4bf7902938` |
+| `release.json` | 223 | `e72f489a8b594288db2e1bbe8d6a8e5116217b3137d4693309020d77266da02b` |
+| `SHA256SUMS` | 273 | `c35e4053377dd80a488e71d846a3576837a1522319fa80d51e452aa3356e1d42` |
+
+`release.json` declara `version 2.7.0`, `tag v2.7.0`, `exe DMWoldVirtualP2P3Dv2.7.0.exe`,
+`size_mb 1243.2`. Las cuatro URLs de descarga responden `200` con su `Content-Length` exacto.

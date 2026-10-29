@@ -52,19 +52,19 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualP2P3Dv2.6.9`, que corresponde al exe `DMWoldVirtualP2P3Dv2.6.9.exe`,
-publicado el 2026-10-29 como release v2.6.9 (tag sobre `f1e57ee` de `main`, assets verificados por
-API). Las releases anteriores v2.6.8, v2.6.7, v2.6.4, v2.6.3, v2.6.2, v2.6.1, v2.6.0 y v2.5.9
-siguen con su propio asset. El árbol local y la release vigente están, por tanto, alineados en la
-2.6.9. **Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
+extensión: hoy `DMWoldVirtualP2P3Dv2.7.0`, que corresponde al exe `DMWoldVirtualP2P3Dv2.7.0.exe`,
+publicado el 2026-10-29 como release v2.7.0 (tag sobre `5f75f6f` de `main`, assets verificados por
+API). Las releases anteriores v2.6.9, v2.6.8, v2.6.7, v2.6.4, v2.6.3, v2.6.2, v2.6.1, v2.6.0 y
+v2.5.9 siguen con su propio asset. El árbol local y la release vigente están, por tanto, alineados
+en la 2.7.0. **Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
 `DMWoldVirtualP2P3Dv2.6.9.exe` al recompilar los arreglos de umbral de VM, recolector de runtimes y
 reintento del release, y sustituir el exe y `SHA256SUMS` en la misma release con
-`gh release upload --clobber` (exe `e7e27212…6d84d8`, 788.316.025 B). La regla sigue vigente: la
-próxima compilación sube `<Version>`.
+`gh release upload --clobber` (exe `e7e27212…6d84d8`, 788.316.025 B); se aplicó sólo a la 2.6.9 y no
+se repite. La regla sigue vigente: cada compilación sube `<Version>`.
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
 fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
-los cuatro planos son `2.6.9` / `v2.6.9` / `DMWoldVirtualP2P3Dv2.6.9.exe` / `2.6.9`; la v2.6.8 y las
+los cuatro planos son `2.7.0` / `v2.7.0` / `DMWoldVirtualP2P3Dv2.7.0.exe` / `2.7.0`; la v2.6.9 y las
 anteriores siguen publicadas bajo su propio tag con sus planos alineados. El
 actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
@@ -156,7 +156,7 @@ mentir: los builds antiguos anuncian la constante empotrada en su propio binario
 **R14 — El triple `exe` + `release.json` + `SHA256SUMS` se sube junto, y se regenera junto.**
 `release.json` con `version`, `tag`, `exe`, `url`, `size_mb`; `SHA256SUMS` con el digest del exe y el
 del propio `release.json`. Subir sólo el binario deja el portal y cualquier consumidor externo
-apuntando al anterior. Desde la 2.6.9 hay un cuarto asset, `WoldVirtualP2P3Dv2.6.9-linux.tar.gz`
+apuntando al anterior. Desde la 2.6.9 hay un cuarto asset, hoy `WoldVirtualP2P3Dv2.7.0-linux.tar.gz`
 (motor Godot de Linux + `wvp3d.pck` + `STM_LBR/`), y su digest va también en `SHA256SUMS`: si el
 paquete se regenera, se sube y se regenera la suma en el mismo gesto. Si se sustituye un asset con
 `--clobber` (excepción autorizada del 2026-10-29 con la 2.6.9), se regenera `SHA256SUMS`, se sube en
