@@ -65,6 +65,9 @@ DOCS_REGLAS: Path = DOCS_DIR / "REGLAS_DE_ACTUALIZACION.md"
 
 TESTS_DIR: Path = SRC_DIR / "tests"
 PYTEST_INI: Path = SRC_DIR / "pytest.ini"
+# La cache de pytest no se queda en la raiz de src: `cache_dir` del pytest.ini
+# la manda aqui, asi que los artefactos de las pruebas viven en STM_HRTS.
+PYTEST_CACHE: Path = STM_HRTS_DIR / ".pytest_cache"
 
 # ---------------------------------------------------- herramientas y runtime
 

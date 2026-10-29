@@ -128,6 +128,15 @@ def test_comando_pytest_unico_en_raiz():
     assert rutas.PYTEST_INI.read_text(encoding="utf-8").count("STM_HRTS") >= 1
 
 
+def test_pytest_cache_vive_en_stm_hrts():
+    assert rutas.PYTEST_CACHE == rutas.STM_HRTS_DIR / ".pytest_cache"
+    assert not (SRC_DIR / ".pytest_cache").exists(), (
+        "La cache de pytest no debe quedar en la raiz de src/"
+    )
+    texto = rutas.PYTEST_INI.read_text(encoding="utf-8")
+    assert "cache_dir" in texto and "STM_HRTS" in texto
+
+
 def test_consola_rutas_y_verificar(capsys):
     assert consola.main(["verificar", "--json"]) == 0
     salida = capsys.readouterr().out
