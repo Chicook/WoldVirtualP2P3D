@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Visor3D.Seguridad.SMTPLC;
 
 namespace Visor3D.Services
 {
@@ -68,6 +69,8 @@ namespace Visor3D.Services
 
                 ComprobarPortal(Check);
                 ComprobarDescubrimiento(Check);
+                ComprobarUmbralVm(Check);
+                ComprobarRecolector(Check);
 
                 if (File.Exists(AppExtractor.GodotExePath))
                     ComprobarMotor(Check);
@@ -128,6 +131,52 @@ namespace Visor3D.Services
         /// </summary>
         private static void ComprobarDescubrimiento(Action<string, bool, string> check)
             => RedSelfTest.ComprobarDescubrimiento(check);
+
+        /// <summary>
+        /// El detector y la política deben compartir umbral: si el detector marca VM
+        /// por debajo del umbral de la política, una sola señal bloquea el registro.
+        /// </summary>
+        private static void ComprobarUmbralVm(Action<string, bool, string> check)
+        {
+            var policy = new SmtplcPolicy();
+            bool ok = Math.Abs(VmDetector.UmbralVm - 0.50) < 0.0001 &&
+                      Math.Abs(policy.VmConfidenceThreshold - VmDetector.UmbralVm) < 0.0001;
+            check("Umbral de VM unificado (0,50)", ok,
+                  $"detector={VmDetector.UmbralVm:0.00} política={policy.VmConfidenceThreshold:0.00}");
+        }
+
+        /// <summary>
+        /// Purga del recolector sobre una raíz de usar y tirar: debe borrar las
+        /// versiones viejas y conservar la vigente, la anterior y los ficheros sueltos.
+        /// </summary>
+        private static void ComprobarRecolector(Action<string, bool, string> check)
+        {
+            string raiz = Path.Combine(Path.GetTempPath(), "wvp3d_recolector_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                foreach (var v in new[] { "2.6.7", "2.6.8", "2.6.9" })
+                    Directory.CreateDirectory(Path.Combine(raiz, v));
+                string nota = Path.Combine(raiz, "nota.txt");
+                File.WriteAllText(nota, "no se toca");
+
+                var (borradas, fallos) = RuntimeCleaner.PurgarAntiguos(raiz, "2.6.9", "2.6.8");
+                bool ok = !Directory.Exists(Path.Combine(raiz, "2.6.7")) &&
+                          Directory.Exists(Path.Combine(raiz, "2.6.8")) &&
+                          Directory.Exists(Path.Combine(raiz, "2.6.9")) &&
+                          File.Exists(nota) &&
+                          borradas.Count == 1 && fallos.Count == 0;
+                check("Recolector de runtimes (conserva vigente y anterior)", ok,
+                      $"borradas=[{string.Join(", ", borradas)}] fallos={fallos.Count}");
+            }
+            catch (Exception ex)
+            {
+                check("Recolector de runtimes", false, $"{ex.GetType().Name}: {ex.Message}");
+            }
+            finally
+            {
+                try { Directory.Delete(raiz, recursive: true); } catch { }
+            }
+        }
 
         private static void ComprobarMotor(Action<string, bool, string> check)
         {
