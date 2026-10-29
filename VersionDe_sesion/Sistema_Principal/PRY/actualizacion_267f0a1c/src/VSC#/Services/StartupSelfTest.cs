@@ -134,40 +134,72 @@ namespace Visor3D.Services
             string log = Path.Combine(Path.GetTempPath(), "wvp3d_arranque_selftest.log");
             try { if (File.Exists(log)) File.Delete(log); } catch { }
 
+            // El mundo sólo carga si user://registro.cfg trae avatar y nick; sin eso
+            // Boot.gd se queda en el carrusel esperando a que alguien elija y nunca
+            // abre la isla ni el 8911. Por eso la prueba usa un perfil de usar y
+            // tirar bajo %TEMP%: así no depende del perfil del equipo ni lo toca,
+            // y un p2p_session.json real no la convierte en cliente remoto.
+            string perfil = Path.Combine(Path.GetTempPath(), "wvp3d_arranque_perfil_" + Guid.NewGuid().ToString("N"));
+            string datos = Path.Combine(perfil, "Godot", "app_userdata", "WoldVirtualP2P3D");
+
             var psi = new ProcessStartInfo(AppExtractor.GodotExePath)
             {
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.Environment["APPDATA"] = perfil;
             psi.ArgumentList.Add("--headless");
             psi.ArgumentList.Add("--main-pack");
             psi.ArgumentList.Add(AppExtractor.PckPath);
             psi.ArgumentList.Add("--log-file");
             psi.ArgumentList.Add(log);
             psi.ArgumentList.Add("--quit-after");
-            psi.ArgumentList.Add("300");
+            psi.ArgumentList.Add("3000");
+            psi.ArgumentList.Add("--");
+            psi.ArgumentList.Add("--server");
 
-            using var proceso = Process.Start(psi);
-            if (proceso == null)
+            try
             {
-                check("Motor arranca desde el PCK", false, "no se pudo lanzar el proceso");
+                Directory.CreateDirectory(datos);
+                File.WriteAllText(Path.Combine(datos, "registro.cfg"),
+                    "[jugador]\n\n" +
+                    "avatar_scene=\"res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH1Ch3D.tscn\"\n" +
+                    "nick=\"Prueba\"\n");
+            }
+            catch (Exception ex)
+            {
+                check("Motor arranca desde el PCK", false, $"no se pudo crear el perfil de prueba: {ex.Message}");
                 return;
             }
 
-            bool termino = proceso.WaitForExit(120_000);
-            if (!termino)
+            try
             {
-                try { proceso.Kill(entireProcessTree: true); } catch { }
-                check("Motor arranca desde el PCK", false, "sin salida en 120 s");
-                return;
-            }
+                using var proceso = Process.Start(psi);
+                if (proceso == null)
+                {
+                    check("Motor arranca desde el PCK", false, "no se pudo lanzar el proceso");
+                    return;
+                }
 
-            string texto = File.Exists(log) ? File.ReadAllText(log) : "";
-            bool mundo = texto.Contains("Isla 0 preparada") || texto.Contains("isla", StringComparison.OrdinalIgnoreCase);
-            bool red = texto.Contains("Servidor WebSocket activo");
-            bool errores = texto.Contains("ERROR:") || texto.Contains("SCRIPT ERROR");
-            check("Motor arranca desde el PCK", proceso.ExitCode == 0 && mundo && red && !errores,
-                  $"exit={proceso.ExitCode} isla={mundo} red={red} errores={errores}");
+                bool termino = proceso.WaitForExit(120_000);
+                if (!termino)
+                {
+                    try { proceso.Kill(entireProcessTree: true); } catch { }
+                    check("Motor arranca desde el PCK", false, "sin salida en 120 s");
+                    return;
+                }
+
+                string texto = File.Exists(log) ? File.ReadAllText(log) : "";
+                bool mundo = texto.Contains("Isla 0 preparada") || texto.Contains("isla", StringComparison.OrdinalIgnoreCase);
+                bool red = texto.Contains("Servidor WebSocket activo");
+                bool errores = texto.Contains("ERROR:") || texto.Contains("SCRIPT ERROR");
+                check("Motor arranca desde el PCK", proceso.ExitCode == 0 && mundo && red && !errores,
+                      $"exit={proceso.ExitCode} isla={mundo} red={red} errores={errores} perfil={perfil}");
+            }
+            finally
+            {
+                try { Directory.Delete(perfil, recursive: true); } catch { }
+            }
         }
 
         private static string Tamano(string ruta)

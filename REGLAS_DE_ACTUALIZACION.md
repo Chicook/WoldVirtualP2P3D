@@ -8,11 +8,12 @@ no pasa el checklist de §7, **no se publica**.
 sustentan. Si el código cambia y esta página no, gana el código y esta página es un defecto.
 
 Rutas relativas a la raíz del repositorio. El proyecto que se compila y exporta está bajo
-`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_52bf0d80/src/`; en lo que sigue, `<src/>` = esa
+`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c/src/`; en lo que sigue, `<src/>` = esa
 carpeta `src/`. Es una instantánea RFPRMN: la sincronización del sistema de comandos deja
 `VersionDe_sesion/CONTRRF/TLLDCD/src/` vacío, y los borrados de esa ruta en Git son el efecto normal
 del flujo, no una señal de que el árbol activo haya desaparecido. Las instantáneas anteriores
-(`actualizacion_f7bfd9ba`, congelada en la 2.5.5) no son el árbol del que sale un binario nuevo.
+(`actualizacion_52bf0d80`, la de la 2.6.4, y `actualizacion_f7bfd9ba`, congelada en la 2.5.5) no son
+el árbol del que sale un binario nuevo.
 
 ---
 
@@ -50,15 +51,14 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualP2P3Dv2.6.4`, que corresponde al exe `DMWoldVirtualP2P3Dv2.6.4.exe`,
-publicado el 2026-10-28 como release v2.6.4 (tag sobre `5f23b8c`, assets verificados por API). Las
-releases anteriores v2.6.3, v2.6.2, v2.6.1, v2.6.0 y v2.5.9 siguen publicadas con su propio asset. El árbol
-local y la release vigente están, por tanto, alineados en la 2.6.4.
+extensión: hoy `DMWoldVirtualP2P3Dv2.6.9`, que corresponde al exe `DMWoldVirtualP2P3Dv2.6.9.exe`.
+Las releases publicadas anteriores v2.6.8, v2.6.7, v2.6.4, v2.6.3, v2.6.2, v2.6.1, v2.6.0 y v2.5.9
+siguen con su propio asset.
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
 fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
-los cuatro planos son `2.6.4` / `v2.6.4` / `DMWoldVirtualP2P3Dv2.6.4.exe` / `2.6.4`; la v2.6.3, la v2.6.2,
-la v2.6.1, la v2.6.0 y la v2.5.9 siguen publicadas bajo su propio tag con sus planos alineados. El
+los cuatro planos son `2.6.9` / `v2.6.9` / `DMWoldVirtualP2P3Dv2.6.9.exe` / `2.6.9`; la v2.6.8 y las
+anteriores siguen publicadas bajo su propio tag con sus planos alineados. El
 actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
 (`<src/>VSC#/STM_actualizar/UpdateChecker.cs`, `SeleccionarMejorRelease`); cualquier desalineación
@@ -241,16 +241,18 @@ Con evidencia en el log, no "me parece que va". El visor escribe en
 - **El PCK embebido no se valida por hash** en tiempo de ejecución: `AppExtractor` se guía por la
   versión del ensamblado, no por el contenido. Un PCK corrupto en el `.exe` sólo se detecta al
   arrancar Godot. *Estado: Planificado.*
-- **`--startup-selftest` depende de la sesión persistida de Godot (2026-10-27).** Si existe
-  `user://p2p_session.json` con una sesión de cliente, el motor arranca como cliente remoto, no
-  genera isla ni abre el WebSocket, y la prueba falla aunque el PCK sea correcto (`isla=False
-  red=False`, exit 0). El 2026-10-27 pasó **15/15** apartando ese fichero.
-  **Segundo caso, comprobado el 2026-10-28:** sin `user://registro.cfg` el motor se queda en el
-  carrusel esperando la sonda y tampoco instancia isla ni abre el 8911, así que la 2.6.1 dio 14/15 en
-  la primera pasada; el PCK de la 2.6.0 en el mismo estado produce el mismo recorte, y con un
-  `APPDATA` aislado y un perfil de prueba la prueba pasa **15/15**. No es una regresión del PCK.
-  La prueba debería aislar ambos estados en lugar de depender del entorno.
-  *Estado: Implementado, sensible al entorno.*
+- **`--startup-selftest` dependía de la sesión persistida de Godot (2026-10-27).** Si existe
+  `user://p2p_session.json` con una sesión de cliente, el motor arrancaba como cliente remoto, no
+  generaba isla ni abría el WebSocket, y la prueba fallaba aunque el PCK fuera correcto (`isla=False
+  red=False`, exit 0). **Segundo caso, comprobado el 2026-10-28:** sin `user://registro.cfg` el motor
+  se quedaba en el carrusel esperando la sonda y tampoco instanciaba isla ni abría el 8911, así que
+  la 2.6.1 dio 14/15 en la primera pasada; con un `APPDATA` aislado y un perfil de prueba pasaba
+  **15/15**. No era una regresión del PCK.
+  **Cerrado el 2026-10-29:** `ComprobarMotor` crea un perfil de Godot de usar y tirar en `%TEMP%`
+  (`registro.cfg` con avatar y nick), apunta `APPDATA` a él, pasa `--server` y borra la carpeta al
+  terminar (`<src/>VSC#/Services/StartupSelfTest.cs`). La prueba ya no lee ni escribe el perfil del
+  equipo; dio **15/15** en la 2.6.9 con el perfil real conteniendo un `p2p_session.json` de cliente.
+  *Estado: Implementado y aislado.*
 - **Alcance del token de invitación (2026-10-28).** El token protege la ruta pública (túnel y proxy
   `/chat`) y se propaga por enlace, `--peer-url`, `p2p_session.json` y el endpoint del chat. Una
   conexión directa en LAN (`ws://<ip>:8911`) o al relay (`:8920`) no atraviesa el WebNodo: queda
