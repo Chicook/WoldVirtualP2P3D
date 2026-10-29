@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualP2P3Dv2.6.9</AssemblyName>
+    <AssemblyName>DMWoldVirtualP2P3Dv2.7.0</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.6.9</Version>
-    <AssemblyVersion>2.6.9.0</AssemblyVersion>
-    <FileVersion>2.6.9.0</FileVersion>
+    <Version>2.7.0</Version>
+    <AssemblyVersion>2.7.0.0</AssemblyVersion>
+    <FileVersion>2.7.0.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualP2P3D v2.6.9 (todo lo de la 2.6.8 —chat completo con texto, amigos, voz y webcam, perfil persistente, una cuenta por PC, reset total único, registro directo con el PC vacío, bienvenida con presencia P2P y SMTPLC sin el falso positivo de VBS— más el arreglo de la webcam: puntúa los dispositivos para empezar por el hardware real, comprueba que llega la primera trama antes de dar la cámara por buena, conmuta al siguiente candidato si no llega, vigila las caídas y explica por qué no hay imagen —Wine, permiso de privacidad o cámara virtual sin tramas—; motor 3D y mundo en PCK idénticos a los de la 2.6.1-2.6.8, sin reexportar)</Description>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.7.0 (todo lo de la 2.6.9 —chat completo con texto, amigos, voz y webcam, perfil persistente, una cuenta por PC, reset total único, bienvenida con presencia P2P, SMTPLC y webcam fiable— más el selector de avatares manejable con ratón —clic, arrastre circular, rueda y teclado—, el nick en la misma pantalla y el aviso verde «AVATAR ORIGINAL» con turno obligatorio antes de entrar; shape keys por código adaptadas de los presets VRM del addon 2031; y las cinco animaciones de los avatares principales prestadas a las 24 plazas, que ya no dependen de sus *_anim.glb; mundo en PCK reexportado con los 24 avatares completos)</Description>
   </PropertyGroup>
 
   <!--

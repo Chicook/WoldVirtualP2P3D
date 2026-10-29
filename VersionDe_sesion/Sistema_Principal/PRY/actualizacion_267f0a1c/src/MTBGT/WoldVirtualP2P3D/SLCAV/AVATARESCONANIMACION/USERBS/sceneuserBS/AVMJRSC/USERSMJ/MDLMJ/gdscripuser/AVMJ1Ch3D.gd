@@ -18,6 +18,8 @@ extends CharacterBody3D
 
 enum St { IDLE, WALK, RUN, STRAFE_LEFT, STRAFE_RIGHT }
 
+const Anim := preload("res://gdscrip/AnimacionesCompartidas.gd")
+
 const BLEND_PATHS := [
 	"parameters/ANMJ/blend_amount",
 	"parameters/Add2/add_amount",
@@ -40,6 +42,13 @@ var _cam_pitch := 0.18
 
 @onready var animation_tree: AnimationTree = find_child("AnimationTree", true, false)
 @onready var camera: Camera3D = find_child("Camera3D", true, false)
+
+
+## Las plazas sin clips propios heredan los cinco de AVH1 (ver
+## AnimacionesCompartidas). Tiene que ser antes de _ready: el AnimationTree se
+## configura al entrar en escena y no reengancha un AnimationPlayer creado luego.
+func _enter_tree() -> void:
+	Anim.asegurar(self)
 
 
 func _ready() -> void:

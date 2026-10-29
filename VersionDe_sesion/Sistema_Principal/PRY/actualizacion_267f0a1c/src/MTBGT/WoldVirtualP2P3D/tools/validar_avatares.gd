@@ -68,19 +68,43 @@ func _probar(nombre: String, inst: Node) -> int:
 	if not vacios.is_empty():
 		problemas.append("clips vacios: " + ", ".join(vacios))
 
+	# Los clips prestados se reescriben a los huesos de este esqueleto; una pista
+	# que siga apuntando al avatar donante aqui no existe.
+	var raiz := ap.get_node_or_null(ap.root_node)
+	var huerfanas := 0
+	if raiz:
+		for clip in CLIPS:
+			var anim := ap.get_animation(clip)
+			if anim == null:
+				continue
+			for t in anim.get_track_count():
+				var nodo := NodePath(anim.track_get_path(t).get_concatenated_names())
+				if raiz.get_node_or_null(nodo) == null:
+					huerfanas += 1
+	if huerfanas > 0:
+		problemas.append("pistas sin nodo: %d" % huerfanas)
+
 	var trees := inst.find_children("*", "AnimationTree", true, false)
 	if trees.is_empty():
 		problemas.append("sin AnimationTree")
 	elif not (trees[0] as AnimationTree).active:
 		problemas.append("AnimationTree inactivo")
 
-	# Reproducir el idle y avanzar medio segundo: detecta clips rotos en runtime.
-	if clips.has("paradoMJ1_1"):
-		ap.play("paradoMJ1_1")
-		await process_frame
-		await process_frame
-		if ap.current_animation != "paradoMJ1_1":
-			problemas.append("el idle no arranca")
+	# El AnimationTree tiene que mover el esqueleto por si solo: es la prueba de
+	# que los clips llegan de verdad a la malla, no solo a la lista del reproductor.
+	if not esqueletos.is_empty():
+		var esqueleto := esqueletos[0] as Skeleton3D
+		var antes: Array[Transform3D] = []
+		for i in esqueleto.get_bone_count():
+			antes.append(esqueleto.get_bone_pose(i))
+		await create_timer(0.35).timeout
+		var movidos := 0
+		for i in esqueleto.get_bone_count():
+			if not antes[i].is_equal_approx(esqueleto.get_bone_pose(i)):
+				movidos += 1
+		print("    huesos en movimiento: %d/%d" % [movidos, esqueleto.get_bone_count()])
+		if movidos < 10:
+			problemas.append("el esqueleto no se mueve (%d huesos)" % movidos)
 
 	return _reportar(nombre, huesos, clips, problemas)
 

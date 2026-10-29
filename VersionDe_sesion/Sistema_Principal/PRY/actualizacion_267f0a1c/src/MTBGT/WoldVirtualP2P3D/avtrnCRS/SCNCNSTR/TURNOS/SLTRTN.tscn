@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://ohj60h17vmfj"]
 
-[ext_resource type="PackedScene" uid="uid://fv2y1out7j14" path="res://AreaDeTrabajo/SCNCNSTR/av3DT1.tscn" id="1_ter6c"]
-[ext_resource type="PackedScene" uid="uid://dbqk7la2hs7d0" path="res://AreaDeTrabajo/SCNCNSTR/av3DT2.tscn" id="2_5wbwh"]
+[ext_resource type="PackedScene" uid="uid://fv2y1out7j14" path="res://avtrnCRS/SCNCNSTR/av3DT1.tscn" id="1_ter6c"]
+[ext_resource type="PackedScene" uid="uid://dbqk7la2hs7d0" path="res://avtrnCRS/SCNCNSTR/av3DT2.tscn" id="2_5wbwh"]
 
 [node name="SLTRTN" type="Node3D" unique_id=668160200]
 

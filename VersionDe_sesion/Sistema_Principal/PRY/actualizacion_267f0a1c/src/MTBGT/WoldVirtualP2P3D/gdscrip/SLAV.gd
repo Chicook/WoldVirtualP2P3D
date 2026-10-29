@@ -17,6 +17,7 @@ extends Node3D
 signal avatar_confirmed(scene_path: String)
 
 const Pers = preload("res://gdscrip/Personalizacion.gd")
+const Anim := preload("res://gdscrip/AnimacionesCompartidas.gd")
 
 const VERDE := Color(0.45, 0.95, 0.55, 1.0)
 const AMBAR := Color(1.0, 0.82, 0.38, 1.0)
@@ -273,6 +274,9 @@ func _montar_turno(turno: int) -> void:
 		var angulo := TAU * float(i) / float(n)
 		inst.position = Vector3(sin(angulo) * radius, y_offset, cos(angulo) * radius)
 		inst.rotation.y = angulo + deg_to_rad(face_offset_deg)
+		# Los GLB de las plazas 9-24 no traen animaciones: se las presta el avatar
+		# principal para que el carrusel no se quede en la pose de reposo.
+		Anim.asegurar(inst)
 		_arrancar_idle(inst)
 		_avatars.append(inst)
 

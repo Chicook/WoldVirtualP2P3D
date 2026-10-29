@@ -1,13 +1,12 @@
-# Desarrollo selector de avatares y shape keys por código
+# Desarrollo selector de avatares, shape keys por código y animaciones compartidas
 
 Trabajo sobre el árbol del 2026-10-29
 (`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c`), rama `DevQoderIA`.
 
-**Estado: Implementado en fuentes, sin publicar.** Los `.gd`, escenas y pruebas están en el árbol y
-pasan la suite headless, pero **el `wvp3d.pck` y el `.exe` no se han regenerado**: eso lo hace el
-sistema de comandos del responsable desde este mismo árbol (`REGLAS_DE_ACTUALIZACION.md` §1 y §7).
-Mientras no se exporte un PCK nuevo, el visor y la release v2.6.9 siguen mostrando el carrusel
-anterior; no hay cambio visible para el usuario final.
+**Estado: Implementado y empaquetado como v2.7.0.** Los `.gd`, escenas y pruebas están en el árbol,
+el `wvp3d.pck` se ha exportado de este mismo árbol, el visor se ha compilado como
+`DMWoldVirtualP2P3Dv2.7.0.exe` y las cuatro autopruebas del visor terminan en verde. La publicación
+en GitHub y el OTA se acreditan al final, cuando ocurren.
 
 ---
 
@@ -22,6 +21,7 @@ anterior; no hay cambio visible para el usuario final.
 4. Mostrar un aviso **en verde: «✔ AVATAR ORIGINAL»**, con el turno asignado.
 5. Mantener la elección internamente, asignarla a un turno y hacer el paso **obligatorio** para
    entrar al metaverso, de modo que **cada avatar sea único** cuando entren más jugadores que plazas.
+6. Que las **24 plazas del catálogo se animen** aunque de 16 de ellas sólo exista el `.glb` estático.
 
 ---
 
@@ -84,7 +84,8 @@ enfocado.
 ## Selector: ratón, nick y aviso verde
 
 Todo el comportamiento nuevo está en `gdscrip/SLAV.gd`; la escena `SLCAV/AVATARESCONANIMACION/SLAV.tscn`
-**no se ha tocado** (la UI nueva se construye por código, así que el export del PCK no cambia rutas).
+**no cambia de estructura** (la UI nueva se construye por código); sólo se reescribieron allí las 16
+rutas `avatar_paths` de las plazas sin `_anim.glb` (ver «Animaciones compartidas»).
 
 | Gesto | Comportamiento | Código |
 |---|---|---|
@@ -133,78 +134,141 @@ quedan en una entrada por recurso.
 
 ---
 
+## Animaciones compartidas: las 5 de los principales para las 24 plazas
+
+De los 24 avatares del catálogo sólo 8 (AVH1-4 y AVMJ1-4) tienen clips propios. Las 16 escenas
+restantes apuntaban a `*_anim.glb` que **no existen en esta máquina** (ver «PCK 2.7.0»), así que
+esas plazas montaban el `.glb` estático y se quedaban en la pose de reposo.
+
+`gdscrip/AnimacionesCompartidas.gd` (nuevo, `class_name AnimacionesCompartidas`) toma las cinco
+animaciones de `res://gltfimport/avatares/AVH1.gltf` —`paradoMJ1_1`, `caminarMJ1_2`, `correrMJ1_3`,
+`left_StrafeMJ1_4`, `rightstrafeMJ1_5`—, reescribe las rutas de pista al esqueleto de destino y las
+instala en el `AnimationPlayer` que el `AnimationTree` ya espera.
+
+| Pieza | Comportamiento |
+|---|---|
+| Retarget | cada pista `Armature/Skeleton3D:mixamorig12_Cabeza` se normaliza quitando el prefijo `mixamorigNN_` y se busca ese hueso en el esqueleto destino; las pistas sin destino se descartan (`_normalizar`, `_retarget`) |
+| Reproductor | se reutiliza el que declara `AnimationTree.anim_player` (`../AnimationPlayer` en las escenas Ch3D); si la malla vino sin reproductor se crea ahí mismo (`_reproductor`) |
+| Biblioteca | Godot 4 no tiene `AnimationPlayer.add_animation`: los clips se añaden a la `AnimationLibrary` sin nombre (`_anadir`) |
+| Refresco | tras inyectar se conmuta `AnimationTree.active` a falso y verdadero, porque el setter ignora el valor repetido (`_refrescar_arbol`) |
+| Carusel | `SLAV._montar_turno` monta los `.gltf`/`.glb` crudos, no las escenas Ch3D, así que llama a `Anim.asegurar(inst)` antes de `_arrancar_idle` (`SLAV.gd:277-280`) |
+
+**Cuándo se inyecta.** `AnimationMixer` resuelve su `anim_player` al recibir `NOTIFICATION_ENTER_TREE`;
+activarlo después no reengancha un reproductor creado más tarde. Por eso la llamada va en
+`_enter_tree()` de `AVMJ1Ch3D.gd` —el guión que comparten las 24 escenas Ch3D— y no en `_ready()`:
+el padre entra en el árbol antes que sus hijos, así que el `AnimationPlayer` ya existe cuando el
+`AnimationTree` se configura.
+
+**Qué cambia en las escenas.** En las 16 plazas sin clips propios
+(`AVH5-12Ch3D.tscn`, `AVMJ5-12Ch3D.tscn`) el `ext_resource` pasa de `…/X_anim.glb` a
+`…/X.glb` (sin `uid`, porque es otro recurso) y se retiran las dos líneas que declaraban
+`AnimationPlayer` con `autoplay = &"paradoMJ1_1"`: en un `.glb` estático Godot no crea reproductor y
+la declaración quedaba huérfana («was modified from inside an instance, but it has vanished»); en los
+dos casos que sí traen animaciones propias (AVH12 y AVMJ11) además colisionaba. Las 8 escenas
+principales no se tocan.
+
+En `SLCAV/AVATARESCONANIMACION/SLAV.tscn` se reescriben las 16 entradas correspondientes de
+`avatar_paths` y en `avtrnCRS/SCNCNSTR/TURNOS/SLTRTN.tscn` se corrigen las rutas `ext_resource` de
+`av3DT1.tscn`/`av3DT2.tscn` (sus `uid` ya coincidían).
+
+---
+
+## PCK 2.7.0: del bloqueo a la exportación
+
+El 2.6.9 no se pudo reexportar el 2026-10-29 a primera hora porque el árbol de fuentes no tenía los
+24 avatares: de las 153 rutas `res://` inventariadas faltaban 73, entre ellas los 16 `*_anim.glb` y
+los 16 `.glb` estáticos de las plazas 5-12. Las animaciones compartidas resuelven la mitad del
+problema (los `*_anim.glb` dejan de ser necesarios); la otra mitad se resolvió montando un árbol de
+trabajo **fuera del repositorio** con los assets de `actualizacion_022321c8` y los estáticos del
+catálogo:
+
+- `E:/areadetrabajo/wvp270/godot`: proyecto Godot con 0 diferencias frente a este commit en los
+  ficheros versionados (comparación SHA-1 fichero a fichero; los 333 ficheros extra son assets no
+  versionados).
+- Export `--export-pack "Windows Desktop"` → `E:/areadetrabajo/wvp270/wvp3d.pck`, 2026-10-29 18:01,
+  **1.053.066.344 B**, 530 entradas, engine 4.7.2.
+- `verify_pck.py` sobre ese PCK: **MD5 de las 530 entradas correcto**, 30 `.gdc` en el PCK = 30
+  guiones del árbol (0 sobrantes, 0 ausentes), **4.041/4.041** identificadores y literales presentes,
+  «el PCK es íntegro y corresponde a ese árbol».
+
+El árbol conserva `gdscrip/AnimacionesCompartidas.gdc` (3.532 B), es decir, la inyección de clips va
+dentro del mundo publicado y no depende de nada externo.
+
+**Por qué el PCK pesa el doble que el de la 2.6.9 (537.836.524 B).** No es código: son texturas. El
+`.glb` estático de cada plaza trae sus imágenes embebidas (`gltf/embedded_image_handling=1` las
+extrae a `.png` junto al `.glb`) y se importan con `compress/mode=0` (lossless) y mipmaps: un mapa de
+normales 4K acaba en 37 MB de `.ctex`. En el PCK de la 2.6.9 esas mismas plazas usaban los `*_anim`,
+cuyas texturas eran mucho más pequeñas.
+
+| Concepto | 2.6.9 | 2.7.0 |
+|---|---|---|
+| `.ctex` | 142 ficheros, 501.778.090 B | 135 ficheros, 1.018.607.504 B |
+| `.scn` | 64 ficheros, 35.586.419 B | 64 ficheros, 33.969.052 B |
+| Total del PCK | 537.836.524 B | 1.053.066.344 B |
+| SHA-256 del PCK | `9d5c15e7…7a69ac94` | `cb17a956…d946b9e1` |
+
+El PCK de la 2.6.9 se conserva fuera del repositorio en `E:/areadetrabajo/wvp270/wvp3d-2.6.9.pck`;
+`src/VSC#/wvp3d.pck` es ahora el de la 2.7.0 (mismo MD5 que el exportado). El guión
+`STM_LBR/woldvirtual-linux.sh` lleva el tamaño y la huella nuevos.
+
+**El visor.** `Visor3D.csproj` pasa a `2.7.0` / `DMWoldVirtualP2P3Dv2.7.0`; el exe embebe
+`wvp3d.pck` como `EmbeddedResource` y lo extrae en streaming (`AppExtractor` usa `stream.CopyTo`), sin
+cargar el gigabyte en memoria. Publicado:
+`DMWoldVirtualP2P3Dv2.7.0.exe`, **1.303.543.673 B** (1.243,2 MiB), SHA-256 `ceea0886…1318b59a`.
+
+---
+
 ## Pruebas ejecutadas (evidencia)
 
-Todas con `APPDATA` aislado en un directorio temporal, Godot 4.7.2
-(`C:/Users/User/Desktop/Godot_v4.7.2-stable_win64_console.exe --headless --path . --script …`),
-sobre `actualizacion_267f0a1c/src/MTBGT/WoldVirtualP2P3D`.
+Las pruebas de Godot, con `APPDATA` aislado en un directorio temporal y Godot 4.7.2
+(`C:/Users/User/Desktop/Godot_v4.7.2-stable_win64_console.exe --headless --path . --script …`), sobre
+`E:/areadetrabajo/wvp270/godot` (idéntico a este commit más los assets).
 
 | Prueba | Qué cubre | Resultado |
 |---|---|---|
 | `tools/probar_shapekeys.gd` | mapa VRM, normalización, fusión con tintes, deformación de las 7 expresiones, pestañas, restauración exacta, idempotencia, guardado y códec | **32 OK, 0 fallos** |
 | `tools/probar_selector.gd` | clic, arrastre que salta plazas, rueda, nick obligatorio, verde/rojo/ámbar, confirmación, claves guardadas, turno 4 | **26 OK, 0 fallos** |
 | `tools/probar_turnos.gd` | reserva exclusiva y huecos | **0 fallos** |
-| `tools/probar_carrusel_ocupado.gd` | carrusel con plazas ocupadas | **2 fallos**, ambos por falta de assets en este snapshot: «turno 1 monta 8 avatares» y «tres etiquetas OCUPADO» |
+| `tools/probar_carrusel.gd` | recorrido de las 24 plazas (AVH1…AVMJ12) | **0 fallos** |
+| `tools/probar_carrusel_ocupado.gd` | carrusel con plazas ocupadas | **0 fallos** (con el árbol completo; en el snapshot sin assets fallaba por motivos ajenos al selector) |
 | `tools/validar_shapekeys_reales.gd` | morfología real: 0 morph targets, 7 expresiones con desplazamiento ≥ 4 mm, sin deriva, restauración | **14 OK, 0 fallos** (AVH1.gltf) |
-| `tools/validar_personalizacion.gd` | 24 avatares reales: deformación, altura, idempotencia, vuelta al original | **8 avatares con assets, 0 fallos** (4.499-4.870 vértices movidos, altura 1.76-1.80 m → 2.06-2.10 m); los otros **16 fallan por «sin malla de cuerpo»** (assets ausentes en el snapshot) |
+| `tools/validar_personalizacion.gd` | **24 avatares reales**: deformación, altura, idempotencia, vuelta al original | **24 avatares, 0 fallos** (2.156-16.421 vértices movidos; altura 1,706-1,805 m → 2,006-2,105 m) |
+| `tools/validar_avatares.gd` | **24 avatares**: huesos, 5 clips, sin pistas huérfanas, `AnimationTree` activo y esqueleto en movimiento por sí solo | **24 avatares, 0 fallos** (33-46 huesos movidos según el esqueleto, de 65 a 168 huesos) |
+| `tools/validar_ch3d.gd` | las **16 escenas** Ch3D remodeladas, dentro del árbol real | **16 escenas, 0 fallos** |
 
-La medición real se hizo en una **copia temporal fuera del repositorio**
-(`E:/areadetrabajo/wvp_shapekeys_real`: proyecto de 1,2 MB + `gltfimport/avatares` de
-`actualizacion_022321c8`, 222 MB) para no tocar ni el snapshot del responsable ni
-`E:/areadetrabajo/AVATARESCONANIMACION`. Esa copia no se versiona y sigue en disco.
+Autopruebas del visor ya compilado, con `WOLD_RUNTIME_DIR` apuntando a una carpeta temporal para no
+tocar el runtime instalado:
 
-`tools/probar_carrusel_ocupado.gd` se ajustó para escribir un nick antes de confirmar, porque la
-confirmación ahora exige nick válido; sin ese ajuste la comprobación de hueco libre fallaba por
-motivo equivocado.
+| Prueba | Resultado |
+|---|---|
+| `--startup-selftest` | **RESULTADO ARRANQUE: OK** — recursos embebidos, extracción en `runtime270`, marcador `.extracted` = `2.7.0`, PCK extraído = embebido, portal escuchando, `/api/info` anuncia `DMWoldVirtualP2P3Dv2.7.0.exe`, baliza UDP 8912, recolector, y **motor arranca desde el PCK** (`exit=0 isla=True red=True errores=False`) |
+| `--chat-selftest` | **fallos=0** (26 comprobaciones: amigos, relay, privados, audio, vídeo JPEG, proxy `/chat` con invitación) |
+| `--cuenta-selftest` | **RESULTADO CUENTA: OK** (reset total, respaldo, estados globales) |
+| `--red-selftest` | **RESULTADO RED: 7 líneas, 0 fallos** |
 
 ## Qué no se ha podido probar
 
-- **Captura visual con ventana** del selector nuevo: esta máquina no ha ejecutado la escena con
-  renderizado. La deformación está medida numéricamente sobre malla real, pero **no hay PNG** del
-  resultado ni comprobación de que el panel SHAPE KEYS no tape el rótulo en cada resolución.
-- **PCK y `.exe`**: sin regenerar. El carrusel nuevo no está en ningún binario publicado. El motivo
-  no es de código sino de assets: ver «Bloqueo del PCK» abajo.
-- **Avatares 5-12** de cada género: sus mallas no están en el snapshot de fuentes, así que
-  `validar_personalizacion` sólo valida 8 de 24.
+- **Captura visual con ventana** del selector y del panel SHAPE KEYS: esta máquina no ha ejecutado la
+  escena con renderizado. La deformación está medida numéricamente sobre malla real y el
+  `AnimationTree` se comprueba por movimiento de huesos, pero **no hay PNG** del resultado ni
+  comprobación de que el panel no tape el rótulo en cada resolución.
+- **OTA de punta a punta**: necesita la release publicada; se acredita cuando se publique.
 - **`probar_registro.gd`** sigue sin poder ejecutarse aquí: necesita `importblend/hm1.blend` y
   `avhm1_anim.glb` (ausentes) y hace `save_png` con textura nula. Es previo a este trabajo.
-- **Linux**: el paquete de `STM_LBR` no se ha vuelto a generar; sigue el de la 2.6.9.
-
-## Bloqueo del PCK: faltan las mallas del catálogo
-
-Para publicar `DMWoldVirtualP2P3Dv2.7.0.exe` hace falta un `wvp3d.pck` exportado de un árbol que
-tenga **el código nuevo y los 24 avatares**. Este árbol tiene el código, pero no los assets:
-inventariadas todas las referencias `res://` de `.tscn`, `.tres`, `.gd`, `.gdshader`, `.cfg` y
-`project.godot`, salen **153 rutas distintas, 80 presentes y 73 ausentes**.
-
-| Extensión ausente | Ficheros | Qué es |
-|---|---|---|
-| `.glb` | 32 | 16 `avhm1-9.glb` / `AVmj1-7.glb` y sus 16 `*_anim.glb` (avatares 5-12 de cada género) |
-| `.png` | 21 | texturas de `gltfimport/avatares/av_texturas` de AVH1-4 / AVMJ1-4 |
-| `.gltf` | 9 | AVH1-4, AVMJ1-4 y `ISLA3DCHUNK.gltf` |
-| `.tscn` | 4 | `AreaDeTrabajo/SCNCNSTR/av3DT1.tscn`, `av3DT2.tscn` y dos rutas de directorio |
-| `.blend`, `.json`, sin extensión | 7 | `importblend/hm1.blend`, el JSON de export y rutas internas de `.godot/` |
-
-Los `.gltf` y las texturas **sí** están en `actualizacion_022321c8` (9 `.gltf`, 39 `.png` en
-`av_texturas`), y con ellos se validaron las expresiones sobre malla real. Lo que no existe en esta
-máquina es ningún `.glb` del catálogo: se buscó `*_anim.glb` en todo `E:`, en `F:` y en las carpetas
-del usuario, y el único resultado es `C:\Users\User\AppData\Local\Temp\prubaimp\avhm9_anim.glb`,
-resto de una prueba de importación. Los otros 15 animados y los 16 sin animar no están.
-
-Sin esos 16 `*_anim.glb` el árbol no exporta un mundo completo: las escenas `AVH5-12`/`AVMJ5-12`
-(`…Ch3D.tscn`) apuntan a ellos y el carrusel dejaría 16 de las 24 plazas rotas. Por eso **no se ha
-exportado PCK, no se ha tocado `src/VSC#/wvp3d.pck` (537.836.524 B, 2026-10-28 14:55, el mundo de la
-2.6.9) y no se ha abierto la release 2.7.0**. Sustituir el PCK por otro sin esos assets o publicar la
-2.7.0 con el PCK viejo incumpliría §8 (mismo código para otro mundo) y el resultado se vería peor
-que la 2.6.9.
-
-Para desbloquearlo basta una de estas dos cosas: que el sistema de comandos del responsable exporte
-el PCK desde el árbol completo (y este trabajo sigue con el bump a 2.7.0, la compilación, el paquete
-Linux y la publicación), o que se indique la ruta del árbol que sí tiene los `.glb` para exportar
-desde una copia, sin tocar el original.
+- **Linux**: el paquete se regenera con el motor 4.7.2 de Linux y el PCK nuevo, pero no se ejecuta
+  aquí: esta máquina no tiene Linux. `woldvirtual-linux.sh --verificar` sí puede comprobar la huella.
 
 ## Checklist de §7
 
-Ninguna casilla de publicación se puede marcar todavía: falta exportar el PCK de este árbol,
-versionar (`R2`), compilar, publicar y hacer el OTA. Lo único cumplido es que el trabajo no mete
-binarios en el commit (`R17`) y que esta documentación va en el mismo commit que el cambio (`R18`).
+| Casilla | Estado |
+|---|---|
+| PCK fresco del árbol de este commit | **Sí** — 2026-10-29 18:01, 1.053.066.344 B, `verify_pck` íntegro |
+| Versión sincronizada (csproj, tag, asset, `release.json`) | **Sí** — 2.7.0 / `v2.7.0` / `DMWoldVirtualP2P3Dv2.7.0.exe` |
+| Compila con el .NET de E: (self-contained single-file) | **Sí** — 1.303.543.673 B |
+| Cero binarios en el commit | **Sí** — `.exe`, `.pck` y `.tar.gz` quedan fuera de Git (`R17`) |
+| Arranque limpio con `runtime\<versión>` y `.extracted` | **Sí** — `runtime270/.extracted` = `2.7.0`, sin `ERROR`/`EXCEPTION` en el log |
+| El motor arranca desde el PCK | **Sí** — `isla=True red=True errores=False` |
+| Portal anuncia la release vigente y `/descargar` | **Parcial** — `/api/info` anuncia el exe correcto; el tamaño sale «—» porque en la prueba no hay `release.json` junto al binario, y `/descargar` se comprueba tras publicar |
+| OTA de punta a punta | **Pendiente** — se acredita tras publicar (`R13`) |
+| Metadatos por API (`gh api`) | **Pendiente** — tras la subida (`R15`) |
+| Docs en el mismo commit | **Sí** (`R18`) |
