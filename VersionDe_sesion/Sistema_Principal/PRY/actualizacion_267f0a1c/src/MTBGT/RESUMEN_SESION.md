@@ -167,7 +167,15 @@ Regla pedida: en el visor C# **cada usuario verá 6 personajes diferentes**. Hoj
 - **Cierre de sesión**: el visor C# hace flush del JSON (o POST al servicio) con `ultimo_uso` y estado antes de salir.
 - **Generación reproducible**: colores/pelo/ropa/altura derivados de un `seed` guardado en JSON → mismo avatar siempre, sin duplicados.
 
-### 2.6 Shape keys de Blender → Godot (retoque del avatar) — PENDIENTE
+### 2.6 Shape keys de Blender → Godot (retoque del avatar) — RESUELTO POR CÓDIGO (2026-10-29)
+
+> **2026-10-29:** los glTF del catálogo **no traen morph targets** (`targets: 0` en
+> `gltfimport/avatares/AVH1.gltf`, 8 mallas y 1 skin), así que no se toca la tubería Blender→glTF:
+> las shape keys se aplican como **deformación analítica de vértices** en espacio de reposo
+> (UV, huesos y pesos intactos) con el vocabulario de presets VRM del addon 2031. Siete
+> expresiones medidas sobre malla real entre 8,4 y 23,5 mm. Implementado y probado en fuentes,
+> **pendiente de exportar `wvp3d.pck` y recompilar**. Detalle y evidencia en
+> `README_desarrollo_20261029_selector_shapekeys.md`.
 
 Objetivo: una vez elegido el avatar, el usuario puede **retocarlo** (cara/cuerpo/nariz/ojos/edad/musculatura...) desde el propio metaverso para hacerlo más original. **Solo para avatares**: el terreno/islas no se editan con shape keys (ver 2.7).
 
@@ -272,9 +280,9 @@ Rendimiento y límites:
 - [ ] Subida a IPFS al cerrar: `ipfs add --pin` + escritura de `user://ipfs_avatares.cid` (vía A o B de 2.3).
 - [ ] Descarga al arrancar: leer CID → `ipfs cat` → fusionar con caché → antes de `_mostrar_carrusel()` en `Boot.gd`.
 - [ ] Manejo de daemon caído / cierre forzado (no bloquear; caer a caché local).
-- [ ] Shape keys: verificar que los `.blend` traen morph targets y que Godot las importa; exportar `.glb` explícito.
-- [ ] UI de retoque (sliders por grupo) tras el carrusel en `registro.tscn`.
-- [ ] Campo `shapes` en el JSON + replicación en el spawn P2P de `PlayerSync.gd`.
+- [x] Shape keys: verificado el 2026-10-29 que los glTF **no traen** morph targets (`targets: 0`); se resuelven por deformación analítica, sin reexportar `.glb`. Estado: *Implementado, sin PCK*.
+- [x] UI de retoque: sliders de las 7 expresiones en el propio selector (`SLAV.gd`, panel SHAPE KEYS) y personalización completa en `registro.tscn`. Estado: *Implementado, sin prueba visual con ventana*.
+- [ ] Campo `shapes` en el JSON de avatares usados/IPFS + replicación en el spawn P2P de `PlayerSync.gd`: las expresiones ya viajan en `Personalizacion.codificar()` (*Parcial*), el JSON/IPFS no existe.
 - [ ] Servicio de asignación atómica para el visor C# (reserva por `owner_uuid`).
 - [ ] Flush del JSON al cerrar sesión y recuperación del mismo avatar al reconectar.
 - [ ] Generación determinista por `seed` para variantes sin duplicados.

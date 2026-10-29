@@ -26,6 +26,7 @@ var _selected_avatar_scene := ""
 var _preview: Node = null
 var _pers: Dictionary = {}
 var _volcando := false
+var _aviso_original: Label
 
 
 func _ready() -> void:
@@ -72,6 +73,17 @@ func _ready() -> void:
 	_preview = preview_host.get_node_or_null("userbaseh1")
 	Pers.aplicar(_preview, _pers)
 
+	# El nick se pidio ya en el selector de avatares; aqui se muestra para que
+	# el jugador lo confirme y no lo repita.
+	_crear_aviso_original()
+	var cfg := ConfigFile.new()
+	if cfg.load("user://registro.cfg") == OK:
+		var nick_previo := str(cfg.get_value("jugador", "nick_selector", ""))
+		if nick_previo.is_empty():
+			nick_previo = str(cfg.get_value("jugador", "nick", ""))
+		if not nick_previo.is_empty():
+			nick_edit.text = nick_previo
+
 	# Asegurar que el campo de texto reciba el foco inmediatamente
 	if nick_edit:
 		nick_edit.grab_focus()
@@ -99,6 +111,35 @@ func set_avatar_scene(scene_path: String) -> void:
 		(ap as AnimationPlayer).play("paradoMJ1_1")
 	_preview = inst
 	Pers.aplicar(inst, _pers)
+	if _aviso_original != null:
+		_aviso_original.text = "✔ AVATAR ORIGINAL · %s" % _nombre_avatar(scene_path)
+		_aviso_original.visible = true
+
+
+func set_nick(nick: String) -> void:
+	if nick_edit != null and not nick.strip_edges().is_empty():
+		nick_edit.text = nick.strip_edges()
+
+
+## Aviso verde con el avatar original elegido en el carrusel.
+func _crear_aviso_original() -> void:
+	var caja := $Panel/VBox
+	if caja == null:
+		return
+	_aviso_original = Label.new()
+	_aviso_original.name = "AvisoAvatarOriginal"
+	_aviso_original.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_aviso_original.add_theme_font_size_override("font_size", 20)
+	_aviso_original.add_theme_color_override("font_color", Color(0.45, 0.95, 0.55, 1.0))
+	_aviso_original.add_theme_color_override("font_outline_color", Color(0.01, 0.04, 0.02, 1.0))
+	_aviso_original.add_theme_constant_override("outline_size", 6)
+	_aviso_original.visible = false
+	caja.add_child(_aviso_original)
+	caja.move_child(_aviso_original, 1)
+
+
+func _nombre_avatar(scene_path: String) -> String:
+	return scene_path.get_file().get_basename().replace("Ch3D", "")
 
 
 func _volcar_controles(datos: Dictionary) -> void:

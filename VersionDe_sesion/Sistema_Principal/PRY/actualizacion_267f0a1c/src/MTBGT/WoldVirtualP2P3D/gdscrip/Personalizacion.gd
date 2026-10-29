@@ -15,6 +15,16 @@ const SECCION := "personalizacion"
 const ORDEN := ["piel", "pelo", "camiseta", "pantalon", "zapatillas"]
 const PROPORCIONES := ["altura_cm", "ancho", "cabeza", "hombros", "torso", "brazos", "piernas"]
 const ROSTRO := ["nariz", "labios", "orejas", "ojos"]
+## Expresiones faciales: shape keys resueltos por codigo, porque los GLB de los
+## 24 avatares no traen morph targets (`targets: 0`) y `set_blend_shape_value`
+## no tendria nada que mover. Se adaptan los presets de VRM que usa el addon
+## V-Sekai/vrm-importer (Asset Library 2031) a deformacion analitica de vertices.
+const EXPRESIONES := ["sonrisa", "enfado", "tristeza", "sorpresa", "parpadeo",
+	"boca_abierta", "boca_ancha"]
+## Claves numericas que se leen, guardan y replican (cuerpo + cara + expresiones).
+const CAMPOS := ["altura_cm", "ancho", "cabeza", "hombros", "torso", "brazos", "piernas",
+	"nariz", "labios", "orejas", "ojos",
+	"sonrisa", "enfado", "tristeza", "sorpresa", "parpadeo", "boca_abierta", "boca_ancha"]
 const NOMBRES := {
 	"piel": "Piel",
 	"pelo": "Pelo",
@@ -32,6 +42,13 @@ const NOMBRES := {
 	"labios": "Labios",
 	"orejas": "Orejas",
 	"ojos": "Ojos",
+	"sonrisa": "Sonrisa",
+	"enfado": "Enfado",
+	"tristeza": "Tristeza",
+	"sorpresa": "Sorpresa",
+	"parpadeo": "Parpadeo",
+	"boca_abierta": "Boca abierta",
+	"boca_ancha": "Boca ancha",
 }
 const POR_DEFECTO := {
 	"piel": Color(1, 1, 1),
@@ -50,6 +67,13 @@ const POR_DEFECTO := {
 	"labios": 0.0,
 	"orejas": 0.0,
 	"ojos": 0.0,
+	"sonrisa": 0.0,
+	"enfado": 0.0,
+	"tristeza": 0.0,
+	"sorpresa": 0.0,
+	"parpadeo": 0.0,
+	"boca_abierta": 0.0,
+	"boca_ancha": 0.0,
 }
 const RANGOS := {
 	"altura_cm": Vector2(0, 30),
@@ -63,6 +87,13 @@ const RANGOS := {
 	"labios": Vector2(0, 1),
 	"orejas": Vector2(0, 1),
 	"ojos": Vector2(0, 1),
+	"sonrisa": Vector2(0, 1),
+	"enfado": Vector2(0, 1),
+	"tristeza": Vector2(0, 1),
+	"sorpresa": Vector2(0, 1),
+	"parpadeo": Vector2(0, 1),
+	"boca_abierta": Vector2(0, 1),
+	"boca_ancha": Vector2(0, 1),
 }
 const ALTURA_REFERENCIA := 1.75
 
@@ -82,7 +113,7 @@ static func leer() -> Dictionary:
 	for clave in ORDEN:
 		if cfg.has_section_key(SECCION, clave):
 			d[clave] = Color.html(str(cfg.get_value(SECCION, clave, "ffffff")))
-	for clave in PROPORCIONES + ROSTRO:
+	for clave in CAMPOS:
 		if cfg.has_section_key(SECCION, clave):
 			d[clave] = float(cfg.get_value(SECCION, clave, POR_DEFECTO[clave]))
 	# Configs antiguas guardaban "altura" como factor 0.9..1.1.
@@ -98,9 +129,10 @@ static func guardar(datos: Dictionary) -> void:
 	cfg.load("user://registro.cfg")
 	for clave in ORDEN:
 		cfg.set_value(SECCION, clave, d[clave].to_html(false))
-	for clave in PROPORCIONES + ROSTRO:
+	for clave in CAMPOS:
 		cfg.set_value(SECCION, clave, d[clave])
-	cfg.erase_section_key(SECCION, "altura")
+	if cfg.has_section_key(SECCION, "altura"):
+		cfg.erase_section_key(SECCION, "altura")
 	cfg.save("user://registro.cfg")
 
 
@@ -114,7 +146,7 @@ static func normalizar(datos: Dictionary) -> Dictionary:
 			elif datos[clave] is String:
 				c = Color.html(str(datos[clave]))
 		d[clave] = Color(clampf(c.r, 0.0, 2.0), clampf(c.g, 0.0, 2.0), clampf(c.b, 0.0, 2.0), 1.0)
-	for clave in PROPORCIONES + ROSTRO:
+	for clave in CAMPOS:
 		if datos.has(clave):
 			var r: Vector2 = RANGOS[clave]
 			d[clave] = clampf(float(datos[clave]), r.x, r.y)
@@ -127,7 +159,7 @@ static func codificar(datos: Dictionary) -> String:
 	var partes := PackedStringArray()
 	for clave in ORDEN:
 		partes.append(d[clave].to_html(false))
-	for clave in PROPORCIONES + ROSTRO:
+	for clave in CAMPOS:
 		partes.append("%.3f" % d[clave])
 	return "|".join(partes)
 
@@ -139,7 +171,7 @@ static func decodificar(texto: String) -> Dictionary:
 	var d := {}
 	for i in ORDEN.size():
 		d[ORDEN[i]] = Color.html(partes[i])
-	var resto: Array = PROPORCIONES + ROSTRO
+	var resto: Array = CAMPOS
 	for i in resto.size():
 		var pos := ORDEN.size() + i
 		if pos < partes.size():
@@ -154,6 +186,13 @@ static func aplicar(avatar: Node, datos: Dictionary) -> void:
 	var d := normalizar(datos)
 	_aplicar_tintes(avatar, d)
 	_aplicar_figura(avatar, d)
+
+
+static func _hay_expresion(d: Dictionary) -> bool:
+	for clave in EXPRESIONES:
+		if float(d[clave]) > 0.001:
+			return true
+	return false
 
 
 ## Altura visible actual en metros (para colocar etiquetas sobre la cabeza).
@@ -204,7 +243,13 @@ static func _aplicar_figura(avatar: Node, d: Dictionary) -> void:
 	var pestanas := _buscar_malla(avatar, "eyelas")
 	var geo: Dictionary = {}
 	if cuerpo != null and cuerpo.mesh != null and sk != null:
-		geo = _geometria(cuerpo.mesh, pestanas.mesh if pestanas != null else null, idx)
+		# Los anclajes se miden siempre sobre la malla SIN deformar: los rebuilds
+		# sustituyen mi.mesh y medir ahi haria derivar la cara en cada ajuste.
+		var malla_base: Mesh = cuerpo.get_meta("pers_mesh_base", cuerpo.mesh)
+		var malla_pestanas: Mesh = null
+		if pestanas != null:
+			malla_pestanas = pestanas.get_meta("pers_mesh_base", pestanas.mesh)
+		geo = _geometria(malla_base, malla_pestanas, idx)
 
 	# La malla de algunos GLB no esta en metros, asi que la altura se mide en
 	# el esqueleto (HeadTop_End en reposo) y se cachea a escala base.
@@ -224,12 +269,13 @@ static func _aplicar_figura(avatar: Node, d: Dictionary) -> void:
 
 	if geo.is_empty():
 		return
-	var hay_cara := float(d["nariz"]) > 0.001 or float(d["labios"]) > 0.001 \
+	var hay_expresion := _hay_expresion(d)
+	var hay_cara := hay_expresion or float(d["nariz"]) > 0.001 or float(d["labios"]) > 0.001 \
 		or float(d["orejas"]) > 0.001 or float(d["ojos"]) > 0.001
 	var hay_cuerpo := absf(float(d["torso"]) - 1.0) > 0.001 or absf(float(d["hombros"]) - 1.0) > 0.001 \
 		or absf(float(d["brazos"]) - 1.0) > 0.001 or absf(float(d["piernas"]) - 1.0) > 0.001
 	var firma := ""
-	for clave in ROSTRO + ["hombros", "torso", "brazos", "piernas"]:
+	for clave in ROSTRO + EXPRESIONES + ["hombros", "torso", "brazos", "piernas"]:
 		firma += "%.3f|" % d[clave]
 	if avatar.get_meta("pers_firma_mallas", "") == firma:
 		return
@@ -242,7 +288,6 @@ static func _aplicar_figura(avatar: Node, d: Dictionary) -> void:
 static func _reconstruir_mallas(avatar: Node, sk: Skeleton3D, geo: Dictionary, d: Dictionary,
 		hay_cara: bool, hay_cuerpo: bool, cuerpo: MeshInstance3D) -> void:
 	var idx := _indices_huesos(sk)
-	var ojos := float(d["ojos"]) > 0.001
 	for nodo in avatar.find_children("*", "MeshInstance3D", true, false):
 		var mi := nodo as MeshInstance3D
 		if mi.mesh == null:
@@ -255,7 +300,7 @@ static func _reconstruir_mallas(avatar: Node, sk: Skeleton3D, geo: Dictionary, d
 			var parte := _parte_superficie(mi, s)
 			if parte == "" and mi == cuerpo:
 				parte = "piel"
-			if (hay_cara and parte == "piel") or (hay_cara and ojos and _es_pestanas(mi, s)) \
+			if (hay_cara and parte == "piel") or (hay_cara and _es_pestanas(mi, s)) \
 					or (hay_cuerpo and parte in ["piel", "camiseta", "pantalon", "zapatillas"]):
 				trabajo = true
 				break
@@ -269,7 +314,7 @@ static func _reconstruir_mallas(avatar: Node, sk: Skeleton3D, geo: Dictionary, d
 			var parte := _parte_superficie(mi, s)
 			if parte == "" and mi == cuerpo:
 				parte = "piel"
-			var es_pestanas := hay_cara and ojos and _es_pestanas(mi, s)
+			var es_pestanas := hay_cara and _es_pestanas(mi, s)
 			var usar_cara := hay_cara and parte == "piel"
 			var usar_cuerpo := hay_cuerpo and parte in ["piel", "camiseta", "pantalon", "zapatillas"]
 			var origen: Array = _arreglos_originales(base, s)
@@ -310,40 +355,146 @@ static func _deformar_rostro(p: Vector3, w_cabeza: float, d: Dictionary, geo: Di
 		var ojo: Vector3 = anclas["ojo_l"] if p.x <= anclas["x"] else anclas["ojo_r"]
 		var w := _campo(p, ojo, anclas["r_ojo"]) * w_cabeza
 		if w > 0.0:
-			var f := 1.0 + 0.26 * t_ojos * w
+			var f := 1.0 + 0.45 * t_ojos * w
 			p.x = ojo.x + (p.x - ojo.x) * f
 			p.y = ojo.y + (p.y - ojo.y) * f
-			p.z += 0.003 * t_ojos * w
+			p.z += 0.008 * t_ojos * w
 
 	if t_nariz > 0.001:
 		var w := _campo(p, anclas["nariz"], anclas["r_nariz"]) * w_cabeza
 		if w > 0.0:
-			p.x = anclas["nariz"].x + (p.x - anclas["nariz"].x) * (1.0 + 0.28 * t_nariz * w)
-			p.y = anclas["nariz"].y + (p.y - anclas["nariz"].y) * (1.0 + 0.20 * t_nariz * w)
-			p.z += 0.012 * t_nariz * w
+			p.x = anclas["nariz"].x + (p.x - anclas["nariz"].x) * (1.0 + 0.55 * t_nariz * w)
+			p.y = anclas["nariz"].y + (p.y - anclas["nariz"].y) * (1.0 + 0.40 * t_nariz * w)
+			p.z += 0.028 * t_nariz * w
 
 	if t_labios > 0.001:
 		var w := _campo(p, anclas["labios"], anclas["r_labios"]) * w_cabeza
 		if w > 0.0:
-			p.x = anclas["labios"].x + (p.x - anclas["labios"].x) * (1.0 + 0.50 * t_labios * w)
-			p.y = anclas["labios"].y + (p.y - anclas["labios"].y) * (1.0 + 0.62 * t_labios * w)
-			p.z += 0.012 * t_labios * w
+			p.x = anclas["labios"].x + (p.x - anclas["labios"].x) * (1.0 + 0.85 * t_labios * w)
+			p.y = anclas["labios"].y + (p.y - anclas["labios"].y) * (1.0 + 1.00 * t_labios * w)
+			p.z += 0.025 * t_labios * w
 
 	if t_orejas > 0.001:
 		var oreja: Vector3 = anclas["oreja_l"] if p.x <= anclas["x"] else anclas["oreja_r"]
 		var w := _campo(p, oreja, anclas["r_oreja"]) * w_cabeza
 		if w > 0.0:
 			var signo := -1.0 if p.x <= anclas["x"] else 1.0
-			p.x += signo * 0.012 * t_orejas * w
-			p.y = oreja.y + (p.y - oreja.y) * (1.0 + 0.30 * t_orejas * w)
-			p.z = oreja.z + (p.z - oreja.z) * (1.0 + 0.26 * t_orejas * w)
+			p.x += signo * 0.028 * t_orejas * w
+			p.y = oreja.y + (p.y - oreja.y) * (1.0 + 0.55 * t_orejas * w)
+			p.z = oreja.z + (p.z - oreja.z) * (1.0 + 0.45 * t_orejas * w)
+
+	return _deformar_expresion(p, w_cabeza, d, geo)
+
+
+## Expresiones (shape keys por codigo). Todas las amplitudes se miden en
+## fracciones de la cabeza, asi que el mismo peso se ve igual en los 24
+## avatares aunque sus mallas tengan escalas distintas.
+static func _deformar_expresion(p: Vector3, w_cabeza: float, d: Dictionary, geo: Dictionary) -> Vector3:
+	if w_cabeza <= 0.01:
+		return p
+	var t_sonrisa := float(d["sonrisa"])
+	var t_enfado := float(d["enfado"])
+	var t_tristeza := float(d["tristeza"])
+	var t_sorpresa := float(d["sorpresa"])
+	var t_blink := float(d["parpadeo"])
+	var t_boca := float(d["boca_abierta"])
+	var t_ancha := float(d["boca_ancha"])
+	if t_sonrisa + t_enfado + t_tristeza + t_sorpresa + t_blink + t_boca + t_ancha <= 0.001:
+		return p
+
+	var anclas: Dictionary = geo["anclas"]
+	var cabeza: Dictionary = geo["cabeza"]
+	var x0: float = cabeza["x"]
+	var h: float = cabeza["h"]
+	var mitad: float = cabeza["mitad"]
+	var labios: Vector3 = anclas["labios"]
+	var dx := p.x - labios.x
+	var comisura := clampf(absf(dx) / maxf(mitad * 0.30, 0.0001), 0.0, 1.0)
+	var w_boca := _campo(p, labios, Vector3(mitad * 0.46, h * 0.12, 0.075)) * w_cabeza
+
+	# Mejillas y entrecejo: campos simetricos alrededor de cada ojo.
+	var ojos := [anclas["ojo_l"], anclas["ojo_r"]]
+
+	if t_sonrisa > 0.001:
+		if w_boca > 0.0:
+			var lado := -1.0 if dx < 0.0 else 1.0
+			p.y += h * 0.080 * t_sonrisa * w_boca * comisura
+			p.x += lado * mitad * 0.16 * t_sonrisa * w_boca * comisura
+			p.z += 0.012 * t_sonrisa * w_boca
+		for c in ojos:
+			var ojo: Vector3 = c
+			var mejilla := Vector3(x0 + (ojo.x - x0) * 0.85, ojo.y - h * 0.15, ojo.z - 0.01)
+			var w := _campo(p, mejilla, Vector3(mitad * 0.32, h * 0.11, 0.075)) * w_cabeza
+			if w > 0.0:
+				p.y += h * 0.035 * t_sonrisa * w
+				p.z += 0.008 * t_sonrisa * w
+
+	if t_enfado > 0.001:
+		for c in ojos:
+			var ojo: Vector3 = c
+			var ceno := Vector3(x0 + (ojo.x - x0) * 0.60, ojo.y + h * 0.09, ojo.z)
+			var w := _campo(p, ceno, Vector3(mitad * 0.28, h * 0.075, 0.075)) * w_cabeza
+			if w > 0.0:
+				p.y -= h * 0.045 * t_enfado * w
+				p.x = x0 + (p.x - x0) * (1.0 - 0.12 * t_enfado * w)
+				p.z += 0.010 * t_enfado * w
+		if w_boca > 0.0:
+			p.y -= h * 0.040 * t_enfado * w_boca * comisura
+
+	if t_tristeza > 0.001:
+		if w_boca > 0.0:
+			p.y -= h * 0.075 * t_tristeza * w_boca * comisura
+		for c in ojos:
+			var ojo: Vector3 = c
+			var ceno := Vector3(x0 + (ojo.x - x0) * 0.58, ojo.y + h * 0.10, ojo.z)
+			var w := _campo(p, ceno, Vector3(mitad * 0.26, h * 0.075, 0.075)) * w_cabeza
+			if w > 0.0:
+				p.y += h * 0.035 * t_tristeza * w
+
+	if t_sorpresa > 0.001:
+		# La mandibula baja y el menton avanza: la boca se abre en ovalo.
+		var bajo := clampf((labios.y + h * 0.05 - p.y) / maxf(h * 0.26, 0.0001), 0.0, 1.0)
+		if bajo > 0.0 and absf(p.x - x0) < mitad * 1.05:
+			p.y -= h * 0.085 * t_sorpresa * bajo * w_cabeza
+			p.z += 0.010 * t_sorpresa * bajo * w_cabeza
+		for c in ojos:
+			var ojo: Vector3 = c
+			var w := _campo(p, ojo, anclas["r_ojo"]) * w_cabeza
+			if w > 0.0:
+				p.y = ojo.y + (p.y - ojo.y) * (1.0 + 0.35 * t_sorpresa * w)
+			var ceja := Vector3(x0 + (ojo.x - x0) * 0.62, ojo.y + h * 0.13, ojo.z)
+			var wb := _campo(p, ceja, Vector3(mitad * 0.28, h * 0.07, 0.075)) * w_cabeza
+			if wb > 0.0:
+				p.y += h * 0.040 * t_sorpresa * wb
+		if w_boca > 0.0:
+			p.y = labios.y + (p.y - labios.y) * (1.0 + 0.40 * t_sorpresa * w_boca)
+
+	if t_blink > 0.001:
+		for c in ojos:
+			var ojo: Vector3 = c
+			var w := _campo(p, ojo, Vector3(anclas["r_ojo"].x * 1.35, anclas["r_ojo"].y * 2.2, 0.075)) * w_cabeza
+			if w > 0.0:
+				p.y = ojo.y + (p.y - ojo.y) * (1.0 - 0.72 * t_blink * w)
+
+	if t_boca > 0.001 and w_boca > 0.0:
+		var apertura := maxf(0.0, 1.0 - comisura * comisura)
+		if p.y <= labios.y:
+			p.y -= h * 0.090 * t_boca * w_boca * apertura
+		else:
+			p.y += h * 0.022 * t_boca * w_boca * apertura
+		p.z += 0.007 * t_boca * w_boca * apertura
+
+	if t_ancha > 0.001 and w_boca > 0.0:
+		p.x = x0 + (p.x - x0) * (1.0 + 0.45 * t_ancha * w_boca)
+		p.z += 0.006 * t_ancha * w_boca * comisura
 
 	return p
 
 
 static func _deformar_pestanas(p: Vector3, d: Dictionary, geo: Dictionary) -> Vector3:
 	var t := float(d["ojos"])
-	if t <= 0.001:
+	var blink := float(d["parpadeo"])
+	if t <= 0.001 and blink <= 0.001:
 		return p
 	var anclas: Dictionary = geo["anclas"]
 	var ojo: Vector3 = anclas["ojo_l"] if p.x <= anclas["x"] else anclas["ojo_r"]
@@ -352,7 +503,9 @@ static func _deformar_pestanas(p: Vector3, d: Dictionary, geo: Dictionary) -> Ve
 		return p
 	var f := 1.0 + 0.32 * t * w
 	p.x = ojo.x + (p.x - ojo.x) * f
-	p.y = ojo.y + (p.y - ojo.y) * f
+	# El parpadeo aplasta la pestana contra el ojo y la arrastra hacia fuera.
+	p.y = ojo.y + (p.y - ojo.y) * f * (1.0 - 0.92 * blink * w)
+	p.z = ojo.z + (p.z - ojo.z) * (1.0 + 0.25 * blink * w)
 	return p
 
 
@@ -550,6 +703,15 @@ static func _geometria(cuerpo: Mesh, pestanas: Mesh, idx: Dictionary) -> Diction
 	var geo := {
 		"x": x0,
 		"altura": altura_top if altura_top > -1e8 else y0 + h,
+		# Dimensiones de la cabeza: las expresiones miden sus amplitudes en
+		# fracciones de `h` y `mitad`, no en metros absolutos.
+		"cabeza": {
+			"x": x0,
+			"y0": y0,
+			"h": h,
+			"mitad": mitad,
+			"z": caja.get_center().z,
+		},
 		"torso_z": suma_z_torso / float(n_torso) if n_torso > 0 else caja.get_center().z,
 		"brazo_l": brazo_l,
 		"brazo_r": brazo_r,
@@ -721,12 +883,13 @@ static func _buscar_cuerpo(avatar: Node, idx: Dictionary) -> MeshInstance3D:
 		var mi := nodo as MeshInstance3D
 		if mi.mesh == null or mi.mesh.get_surface_count() == 0:
 			continue
-		var cabezas := _cuenta_cabeza(mi.mesh, idx)
+		var malla: Mesh = mi.get_meta("pers_mesh_base", mi.mesh)
+		var cabezas := _cuenta_cabeza(malla, idx)
 		if cabezas == 0:
 			continue
 		var parte := _parte(mi.name)
 		var puntos := 2 if parte == "piel" else (1 if parte == "" else 0)
-		var verts := _cuenta_vertices(mi.mesh)
+		var verts := _cuenta_vertices(malla)
 		if puntos > mejor_puntos or (puntos == mejor_puntos and cabezas > mejor_cabeza) \
 				or (puntos == mejor_puntos and cabezas == mejor_cabeza and verts > mejor_vert):
 			mejor = mi
@@ -746,7 +909,8 @@ static func _malla_mayor(avatar: Node) -> MeshInstance3D:
 		var mi := nodo as MeshInstance3D
 		if mi.mesh == null or mi.mesh.get_surface_count() == 0:
 			continue
-		var verts := _cuenta_vertices(mi.mesh)
+		var malla: Mesh = mi.get_meta("pers_mesh_base", mi.mesh)
+		var verts := _cuenta_vertices(malla)
 		if verts > mejor_vert:
 			mejor = mi
 			mejor_vert = verts
