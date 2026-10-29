@@ -16,6 +16,14 @@ namespace Visor3D.Seguridad.SMTPLC
     /// </summary>
     public static class VmDetector
     {
+        /// <summary>
+        /// Confianza mínima para dar el equipo por virtualizado. Debe coincidir con
+        /// <c>SmtplcSecurityPolicy.VmConfidenceThreshold</c>: la política decide con
+        /// <c>IsVm || score >= umbral</c>, así que si este valor fuera menor el umbral
+        /// de la política quedaría inoperante y una sola señal de 0,40 bloquearía.
+        /// </summary>
+        public const double UmbralVm = 0.50;
+
         // Prefijos OUI de direcciones MAC asignadas a fabricantes de virtualización
         private static readonly Dictionary<string, string> KnownVmMacOui = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -102,7 +110,7 @@ namespace Visor3D.Seguridad.SMTPLC
 
             // Normalizar score y armar resultado final
             result.ConfidenceScore = Math.Min(1.0, score);
-            result.IsVm = result.ConfidenceScore >= 0.40;
+            result.IsVm = result.ConfidenceScore >= UmbralVm;
             result.DetectedHypervisors = detectedHypervisors.ToList();
             result.Artifacts = artifacts;
 

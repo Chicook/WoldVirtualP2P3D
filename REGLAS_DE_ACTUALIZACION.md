@@ -56,7 +56,11 @@ extensión: hoy `DMWoldVirtualP2P3Dv2.6.9`, que corresponde al exe `DMWoldVirtua
 publicado el 2026-10-29 como release v2.6.9 (tag sobre `f1e57ee` de `main`, assets verificados por
 API). Las releases anteriores v2.6.8, v2.6.7, v2.6.4, v2.6.3, v2.6.2, v2.6.1, v2.6.0 y v2.5.9
 siguen con su propio asset. El árbol local y la release vigente están, por tanto, alineados en la
-2.6.9.
+2.6.9. **Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
+`DMWoldVirtualP2P3Dv2.6.9.exe` al recompilar los arreglos de umbral de VM, recolector de runtimes y
+reintento del release, y sustituir el exe y `SHA256SUMS` en la misma release con
+`gh release upload --clobber` (exe `e7e27212…6d84d8`, 788.316.025 B). La regla sigue vigente: la
+próxima compilación sube `<Version>`.
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
 fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
@@ -154,7 +158,9 @@ mentir: los builds antiguos anuncian la constante empotrada en su propio binario
 del propio `release.json`. Subir sólo el binario deja el portal y cualquier consumidor externo
 apuntando al anterior. Desde la 2.6.9 hay un cuarto asset, `WoldVirtualP2P3Dv2.6.9-linux.tar.gz`
 (motor Godot de Linux + `wvp3d.pck` + `STM_LBR/`), y su digest va también en `SHA256SUMS`: si el
-paquete se regenera, se sube y se regenera la suma en el mismo gesto.
+paquete se regenera, se sube y se regenera la suma en el mismo gesto. Si se sustituye un asset con
+`--clobber` (excepción autorizada del 2026-10-29 con la 2.6.9), se regenera `SHA256SUMS`, se sube en
+el mismo gesto y se comprueba el `digest` nuevo por API.
 
 **R15 — Verifica por API, no por `curl`.** GitHub cachea assets por CDN: tras un `--clobber`, la URL
 de descarga puede servir contenido viejo durante decenas de segundos. El `digest` que devuelve
@@ -256,7 +262,8 @@ Con evidencia en el log, no "me parece que va". El visor escribe en
   **Cerrado el 2026-10-29:** `ComprobarMotor` crea un perfil de Godot de usar y tirar en `%TEMP%`
   (`registro.cfg` con avatar y nick), apunta `APPDATA` a él, pasa `--server` y borra la carpeta al
   terminar (`<src/>VSC#/Services/StartupSelfTest.cs`). La prueba ya no lee ni escribe el perfil del
-  equipo; dio **15/15** en la 2.6.9 con el perfil real conteniendo un `p2p_session.json` de cliente.
+  equipo; dio **15/15** en la 2.6.9 con el perfil real conteniendo un `p2p_session.json` de cliente
+  (17/17 desde la recompilación del 2026-10-29, que añadió el umbral de VM y el recolector).
   *Estado: Implementado y aislado.*
 - **Alcance del token de invitación (2026-10-28).** El token protege la ruta pública (túnel y proxy
   `/chat`) y se propaga por enlace, `--peer-url`, `p2p_session.json` y el endpoint del chat. Una

@@ -73,6 +73,12 @@ namespace Visor3D.Services
         private static readonly object _releaseLock = new object();
         private static bool _refresheoLanzado;
 
+        /// <summary>Consultas a GitHub por arranque antes de rendirse.</summary>
+        private const int IntentosRelease = 3;
+
+        /// <summary>Espera entre intentos; crece con cada reintento.</summary>
+        private static readonly TimeSpan EsperaReintentoBase = TimeSpan.FromSeconds(5);
+
         private static string ExeName { get { lock (_releaseLock) return ReleaseActiva.Name; } }
         private static string ExeUrl { get { lock (_releaseLock) return ReleaseActiva.Url; } }
         private static string ExeSizeMb { get { lock (_releaseLock) return ReleaseActiva.SizeMb; } }
@@ -96,26 +102,41 @@ namespace Visor3D.Services
 
         private static async Task RefrescarReleaseAsync()
         {
-            try
+            for (int intento = 1; intento <= IntentosRelease; intento++)
             {
-                var info = await new Visor3D.Update.UpdateChecker().GetLatestReleaseAsync();
-                if (info == null || string.IsNullOrWhiteSpace(info.AssetName) ||
-                    string.IsNullOrWhiteSpace(info.AssetUrl))
+                try
                 {
-                    VisorLog.Info("WebNodo: GitHub no informa de release vigente; se mantiene la local.");
+                    var info = await new Visor3D.Update.UpdateChecker().GetLatestReleaseAsync();
+                    if (info == null || string.IsNullOrWhiteSpace(info.AssetName) ||
+                        string.IsNullOrWhiteSpace(info.AssetUrl))
+                    {
+                        VisorLog.Info("WebNodo: GitHub no informa de release vigente; se mantiene la local.");
+                        return;
+                    }
+
+                    string mb = info.AssetSize > 0
+                        ? (info.AssetSize / 1048576.0).ToString("0.0")
+                        : "—";
+                    var nueva = (Name: info.AssetName!, Url: info.AssetUrl!, SizeMb: mb);
+                    lock (_releaseLock) ReleaseActiva = nueva;
+                    VisorLog.Info($"WebNodo: release vigente → {nueva.Name} ({nueva.SizeMb} MB)");
                     return;
                 }
+                catch (Exception ex)
+                {
+                    if (intento < IntentosRelease)
+                    {
+                        var espera = TimeSpan.FromSeconds(EsperaReintentoBase.TotalSeconds * intento);
+                        VisorLog.Info($"WebNodo: consulta de release falló (intento {intento}/{IntentosRelease}: {ex.Message}); reintento en {espera.TotalSeconds:0} s.");
+                        await Task.Delay(espera);
+                        continue;
+                    }
 
-                string mb = info.AssetSize > 0
-                    ? (info.AssetSize / 1048576.0).ToString("0.0")
-                    : "—";
-                var nueva = (Name: info.AssetName!, Url: info.AssetUrl!, SizeMb: mb);
-                lock (_releaseLock) ReleaseActiva = nueva;
-                VisorLog.Info($"WebNodo: release vigente → {nueva.Name} ({nueva.SizeMb} MB)");
-            }
-            catch (Exception ex)
-            {
-                VisorLog.Info($"WebNodo: no se pudo leer la release vigente ({ex.Message}); se mantiene la local.");
+                    // Se suelta el pestillo para que un Start() posterior (reinicio
+                    // del portal tras un fallo de red) vuelva a intentarlo.
+                    lock (_releaseLock) _refresheoLanzado = false;
+                    VisorLog.Info($"WebNodo: no se pudo leer la release vigente tras {IntentosRelease} intentos ({ex.Message}); se mantiene la local.");
+                }
             }
         }
 

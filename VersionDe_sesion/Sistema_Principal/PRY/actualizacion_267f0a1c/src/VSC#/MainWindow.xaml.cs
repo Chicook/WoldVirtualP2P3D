@@ -185,6 +185,10 @@ namespace Visor3D
             // Iniciar búsqueda de actualizaciones en segundo plano
             _ = Task.Run(CheckUpdatesAsync);
 
+            // La ventana ya está en pie: el recolector puede purgar los runtimes
+            // anteriores en el próximo arranque.
+            RuntimeCleaner.MarcarArranqueCorrecto();
+
             // Equipo vacío: saltar la bienvenida y entrar directo al registro completo.
             if (_equipoVacio)
                 Dispatcher.BeginInvoke(new Action(AbrirRegistroInicial));
