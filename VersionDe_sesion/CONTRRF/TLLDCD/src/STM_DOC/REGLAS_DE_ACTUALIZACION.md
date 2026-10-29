@@ -52,11 +52,11 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualP2P3Dv2.7.0`, que corresponde al exe `DMWoldVirtualP2P3Dv2.7.0.exe`,
-publicado el 2026-10-29 como release v2.7.0 (tag sobre `5f75f6f` de `main`, assets verificados por
-API). Las releases anteriores v2.6.9, v2.6.8, v2.6.7, v2.6.4, v2.6.3, v2.6.2, v2.6.1, v2.6.0 y
-v2.5.9 siguen con su propio asset. El árbol local y la release vigente están, por tanto, alineados
-en la 2.7.0. **Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
+extensión: hoy `DMWoldVirtualP2P3Dv2.7.1`, que corresponde al exe `DMWoldVirtualP2P3Dv2.7.1.exe`,
+publicado el 2026-10-29 como release v2.7.1 (tag sobre `261864b` de `DevQoderIA`, assets verificados
+por API). Las releases anteriores v2.7.0, v2.6.9, v2.6.8, v2.6.7, v2.6.4, v2.6.3, v2.6.2, v2.6.1,
+v2.6.0 y v2.5.9 siguen con su propio asset. El árbol local y la release vigente están, por tanto,
+alineados en la 2.7.1. **Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
 `DMWoldVirtualP2P3Dv2.6.9.exe` al recompilar los arreglos de umbral de VM, recolector de runtimes y
 reintento del release, y sustituir el exe y `SHA256SUMS` en la misma release con
 `gh release upload --clobber` (exe `e7e27212…6d84d8`, 788.316.025 B); se aplicó sólo a la 2.6.9 y no
@@ -64,7 +64,7 @@ se repite. La regla sigue vigente: cada compilación sube `<Version>`.
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
 fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
-los cuatro planos son `2.7.0` / `v2.7.0` / `DMWoldVirtualP2P3Dv2.7.0.exe` / `2.7.0`; la v2.6.9 y las
+los cuatro planos son `2.7.1` / `v2.7.1` / `DMWoldVirtualP2P3Dv2.7.1.exe` / `2.7.1`; la v2.7.0 y las
 anteriores siguen publicadas bajo su propio tag con sus planos alineados. El
 actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
@@ -156,7 +156,7 @@ mentir: los builds antiguos anuncian la constante empotrada en su propio binario
 **R14 — El triple `exe` + `release.json` + `SHA256SUMS` se sube junto, y se regenera junto.**
 `release.json` con `version`, `tag`, `exe`, `url`, `size_mb`; `SHA256SUMS` con el digest del exe y el
 del propio `release.json`. Subir sólo el binario deja el portal y cualquier consumidor externo
-apuntando al anterior. Desde la 2.6.9 hay un cuarto asset, hoy `WoldVirtualP2P3Dv2.7.0-linux.tar.gz`
+apuntando al anterior. Desde la 2.6.9 hay un cuarto asset, hoy `WoldVirtualP2P3Dv2.7.1-linux.tar.gz`
 (motor Godot de Linux + `wvp3d.pck` + `STM_LBR/`), y su digest va también en `SHA256SUMS`: si el
 paquete se regenera, se sube y se regenera la suma en el mismo gesto. Si se sustituye un asset con
 `--clobber` (excepción autorizada del 2026-10-29 con la 2.6.9), se regenera `SHA256SUMS`, se sube en
@@ -277,3 +277,13 @@ Con evidencia en el log, no "me parece que va". El visor escribe en
 - **Prueba visual del chat con webcams (2026-10-28).** La franja horizontal de vídeos dentro del marco
   del chat compila y la suite headless del chat pasa, pero no se ha visto con una sesión autenticada
   real ni con dos cámaras. *Estado: Implementado, sin prueba visual.*
+- **`--startup-selftest` no comparte puertos (2026-10-29).** La comprobación del motor arranca un
+  Godot que ocupa TCP 8911 y UDP 8912. Si en ese momento corren otras suites del mundo en el mismo
+  equipo, el arranque se queda sin puerto: la prueba da `Motor arranca desde el PCK` en rojo
+  (`isla=False red=False errores=False`, exit 0) aunque el PCK sea correcto. Pasó en la primera pasada
+  de la 2.7.1 y se repitió en solitario con **17/17**. Ejecutarla sin otras instancias abiertas.
+  *Estado: Implementado; requisito operativo documentado.*
+- **Deshacer/rehacer en red entre dos equipos (2026-10-29).** La pila de historial por isla y la
+  comprobación de permisos se validan en headless sobre un árbol sintético, pero no se ha probado una
+  sesión real de anfitrión e invitado deshaciendo alternativamente. *Estado: Implementado, sin prueba
+  de dos máquinas.*
