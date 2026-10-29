@@ -1,0 +1,89 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <Platforms>x64</Platforms>
+
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+
+    <AssemblyName>DMWoldVirtualP2P3Dv2.6.4</AssemblyName>
+    <RootNamespace>Visor3D</RootNamespace>
+
+    <Version>2.6.4</Version>
+    <AssemblyVersion>2.6.4.0</AssemblyVersion>
+    <FileVersion>2.6.4.0</FileVersion>
+
+    <Title>Wold Virtual p2p 3D</Title>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.6.4 (borra una sola vez la base local al arrancar —perfil, credenciales, llave, semilla, amigos, sello y estado del jugador en Godot— archivándola en respaldo_cuenta, para recorrer el registro completo; si el PC no tiene nada de lo necesario abre el ciclo de registro sin pasar por la bienvenida; anota el estado global del equipo en estado.json y, tras registrarse, la cuenta persiste en esta y futuras versiones; mantiene el diagnóstico de cuenta de la 2.6.3 y la corrección de la webcam en la franja del chat)</Description>
+  </PropertyGroup>
+
+  <!--
+    Fase 0: solo estructura WPF + login.
+    El motor 3D (Godot incrustado / Silk.NET) y la red P2P se añaden en fases posteriores.
+  -->
+
+  <!-- Excluir subcarpetas que son proyectos hermanos o carpetas de descargas -->
+  <ItemGroup>
+    <Compile Remove="version_prueba\**" />
+    <EmbeddedResource Remove="version_prueba\**" />
+    <None Remove="version_prueba\**" />
+    <Page Remove="version_prueba\**" />
+    <Compile Remove="webnodo\descargas\**" />
+    <EmbeddedResource Remove="webnodo\descargas\**" />
+    <None Remove="webnodo\descargas\**" />
+    <Compile Remove="webnodo\node_modules\**" />
+    <EmbeddedResource Remove="webnodo\node_modules\**" />
+    <None Remove="webnodo\node_modules\**" />
+  </ItemGroup>
+
+  <!-- Dependencias -->
+  <ItemGroup>
+    <!-- WMI: lectura de hardware (CPU, placa base, SO) -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <!-- Chat de voz: captura/reproducción PCM de baja latencia -->
+    <PackageReference Include="NAudio" Version="2.3.0" />
+    <!-- Chat de webcam: captura DirectShow y compresión JPEG -->
+    <PackageReference Include="AForge.Video" Version="2.2.5" />
+    <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
+  </ItemGroup>
+
+  <!-- Recursos web (para fases posteriores y WebNodo) -->
+  <ItemGroup>
+    <None Update="webnodo\public\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="www\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Recursos embebidos para distribución standalone en un único .exe -->
+  <ItemGroup>
+    <EmbeddedResource Include="Seguridad\bip39-english.txt" />
+    <EmbeddedResource Include="webnodo\public\index.html" />
+    <EmbeddedResource Include="webnodo\public\metaverso.jpg" />
+    <!-- Interruptor de desarrollo: -p:SkipGodotAssets=true compila la UI sin el motor ni el mundo.
+         La build de distribución NO define la propiedad, así que los incluye. -->
+    <EmbeddedResource Include="godot_exe.zip" Condition="'$(SkipGodotAssets)' != 'true'" />
+    <EmbeddedResource Include="wvp3d.pck" Condition="'$(SkipGodotAssets)' != 'true'" />
+  </ItemGroup>
+
+</Project>

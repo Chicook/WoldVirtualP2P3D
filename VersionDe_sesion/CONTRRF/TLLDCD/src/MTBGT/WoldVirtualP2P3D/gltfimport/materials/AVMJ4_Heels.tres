@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://beji7sc6n7oba"]
+
+[resource]
+resource_name = "AVMJ4_Heels"
+cull_mode = 2
+albedo_color = Color(0.22091636, 0.22091636, 0.24780053, 1)
+roughness = 0.3
