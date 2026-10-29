@@ -2,13 +2,16 @@
 
 Trabajo sobre el árbol del 2026-10-29
 (`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c`), rama `DevQoderIA`.
-**Estado: publicada como v2.6.9 el 2026-10-29.** Tag `v2.6.9` sobre `f1e57ee` de `main` (merge del
-PR #36), marcada *Latest*, con `exe`, `WoldVirtualP2P3Dv2.6.9-linux.tar.gz`, `release.json` y
-`SHA256SUMS` verificados por API. La v2.6.8 sigue publicada como release anterior. Todo lo de la
-2.6.8 sigue dentro: los únicos ficheros que cambian son `Chat/ChatWebcam.cs`,
-`Services/StartupSelfTest.cs`, `Services/WebNodoService.cs` (nombre y URL del fallback) y
-`Visor3D.csproj` (versión y globalización); el motor y el `wvp3d.pck` son los mismos de la 2.6.1 a
-la 2.6.8.
+**Estado: publicada como v2.6.9 el 2026-10-29 y recompilada el mismo día con tres arreglos.**
+Tag `v2.6.9` sobre `f1e57ee` de `main` (merge del PR #36), marcada *Latest*, con `exe`,
+`WoldVirtualP2P3Dv2.6.9-linux.tar.gz`, `release.json` y `SHA256SUMS` verificados por API. El
+responsable pidió **mantener el nombre `DMWoldVirtualP2P3Dv2.6.9.exe`** y sustituir los assets en
+lugar de subir una 2.6.10: el exe y `SHA256SUMS` se reemplazaron el 2026-10-29, con el mismo tag,
+nombre y URL. La v2.6.8 sigue publicada como release anterior. Todo lo de la 2.6.8 sigue dentro: los
+ficheros que cambian son `Chat/ChatWebcam.cs`, `Services/StartupSelfTest.cs`,
+`Services/WebNodoService.cs`, `Visor3D.csproj`, `Seguridad/SMTPLC/VmDetector.cs`, el nuevo
+`RuntimeCleaner.cs`, `App.xaml.cs` y `MainWindow.xaml.cs`; el motor y el `wvp3d.pck` son los mismos
+de la 2.6.1 a la 2.6.8.
 
 ---
 
@@ -29,6 +32,9 @@ la 2.6.8.
 | Arranque | `--startup-selftest` crea un perfil de Godot de usar y tirar en `%TEMP%` (`registro.cfg` con avatar y nick) y fuerza `--server`; deja de depender del perfil real y de un `p2p_session.json` ajeno | `VSC#/Services/StartupSelfTest.cs` |
 | Portal | El fallback empotrado anuncia `DMWoldVirtualP2P3Dv2.6.9.exe` y su URL | `VSC#/Services/WebNodoService.cs:64-66` |
 | Versión | `AssemblyName` = `DMWoldVirtualP2P3Dv2.6.9`; `Version`/`AssemblyVersion`/`FileVersion` = `2.6.9`/`2.6.9.0` | `VSC#/Visor3D.csproj:24,27-29` |
+| Umbral de VM | `VmDetector.UmbralVm = 0,50`, el mismo que `SmtplcPolicy.VmConfidenceThreshold`: antes el detector marcaba desde 0,40 y una sola señal débil bloqueaba el registro | `VSC#/Seguridad/SMTPLC/VmDetector.cs` |
+| Recolector de runtimes | Tras un arranque correcto borra las carpetas de versiones anteriores, conservando la vigente y la última buena; sólo actúa si la carpeta padre se llama `runtime` | `VSC#/RuntimeCleaner.cs`, `App.xaml.cs`, `MainWindow.xaml.cs` |
+| Reintento del release | Tres consultas con espera 5 s × intento; si falla, libera el pestillo para que un `Start()` posterior reintente | `VSC#/Services/WebNodoService.cs` |
 | Linux | `STM_LBR/` con `woldvirtual-linux.sh`, `woldvirtual-wine.sh`, `diagnostico.sh` y `README.md`; buscan el motor y el mundo en `./motor/` y `./mundo/` del paquete (o en la carpeta padre) | `VSC#/STM_LBR/` |
 | Chat, amigos, perfiles, reset total, bienvenida, SMTPLC, motor y PCK | Sin cambios | — |
 
@@ -120,11 +126,11 @@ cd VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c/src/VSC#
 
 | Dato | Valor |
 |---|---|
-| Salida | `E:/out_v269/publish/DMWoldVirtualP2P3Dv2.6.9.exe` |
-| Tamaño | 788.311.929 B (≈751,8 MiB) |
-| SHA-256 | `1fdbd356435ab9b0f28b9dca2a7c4774b63470d9ea25047cd35eeb959e83ac8b` |
+| Salida | `E:/areadetrabajo/wvp269/release_269b/build/DMWoldVirtualP2P3Dv2.6.9.exe` |
+| Tamaño | 788.316.025 B (≈751,8 MiB) |
+| SHA-256 | `e7e27212921807b735cdca98f6a1995ef96492ae456a8316b8fd5469596d84d8` |
 | `FileVersion` | `2.6.9.0` |
-| `ProductVersion` | `2.6.9+50ce9d69a7a48ab8dfd27940cdbbd72c1c298588` |
+| `ProductVersion` | `2.6.9+fb9e7348cc5234fa85c7c988f59d442ccbff13a6` |
 | Errores / avisos | 0 / 0 (sólo el aviso `NETSDK1057` de SDK preliminar) |
 
 ## Autopruebas del binario 2.6.9
@@ -137,7 +143,11 @@ no se toca: `--startup-selftest` usa el suyo en `%TEMP%`.
 | Chat, amigos, relay y franja | `… --chat-selftest` | **26 comprobaciones, 0 fallos**, exit 0; `micrófonos=1 webcams=2` |
 | Cuenta, reset total y estado global | `… --cuenta-selftest` | **19/19, 0 fallos**, exit 0; `RESULTADO CUENTA: OK` |
 | Red y portal | `… --red-selftest` | **7 líneas, 0 fallos**, exit 0 |
-| Arranque, extracción y motor | `… --startup-selftest` | **15/15, 0 fallos**, exit 0; `.extracted` = `2.6.9`; PCK 512,9 MiB íntegro; `isla=True red=True errores=False` |
+| Arranque, extracción y motor | `… --startup-selftest` | **17/17, 0 fallos**, exit 0; `.extracted` = `2.6.9`; PCK 512,9 MiB íntegro; `isla=True red=True errores=False` |
+
+Las dos comprobaciones nuevas del arranque son «Umbral de VM unificado (0,50)» (detector y política
+coinciden) y «Recolector de runtimes (conserva vigente y anterior)»: crea `2.6.7`, `2.6.8` y `2.6.9`
+en `%TEMP%`, purga y exige que sólo desaparezca la más antigua.
 
 Informes: `%TEMP%\woldvirtual_chat_selftest.log`, `%LOCALAPPDATA%\WoldVirtualP2P3D\logs\cuenta-selftest.log`,
 `…\red-selftest.log` y `…\arranque-selftest.log`.
@@ -145,8 +155,9 @@ Informes: `%TEMP%\woldvirtual_chat_selftest.log`, `%LOCALAPPDATA%\WoldVirtualP2P
 **Arranque: por qué se cambió la prueba.** La primera pasada dio 14/15: «Motor arranca desde el
 PCK» falló con `exit=0 isla=False red=False` porque el motor leyó el `user://p2p_session.json` real,
 se puso en modo cliente remoto y nunca abrió la isla ni el 8911. Con un perfil aislado y un
-`registro.cfg` de prueba pasa 15/15 (era la deuda que la 2.6.1 ya había documentado). Ahora la
-prueba crea ese perfil por sí misma y no toca el del equipo.
+`registro.cfg` de prueba pasaba 15/15 (era la deuda que la 2.6.1 ya había documentado) y ahora da
+17/17 con las dos comprobaciones nuevas. La prueba crea ese perfil por sí misma y no toca el del
+equipo.
 
 ## Pruebas de globalización
 
@@ -161,10 +172,10 @@ prueba crea ese perfil por sí misma y no toca el del equipo.
 
 | Comprobación | Resultado |
 |---|---|
-| Ficheros de código distintos | 4 (`ChatWebcam.cs`, `StartupSelfTest.cs`, `WebNodoService.cs`, `Visor3D.csproj`); el resto, igual |
+| Ficheros de código distintos | 8 (`ChatWebcam.cs`, `StartupSelfTest.cs`, `WebNodoService.cs`, `Visor3D.csproj`, `VmDetector.cs`, `RuntimeCleaner.cs`, `App.xaml.cs`, `MainWindow.xaml.cs`); el resto, igual |
 | `wvp3d.pck` | `9d5c15e7322cfce3d450e65341a23f6e82d01a008b760245a3e10e0d7a69ac94`, idéntico al del árbol, al del `runtime\2.6.8\` instalado y al extraído del exe 2.6.9 |
 | Motor | `ab1824f85bfd8e0e4128182c000c4003a3e042245b2967848d089b2a04b22424` (180.858.888 B), idéntico al del `runtime\2.6.8\` y extraído del exe 2.6.9 |
-| Autopruebas | chat 26/0, cuenta 19/19, red 7/7, arranque 15/15 — iguales o mejores que la 2.6.8 |
+| Autopruebas | chat 26/0, cuenta 19/19, red 7/7, arranque 17/17 — iguales o mejores que la 2.6.8 |
 | Licencia y mundo | `godot_exe.zip` sin tocar (`ef472613f249c1123f17655417aeade55a628c59994be0c4befd508bb9ca6137`) |
 
 ## Paquete de Linux
@@ -186,11 +197,32 @@ Publicada el 2026-10-29 como *Latest*:
 |---|---|
 | Tag | `v2.6.9` sobre `f1e57ee` de `main` (merge del PR #36 desde `DevQoderIA`) |
 | Release | `https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.6.9` |
-| `digest` del exe (API) | `sha256:1fdbd356435ab9b0f28b9dca2a7c4774b63470d9ea25047cd35eeb959e83ac8b` (coincide con el SHA-256 local) |
+| `digest` del exe (API) | `sha256:e7e27212921807b735cdca98f6a1995ef96492ae456a8316b8fd5469596d84d8` (coincide con el SHA-256 local) |
 | `digest` del tar.gz (API) | `sha256:33de816826dd7f6e50908ac9b2c7d91516476c33e2fa571276e0faa33885594f` |
 | `release.json` | `9f402c533a14c7ccb1b694a38a88b1fd16d4c6776a607e42d8bc1dae9fdd9c47`, 215 B |
-| `SHA256SUMS` | `67337d36e4e83246deb981f31d80efea91032d82e034856dbfdb9e5f5d16d59a`, 276 B (tres líneas: exe, `release.json` y tar.gz) |
-| Descargas | las cuatro responden `200`: exe `Content-Length` 788.311.929, tar.gz 552.727.606, `release.json` 215, `SHA256SUMS` 276 |
+| `SHA256SUMS` | `afc3efc27f912e1b1007bcd7b997329bb30b4d7eb6e74e9a4ca1ee87a1f75bf9`, 276 B (tres líneas: exe, `release.json` y tar.gz) |
+| Descargas | las cuatro responden `200`: exe `Content-Length` 788.316.025, tar.gz 552.727.606, `release.json` 215, `SHA256SUMS` 276 |
 
 El artefacto se subió desde `E:/out_v269/release/`, una ruta sin `#`: `gh release create` lanzado
 desde el repo raíz con `-R`, porque una ruta con `#` (`src/VSC#/…`) se corta en `VSC`.
+
+## Recompilación del mismo 2.6.9 (2026-10-29)
+
+El responsable pidió **conservar el nombre `DMWoldVirtualP2P3Dv2.6.9.exe`** para el binario que
+incluye los tres arreglos posteriores a la primera publicación. Se compiló desde el commit
+`fb9e734` y se sustituyeron el exe y `SHA256SUMS` con `gh release upload v2.6.9 --clobber`; el tag,
+el nombre, la URL, `release.json` y el tar.gz de Linux no cambiaron.
+
+| Comprobación | Resultado |
+|---|---|
+| Recompilación | `dotnet publish … -p:PublishSingleFile=true` → 788.316.025 B, SHA-256 `e7e27212…6d84d8`, `ProductVersion 2.6.9+fb9e7348…` |
+| Autopruebas del artefacto subido | chat 0 fallos, cuenta 19/19, red 7/7, arranque **17/17** con `runtime\2.6.9` |
+| `digest` del exe por API | `sha256:e7e27212921807b735cdca98f6a1995ef96492ae456a8316b8fd5469596d84d8`, 788.316.025 B |
+| `digest` de `SHA256SUMS` por API | `sha256:afc3efc27f912e1b1007bcd7b997329bb30b4d7eb6e74e9a4ca1ee87a1f75bf9`, 276 B; su descarga coincide con ese hash |
+| Sin cambios | `release.json` (`9f402c53…d9c47`, `size_mb` sigue 751,8) y `WoldVirtualP2P3Dv2.6.9-linux.tar.gz` (`33de8168…885594f`) |
+| Descargas | las cuatro responden `200` con el `Content-Length` nuevo del exe (788.316.025) y el resto igual |
+
+Esto es una excepción puntual a **R2** (un binario nuevo exige `<Version>` nueva) autorizada por el
+responsable; la regla sigue vigente para la próxima compilación, que debe subir versión. El exe
+anterior (`1fdbd356…e83ac8b`) deja de ser reproducible desde el tag, porque el tag apunta a
+`f1e57ee` y este binario se compiló desde `fb9e734`.
