@@ -154,15 +154,15 @@ namespace Visor3D.Services
             string raiz = Path.Combine(Path.GetTempPath(), "wvp3d_recolector_" + Guid.NewGuid().ToString("N"));
             try
             {
-                foreach (var v in new[] { "2.6.7", "2.6.8", "2.6.9" })
+                foreach (var v in new[] { "2.6.8", "2.6.9", "2.7.0" })
                     Directory.CreateDirectory(Path.Combine(raiz, v));
                 string nota = Path.Combine(raiz, "nota.txt");
                 File.WriteAllText(nota, "no se toca");
 
-                var (borradas, fallos) = RuntimeCleaner.PurgarAntiguos(raiz, "2.6.9", "2.6.8");
-                bool ok = !Directory.Exists(Path.Combine(raiz, "2.6.7")) &&
-                          Directory.Exists(Path.Combine(raiz, "2.6.8")) &&
+                var (borradas, fallos) = RuntimeCleaner.PurgarAntiguos(raiz, "2.7.0", "2.6.9");
+                bool ok = !Directory.Exists(Path.Combine(raiz, "2.6.8")) &&
                           Directory.Exists(Path.Combine(raiz, "2.6.9")) &&
+                          Directory.Exists(Path.Combine(raiz, "2.7.0")) &&
                           File.Exists(nota) &&
                           borradas.Count == 1 && fallos.Count == 0;
                 check("Recolector de runtimes (conserva vigente y anterior)", ok,

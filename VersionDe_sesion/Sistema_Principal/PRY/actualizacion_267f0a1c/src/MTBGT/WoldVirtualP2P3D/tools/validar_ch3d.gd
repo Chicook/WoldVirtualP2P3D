@@ -25,6 +25,13 @@ const BLEND := ["ANMJ", "Add2", "Blend2", "Blend2 2", "Blend2 3"]
 
 
 func _initialize() -> void:
+	_correr()
+
+
+func _correr() -> void:
+	# Sin este frame la raiz aun no esta en el arbol y add_child no dispara
+	# _enter_tree, que es donde se montan los clips prestados.
+	await process_frame
 	var fallos := 0
 	for ruta in RUTAS:
 		var escena: PackedScene = load(ruta)
@@ -33,6 +40,8 @@ func _initialize() -> void:
 			fallos += 1
 			continue
 		var inst := escena.instantiate()
+		# Los clips prestados y el AnimationPlayer se montan al entrar en escena.
+		get_root().add_child(inst)
 		var esqueleto: Skeleton3D = null
 		var reproductor: AnimationPlayer = null
 		var arbol: AnimationTree = null
@@ -69,6 +78,7 @@ func _initialize() -> void:
 		] + ("" if problemas.is_empty() else " | " + ", ".join(problemas)))
 		if not problemas.is_empty():
 			fallos += 1
-		inst.free()
+		inst.queue_free()
+		await process_frame
 	print("== %d escenas, %d con fallo ==" % [RUTAS.size(), fallos])
 	quit(1 if fallos > 0 else 0)

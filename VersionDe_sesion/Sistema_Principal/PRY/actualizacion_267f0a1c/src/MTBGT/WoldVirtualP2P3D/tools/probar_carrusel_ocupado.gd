@@ -23,6 +23,9 @@ func _correr() -> void:
 
 	get_root().add_child(carrusel)
 	await process_frame
+	# El nick es obligatorio para confirmar: se rellena como lo haria el jugador.
+	carrusel._nick_edit.text = "Prueba"
+	carrusel._on_nick_cambiada("Prueba")
 	_check(carrusel._index == 2, "conserva el hueco tras montar el turno")
 	_check(carrusel._avatars.size() == 8, "turno 1 monta 8 avatares")
 	_check(carrusel._name_label.text.find("OCUPADO") == -1, "el hueco elegido no esta marcado")

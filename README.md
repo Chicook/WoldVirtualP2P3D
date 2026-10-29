@@ -648,7 +648,7 @@ Por la política del proyecto (fases L5–L6): el **avatar 3D de LucIA, sus anim
 
 - **LucIA** (`src/tests/`, 10 ficheros): pruebas pytest de voz, memoria, emoción, comandos, conocimiento, perfil, escucha, regresión y sistema, más un script de diagnóstico de voz (`diag_voz.py`). Configuración en `src/pytest.ini` / `pyproject.toml` (`testpaths=["tests"]`). Ejecución: `python -m pytest` desde `src/`.
 - **Visor C#**: no hay suite unitaria ni CI (deuda D15), pero el ejecutable incluye autopruebas de línea de comandos que se pasan antes de publicar: `--startup-selftest` (17/17), `--chat-selftest` (26/0), `--cuenta-selftest` (19/19) y `--red-selftest` (7/7). Cada release se valida además a mano.
-- **Mundo Godot**: scripts de comprobación en `src/MTBGT/WoldVirtualP2P3D/tools/` (`probar_turnos.gd`, `probar_carrusel_ocupado.gd`, `probar_red.gd`, `probar_sonda_*.gd`, `probar_personalizacion.gd`, `probar_construccion.gd`…), ejecutados a mano en headless. La prueba visual `capturar_construccion.gd` esculpe y reza prims en una ventana real, guarda 18 capturas y comprueba 26 condiciones (26/26 en la ejecución de referencia del 2026-10-26).
+- **Mundo Godot**: scripts de comprobación en `src/MTBGT/WoldVirtualP2P3D/tools/` (`probar_turnos.gd`, `probar_carrusel_ocupado.gd`, `probar_selector.gd`, `probar_shapekeys.gd`, `validar_shapekeys_reales.gd`, `probar_red.gd`, `probar_sonda_*.gd`, `probar_personalizacion.gd`, `probar_construccion.gd`…), ejecutados a mano en headless. La prueba visual `capturar_construccion.gd` esculpe y reza prims en una ventana real, guarda 18 capturas y comprueba 26 condiciones (26/26 en la ejecución de referencia del 2026-10-26).
 
 ### CI
 

@@ -20,7 +20,7 @@ recurso embebido del exe y se extrae al arrancar:
 | Pieza | Dentro del exe | En disco al arrancar |
 |---|---|---|
 | Motor | `godot_exe.zip` → `Godot_v4.7.2-stable_win64.exe` | `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\Servidor3D\` |
-| Mundo | `wvp3d.pck` (537.836.524 B, SHA-256 `9d5c15e7…7a69ac94`) | `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\wvp3d.pck` |
+| Mundo | `wvp3d.pck` (1.053.066.344 B, SHA-256 `cb17a956…d946b9e1`) | `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\wvp3d.pck` |
 
 El motor se lanza como `Godot_v4.7.2-stable_win64.exe --main-pack "<pck>" -- <args de red>`.
 Ese detalle es el que hace posible la vía nativa de más abajo: **el mundo es
