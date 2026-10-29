@@ -33,7 +33,7 @@ namespace Visor3D
             TxtNombre.Focus();
         }
 
-        private void OnCrearUsuarioClicked(object sender, RoutedEventArgs e)
+        private async void OnCrearUsuarioClicked(object sender, RoutedEventArgs e)
         {
             TxtError.Visibility = Visibility.Collapsed;
 
@@ -67,6 +67,30 @@ namespace Visor3D
                 MostrarError("Las contraseñas no coinciden. Compruébalas e inténtalo de nuevo.");
                 TxtPasswordRepetir.Clear();
                 TxtPasswordRepetir.Focus();
+                return;
+            }
+
+            // Evaluación de seguridad SMTPLC: anti-VM, anti-VPN y anti-multicuenta
+            // en la misma ubicación física. Se ejecuta antes de escribir nada.
+            BtnCrearUsuario.IsEnabled = false;
+
+            Visor3D.Seguridad.SMTPLC.SecurityEvaluationResult evaluacion;
+            try
+            {
+                evaluacion = await Visor3D.Seguridad.SMTPLC.SmtplcSecurityService.Instance
+                    .EvaluateRegistrationAsync(nombre, _hardwareHash);
+            }
+            catch (Exception ex)
+            {
+                MostrarError($"No se pudo completar la verificación de seguridad:\n{ex.Message}");
+                BtnCrearUsuario.IsEnabled = true;
+                return;
+            }
+
+            if (!evaluacion.IsAllowed)
+            {
+                MostrarError($"{evaluacion.DenialTitle}:\n{evaluacion.DenialReason}");
+                BtnCrearUsuario.IsEnabled = true;
                 return;
             }
 
@@ -107,6 +131,10 @@ namespace Visor3D
                 // ── Sesión única: sellar este PC como "ya registrado" ──────────
                 Visor3D.Seguridad.SesionUnica.SesionUnicaGuarda.SellarDespuesDeRegistro(_uuid);
 
+                // ── SMTPLC: anotar la cuenta en el libro mayor de la ubicación ──
+                Visor3D.Seguridad.SMTPLC.SmtplcSecurityService.Instance
+                    .CommitRegistration(_uuid, nombre, evaluacion, _hardwareHash);
+
                 // Pasar a la siguiente pantalla: Frase Semilla de la Wallet DeFi
                 var semillaWin = new SemillaWalletWindow(_uuid, nombre, passHash, _hardwareHash);
                 semillaWin.Show();
@@ -115,6 +143,7 @@ namespace Visor3D
             catch (Exception ex)
             {
                 MostrarError($"No se pudo guardar el perfil:\n{ex.Message}");
+                BtnCrearUsuario.IsEnabled = true;
             }
         }
 

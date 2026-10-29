@@ -1,6 +1,6 @@
 extends SceneTree
 ## Captura el carrusel en ventana para revisar turnos y escalas.
-## Uso: godot --path . --script res://tools/capturar_carrusel.gd
+## Uso: python -m STM_HRTS ejecutar capturar_carrusel
 
 const RUTA := "res://SLCAV/AVATARESCONANIMACION/SLAV.tscn"
 const PASOS := [0, 1, 7, 8, 11, 15, 16, 17, 19, 23]

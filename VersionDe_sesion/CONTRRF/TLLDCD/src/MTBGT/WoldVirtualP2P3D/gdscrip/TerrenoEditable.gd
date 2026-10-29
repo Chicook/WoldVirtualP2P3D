@@ -22,6 +22,10 @@ const APLANAR := 3
 const MOVER := 4
 ## Aplana hacia ~1 m sobre el agua y tiñe de arena.
 const PLAYA := 5
+## Agita el relieve con ruido determinista (mismo resultado en todos los peers).
+const RUGOSIDAD := 6
+## Devuelve el pincel al estado exportado: alturas y colores base.
+const REVERTIR := 7
 
 ## Nivel del agua en la escena de isla (malla local). Se detecta del nodo
 ## Oceano; si no existe (glTF suelto en pruebas) se usa el valor del mundo.
@@ -56,6 +60,9 @@ var indices := PackedInt32Array()
 var colores := PackedColorArray()
 
 var _vecinos: Array = []
+var _caras_por_vertice: Array = []
+var _caras_sucias := {}
+var _caras := PackedVector3Array()
 var _hash_base := 0
 var _editado := false
 var _espaciado := 0.02
@@ -84,8 +91,13 @@ func configurar(nodo_isla: Node3D, idx: int) -> bool:
 	# propia de esta isla (malla.mesh deja de compartirse entre duplicados).
 	var horneada := malla.bake_mesh_from_current_blend_shape_mix()
 	if horneada == null:
-		push_warning("[Terreno] No se pudo hornear la malla de la isla %d" % idx)
-		return false
+		# Sin blend shapes no hay nada que hornear: una ArrayMesh ya es la
+		# geometría final (islas sintéticas de prueba, mallas ya editadas).
+		if malla_original is ArrayMesh:
+			horneada = (malla_original as ArrayMesh).duplicate()
+		if horneada == null:
+			push_warning("[Terreno] No se pudo hornear la malla de la isla %d" % idx)
+			return false
 	malla.mesh = horneada
 	var anim := isla.get_node_or_null("AnimationPlayer") as AnimationPlayer
 	if anim != null:
@@ -138,6 +150,7 @@ func configurar(nodo_isla: Node3D, idx: int) -> bool:
 	escala = maxf(0.001, (absf(s.x) + absf(s.y) + absf(s.z)) / 3.0)
 	nivel_agua = _detectar_nivel_agua()
 	_construir_vecinos()
+	_construir_caras_por_vertice()
 	_reconstruir_malla()
 	return true
 
@@ -234,6 +247,20 @@ func aplicar_pincel(centro_mundo: Vector3, radio_m: float, fuerza_m: float,
 				var nuevo := lerpf(v.y, destino, mezcla)
 				v.y = clampf(move_toward(v.y, nuevo, 0.02), ALTURA_MIN, ALTURA_MAX)
 				colores[i] = colores[i].lerp(COLOR_PLAYA, clampf(caida * 0.4, 0.0, 0.4))
+			RUGOSIDAD:
+				# La semilla del ruido es el índice del vértice: los peers
+				# aplican el mismo paso sobre la misma malla y obtienen el
+				# mismo relieve, sin enviar alturas por la red.
+				v.y = clampf(v.y + paso * caida * 2.0 * _ruido_vertice(i),
+						ALTURA_MIN, ALTURA_MAX)
+			REVERTIR:
+				if i >= vertices_base.size():
+					continue
+				var base := vertices_base[i]
+				v.y = move_toward(v.y, base.y, maxf(0.002, absf(paso)) * caida)
+				if i < colores_base.size():
+					colores[i] = colores[i].lerp(colores_base[i],
+							clampf(caida * 0.5, 0.0, 0.5))
 			_:
 				continue
 		vertices[i] = v
@@ -244,15 +271,15 @@ func aplicar_pincel(centro_mundo: Vector3, radio_m: float, fuerza_m: float,
 	# alfa perdido en el borde para que la tierra arrastrada no palidezca.
 	if herramienta == MOVER:
 		_equilibrar_alfa(afectados, alfa_antes)
-	if not afectados.is_empty():
-		_editado = true
+	_marcar_caras(afectados)
+	_editado = true
 	_recalcular_normales()
 	_reconstruir_malla()
 	return afectados.size()
 
 
-## Recalcula la colisión trimesh. Es la operación más pesada: llamarla al
-## soltar el pincel o como mucho cada ~200 ms durante el trazo.
+## Recalcula la colisión trimesh completa. Es la operación más pesada: se llama
+## al soltar el pincel, al cargar un blob y en los cambios de estado grandes.
 func actualizar_colision() -> void:
 	if forma == null or indices.is_empty():
 		return
@@ -260,7 +287,77 @@ func actualizar_colision() -> void:
 	caras.resize(indices.size())
 	for i in indices.size():
 		caras[i] = vertices[indices[i]]
+	_caras = caras
+	_caras_sucias.clear()
 	forma.set_faces(caras)
+
+
+## Refresca solo las caras que tocó el pincel desde la última actualización.
+## Evita recorrer las ~64 000 caras en cada tick del trazo; si no hay caché
+## (o quedó desfasada) delega en la reconstrucción completa.
+func actualizar_colision_parcial() -> int:
+	if forma == null or indices.is_empty():
+		return 0
+	if _caras.size() != indices.size():
+		actualizar_colision()
+		return _caras.size() / 3
+	var tocadas := 0
+	for inicio in _caras_sucias.keys():
+		var t := int(inicio)
+		_caras[t] = vertices[indices[t]]
+		_caras[t + 1] = vertices[indices[t + 1]]
+		_caras[t + 2] = vertices[indices[t + 2]]
+		tocadas += 1
+	if tocadas > 0:
+		forma.set_faces(_caras)
+	_caras_sucias.clear()
+	return tocadas
+
+
+func esta_colision_sucia() -> bool:
+	return not _caras_sucias.is_empty()
+
+
+## Estado mínimo para deshacer un trazo o una restauración: alturas (float32)
+## y colores (RGBA8) de todos los vértices, más la marca de editado.
+func instantanea() -> Dictionary:
+	var alturas := PackedFloat32Array()
+	alturas.resize(vertices.size())
+	for i in vertices.size():
+		alturas[i] = vertices[i].y
+	var cols := PackedByteArray()
+	cols.resize(colores.size() * 4)
+	var off := 0
+	for i in colores.size():
+		var c := colores[i]
+		cols[off] = clampi(roundi(c.r * 255.0), 0, 255)
+		cols[off + 1] = clampi(roundi(c.g * 255.0), 0, 255)
+		cols[off + 2] = clampi(roundi(c.b * 255.0), 0, 255)
+		cols[off + 3] = clampi(roundi(c.a * 255.0), 0, 255)
+		off += 4
+	return {"alturas": alturas, "colores": cols, "editado": _editado}
+
+
+func restaurar_instantanea(inst: Dictionary) -> bool:
+	var alturas = inst.get("alturas", PackedFloat32Array())
+	if not (alturas is PackedFloat32Array) or alturas.size() != vertices.size():
+		return false
+	var cols = inst.get("colores", PackedByteArray())
+	if not (cols is PackedByteArray) or cols.size() != vertices.size() * 4:
+		return false
+	for i in vertices.size():
+		var v := vertices[i]
+		v.y = alturas[i]
+		vertices[i] = v
+	var off := 0
+	for i in colores.size():
+		colores[i] = Color8(cols[off], cols[off + 1], cols[off + 2], cols[off + 3])
+		off += 4
+	_editado = bool(inst.get("editado", true))
+	_recalcular_normales()
+	_reconstruir_malla()
+	actualizar_colision()
+	return true
 
 
 ## Devuelve la isla al estado del mundo exportado: alturas, colores, malla y
@@ -489,6 +586,44 @@ func _construir_vecinos() -> void:
 		suma += vertices[i].distance_to(vertices[lista[0]])
 		cuenta += 1
 	_espaciado = maxf(0.001, suma / float(maxi(cuenta, 1)))
+
+
+## Caras (desplazamiento en `indices`) que usan cada vértice. El pincel marca
+## solo esas al mover un vértice y la colisión se refresca sin recorrer la malla.
+func _construir_caras_por_vertice() -> void:
+	var listas: Array = []
+	listas.resize(vertices.size())
+	for i in listas.size():
+		listas[i] = PackedInt32Array()
+	for t in range(0, indices.size(), 3):
+		for k in 3:
+			var v := indices[t + k]
+			if v < 0 or v >= listas.size():
+				continue
+			var lista: PackedInt32Array = listas[v]
+			lista.append(t)
+			listas[v] = lista
+	_caras_por_vertice = listas
+	_caras_sucias.clear()
+	_caras = PackedVector3Array()
+
+
+func _marcar_caras(afectados: Array[int]) -> void:
+	if _caras_por_vertice.size() != vertices.size():
+		_construir_caras_por_vertice()
+	for i in afectados:
+		if i < 0 or i >= _caras_por_vertice.size():
+			continue
+		for inicio in _caras_por_vertice[i]:
+			_caras_sucias[inicio] = true
+
+
+## Ruido determinista por índice de vértice (-1..1): rugosidad sin estado que
+## enviar, idéntica en todos los peers para la misma malla.
+func _ruido_vertice(i: int) -> float:
+	var n := (i * 374761393 + 1442695041) & 0x7fffffff
+	n = ((n ^ (n >> 13)) * 1274126177) & 0x7fffffff
+	return float(n & 0xffff) / 32767.5 - 1.0
 
 
 func _agregar_arista(listas: Array, vistos: Dictionary, a: int, b: int) -> void:

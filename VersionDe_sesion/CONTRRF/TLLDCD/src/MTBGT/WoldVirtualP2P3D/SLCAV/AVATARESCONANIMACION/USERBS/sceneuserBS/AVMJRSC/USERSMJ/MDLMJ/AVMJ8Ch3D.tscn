@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="PackedScene" uid="uid://dd8pcbmlmtrpc" path="res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj3_anim.glb" id="1_8njtr"]
+[ext_resource type="PackedScene" path="res://AreaDeTrabajo/GTLF_GODOT/GltfIMP/AVATARES/AVHM/AVmj3.glb" id="1_8njtr"]
 [ext_resource type="Script" uid="uid://blglsbol7iwh4" path="res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVMJRSC/USERSMJ/MDLMJ/gdscripuser/AVMJ1Ch3D.gd" id="1_i373r"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_xrivr"]
@@ -71,9 +71,6 @@ shape = SubResource("CapsuleShape3D_xrivr")
 
 [node name="AVMJ8" parent="CS3DAVMJ8" instance=ExtResource("1_8njtr")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.85827637, 0)
-
-[node name="AnimationPlayer" parent="CS3DAVMJ8/AVMJ8" index="1"]
-autoplay = &"paradoMJ1_1"
 
 [node name="Camera3D" type="Camera3D" parent="CS3DAVMJ8/AVMJ8"]
 transform = Transform3D(-1, 0, -1.5179343e-06, 0, 1, 0, 1.5179343e-06, 0, -1, 0, 0.98910654, -1.4097605)

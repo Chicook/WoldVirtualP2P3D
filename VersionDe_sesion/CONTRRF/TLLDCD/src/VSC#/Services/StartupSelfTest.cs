@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Visor3D.Seguridad.SMTPLC;
 
 namespace Visor3D.Services
 {
@@ -68,6 +69,8 @@ namespace Visor3D.Services
 
                 ComprobarPortal(Check);
                 ComprobarDescubrimiento(Check);
+                ComprobarUmbralVm(Check);
+                ComprobarRecolector(Check);
 
                 if (File.Exists(AppExtractor.GodotExePath))
                     ComprobarMotor(Check);
@@ -129,45 +132,123 @@ namespace Visor3D.Services
         private static void ComprobarDescubrimiento(Action<string, bool, string> check)
             => RedSelfTest.ComprobarDescubrimiento(check);
 
+        /// <summary>
+        /// El detector y la política deben compartir umbral: si el detector marca VM
+        /// por debajo del umbral de la política, una sola señal bloquea el registro.
+        /// </summary>
+        private static void ComprobarUmbralVm(Action<string, bool, string> check)
+        {
+            var policy = new SmtplcPolicy();
+            bool ok = Math.Abs(VmDetector.UmbralVm - 0.50) < 0.0001 &&
+                      Math.Abs(policy.VmConfidenceThreshold - VmDetector.UmbralVm) < 0.0001;
+            check("Umbral de VM unificado (0,50)", ok,
+                  $"detector={VmDetector.UmbralVm:0.00} política={policy.VmConfidenceThreshold:0.00}");
+        }
+
+        /// <summary>
+        /// Purga del recolector sobre una raíz de usar y tirar: debe borrar las
+        /// versiones viejas y conservar la vigente, la anterior y los ficheros sueltos.
+        /// </summary>
+        private static void ComprobarRecolector(Action<string, bool, string> check)
+        {
+            string raiz = Path.Combine(Path.GetTempPath(), "wvp3d_recolector_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                foreach (var v in new[] { "2.6.9", "2.7.0", "2.7.1" })
+                    Directory.CreateDirectory(Path.Combine(raiz, v));
+                string nota = Path.Combine(raiz, "nota.txt");
+                File.WriteAllText(nota, "no se toca");
+
+                var (borradas, fallos) = RuntimeCleaner.PurgarAntiguos(raiz, "2.7.1", "2.7.0");
+                bool ok = !Directory.Exists(Path.Combine(raiz, "2.6.9")) &&
+                          Directory.Exists(Path.Combine(raiz, "2.7.0")) &&
+                          Directory.Exists(Path.Combine(raiz, "2.7.1")) &&
+                          File.Exists(nota) &&
+                          borradas.Count == 1 && fallos.Count == 0;
+                check("Recolector de runtimes (conserva vigente y anterior)", ok,
+                      $"borradas=[{string.Join(", ", borradas)}] fallos={fallos.Count}");
+            }
+            catch (Exception ex)
+            {
+                check("Recolector de runtimes", false, $"{ex.GetType().Name}: {ex.Message}");
+            }
+            finally
+            {
+                try { Directory.Delete(raiz, recursive: true); } catch { }
+            }
+        }
+
         private static void ComprobarMotor(Action<string, bool, string> check)
         {
             string log = Path.Combine(Path.GetTempPath(), "wvp3d_arranque_selftest.log");
             try { if (File.Exists(log)) File.Delete(log); } catch { }
+
+            // El mundo sólo carga si user://registro.cfg trae avatar y nick; sin eso
+            // Boot.gd se queda en el carrusel esperando a que alguien elija y nunca
+            // abre la isla ni el 8911. Por eso la prueba usa un perfil de usar y
+            // tirar bajo %TEMP%: así no depende del perfil del equipo ni lo toca,
+            // y un p2p_session.json real no la convierte en cliente remoto.
+            string perfil = Path.Combine(Path.GetTempPath(), "wvp3d_arranque_perfil_" + Guid.NewGuid().ToString("N"));
+            string datos = Path.Combine(perfil, "Godot", "app_userdata", "WoldVirtualP2P3D");
 
             var psi = new ProcessStartInfo(AppExtractor.GodotExePath)
             {
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.Environment["APPDATA"] = perfil;
             psi.ArgumentList.Add("--headless");
             psi.ArgumentList.Add("--main-pack");
             psi.ArgumentList.Add(AppExtractor.PckPath);
             psi.ArgumentList.Add("--log-file");
             psi.ArgumentList.Add(log);
             psi.ArgumentList.Add("--quit-after");
-            psi.ArgumentList.Add("300");
+            psi.ArgumentList.Add("3000");
+            psi.ArgumentList.Add("--");
+            psi.ArgumentList.Add("--server");
 
-            using var proceso = Process.Start(psi);
-            if (proceso == null)
+            try
             {
-                check("Motor arranca desde el PCK", false, "no se pudo lanzar el proceso");
+                Directory.CreateDirectory(datos);
+                File.WriteAllText(Path.Combine(datos, "registro.cfg"),
+                    "[jugador]\n\n" +
+                    "avatar_scene=\"res://SLCAV/AVATARESCONANIMACION/USERBS/sceneuserBS/AVHMBSC/AVH1Ch3D.tscn\"\n" +
+                    "nick=\"Prueba\"\n");
+            }
+            catch (Exception ex)
+            {
+                check("Motor arranca desde el PCK", false, $"no se pudo crear el perfil de prueba: {ex.Message}");
                 return;
             }
 
-            bool termino = proceso.WaitForExit(120_000);
-            if (!termino)
+            try
             {
-                try { proceso.Kill(entireProcessTree: true); } catch { }
-                check("Motor arranca desde el PCK", false, "sin salida en 120 s");
-                return;
-            }
+                using var proceso = Process.Start(psi);
+                if (proceso == null)
+                {
+                    check("Motor arranca desde el PCK", false, "no se pudo lanzar el proceso");
+                    return;
+                }
 
-            string texto = File.Exists(log) ? File.ReadAllText(log) : "";
-            bool mundo = texto.Contains("Isla 0 preparada") || texto.Contains("isla", StringComparison.OrdinalIgnoreCase);
-            bool red = texto.Contains("Servidor WebSocket activo");
-            bool errores = texto.Contains("ERROR:") || texto.Contains("SCRIPT ERROR");
-            check("Motor arranca desde el PCK", proceso.ExitCode == 0 && mundo && red && !errores,
-                  $"exit={proceso.ExitCode} isla={mundo} red={red} errores={errores}");
+                bool termino = proceso.WaitForExit(120_000);
+                if (!termino)
+                {
+                    try { proceso.Kill(entireProcessTree: true); } catch { }
+                    check("Motor arranca desde el PCK", false, "sin salida en 120 s");
+                    return;
+                }
+
+                string texto = File.Exists(log) ? File.ReadAllText(log) : "";
+                bool mundo = texto.Contains("Isla 0 preparada") || texto.Contains("isla", StringComparison.OrdinalIgnoreCase);
+                bool red = texto.Contains("Servidor WebSocket activo");
+                bool errores = texto.Contains("ERROR:") || texto.Contains("SCRIPT ERROR");
+                check("Motor arranca desde el PCK", proceso.ExitCode == 0 && mundo && red && !errores,
+                      $"exit={proceso.ExitCode} isla={mundo} red={red} errores={errores} perfil={perfil}");
+            }
+            finally
+            {
+                try { Directory.Delete(perfil, recursive: true); } catch { }
+            }
         }
 
         private static string Tamano(string ruta)

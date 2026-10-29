@@ -14,13 +14,18 @@ signal borrar_solicitado
 signal color_solicitado(color: Color)
 signal escala_solicitada(metros: float)
 signal snap_cambiada(activo: bool)
+signal snap_paso_cambiada(metros: float)
+signal eje_escala_cambiada(eje: int)
 signal deshacer_solicitado
+signal deshacer_paso_solicitado
+signal rehacer_paso_solicitado
 signal inventario_guardado_solicitado
 signal inventario_mostrado
 
 const Prims = preload("res://gdscrip/Prims.gd")
 const VoxelSuave = preload("res://gdscrip/VoxelSuave.gd")
-const HERRAMIENTAS := ["Seleccionar", "Subir", "Bajar", "Suavizar", "Aplanar", "Mover", "Playa"]
+const HERRAMIENTAS := ["Seleccionar", "Subir", "Bajar", "Suavizar", "Aplanar", "Mover",
+		"Playa", "Rugosidad", "Revertir"]
 const AYUDAS_HERRAMIENTA := [
 	"Selecciona objetos (clic)",
 	"Levanta el terreno",
@@ -29,6 +34,8 @@ const AYUDAS_HERRAMIENTA := [
 	"Aplana a la altura del clic",
 	"Arrastra: desplaza el montículo en la dirección del ratón",
 	"Aplana a ~1 m sobre el agua y tiñe de arena",
+	"Rompe la superficie con un relieve irregular",
+	"Devuelve la zona hacia su forma original",
 ]
 
 var _panel: PanelContainer = null
@@ -37,6 +44,8 @@ var _tabs: TabContainer = null
 var _lista_actual: VBoxContainer = null
 var _lista_guardado: VBoxContainer = null
 var _btn_deshacer: Button = null
+var _btn_deshacer_paso: Button = null
+var _btn_rehacer_paso: Button = null
 var _btn_inventario: Button = null
 var _dialogo_deshacer: ConfirmationDialog = null
 var _btn_abrir: Button = null
@@ -46,7 +55,9 @@ var _lbl_seleccion: Label = null
 var _slider_radio: HSlider = null
 var _slider_fuerza: HSlider = null
 var _slider_escala: HSlider = null
+var _slider_snap_paso: HSlider = null
 var _snap: CheckButton = null
+var _eje_escala: OptionButton = null
 var _tipo: OptionButton = null
 var _forma_voxel: OptionButton = null
 var _btn_terreno: Button = null
@@ -113,6 +124,19 @@ func set_escala_ui(valor: float) -> void:
 
 func snap_activo() -> bool:
 	return _snap.button_pressed if _snap != null else true
+
+
+## Eje que cambia el deslizador «Tamaño»: 0 uniforme, 1 X, 2 Y, 3 Z.
+func eje_escala() -> int:
+	return _eje_escala.selected if _eje_escala != null else 0
+
+
+## Estado de los botones de paso: deshacer/rehacer de la isla activa.
+func set_historial(puede_deshacer: bool, puede_rehacer: bool) -> void:
+	if _btn_deshacer_paso != null:
+		_btn_deshacer_paso.disabled = not puede_deshacer
+	if _btn_rehacer_paso != null:
+		_btn_rehacer_paso.disabled = not puede_rehacer
 
 
 func set_isla(texto: String, editable: bool) -> void:
@@ -218,6 +242,20 @@ func _construir() -> void:
 	pista.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	caja.add_child(pista)
 
+	var fila_hist := HBoxContainer.new()
+	fila_hist.add_theme_constant_override("separation", 6)
+	_btn_deshacer_paso = _boton("Deshacer")
+	_btn_deshacer_paso.tooltip_text = "Deshace el último trazo u objeto creado (Ctrl+Z)"
+	_btn_deshacer_paso.disabled = true
+	_btn_deshacer_paso.pressed.connect(func(): deshacer_paso_solicitado.emit())
+	fila_hist.add_child(_btn_deshacer_paso)
+	_btn_rehacer_paso = _boton("Rehacer")
+	_btn_rehacer_paso.tooltip_text = "Rehace el último paso deshecho (Ctrl+Y)"
+	_btn_rehacer_paso.disabled = true
+	_btn_rehacer_paso.pressed.connect(func(): rehacer_paso_solicitado.emit())
+	fila_hist.add_child(_btn_rehacer_paso)
+	caja.add_child(fila_hist)
+
 	_btn_deshacer = _boton("Deshacer isla")
 	_btn_deshacer.tooltip_text = "Deja la isla como recién exportada: borra el relieve esculpido y todos los objetos"
 	_btn_deshacer.add_theme_color_override("font_color", Color(1.0, 0.72, 0.62))
@@ -297,6 +335,21 @@ func _construir() -> void:
 	_btn_inventario.pressed.connect(func(): inventario_guardado_solicitado.emit())
 	caja.add_child(_btn_inventario)
 
+	var fila_eje := HBoxContainer.new()
+	fila_eje.add_theme_constant_override("separation", 6)
+	var lbl_eje := _etiqueta("Eje tamaño", 12, Color(0.78, 0.86, 0.95))
+	lbl_eje.custom_minimum_size = Vector2(52, 0)
+	fila_eje.add_child(lbl_eje)
+	_eje_escala = OptionButton.new()
+	_eje_escala.focus_mode = Control.FOCUS_NONE
+	_eje_escala.tooltip_text = "Dimensión que cambia el deslizador Tamaño"
+	for texto in ["Uniforme", "X", "Y", "Z"]:
+		_eje_escala.add_item(texto)
+	_eje_escala.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_eje_escala.item_selected.connect(func(i): eje_escala_cambiada.emit(i))
+	fila_eje.add_child(_eje_escala)
+	caja.add_child(fila_eje)
+
 	_slider_escala = _deslizador(caja, "Tamaño", 0.4, 12.0, 0.1, 2.0, _on_escala)
 	_snap = CheckButton.new()
 	_snap.text = "Rejilla de 0,5 m"
@@ -304,12 +357,13 @@ func _construir() -> void:
 	_snap.focus_mode = Control.FOCUS_NONE
 	_snap.toggled.connect(func(v): snap_cambiada.emit(v))
 	caja.add_child(_snap)
+	_slider_snap_paso = _deslizador(caja, "Paso", 0.1, 2.0, 0.1, 0.5, _on_snap_paso)
 
 	_lbl_seleccion = _etiqueta("Selección: —", 12, Color(0.65, 0.9, 1.0))
 	_lbl_seleccion.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	caja.add_child(_lbl_seleccion)
 
-	var ayuda := _etiqueta("Flechas/WASD mover · Q/E girar · RePág/AvPág altura · +/- tamaño · Ctrl+D duplicar · Supr borrar · Esc soltar", 10, Color(0.5, 0.6, 0.72))
+	var ayuda := _etiqueta("Flechas/WASD mover · Q/E girar · RePág/AvPág altura · +/- tamaño · Ctrl+D duplicar · Ctrl+Z deshacer · Ctrl+Y rehacer · Supr borrar · Esc soltar", 10, Color(0.5, 0.6, 0.72))
 	ayuda.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	caja.add_child(ayuda)
 
@@ -489,3 +543,7 @@ func _on_fuerza(valor: float) -> void:
 
 func _on_escala(valor: float) -> void:
 	escala_solicitada.emit(valor)
+
+
+func _on_snap_paso(valor: float) -> void:
+	snap_paso_cambiada.emit(valor)

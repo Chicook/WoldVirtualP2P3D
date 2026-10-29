@@ -6,7 +6,13 @@ const Terreno := preload("res://gdscrip/TerrenoEditable.gd")
 const Prims := preload("res://gdscrip/Prims.gd")
 const VoxelSuave := preload("res://gdscrip/VoxelSuave.gd")
 const Construccion := preload("res://gdscrip/Construccion.gd")
-const ESCENA_ISLA := "res://gltfimport/terrenoblok/ISLA3DCHUNK.gltf"
+
+## El glTF de la isla no viaja en el árbol de trabajo (se importa desde el
+## paquete del juego), así que la prueba fabrica la misma forma en memoria:
+## meseta central, costa y fondo, con la escala ~100 del chunk real.
+const MEDIDA_ISLA := 0.72
+const PASO_ISLA := 0.02
+const ESCALA_ISLA := 100.0
 
 var _ok := 0
 var _fallos := 0
@@ -51,9 +57,86 @@ func _check(condicion: bool, mensaje: String) -> void:
 		print("[FALLO] %s -> %s" % [_contexto, mensaje])
 
 
+## Altura local de la isla sintética: meseta a 0,52 hasta r=0,42, caída suave
+## hasta 0,50 en r=0,55 y playa sumergida hasta 0,30 en r=1,15.
+func _altura_isla(x: float, z: float) -> float:
+	var r := Vector2(x, z).length()
+	if r <= 0.42:
+		return 0.52
+	if r <= 0.55:
+		return lerpf(0.52, 0.50, (r - 0.42) / 0.13)
+	return lerpf(0.50, 0.30, clampf((r - 0.55) / 0.60, 0.0, 1.0))
+
+
+func _malla_isla() -> ArrayMesh:
+	var n := int(round(MEDIDA_ISLA * 2.0 / PASO_ISLA)) + 1
+	var verts := PackedVector3Array()
+	var normales := PackedVector3Array()
+	verts.resize(n * n)
+	normales.resize(n * n)
+	for iz in n:
+		for ix in n:
+			var x := -MEDIDA_ISLA + float(ix) * PASO_ISLA
+			var z := -MEDIDA_ISLA + float(iz) * PASO_ISLA
+			var i := iz * n + ix
+			verts[i] = Vector3(x, _altura_isla(x, z), z)
+			normales[i] = Vector3.UP
+	var indices := PackedInt32Array()
+	indices.resize((n - 1) * (n - 1) * 6)
+	var k := 0
+	for iz in n - 1:
+		for ix in n - 1:
+			var a := iz * n + ix
+			var b := a + 1
+			var c := a + n
+			var d := c + 1
+			indices[k] = a
+			indices[k + 1] = c
+			indices[k + 2] = b
+			indices[k + 3] = b
+			indices[k + 4] = c
+			indices[k + 5] = d
+			k += 6
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normales
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var malla := ArrayMesh.new()
+	malla.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return malla
+
+
+## Colisión trimesh con la misma geometría que la malla sintética.
+func _forma_isla(malla: ArrayMesh) -> ConcavePolygonShape3D:
+	var arrays := malla.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var caras := PackedVector3Array()
+	caras.resize(indices.size())
+	for i in indices.size():
+		caras[i] = verts[indices[i]]
+	var forma := ConcavePolygonShape3D.new()
+	forma.set_faces(caras)
+	return forma
+
+
 func _instancia_isla() -> Node3D:
-	var packed := load(ESCENA_ISLA) as PackedScene
-	var raiz := packed.instantiate() as Node3D
+	var raiz := Node3D.new()
+	raiz.name = "ISLA3DCHUNK"
+	raiz.scale = Vector3.ONE * ESCALA_ISLA
+	var malla := MeshInstance3D.new()
+	malla.name = "isla3D"
+	malla.mesh = _malla_isla()
+	malla.material_override = StandardMaterial3D.new()
+	raiz.add_child(malla)
+	var cuerpo := StaticBody3D.new()
+	cuerpo.name = "StaticBody3D"
+	var colision := CollisionShape3D.new()
+	colision.name = "CollisionShape3D"
+	colision.shape = _forma_isla(malla.mesh as ArrayMesh)
+	cuerpo.add_child(colision)
+	malla.add_child(cuerpo)
 	root.add_child(raiz)
 	return raiz
 
@@ -212,6 +295,46 @@ func _probar_terreno() -> void:
 			"playa aplana a agua+1 m (%.4f vs %.4f)" % [t.vertices[costa].y, objetivo_playa])
 	_check(_color_cerca(t.colores[costa], Terreno.COLOR_PLAYA),
 			"playa tiñe de arena (%s)" % t.colores[costa].to_html(true))
+
+	# Rugosidad: relieve determinista por índice de vértice, idéntico en cada
+	# peer porque no viaja estado por la red.
+	var isla_r := _instancia_isla()
+	var tr := Terreno.new()
+	_check(tr.configurar(isla_r, 30), "isla preparada para rugosidad y revertir")
+	var cima_r := tr.malla.to_global(Vector3(0.0, _altura_cerca(tr, 0.0, 0.0), 0.0))
+	var base_r := tr.vertices.duplicate()
+	_check(tr.aplicar_pincel(cima_r, 10.0, 2.0, 0.05, Terreno.RUGOSIDAD) > 0,
+			"rugosidad modifica los vértices cercanos")
+	var isla_r2 := _instancia_isla()
+	var tr2 := Terreno.new()
+	_check(tr2.configurar(isla_r2, 31), "segunda isla para el ruido determinista")
+	tr2.aplicar_pincel(cima_r, 10.0, 2.0, 0.05, Terreno.RUGOSIDAD)
+	_check(tr.vertices == tr2.vertices, "rugosidad da el mismo relieve en cada peer")
+
+	# Revertir: devuelve alturas y máscara de arena hacia el estado exportado.
+	for i in 30:
+		tr.aplicar_pincel(cima_r, 12.0, 4.0, 0.05, Terreno.SUBIR)
+	var revertir_idx := _indice_cerca(tr, 0.0, 0.0)
+	_check(tr.vertices[revertir_idx].y > base_r[revertir_idx].y + 0.02,
+			"el centro queda elevado antes de revertir (%.4f)" % tr.vertices[revertir_idx].y)
+	tr.aplicar_pincel(cima_r, 14.0, 4.0, 0.05, Terreno.PLAYA)
+	_check(tr.colores[revertir_idx].a > 0.1, "la playa pinta arena antes de revertir")
+	for i in 120:
+		tr.aplicar_pincel(cima_r, 14.0, 4.0, 0.05, Terreno.REVERTIR)
+	_check(absf(tr.vertices[revertir_idx].y - base_r[revertir_idx].y) <= 0.01,
+			"revertir devuelve el centro a su altura original (%.4f)"
+			% tr.vertices[revertir_idx].y)
+	_check(tr.colores[revertir_idx].a < 0.05, "revertir retira la máscara de arena")
+
+	# Colisión incremental: el pincel marca solo las caras que tocó.
+	tr.actualizar_colision()
+	tr.aplicar_pincel(cima_r, 10.0, 2.0, 0.05, Terreno.SUBIR)
+	_check(tr.esta_colision_sucia(), "el pincel marca caras para la colisión parcial")
+	var parcial := tr.actualizar_colision_parcial()
+	print("[terreno] colisión parcial: %d de %d caras" % [parcial, tr.indices.size() / 3])
+	_check(parcial > 0 and parcial < tr.indices.size() / 3,
+			"la colisión parcial refresca solo una parte de la malla")
+	_check(not tr.esta_colision_sucia(), "tras refrescar no quedan caras sucias")
 
 	var t1 := Time.get_ticks_usec()
 	t.actualizar_colision()
@@ -520,9 +643,20 @@ func _probar_construccion() -> void:
 	c.name = "Constructor"
 	stub.add_child(c)
 	_check(c._panel != null, "_ready construye el panel")
-	_check(c._panel._botones_herr.size() == 7, "el panel ofrece las 7 herramientas")
+	_check(c._panel._botones_herr.size() == 9, "el panel ofrece las 9 herramientas")
 	_check(c._panel._botones_herr[5].text == "Mover" and c._panel._botones_herr[6].text == "Playa",
 			"mover y playa están en el panel")
+	_check(c._panel._botones_herr[7].text == "Rugosidad"
+			and c._panel._botones_herr[8].text == "Revertir",
+			"rugosidad y revertir amplían el panel")
+	_check(c._panel._btn_deshacer_paso != null and c._panel._btn_deshacer_paso.disabled,
+			"Deshacer arranca deshabilitado")
+	_check(c._panel._btn_rehacer_paso != null and c._panel._btn_rehacer_paso.disabled,
+			"Rehacer arranca deshabilitado")
+	_check(is_equal_approx(c._panel._slider_snap_paso.value, 0.5),
+			"el paso de rejilla parte de 0,5 m")
+	_check(c._panel._eje_escala != null and c._panel.eje_escala() == 0,
+			"el tamaño empieza en modo uniforme")
 
 	var isla := _instancia_isla()
 	isla.get_parent().remove_child(isla)
@@ -542,6 +676,23 @@ func _probar_construccion() -> void:
 	_check(nodo.scale.is_equal_approx(Vector3(1.4, 2.2, 1.4)), "escala aplicada al nodo")
 	_check(nodo.get_node_or_null("Malla") is MeshInstance3D, "el prim tiene malla")
 	_check(nodo.get_node_or_null("Colision") is CollisionShape3D, "el prim tiene colision")
+
+	# ── Historial por pasos: crear, deshacer y rehacer un objeto ────────
+	var id_hist: int = c._host_crear_prim(99, "cubo", Vector3(8.0, 1.0, 8.0),
+			Vector3.ZERO, Vector3.ONE, Color.WHITE)
+	_check(id_hist == 2, "el segundo prim recibe id 2")
+	_check(c._historial.puede_deshacer(99), "crear un objeto deja un paso de historial")
+	_check(not c._panel._btn_deshacer_paso.disabled, "el panel habilita Deshacer")
+	c._deshacer_paso()
+	_check(not c._prims[99].has(id_hist), "deshacer retira el objeto creado")
+	_check(not c._nodos[99].has(id_hist), "deshacer retira el nodo del objeto")
+	_check(c._historial.puede_rehacer(99) and not c._panel._btn_rehacer_paso.disabled,
+			"el panel habilita Rehacer tras deshacer")
+	c._rehacer_paso()
+	_check(c._prims[99].has(id_hist), "rehacer devuelve el objeto al registro")
+	_check(c._nodos[99].has(id_hist), "rehacer reinstancia el nodo")
+	c._solicitar_borrado(99, id_hist)
+	_check(not c._prims[99].has(id_hist), "el objeto de la prueba de historial se borra")
 
 	# Simula el aviso del anfitrion con un id creado por otro peer.
 	c._siguiente[99] = 1
@@ -572,6 +723,23 @@ func _probar_construccion() -> void:
 	var mio: Vector3 = c._terrenos[99].malla.to_global(c._terrenos[99].vertices[0])
 	c._terrenos[99].aplicar_pincel(mio, 40.0, 4.0, 0.05, Terreno.SUBIR)
 	_check(c._terrenos[100].vertices == base_ajena, "esculpir mi isla no toca la ajena")
+
+	# ── Historial de trazos: par antes/después del terreno ──────────────
+	var t99 = c._terrenos[99]
+	var previo_trazo: Dictionary = t99.instantanea()
+	var cima99: Vector3 = t99.malla.to_global(Vector3(0.0, _altura_cerca(t99, 0.0, 0.0), 0.0))
+	t99.aplicar_pincel(cima99, 12.0, 4.0, 0.05, Terreno.SUBIR)
+	c._pincel_antes = previo_trazo
+	c._registrar_pincel(99, t99)
+	c._pincel_antes = {}
+	_check(c._historial.puede_deshacer(99), "un trazo de terreno deja un paso de historial")
+	var tras_trazo: float = _altura_cerca(t99, 0.0, 0.0)
+	c._deshacer_paso()
+	_check(absf(_altura_cerca(t99, 0.0, 0.0) - tras_trazo) > 0.0005,
+			"deshacer revierte el trazo de terreno")
+	c._rehacer_paso()
+	_check(absf(_altura_cerca(t99, 0.0, 0.0) - tras_trazo) < 0.0005,
+			"rehacer recupera la altura esculpida")
 	c.registrar_isla(101, isla)
 	_check(not c._islas.has(101), "registrar_isla rechaza un nodo ya registrado")
 
@@ -579,9 +747,29 @@ func _probar_construccion() -> void:
 	var esc: Vector3 = c._prims[99][1]["escala"]
 	_check(esc.is_equal_approx(Vector3(2.8, 4.4, 2.8)), "escalar conserva la proporcion")
 
+	# Tamaño por eje: solo cambia la dimensión elegida.
+	c._panel._eje_escala.select(2)
+	c._aplicar_escala(6.0)
+	_check(c._prims[99][1]["escala"].is_equal_approx(Vector3(2.8, 6.0, 2.8)),
+			"el eje Y solo cambia la altura")
+	c._panel._eje_escala.select(1)
+	c._aplicar_escala(3.5)
+	_check(c._prims[99][1]["escala"].is_equal_approx(Vector3(3.5, 6.0, 2.8)),
+			"el eje X solo cambia la anchura")
+	c._panel._eje_escala.select(0)
+
 	var antes_x: float = c._prims[99][1]["pos"].x
 	c._mover_seleccion(KEY_RIGHT, false)
 	_check(is_equal_approx(c._prims[99][1]["pos"].x, antes_x + 0.5), "mover desplaza con la rejilla")
+
+	# Paso de rejilla configurable desde el panel.
+	c._panel._slider_snap_paso.value = 0.2
+	_check(is_equal_approx(c._snap_paso, 0.2), "el deslizador Paso actualiza la rejilla")
+	var antes_paso: float = c._prims[99][1]["pos"].x
+	c._mover_seleccion(KEY_RIGHT, false)
+	_check(is_equal_approx(c._prims[99][1]["pos"].x, antes_paso + 0.2),
+			"mover usa el paso elegido")
+	c._panel._slider_snap_paso.value = 0.5
 
 	c._aplicar_color(Color(0.93, 0.32, 0.31))
 	_check((c._prims[99][1]["color"] as Color).to_html(true) == Color(0.93, 0.32, 0.31).to_html(true),

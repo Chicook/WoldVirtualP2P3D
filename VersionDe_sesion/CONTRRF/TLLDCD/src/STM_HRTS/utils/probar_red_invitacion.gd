@@ -3,7 +3,7 @@ extends SceneTree
 ## túneles (wss://), nunca en las conexiones directas de LAN.
 ##
 ## Uso:
-##   godot --headless --path . --script res://tools/probar_red_invitacion.gd -- \
+##   python -m STM_HRTS ejecutar probar_red_invitacion -- \
 ##     --client --peer-url="https://demo.trycloudflare.com/?invitacion=<32 hex>"
 
 const Red = preload("res://gdscrip/Red.gd")

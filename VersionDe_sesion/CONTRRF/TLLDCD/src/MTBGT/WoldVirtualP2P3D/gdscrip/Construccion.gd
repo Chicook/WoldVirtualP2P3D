@@ -10,6 +10,9 @@ const Terreno := preload("res://gdscrip/TerrenoEditable.gd")
 const Prims := preload("res://gdscrip/Prims.gd")
 const VoxelSuave := preload("res://gdscrip/VoxelSuave.gd")
 const PanelConstruccion := preload("res://gdscrip/ConstructorPanel.gd")
+const Historial := preload("res://gdscrip/construccion/HistorialEdicion.gd")
+const Inventario := preload("res://gdscrip/construccion/InventarioConstruccion.gd")
+const Contorno := preload("res://gdscrip/construccion/ContornoIsla.gd")
 
 const CARPETA := "user://construccion"
 const CARPETA_INVENTARIO := "user://inventario"
@@ -18,8 +21,14 @@ const TIPO_PRIMS := 1
 const BLOQUE_BYTES := 6000
 const RADIO_ISLA := 95.0
 const PASO_PINCEL := 0.05
+## Un trazo nunca avanza más de esto por tick aunque el motor dé un salto de
+## fotograma: el paso del pincel es proporcional a los segundos transcurridos.
+const PASO_MAXIMO := 0.1
+## Cadencia de la colisión incremental mientras se esculpe (la completa se
+## reconstruye al soltar el botón).
+const CADENCIA_COLISION := 0.12
 
-enum Herramienta { SELECCION, SUBIR, BAJAR, SUAVIZAR, APLANAR, MOVER, PLAYA }
+enum Herramienta { SELECCION, SUBIR, BAJAR, SUAVIZAR, APLANAR, MOVER, PLAYA, RUGOSIDAD, REVERTIR }
 
 var _panel = null
 var _islas := {}          # indice -> Node3D de la isla
@@ -36,9 +45,11 @@ var _herramienta := Herramienta.SELECCION
 var _radio := 8.0
 var _fuerza := 1.2
 var _snap := true
+var _snap_paso := 0.5
 var _color_actual: Color = Prims.COLORES[0]
 var _pincelando := false
 var _pincel_isla := -1
+var _pincel_antes := {}
 var _ultimo_impacto := Vector3.ZERO
 var _impacto_previo := Vector3.ZERO
 var _mira: MeshInstance3D = null
@@ -51,10 +62,14 @@ var _col_t := 0.0
 var _ui_t := 0.0
 var _mira_t := 0.0
 var _pincel_t := 0.0
+var _col_parcial_t := 0.0
 var _ultimo_envio_ms := 0
 var _ultimo_aviso := ""
 # Carpeta del inventario; las pruebas la redirigen para no tocar datos reales.
 var _carpeta_inventario := CARPETA_INVENTARIO
+var _historial = Historial.new()
+var _inventario = Inventario.new()
+var _contorno = Contorno.new()
 
 
 func _ready() -> void:
@@ -67,13 +82,17 @@ func _ready() -> void:
 	_panel.radio_cambiada.connect(func(v): _radio = v)
 	_panel.fuerza_cambiada.connect(func(v): _fuerza = v)
 	_panel.snap_cambiada.connect(func(v): _snap = v)
+	_panel.snap_paso_cambiada.connect(func(v): _snap_paso = v)
 	_panel.rez_solicitado.connect(_rez)
 	_panel.terreno_solicitado.connect(_crear_terreno_voxel)
 	_panel.duplicar_solicitado.connect(_duplicar)
 	_panel.borrar_solicitado.connect(_borrar)
 	_panel.color_solicitado.connect(_aplicar_color)
 	_panel.escala_solicitada.connect(_aplicar_escala)
+	_panel.eje_escala_cambiada.connect(_on_eje_escala)
 	_panel.deshacer_solicitado.connect(_deshacer_isla)
+	_panel.deshacer_paso_solicitado.connect(_deshacer_paso)
+	_panel.rehacer_paso_solicitado.connect(_rehacer_paso)
 	_panel.inventario_guardado_solicitado.connect(_guardar_en_inventario)
 	_panel.inventario_mostrado.connect(_refrescar_inventario)
 	_crear_mira()
@@ -178,6 +197,7 @@ func _guardar_sucios() -> void:
 func olvidar_isla(idx: int) -> void:
 	if _sel_isla == idx:
 		_seleccionar(null)
+	_historial.limpiar(idx)
 	_islas.erase(idx)
 	_terrenos.erase(idx)
 	_contenedores.erase(idx)
@@ -291,6 +311,7 @@ func _activar_modo(activo: bool) -> void:
 	_modo = activo
 	_pincelando = false
 	_pincel_isla = -1
+	_pincel_antes = {}
 	_panel.abrir(activo)
 	_bloquear_avatar(activo)
 	if not activo:
@@ -300,6 +321,7 @@ func _activar_modo(activo: bool) -> void:
 	else:
 		_avisar("Modo construcción activo. El avatar queda suelto hasta cerrar (B).")
 		_refrescar_inventario()
+	_refrescar_historial_ui()
 
 
 func _bloquear_avatar(activo: bool) -> void:
@@ -349,12 +371,24 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if not _modo:
 		return
-	# Ctrl se reserva para atajos (Ctrl+D duplica); sin esto, el movimiento
-	# también reaccionaría a las teclas con Ctrl pulsado.
+	# Ctrl se reserva para atajos (Ctrl+D duplica, Ctrl+Z/Ctrl+Y deshacer y
+	# rehacer); sin esto, el movimiento también reaccionaría a las teclas con
+	# Ctrl pulsado.
 	if event.ctrl_pressed:
-		if not event.echo and event.keycode == KEY_D:
-			_duplicar()
-			get_viewport().set_input_as_handled()
+		if not event.echo:
+			match event.keycode:
+				KEY_D:
+					_duplicar()
+					get_viewport().set_input_as_handled()
+				KEY_Z:
+					if event.shift_pressed:
+						_rehacer_paso()
+					else:
+						_deshacer_paso()
+					get_viewport().set_input_as_handled()
+				KEY_Y:
+					_rehacer_paso()
+					get_viewport().set_input_as_handled()
 		return
 	if not event.echo:
 		match event.keycode:
@@ -395,7 +429,7 @@ func _mover_seleccion(codigo: int, rapido: bool) -> void:
 	var pos: Vector3 = datos["pos"]
 	var rot: Vector3 = datos["rot"]
 	var esc: Vector3 = datos["escala"]
-	var paso := 1.0 if rapido else (0.5 if _snap else 0.25)
+	var paso := 1.0 if rapido else (_snap_paso if _snap else 0.25)
 	match codigo:
 		KEY_LEFT, KEY_A:
 			pos.x -= paso
@@ -421,6 +455,7 @@ func _mover_seleccion(codigo: int, rapido: bool) -> void:
 			_panel.set_escala_ui(_mayor_escala(esc))
 		_:
 			return
+	var antes := _instantanea_prims(_sel_isla)
 	pos.x = clampf(pos.x, -RADIO_ISLA, RADIO_ISLA)
 	pos.z = clampf(pos.z, -RADIO_ISLA, RADIO_ISLA)
 	pos.y = clampf(pos.y, 0.0, 140.0)
@@ -429,6 +464,7 @@ func _mover_seleccion(codigo: int, rapido: bool) -> void:
 	datos["escala"] = esc
 	_aplicar_datos_prim(_sel_isla, _sel_id, datos)
 	_envio_prim_throttled()
+	_registrar_prims(_sel_isla, antes)
 
 
 # ------------------------------------------------------------------ terreno
@@ -447,16 +483,21 @@ func _iniciar_pincel() -> void:
 	_ultimo_impacto = hit["position"]
 	_impacto_previo = _ultimo_impacto
 	_pincel_t = 0.0
+	var terreno = _terrenos.get(idx)
+	# La instantánea se toma antes del primer tick: al soltar, el par
+	# antes/después entra en el historial como un único paso de deshacer.
+	_pincel_antes = terreno.instantanea() if terreno != null else {}
 	_tick_pincel()
 
 
-func _tick_pincel() -> void:
+func _tick_pincel(dt := PASO_PINCEL) -> void:
 	if not _pincelando or _pincel_isla < 0:
 		return
 	var terreno = _terrenos.get(_pincel_isla)
 	if terreno == null:
 		_pincelando = false
 		return
+	var paso_dt := clampf(dt, 0.0, PASO_MAXIMO)
 	var hit := _rayo_raton()
 	if not hit.is_empty():
 		_ultimo_impacto = hit["position"]
@@ -470,7 +511,7 @@ func _tick_pincel() -> void:
 		if largo > tope:
 			delta = delta / largo * tope
 	_impacto_previo = _ultimo_impacto
-	var afectados: int = terreno.aplicar_pincel(_ultimo_impacto, _radio, _fuerza, PASO_PINCEL,
+	var afectados: int = terreno.aplicar_pincel(_ultimo_impacto, _radio, _fuerza, paso_dt,
 			herramienta_terreno, delta)
 	if afectados <= 0:
 		return
@@ -478,11 +519,11 @@ func _tick_pincel() -> void:
 	_sucio[_pincel_isla] = true
 	_col_t = 0.0
 	if multiplayer.is_server():
-		_difundir_pincel(_pincel_isla, _ultimo_impacto, _radio, _fuerza, PASO_PINCEL,
+		_difundir_pincel(_pincel_isla, _ultimo_impacto, _radio, _fuerza, paso_dt,
 				herramienta_terreno, delta)
 	else:
 		rpc_id(1, "_solicitar_pincel", _pincel_isla, _ultimo_impacto, _radio, _fuerza,
-				PASO_PINCEL, herramienta_terreno, delta)
+				paso_dt, herramienta_terreno, delta)
 
 
 func _terminar_pincel() -> void:
@@ -491,11 +532,28 @@ func _terminar_pincel() -> void:
 		var terreno = _terrenos.get(_pincel_isla)
 		if terreno != null:
 			terreno.actualizar_colision()
+			_registrar_pincel(_pincel_isla, terreno)
 		_colision_pendiente.erase(_pincel_isla)
 		if _guardar_isla(_pincel_isla):
 			_sucio.erase(_pincel_isla)
 	_pincel_isla = -1
+	_pincel_antes = {}
 	_refrescar_inventario()
+
+
+## Convierte el trazo recién soltado en un paso de historial si movió algo.
+func _registrar_pincel(idx: int, terreno) -> void:
+	if _pincel_antes.is_empty() or terreno == null:
+		return
+	var despues: Dictionary = terreno.instantanea()
+	var alturas_antes: PackedFloat32Array = _pincel_antes["alturas"]
+	var alturas_despues: PackedFloat32Array = despues["alturas"]
+	var colores_antes: PackedByteArray = _pincel_antes["colores"]
+	var colores_despues: PackedByteArray = despues["colores"]
+	if alturas_antes == alturas_despues and colores_antes == colores_despues:
+		return
+	_historial.empujar(idx, {"isla": idx, "terreno": [_pincel_antes, despues]})
+	_refrescar_historial_ui()
 
 
 func _difundir_pincel(idx: int, centro: Vector3, radio: float, fuerza: float, dt: float,
@@ -554,7 +612,7 @@ func _rez(tipo: String) -> void:
 	var tam := Prims.tamano_por_defecto(tipo)
 	pos.y += tam.y * 0.5
 	if _snap:
-		pos = Vector3(snappedf(pos.x, 0.5), pos.y, snappedf(pos.z, 0.5))
+		pos = Vector3(snappedf(pos.x, _snap_paso), pos.y, snappedf(pos.z, _snap_paso))
 	pos.x = clampf(pos.x, -RADIO_ISLA, RADIO_ISLA)
 	pos.z = clampf(pos.z, -RADIO_ISLA, RADIO_ISLA)
 	var rot := Vector3(0.0, _giro_camara(), 0.0)
@@ -599,8 +657,8 @@ func _crear_terreno_voxel(forma: String) -> void:
 	base.y = (agua_y - 0.15) if tocar_mar else (impacto.y - 0.25)
 	var pos := isla_nodo.to_local(base)
 	if _snap:
-		pos.x = snappedf(pos.x, 0.5)
-		pos.z = snappedf(pos.z, 0.5)
+		pos.x = snappedf(pos.x, _snap_paso)
+		pos.z = snappedf(pos.z, _snap_paso)
 	pos.x = clampf(pos.x, -RADIO_ISLA, RADIO_ISLA)
 	pos.z = clampf(pos.z, -RADIO_ISLA, RADIO_ISLA)
 	_rez_con_datos(idx, Prims.TIPO_VOXEL, pos, Vector3(0.0, _giro_camara(), 0.0),
@@ -628,15 +686,25 @@ func _disponible_voxel(idx: int, centro: Vector3, borde: float, tocar_mar: bool)
 
 
 ## Mayor círculo de tierra que cabe alrededor de `centro` (local de la isla).
-## Se lanza un rayo desde arriba en 40 direcciones y se acepta el último punto
-## cuya superficie sea del terreno propio. Con `permitir_sumergido` también
-## cuenta el fondo ya bajo el agua, para medir el contorno de la isla.
+## La medida la resuelve ContornoIsla: rayos verticales contra el terreno propio
+## en 24 direcciones, de fuera hacia dentro con refinado binario. Con
+## `permitir_sumergido` también cuenta el fondo ya bajo el agua, para medir el
+## contorno de la isla.
 func _radio_tierra(idx: int, centro: Vector3, maximo: float,
 		permitir_sumergido := false) -> float:
 	var terreno = _terrenos.get(idx)
 	if terreno == null or terreno.malla == null:
 		return 0.0
 	var agua_y := _nivel_agua_mundo(terreno)
+	var radio := clampf(maximo, 1.0, RADIO_ISLA)
+	return _contorno.medir(get_world_3d().direct_space_state, terreno.malla,
+			terreno.escala, agua_y, centro, radio, idx, _rids_excluidos(),
+			permitir_sumergido)
+
+
+## Cuerpos que no deben interceptar los rayos de medida: el avatar y los
+## objetos construidos (sus colisiones taparían el terreno).
+func _rids_excluidos() -> Array[RID]:
 	var excluir: Array[RID] = []
 	var ub := get_parent().get_node_or_null("USERBASE") if get_parent() != null else null
 	if ub is CollisionObject3D:
@@ -645,43 +713,7 @@ func _radio_tierra(idx: int, centro: Vector3, maximo: float,
 		for nodo in isla.values():
 			if nodo is CollisionObject3D and is_instance_valid(nodo):
 				excluir.append((nodo as CollisionObject3D).get_rid())
-	var radio := clampf(maximo, 1.0, RADIO_ISLA)
-	var menor := radio
-	var pasos := 40
-	for a in pasos:
-		var angulo := TAU * float(a) / float(pasos)
-		var dir := Vector2(cos(angulo), sin(angulo))
-		var limite := 0.0
-		var r := radio
-		while r >= 0.75:
-			# `centro` y `r` van en metros de isla; la malla del glTF está
-			# escalada ~100x, así que se convierte antes de to_global().
-			var local: Vector3 = Vector3(
-					(centro.x + dir.x * r) / terreno.escala, 0.0,
-					(centro.z + dir.y * r) / terreno.escala)
-			var mundo: Vector3 = terreno.malla.to_global(local)
-			var consulta := PhysicsRayQueryParameters3D.create(
-					Vector3(mundo.x, agua_y + 240.0, mundo.z),
-					Vector3(mundo.x, agua_y - 90.0, mundo.z))
-			consulta.collide_with_areas = false
-			consulta.exclude = excluir
-			var golpe := get_world_3d().direct_space_state.intersect_ray(consulta)
-			if not golpe.is_empty():
-				var col = golpe["collider"]
-				var es_terreno := false
-				if col is Node:
-					var nodo := col as Node
-					es_terreno = nodo.has_meta("terreno_editable") \
-							and int(nodo.get_meta("isla", -1)) == idx
-				if es_terreno and (permitir_sumergido \
-						or (golpe["position"] as Vector3).y >= agua_y - 0.18):
-					limite = r
-					break
-			r -= 0.5
-		if limite <= 0.0:
-			return 0.0
-		menor = minf(menor, limite)
-	return menor
+	return excluir
 
 
 func _rez_con_datos(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: Vector3,
@@ -697,6 +729,7 @@ func _host_crear_prim(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: V
 		color: Color, params := {}) -> int:
 	if not _prims.has(idx):
 		return 0
+	var antes := _instantanea_prims(idx)
 	var id := int(_siguiente.get(idx, 1))
 	_siguiente[idx] = id + 1
 	var tipo_final := tipo if Prims.es_tipo_valido(tipo) else "cubo"
@@ -714,6 +747,7 @@ func _host_crear_prim(idx: int, tipo: String, pos: Vector3, rot: Vector3, esc: V
 	_instanciar_prim(idx, datos)
 	_sucio[idx] = true
 	_refrescar_inventario()
+	_registrar_prims(idx, antes)
 	return id
 
 
@@ -744,6 +778,7 @@ func _prim_creado(idx: int, id: int, tipo: String, pos: Vector3, rot: Vector3, e
 		color: Color, params: Dictionary) -> void:
 	if not _prims.has(idx) or _prims[idx].has(id):
 		return
+	var antes := _instantanea_prims(idx)
 	var tipo_final := tipo if Prims.es_tipo_valido(tipo) else "cubo"
 	var datos := {"id": id, "tipo": tipo_final, "pos": pos, "rot": rot, "escala": esc,
 			"color": color}
@@ -755,6 +790,7 @@ func _prim_creado(idx: int, id: int, tipo: String, pos: Vector3, rot: Vector3, e
 	_instanciar_prim(idx, datos)
 	_sucio[idx] = true
 	_refrescar_inventario()
+	_registrar_prims(idx, antes)
 
 
 func _instanciar_prim(idx: int, datos: Dictionary) -> void:
@@ -896,6 +932,7 @@ func _host_borrar_prim(idx: int, id: int) -> bool:
 	var datos = _prims.get(idx, {}).get(id)
 	if datos == null:
 		return false
+	var antes := _instantanea_prims(idx)
 	if _seleccionado != null and _sel_isla == idx and _sel_id == id:
 		_seleccionar(null)
 	var nodo = _nodos.get(idx, {}).get(id)
@@ -905,11 +942,13 @@ func _host_borrar_prim(idx: int, id: int) -> bool:
 	_prims.get(idx, {}).erase(id)
 	_sucio[idx] = true
 	_refrescar_inventario()
+	_registrar_prims(idx, antes)
 	return true
 
 
 @rpc("authority", "call_remote", "reliable")
 func _prim_borrado(idx: int, id: int) -> void:
+	var antes := _instantanea_prims(idx)
 	if _seleccionado != null and _sel_isla == idx and _sel_id == id:
 		_seleccionar(null)
 	var nodo = _nodos.get(idx, {}).get(id)
@@ -919,6 +958,7 @@ func _prim_borrado(idx: int, id: int) -> void:
 	_prims.get(idx, {}).erase(id)
 	_sucio[idx] = true
 	_refrescar_inventario()
+	_registrar_prims(idx, antes)
 
 
 func _difundir_prim_borrado(idx: int, id: int) -> void:
@@ -959,40 +999,186 @@ func _solicitar_deshacer(idx: int) -> void:
 
 func _host_deshacer_isla(idx: int) -> void:
 	var terreno = _terrenos.get(idx)
+	var terreno_antes: Dictionary = terreno.instantanea() if terreno != null else {}
+	var prims_antes := _instantanea_prims(idx)
 	if terreno != null:
 		terreno.restablecer()
 	_seleccionar(null)
-	for id in _nodos.get(idx, {}).keys():
-		var nodo = _nodos[idx][id]
-		if nodo != null and is_instance_valid(nodo):
-			nodo.queue_free()
-	_nodos.get(idx, {}).clear()
+	_vaciar_nodos(idx)
 	_prims.get(idx, {}).clear()
 	_siguiente[idx] = 1
 	_sucio[idx] = true
 	_guardar_isla(idx)
 	_refrescar_estado_ui()
 	_refrescar_inventario()
+	# El estado posterior sirve para rehacer: restaurar la isla también es un
+	# paso más de Ctrl+Z, igual que un trazo o un objeto.
+	var accion := {"isla": idx, "prims": [prims_antes, _instantanea_prims(idx)]}
+	if not terreno_antes.is_empty() and terreno != null:
+		accion["terreno"] = [terreno_antes, terreno.instantanea()]
+	_historial.empujar(idx, accion)
+	_refrescar_historial_ui()
 	_avisar("Isla restaurada: terreno original y sin objetos.")
 
 
+## Deshace el último paso propio de la isla activa (Ctrl+Z).
+func _deshacer_paso() -> void:
+	var idx := _isla_actual()
+	if idx < 0 or not _puedo_editar(idx):
+		_avisar("Solo puedes deshacer en la isla que estás editando.")
+		return
+	if not _historial.puede_deshacer(idx):
+		_avisar("No hay nada que deshacer en esta isla.")
+		return
+	var accion := _historial.deshacer(idx)
+	if _aplicar_accion(accion, true):
+		_avisar("Paso deshecho. Quedan %d." % int(_historial.profundidad(idx)["deshacer"]))
+	_refrescar_historial_ui()
+
+
+## Rehace el último paso deshecho (Ctrl+Y o Ctrl+Shift+Z).
+func _rehacer_paso() -> void:
+	var idx := _isla_actual()
+	if idx < 0 or not _puedo_editar(idx):
+		_avisar("Solo puedes rehacer en la isla que estás editando.")
+		return
+	if not _historial.puede_rehacer(idx):
+		_avisar("No hay nada que rehacer en esta isla.")
+		return
+	var accion := _historial.rehacer(idx)
+	if _aplicar_accion(accion, false):
+		_avisar("Paso rehecho. Quedan %d por rehacer."
+				% int(_historial.profundidad(idx)["rehacer"]))
+	_refrescar_historial_ui()
+
+
+func _refrescar_historial_ui() -> void:
+	if _panel == null or not _panel.has_method("set_historial"):
+		return
+	var idx := _isla_actual()
+	var propio: bool = idx >= 0 and _puedo_editar(idx)
+	_panel.set_historial(propio and _historial.puede_deshacer(idx),
+			propio and _historial.puede_rehacer(idx))
+
+
+## Lleva la isla al estado guardado en una acción, en su cara «antes» (deshacer)
+## o «después» (rehacer), y lo sincroniza con el resto de peers.
+func _aplicar_accion(accion: Dictionary, hacia_atras: bool) -> bool:
+	var idx := int(accion.get("isla", -1))
+	if idx < 0:
+		return false
+	var cara := 0 if hacia_atras else 1
+	var terreno_si := false
+	var prims_si := false
+	if accion.has("terreno"):
+		var par: Array = accion["terreno"]
+		if par.size() > cara:
+			var inst = par[cara]
+			var terreno = _terrenos.get(idx)
+			terreno_si = terreno != null and inst is Dictionary \
+					and terreno.restaurar_instantanea(inst)
+	if accion.has("prims"):
+		var par_prims: Array = accion["prims"]
+		if par_prims.size() > cara:
+			prims_si = _aplicar_prims_estado(idx, par_prims[cara])
+	if terreno_si or prims_si:
+		_sincronizar_isla(idx, terreno_si, prims_si)
+	return terreno_si or prims_si
+
+
+## Difunde a los peers y guarda en disco el estado actual de la isla.
+func _sincronizar_isla(idx: int, terreno_si: bool, prims_si: bool) -> void:
+	var terreno = _terrenos.get(idx)
+	if multiplayer.is_server():
+		if terreno_si:
+			_difundir_terreno(idx)
+		if prims_si:
+			_difundir_prims(idx)
+	else:
+		if terreno_si and terreno != null:
+			rpc_id(1, "_aportar_terreno", idx, terreno.serializar())
+		if prims_si and _prims.has(idx):
+			var texto := Prims.serializar_isla(_prims[idx], int(_siguiente.get(idx, 1)),
+					_uuid_dueno(idx))
+			rpc_id(1, "_aportar_prims", idx, texto.to_utf8_buffer())
+	_sucio[idx] = true
+	if _guardar_isla(idx):
+		_sucio.erase(idx)
+	_refrescar_estado_ui()
+	_refrescar_inventario()
+
+
+func _difundir_terreno(idx: int) -> void:
+	var terreno = _terrenos.get(idx)
+	if terreno == null or multiplayer.get_peers().is_empty():
+		return
+	var datos: PackedByteArray = terreno.serializar()
+	for peer in multiplayer.get_peers():
+		_enviar_blob(peer, idx, TIPO_TERRENO, datos)
+
+
+func _difundir_prims(idx: int) -> void:
+	if not _prims.has(idx) or multiplayer.get_peers().is_empty():
+		return
+	var datos := Prims.serializar_isla(_prims[idx], int(_siguiente.get(idx, 1)),
+			_uuid_dueno(idx)).to_utf8_buffer()
+	for peer in multiplayer.get_peers():
+		_enviar_blob(peer, idx, TIPO_PRIMS, datos)
+
+
+## Copia profunda del registro de objetos: base de los pasos de historial.
+func _instantanea_prims(idx: int) -> Dictionary:
+	return {
+		"prims": (_prims.get(idx, {}) as Dictionary).duplicate(true),
+		"siguiente": int(_siguiente.get(idx, 1)),
+	}
+
+
+## Sustituye los objetos de la isla por los de una instantánea. El contador no
+## retrocede: un id ya visto por otros peers no debe reutilizarse.
+func _aplicar_prims_estado(idx: int, snap) -> bool:
+	if not _prims.has(idx) or not (snap is Dictionary):
+		return false
+	_seleccionar(null)
+	_vaciar_nodos(idx)
+	_prims[idx] = (snap.get("prims", {}) as Dictionary).duplicate(true)
+	_siguiente[idx] = maxi(int(_siguiente.get(idx, 1)), int(snap.get("siguiente", 1)))
+	for id in _prims[idx]:
+		_instanciar_prim(idx, _prims[idx][id])
+	_sucio[idx] = true
+	_refrescar_inventario()
+	return true
+
+
+## Registra un cambio de objetos solo si de verdad modificó el registro.
+func _registrar_prims(idx: int, antes: Dictionary) -> void:
+	if idx < 0 or antes.is_empty() or not _prims.has(idx):
+		return
+	var despues := _instantanea_prims(idx)
+	if antes["prims"] == despues["prims"]:
+		return
+	_historial.empujar(idx, {"isla": idx, "prims": [antes, despues]})
+	_refrescar_historial_ui()
+
+
+func _vaciar_nodos(idx: int) -> void:
+	for id in _nodos.get(idx, {}).keys():
+		var nodo = _nodos[idx][id]
+		if nodo == null or not is_instance_valid(nodo):
+			continue
+		var padre = nodo.get_parent()
+		if padre != null:
+			padre.remove_child(nodo)
+		nodo.queue_free()
+	_nodos.get(idx, {}).clear()
+
+
 func _ruta_entradas_inventario() -> String:
-	return _carpeta_inventario.path_join("inventario.json")
+	return _inventario.ruta_indice(_carpeta_inventario)
 
 
 func _leer_entradas_inventario() -> Array:
-	var ruta := _ruta_entradas_inventario()
-	if not FileAccess.file_exists(ruta):
-		return []
-	var f := FileAccess.open(ruta, FileAccess.READ)
-	if f == null:
-		return []
-	var texto := f.get_as_text()
-	f.close()
-	var leido = JSON.parse_string(texto)
-	if leido is Dictionary and leido.get("entradas") is Array:
-		return leido["entradas"]
-	return []
+	return _inventario.leer_entradas(_carpeta_inventario)
 
 
 ## Guarda una copia del terreno propio y de sus objetos. La copia completa
@@ -1011,56 +1197,15 @@ func _guardar_en_inventario() -> void:
 
 	var texto_prims := Prims.serializar_isla(_prims.get(idx, {}),
 			int(_siguiente.get(idx, 1)), _uuid_dueno(idx))
-	var leido = JSON.parse_string(texto_prims)
-	var assets: Array = leido.get("prims", []) if leido is Dictionary else []
-	if blob.is_empty() and assets.is_empty():
-		_avisar("No hay nada construido que guardar en el inventario.")
+	var resultado := _inventario.guardar(_carpeta_inventario, idx, blob, texto_prims,
+			_uuid_dueno(idx))
+	if not bool(resultado.get("ok", false)):
+		_avisar(str(resultado.get("mensaje", "No se pudo guardar la copia.")))
 		return
-
-	var sello := Time.get_datetime_string_from_system()
-	var id := "%s-%d" % [sello.replace("-", "").replace(":", "").replace("T", "-"),
-			Time.get_ticks_msec()]
-	var archivo := "inv_%s_isla%d.json" % [id, idx]
-
-	var dir := DirAccess.open("user://")
-	if dir != null:
-		dir.make_dir_recursive(_carpeta_inventario.trim_prefix("user://"))
-
-	var contenido := {
-		"version": 1,
-		"id": id,
-		"fecha": sello,
-		"isla": idx,
-		"uuid": _uuid_dueno(idx),
-		"terreno": not blob.is_empty(),
-		"terreno_b64": Marshalls.raw_to_base64(blob) if not blob.is_empty() else "",
-		"prims": assets,
-	}
-	var f := FileAccess.open(_carpeta_inventario.path_join(archivo), FileAccess.WRITE)
-	if f == null:
-		_avisar("No se pudo escribir la copia del inventario.")
-		return
-	f.store_string(JSON.stringify(contenido, "\t"))
-	f.close()
-
-	var entradas := _leer_entradas_inventario()
-	entradas.append({
-		"id": id,
-		"fecha": sello,
-		"isla": idx,
-		"terreno": not blob.is_empty(),
-		"assets": assets.size(),
-		"archivo": archivo,
-	})
-	var fi := FileAccess.open(_ruta_entradas_inventario(), FileAccess.WRITE)
-	if fi == null:
-		_avisar("No se pudo actualizar el índice del inventario.")
-		return
-	fi.store_string(JSON.stringify({"version": 1, "entradas": entradas}, "\t"))
-	fi.close()
 
 	_refrescar_inventario()
-	_avisar("Guardado en inventario: %s (isla %d)." % [sello, idx])
+	_avisar("Guardado en inventario: %s (isla %d)."
+			% [str(resultado["entrada"]["fecha"]), idx])
 
 
 ## Vuelca en la pestaña lo construido ahora y las copias guardadas.
@@ -1102,30 +1247,69 @@ func _aplicar_color(color: Color) -> void:
 	var datos: Dictionary = _prims[_sel_isla].get(_sel_id, {})
 	if datos.is_empty():
 		return
+	var antes := _instantanea_prims(_sel_isla)
 	datos["color"] = color
 	_aplicar_datos_prim(_sel_isla, _sel_id, datos)
 	_enviar_prim_actual(_sel_isla, _sel_id)
+	_registrar_prims(_sel_isla, antes)
 
 
+## Escala el objeto seleccionado. Con el eje «Uniforme» se conserva la
+## proporción original (un cilindro deja de serlo si se fuerza la misma escala
+## en los tres ejes); con X/Y/Z solo cambia esa dimensión.
 func _aplicar_escala(valor: float) -> void:
 	if _seleccionado == null:
 		return
 	var datos: Dictionary = _prims[_sel_isla].get(_sel_id, {})
 	if datos.is_empty():
 		return
-	# Se conserva la proporción original: un cilindro deja de serlo si se
-	# fuerza la misma escala en los tres ejes.
+	var antes := _instantanea_prims(_sel_isla)
 	var actual: Vector3 = datos["escala"]
-	var mayor := _mayor_escala(actual)
-	datos["escala"] = (actual * (valor / mayor) if mayor > 0.001
-			else Vector3(valor, valor, valor)).clamp(
-			Vector3(0.15, 0.15, 0.15), Vector3(40.0, 40.0, 40.0))
+	var eje: int = int(_panel.eje_escala()) if _panel != null \
+			and _panel.has_method("eje_escala") else 0
+	var nuevo := actual
+	match eje:
+		1:
+			nuevo.x = valor
+		2:
+			nuevo.y = valor
+		3:
+			nuevo.z = valor
+		_:
+			var mayor := _mayor_escala(actual)
+			nuevo = (actual * (valor / mayor) if mayor > 0.001
+					else Vector3(valor, valor, valor))
+	datos["escala"] = nuevo.clamp(Vector3(0.15, 0.15, 0.15), Vector3(40.0, 40.0, 40.0))
 	_aplicar_datos_prim(_sel_isla, _sel_id, datos)
 	_enviar_prim_actual(_sel_isla, _sel_id)
+	_registrar_prims(_sel_isla, antes)
 
 
 func _mayor_escala(esc: Vector3) -> float:
 	return maxf(esc.x, maxf(esc.y, esc.z))
+
+
+## Valor que muestra el deslizador «Tamaño»: el eje elegido o el mayor.
+func _escala_objetivo(datos: Dictionary) -> float:
+	var esc: Vector3 = datos.get("escala", Vector3.ONE)
+	var eje: int = int(_panel.eje_escala()) if _panel != null \
+			and _panel.has_method("eje_escala") else 0
+	match eje:
+		1:
+			return esc.x
+		2:
+			return esc.y
+		3:
+			return esc.z
+	return _mayor_escala(esc)
+
+
+func _on_eje_escala(_eje: int) -> void:
+	if _sel_id <= 0:
+		return
+	var datos: Dictionary = _prims.get(_sel_isla, {}).get(_sel_id, {})
+	if not datos.is_empty():
+		_panel.set_escala_ui(_escala_objetivo(datos))
 
 
 # ---------------------------------------------------------------- seleccion
@@ -1163,7 +1347,7 @@ func _seleccionar(nodo) -> void:
 	var datos: Dictionary = _prims.get(_sel_isla, {}).get(_sel_id, {})
 	_actualizar_texto_seleccion()
 	if not datos.is_empty():
-		_panel.set_escala_ui(_mayor_escala(datos["escala"]))
+		_panel.set_escala_ui(_escala_objetivo(datos))
 	_crear_resalte(nodo)
 
 
@@ -1229,6 +1413,7 @@ func _refrescar_estado_ui() -> void:
 	# Un aviso reciente manda: el refresco periódico no debe taparlo.
 	if _ultimo_aviso == "":
 		_panel.set_estado("%s\nObjetos: %d" % [canal, prims])
+	_refrescar_historial_ui()
 
 
 func _isla_actual() -> int:
@@ -1430,8 +1615,19 @@ func _process(delta: float) -> void:
 		if _pincelando:
 			_pincel_t += delta
 			if _pincel_t >= PASO_PINCEL:
+				# El paso del pincel sigue a los segundos reales transcurridos:
+				# misma velocidad por segundo a 30 que a 144 fps.
+				var paso := clampf(_pincel_t, PASO_PINCEL, PASO_MAXIMO)
 				_pincel_t = 0.0
-				_tick_pincel()
+				_tick_pincel(paso)
+	# Colisión incremental durante el trazo: solo las caras tocadas, a ~8 Hz.
+	# Al soltar, _terminar_pincel reconstruye la malla completa una vez.
+	_col_parcial_t += delta
+	if _pincelando and _pincel_isla >= 0 and _col_parcial_t >= CADENCIA_COLISION:
+		_col_parcial_t = 0.0
+		var t_parcial = _terrenos.get(_pincel_isla)
+		if t_parcial != null:
+			t_parcial.actualizar_colision_parcial()
 	_col_t += delta
 	# Debounce: la colisión trimesh tarda ~20 ms; se reconstruye cuando el
 	# pincel lleva 0,5 s sin cambios (o al soltar, en _terminar_pincel).
@@ -1559,3 +1755,7 @@ func _actualizar_mira(impacto := {}) -> void:
 			mat.albedo_color = Color(0.85, 0.72, 1.0, 0.95)
 		Herramienta.PLAYA:
 			mat.albedo_color = Color(0.98, 0.9, 0.62, 0.95)
+		Herramienta.RUGOSIDAD:
+			mat.albedo_color = Color(0.62, 0.95, 0.42, 0.95)
+		Herramienta.REVERTIR:
+			mat.albedo_color = Color(0.7, 0.78, 0.92, 0.95)

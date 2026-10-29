@@ -2,7 +2,7 @@ extends SceneTree
 ## Prueba visual del modo construcción: esculpe el terreno de la isla con las
 ## cuatro herramientas y reza/edita prims, capturando antes y después.
 ##
-## Uso: godot --path . --script res://tools/capturar_construccion.gd
+## Uso: python -m STM_HRTS ejecutar capturar_construccion
 ## Salida: CONSTRUCCION_DIR o user://capturas_construccion (PNG + log).
 ## Necesita ventana (save_png). No escribe en user://construccion: termina las
 ## pinceladas sin llamar a _terminar_pincel y limpia _sucio antes de cerrar.

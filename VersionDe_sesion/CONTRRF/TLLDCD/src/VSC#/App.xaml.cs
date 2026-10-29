@@ -112,6 +112,10 @@ namespace Visor3D
 
             this.Exit += (_, _) => WebNodo.Dispose();
 
+            // Recolector de runtimes antiguos: sólo purga si el arranque anterior
+            // terminó bien, y conserva la versión vigente y la última buena.
+            RuntimeCleaner.EjecutarAlArrancar();
+
             // Extraer Godot + proyecto 3D al LocalAppData si no esta ya
             if (!AppExtractor.EnsureExtracted())
             {

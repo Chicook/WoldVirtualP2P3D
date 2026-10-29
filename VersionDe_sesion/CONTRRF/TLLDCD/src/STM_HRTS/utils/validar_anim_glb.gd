@@ -1,7 +1,7 @@
 extends SceneTree
 ## Comprueba con el cargador real de Godot que los *_anim.glb generados abren y
 ## que cada uno trae las 5 animaciones esperadas sobre un esqueleto con 65 huesos.
-## Uso: godot --headless --path <proyecto> --script res://tools/validar_anim_glb.gd
+## Uso: python -m STM_HRTS ejecutar validar_anim_glb
 
 const ESPERADAS := ["paradoMJ1_1", "caminarMJ1_2", "correrMJ1_3", "left_StrafeMJ1_4", "rightstrafeMJ1_5"]
 const PATRON := "res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES"

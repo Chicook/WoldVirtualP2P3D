@@ -1,6 +1,6 @@
 extends SceneTree
 ## Renderiza una miniatura de cada avatar para revisarlos de un vistazo.
-## Uso: godot --path . --script res://tools/render_avatares.gd
+## Uso: python -m STM_HRTS ejecutar render_avatares
 ## Necesita ventana (el modo headless no dibuja). La salida va a %TEMP%/thumbs.
 
 const CARPETAS := ["res://avtrnCRS/GTLF_GODOT/GltfIMP/AVATARES", "res://gltfimport/avatares"]

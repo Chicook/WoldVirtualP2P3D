@@ -20,7 +20,7 @@ recurso embebido del exe y se extrae al arrancar:
 | Pieza | Dentro del exe | En disco al arrancar |
 |---|---|---|
 | Motor | `godot_exe.zip` → `Godot_v4.7.2-stable_win64.exe` | `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\Servidor3D\` |
-| Mundo | `wvp3d.pck` (537.836.524 B, SHA-256 `9d5c15e7…7a69ac94`) | `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\wvp3d.pck` |
+| Mundo | `wvp3d.pck` (1.053.081.932 B, SHA-256 `8d42b2d3…019fdede`) | `%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\wvp3d.pck` |
 
 El motor se lanza como `Godot_v4.7.2-stable_win64.exe --main-pack "<pck>" -- <args de red>`.
 Ese detalle es el que hace posible la vía nativa de más abajo: **el mundo es
@@ -54,23 +54,23 @@ usan `~/.local/share/woldvirtual-p2p3d/wineprefix` salvo que se indique
 ## Uso
 
 ```bash
-cd VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c/src/VSC#/STM_LBR
+cd VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/STM_LBR
 chmod +x *.sh
 
 ./diagnostico.sh                                   # qué falla en este equipo
-./woldvirtual-wine.sh --exe ~/Descargas/DMWoldVirtualP2P3Dv2.6.9.exe
+./woldvirtual-wine.sh --exe ~/Descargas/DMWoldVirtualP2P3Dv2.7.1.exe
 ./woldvirtual-linux.sh --pck /ruta/wvp3d.pck --godot /ruta/Godot_v4.7.2-stable_linux.x86_64
 ./woldvirtual-linux.sh -- --peer-url="<url de invitación>"   # entrar en la sesión de otro PC
 ```
 
-En el paquete de Linux de la release (`WoldVirtualP2P3Dv2.6.9-linux.tar.gz`) el
+En el paquete de Linux de la release (`WoldVirtualP2P3Dv2.7.1-linux.tar.gz`) el
 motor y el mundo ya vienen dentro: `motor/Godot_v4.7.2-stable_linux.x86_64` y
 `mundo/wvp3d.pck`, y `woldvirtual-linux.sh` los encuentra solo porque están junto
 al guión. Si se usan estos ficheros sueltos del repositorio, el `wvp3d.pck` se
 copia de un PC con el visor instalado
-(`%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\wvp3d.pck`) o del propio
-repositorio (`actualizacion_267f0a1c/src/VSC#/wvp3d.pck`), y Godot 4.7.2 para
-Linux se baja de godotengine.org/download/linux/
+(`%LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\wvp3d.pck`) o del árbol de
+compilación (`CONTRRF/TLLDCD/src/VSC#/wvp3d.pck`, no versionado), y Godot 4.7.2
+para Linux se baja de godotengine.org/download/linux/
 (`Godot_v4.7.2-stable_linux.x86_64.zip`).
 
 ## Qué funciona en Linux y qué no
@@ -100,6 +100,6 @@ Linux se baja de godotengine.org/download/linux/
 
 Estos guiones no forman parte del exe de Windows: son ficheros externos que
 viven en `STM_LBR/` y que desde la 2.6.9 se publican también como el asset de
-Linux de la release (`WoldVirtualP2P3Dv2.6.9-linux.tar.gz`). El arreglo de la
-webcam de la misma sesión sí es código del visor (`Chat/ChatWebcam.cs`) y **sí**
-va dentro de `DMWoldVirtualP2P3Dv2.6.9.exe`; no está en el de la 2.6.8.
+Linux de la release (hoy `WoldVirtualP2P3Dv2.7.1-linux.tar.gz`). El arreglo de la
+webcam de la sesión de la 2.6.9 sí es código del visor (`Chat/ChatWebcam.cs`) y
+**sí** va dentro de `DMWoldVirtualP2P3Dv2.7.1.exe`; no estaba en el de la 2.6.8.

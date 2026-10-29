@@ -17,10 +17,10 @@
 #   ./woldvirtual-linux.sh -- --peer-url="<url de invitación>"
 #
 # DE DÓNDE SALE CADA PIEZA
-#   wvp3d.pck  (537.836.524 B, SHA-256 9d5c15e7…7a69ac94)
+#   wvp3d.pck  (1.053.081.932 B, SHA-256 8d42b2d3…019fdede)
 #     En el paquete de Linux: ./mundo/wvp3d.pck (o junto a este guión)
 #     En un PC con el visor instalado: %LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\wvp3d.pck
-#     En el repositorio: VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c/src/VSC#/wvp3d.pck
+#     En el árbol de compilación: VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/wvp3d.pck (no versionado)
 #     Bajo Wine, si el visor llegó a arrancar: <prefix>/drive_c/users/*/AppData/Local/WoldVirtualP2P3D/runtime/*/wvp3d.pck
 #   Godot 4.7.2 para Linux
 #     En el paquete de Linux: ./motor/ (o junto a este guión)
@@ -36,8 +36,8 @@ set -uo pipefail
 
 VERSION_GODOT="4.7"
 NOMBRE_MOTOR_LINUX="Godot_v4.7.2-stable_linux.x86_64"
-PCK_BYTES=537836524
-PCK_SHA256="9d5c15e7322cfce3d450e65341a23f6e82d01a008b760245a3e10e0d7a69ac94"
+PCK_BYTES=1053081932
+PCK_SHA256="8d42b2d3193ac575664fc53ea4d2ab49754687a9ccbb12d4b34aefe7019fdede"
 
 # El paquete de Linux lleva el motor y el mundo junto al guión: se buscan ahí
 # primero para que funcione recién descomprimido, sin instalar nada.
@@ -133,7 +133,7 @@ if [ "$VERIFICAR" -eq 1 ]; then
   info "Calculando SHA-256 de $BYTES B (unos segundos)…"
   REAL="$(sha256sum "$PCK" | cut -d' ' -f1)"
   if [ "$REAL" = "$PCK_SHA256" ]; then
-    info "huella OK: $REAL (mundo de la 2.6.1 a la 2.6.9)"
+    info "huella OK: $REAL (mundo de la 2.7.1)"
   else
     info "huella distinta: $REAL"
     info "esperada         : $PCK_SHA256"
