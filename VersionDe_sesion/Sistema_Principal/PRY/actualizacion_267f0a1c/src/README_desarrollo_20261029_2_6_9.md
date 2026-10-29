@@ -2,10 +2,13 @@
 
 Trabajo sobre el árbol del 2026-10-29
 (`VersionDe_sesion/Sistema_Principal/PRY/actualizacion_267f0a1c`), rama `DevQoderIA`.
-**Estado: binario construido y probado; publicación pendiente.** Todo lo de la 2.6.8 sigue
-dentro: los únicos ficheros que cambian son `Chat/ChatWebcam.cs`, `Services/StartupSelfTest.cs`,
-`Services/WebNodoService.cs` (nombre y URL del fallback) y `Visor3D.csproj` (versión y
-globalización); el motor y el `wvp3d.pck` son los mismos de la 2.6.1 a la 2.6.8.
+**Estado: publicada como v2.6.9 el 2026-10-29.** Tag `v2.6.9` sobre `f1e57ee` de `main` (merge del
+PR #36), marcada *Latest*, con `exe`, `WoldVirtualP2P3Dv2.6.9-linux.tar.gz`, `release.json` y
+`SHA256SUMS` verificados por API. La v2.6.8 sigue publicada como release anterior. Todo lo de la
+2.6.8 sigue dentro: los únicos ficheros que cambian son `Chat/ChatWebcam.cs`,
+`Services/StartupSelfTest.cs`, `Services/WebNodoService.cs` (nombre y URL del fallback) y
+`Visor3D.csproj` (versión y globalización); el motor y el `wvp3d.pck` son los mismos de la 2.6.1 a
+la 2.6.8.
 
 ---
 
@@ -177,6 +180,17 @@ prueba crea ese perfil por sí misma y no toca el del equipo.
 
 ## Estado de la release
 
-Pendiente de publicar en `https://github.com/Chicook/WoldVirtualP2P3D/releases` como `v2.6.9`
-con `DMWoldVirtualP2P3Dv2.6.9.exe` y `WoldVirtualP2P3Dv2.6.9-linux.tar.gz`, más `release.json` y
-`SHA256SUMS`. Los digests se acreditan en el commit siguiente a la publicación.
+Publicada el 2026-10-29 como *Latest*:
+
+| Dato | Valor |
+|---|---|
+| Tag | `v2.6.9` sobre `f1e57ee` de `main` (merge del PR #36 desde `DevQoderIA`) |
+| Release | `https://github.com/Chicook/WoldVirtualP2P3D/releases/tag/v2.6.9` |
+| `digest` del exe (API) | `sha256:1fdbd356435ab9b0f28b9dca2a7c4774b63470d9ea25047cd35eeb959e83ac8b` (coincide con el SHA-256 local) |
+| `digest` del tar.gz (API) | `sha256:33de816826dd7f6e50908ac9b2c7d91516476c33e2fa571276e0faa33885594f` |
+| `release.json` | `9f402c533a14c7ccb1b694a38a88b1fd16d4c6776a607e42d8bc1dae9fdd9c47`, 215 B |
+| `SHA256SUMS` | `67337d36e4e83246deb981f31d80efea91032d82e034856dbfdb9e5f5d16d59a`, 276 B (tres líneas: exe, `release.json` y tar.gz) |
+| Descargas | las cuatro responden `200`: exe `Content-Length` 788.311.929, tar.gz 552.727.606, `release.json` 215, `SHA256SUMS` 276 |
+
+El artefacto se subió desde `E:/out_v269/release/`, una ruta sin `#`: `gh release create` lanzado
+desde el repo raíz con `-R`, porque una ruta con `#` (`src/VSC#/…`) se corta en `VSC`.
