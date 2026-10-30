@@ -13,7 +13,7 @@ using Visor3D.Services;
 namespace Visor3D.Linux.Vistas
 {
     /// <summary>
-    /// Visor Linux 2.7.1: cuenta local, mundo 3D, portal WebNodo con túnel,
+    /// Visor Linux 2.7.2: cuenta local, mundo 3D, portal WebNodo con túnel,
     /// red P2P e invitación, chat de texto con amigos, actualizaciones y
     /// diagnóstico. Reutiliza el núcleo del visor de Windows; lo específico de
     /// Linux (rutas, sello de equipo, lanzamiento del motor) vive en Linux/.

@@ -56,7 +56,9 @@ extensión: hoy `DMWoldVirtualP2P3Dv2.7.1`, que corresponde al exe `DMWoldVirtua
 publicado el 2026-10-29 como release v2.7.1 (tag sobre `261864b` de `DevQoderIA`, assets verificados
 por API). Las releases anteriores v2.7.0, v2.6.9, v2.6.8, v2.6.7, v2.6.4, v2.6.3, v2.6.2, v2.6.1,
 v2.6.0 y v2.5.9 siguen con su propio asset. El árbol local y la release vigente están, por tanto,
-alineados en la 2.7.1. **Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
+alineados en la 2.7.1. **Estado (2026-10-30):** el árbol de `DevQoderIA` ya compila la 2.7.2
+(`DMWoldVirtualP2P3Dv2.7.2`) con el mundo reempaquetado a 1K; la release vigente seguirá siendo la
+2.7.1 hasta que la 2.7.2 se publique. **Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
 `DMWoldVirtualP2P3Dv2.6.9.exe` al recompilar los arreglos de umbral de VM, recolector de runtimes y
 reintento del release, y sustituir el exe y `SHA256SUMS` en la misma release con
 `gh release upload --clobber` (exe `e7e27212…6d84d8`, 788.316.025 B); se aplicó sólo a la 2.6.9 y no

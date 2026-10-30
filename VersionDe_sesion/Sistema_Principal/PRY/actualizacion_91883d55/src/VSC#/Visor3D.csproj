@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualP2P3Dv2.7.1</AssemblyName>
+    <AssemblyName>DMWoldVirtualP2P3Dv2.7.2</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.7.1</Version>
-    <AssemblyVersion>2.7.1.0</AssemblyVersion>
-    <FileVersion>2.7.1.0</FileVersion>
+    <Version>2.7.2</Version>
+    <AssemblyVersion>2.7.2.0</AssemblyVersion>
+    <FileVersion>2.7.2.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualP2P3D v2.7.1 (todo lo de la 2.7.0 —selector de avatares manejable con ratón, shape keys por código y las cinco animaciones compartidas por las 24 plazas— más el sistema de construcción modular: deshacer/rehacer por pasos con Ctrl+Z/Ctrl+Y, pincel a tiempo real, rugosidad y revertir, colisión incremental, rejilla de paso configurable, tamaño por ejes, guardado del progreso en inventario y el contorno de isla medido por rayos; rutas y herramientas centralizadas en STM_HRTS con STM_CH delegando)</Description>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.7.2 (todo lo de la 2.7.0 —selector de avatares manejable con ratón, shape keys por código y las cinco animaciones compartidas por las 24 plazas— más el sistema de construcción modular: deshacer/rehacer por pasos con Ctrl+Z/Ctrl+Y, pincel a tiempo real, rugosidad y revertir, colisión incremental, rejilla de paso configurable, tamaño por ejes, guardado del progreso en inventario y el contorno de isla medido por rayos; rutas y herramientas centralizadas en STM_HRTS con STM_CH delegando; y el mundo reempaquetado en 1K: las 115 texturas de avatar y del terreno que superaban 1024 px reescaladas con Lanczos conservando formato, mipmaps y flags, con el PCK de 1,05 GB a 114,6 MB y verificación visual sin diferencias perceptibles)</Description>
   </PropertyGroup>
 
   <!--
