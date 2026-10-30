@@ -7,6 +7,7 @@ extends SceneTree
 ## conectados el mundo no debe tener islas ajenas.
 
 const CM = preload("res://gdscrip/ChunkManager.gd")
+const TeleportManager = preload("res://gdscrip/TeleportManager.gd")
 
 var _fallos := 0
 
@@ -68,8 +69,23 @@ func _correr() -> void:
 	_check(cm.get_child_count() == 2 and cm.spawned_indices.size() == 1,
 			"retirar una isla inexistente no altera el mundo")
 
+	# El explorador solo lista islas instanciadas. Un Node3D ajeno al sistema de
+	# islas (el nodo Constructor vive en el origen) no puede aparecer como isla.
+	var ajeno := Node3D.new()
+	ajeno.name = "Constructor"
+	cm.add_child(ajeno)
+	var tm = TeleportManager.new()
+	tm._chunk_manager = cm
+	tm._scan_islands()
+	_check(tm.island_history.has(1), "la isla instanciada entra en el explorador")
+	_check(not tm.island_history.has(0), "el nodo Constructor no se cuenta como isla")
+	_check(tm.island_history.size() == 1, "el explorador no inventa islas")
+	tm.forget_island(1)
+	_check(tm.island_history.is_empty(), "sin islas instanciadas el explorador queda vacío")
+	tm.free()
+
 	# Limpieza: los nodos viven fuera del árbol, donde queue_free() no se procesa.
-	for nodo in [isla_a, oceano_a, isla_b, oceano_b]:
+	for nodo in [isla_a, oceano_a, isla_b, oceano_b, ajeno]:
 		if is_instance_valid(nodo) and nodo.get_parent() == cm:
 			cm.remove_child(nodo)
 		if is_instance_valid(nodo):

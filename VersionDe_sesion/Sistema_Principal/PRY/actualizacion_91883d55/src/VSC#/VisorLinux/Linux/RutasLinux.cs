@@ -6,13 +6,13 @@ namespace Visor3D.Linux
 {
     /// <summary>
     /// Rutas del paquete Linux. El tar desplegado es
-    /// <c>WoldVirtualP2P3Dv2.7.1/{woldvirtual-linux, motor/, mundo/}</c>;
+    /// <c>WoldVirtualP2P3Dv2.7.3/{woldvirtual-linux, motor/, mundo/}</c>;
     /// en desarrollo se admite el árbol del repositorio y las variables
     /// <c>WOLD_MOTOR</c> / <c>WOLD_PCK</c> para apuntar a otra copia.
     /// </summary>
     public static class RutasLinux
     {
-        public const string Version = "2.7.1";
+        public const string Version = "2.7.3";
         public const string NombreMotor = "Godot_v4.7.2-stable_linux.x86_64";
         public const string NombrePck = "wvp3d.pck";
 

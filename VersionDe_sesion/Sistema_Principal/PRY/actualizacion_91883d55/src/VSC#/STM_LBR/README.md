@@ -1,13 +1,13 @@
 # STM_LBR — el visor de WoldVirtualP2P3D en Linux
 
-El paquete de Linux de la release (`WoldVirtualP2P3Dv2.7.1-linux.tar.gz`) ya no
+El paquete de Linux de la release (`WoldVirtualP2P3Dv2.7.3-linux.tar.gz`) ya no
 lleva sólo el mundo de Godot: lleva **el visor completo adaptado a Linux**, la
-misma versión 2.7.1 del exe de Windows (selector de avatares, shape keys,
-animaciones de las 24 plazas y el sistema de construcción modular), recompilada
-con Avalonia en lugar de WPF.
+misma versión 2.7.3 del exe de Windows (selector de avatares, shape keys,
+animaciones de las 24 plazas, el sistema de construcción modular, el mundo
+reescalado a 1K y las correcciones de avatar e islas fantasma), recompilada con Avalonia en lugar de WPF.
 
 ```
-WoldVirtualP2P3Dv2.7.1/
+WoldVirtualP2P3Dv2.7.3/
 ├── woldvirtual-linux          visor completo: interfaz + motor Godot 4.7.2 + wvp3d.pck
 ├── woldvirtual-linux.sh       lanzador: arranca el visor o, con --motor, sólo el mundo
 ├── diagnostico.sh             informe del equipo + sondeo del visor (--comprobar)
@@ -17,7 +17,7 @@ WoldVirtualP2P3Dv2.7.1/
 
 El motor y el mundo **ya no van sueltos**: van embebidos dentro de
 `woldvirtual-linux`, igual que el exe de Windows lleva `godot_exe.zip` y
-`wvp3d.pck` dentro. Se extraen la primera vez (≈1,2 GB) a
+`wvp3d.pck` dentro. Se extraen la primera vez (≈261 MB) a
 `~/.local/share/WoldVirtualP2P3D/runtime/<versión>/` y de ahí los lanza el visor.
 
 ## Qué trae el visor Linux
@@ -44,7 +44,7 @@ que la lógica de sesión, invitación y chat no está duplicada.
 | Pieza | Dónde viaja | Dónde queda al extraer |
 |---|---|---|
 | Motor `Godot_v4.7.2-stable_linux.x86_64` (146.414.384 B) | dentro de `woldvirtual-linux` (`godot_linux.zip`) | `~/.local/share/WoldVirtualP2P3D/runtime/<versión>/Servidor3D/` |
-| Mundo `wvp3d.pck` (1.053.081.932 B, SHA-256 `8d42b2d3…019fdede`) | dentro de `woldvirtual-linux` (`wvp3d.pck`) | `~/.local/share/WoldVirtualP2P3D/runtime/<versión>/wvp3d.pck` |
+| Mundo `wvp3d.pck` (114.591.756 B, SHA-256 `3e010b5e…c1e5c5e`) | dentro de `woldvirtual-linux` (`wvp3d.pck`) | `~/.local/share/WoldVirtualP2P3D/runtime/<versión>/wvp3d.pck` |
 
 La extracción ocurre la primera vez que se abre el mundo (o con el botón
 **Preparar mundo 3D**), en segundo plano y con un marcador `.extracted` por
@@ -73,8 +73,8 @@ ninguna carpeta de Windows.
 ## Uso
 
 ```bash
-tar xzf WoldVirtualP2P3Dv2.7.1-linux.tar.gz
-cd WoldVirtualP2P3Dv2.7.1
+tar xzf WoldVirtualP2P3Dv2.7.3-linux.tar.gz
+cd WoldVirtualP2P3Dv2.7.3
 chmod +x woldvirtual-linux woldvirtual-linux.sh diagnostico.sh woldvirtual-wine.sh
 
 ./woldvirtual-linux --comprobar      # sin ventana: rutas, cuenta, portal, actualizaciones, LAN
@@ -173,7 +173,7 @@ queda como recurso de diagnóstico.
 ## Alcance
 
 `STM_LBR/` es la carpeta de referencia de estos guiones; el paquete publicado se
-arma desde `E:/areadetrabajo/wvp271/linux/`. El código del visor Linux vive en
+arma desde `E:/areadetrabajo/wvp273/linux/`. El código del visor Linux vive en
 `src/VSC#/VisorLinux/` y **no** entra en el exe de Windows: `Visor3D.csproj`
 excluye esa carpeta. El arreglo de webcam de la 2.6.9 y todo lo de la 2.7.x son
-código compartido y sí van dentro de `DMWoldVirtualP2P3Dv2.7.1.exe`.
+código compartido y sí van dentro de `DMWoldVirtualP2P3Dv2.7.3.exe`.

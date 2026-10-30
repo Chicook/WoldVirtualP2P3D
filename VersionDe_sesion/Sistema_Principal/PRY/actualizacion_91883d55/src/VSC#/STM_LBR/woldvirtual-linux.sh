@@ -21,7 +21,7 @@
 #   ./woldvirtual-linux.sh -- --peer-url="<url de invitación>"
 #
 # DE DÓNDE SALE CADA PIEZA
-#   wvp3d.pck  (1.053.081.932 B, SHA-256 8d42b2d3…019fdede)
+#   wvp3d.pck  (114.591.756 B, SHA-256 3e010b5e…c1e5c5e)
 #     Dentro del visor: se extrae a ~/.local/share/WoldVirtualP2P3D/runtime/<versión>/wvp3d.pck
 #     Suelto junto al guión: ./mundo/wvp3d.pck (o ./wvp3d.pck)
 #     En un PC con el visor de Windows: %LOCALAPPDATA%\WoldVirtualP2P3D\runtime\<versión>\wvp3d.pck
@@ -45,8 +45,8 @@ set -uo pipefail
 
 VERSION_GODOT="4.7"
 NOMBRE_MOTOR_LINUX="Godot_v4.7.2-stable_linux.x86_64"
-PCK_BYTES=1053081932
-PCK_SHA256="8d42b2d3193ac575664fc53ea4d2ab49754687a9ccbb12d4b34aefe7019fdede"
+PCK_BYTES=114591724
+PCK_SHA256="ebeff90c752e4680dbd1f3763b1869643f1980316a44523990ec25fb97ae5e14"
 
 # El paquete de Linux lleva el motor y el mundo junto al guión: se buscan ahí
 # primero para que funcione recién descomprimido, sin instalar nada.
@@ -84,7 +84,7 @@ while [ $# -gt 0 ]; do
 done
 
 # ── Visor completo ──────────────────────────────────────────────────────
-# El paquete de la 2.7.1 trae «woldvirtual-linux» junto a este guión. Si está,
+# El paquete de la 2.7.3 trae «woldvirtual-linux» junto a este guión. Si está,
 # se arranca él: es el visor completo (cuenta, portal, túnel, chat, motor).
 VISOR="$AQUI/woldvirtual-linux"
 if [ "$MODO_MOTOR" -eq 0 ] && [ -x "$VISOR" ]; then
@@ -203,7 +203,7 @@ if [ "$VERIFICAR" -eq 1 ]; then
   info "Calculando SHA-256 de $BYTES B (unos segundos)…"
   REAL="$(sha256sum "$PCK" | cut -d' ' -f1)"
   if [ "$REAL" = "$PCK_SHA256" ]; then
-    info "huella OK: $REAL (mundo de la 2.7.1)"
+    info "huella OK: $REAL (mundo de la 2.7.3)"
   else
     info "huella distinta: $REAL"
     info "esperada         : $PCK_SHA256"

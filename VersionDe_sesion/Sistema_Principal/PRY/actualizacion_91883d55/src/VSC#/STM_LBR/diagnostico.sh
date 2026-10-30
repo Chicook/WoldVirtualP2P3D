@@ -112,7 +112,7 @@ fi
 if [ -z "$VISOR" ] && [ -n "$VISOR_SIN_X" ]; then
   decir "visor   : $VISOR_SIN_X (sin permiso de ejecución: chmod +x)"
 elif [ -z "$VISOR" ]; then
-  decir "visor   : no encontrado (viene en el paquete WoldVirtualP2P3Dv2.7.1-linux.tar.gz)"
+  decir "visor   : no encontrado (viene en el paquete WoldVirtualP2P3Dv2.7.3-linux.tar.gz)"
 else
   decir "visor   : $VISOR"
   decir "tamaño  : $(stat -c %s "$VISOR" 2>/dev/null || stat -f %z "$VISOR" 2>/dev/null || echo '?') B"
