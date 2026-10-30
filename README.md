@@ -239,7 +239,7 @@ El repositorio versiona **480 ficheros** con **12.689.533 B (≈12,1 MiB)** de c
 
 ### Modelo de versionado
 
-Todo el código que se exporta y compila vive en `VersionDe_sesion/Sistema_Principal/PRY/actualizacion_91883d55/src/` (el taller activo, 2.7.4). La herramienta interna RFPRMN (ver [§13](#13-herramienta-rfprmn-contrrf)) genera instantáneas `actualizacion_<id>/src/` para aislar cada envío; las anteriores (`f7bfd9ba`, `267f0a1c`, `52bf0d80`…) **sólo viven en el historial de Git**: el 2026-10-30 el árbol se consolidó en el snapshot actual y las 17 ramas del repositorio comparten exactamente el mismo contenido.
+Todo el código que se exporta y compila vive en `VersionDe_sesion/Sistema_Principal/PRY/actualizacion_91883d55/src/` (el taller activo, 2.7.4). La herramienta interna RFPRMN (ver [§13](#13-herramienta-rfprmn-contrrf)) genera instantáneas `actualizacion_<id>/src/` para aislar cada envío; las anteriores (`f7bfd9ba`, `267f0a1c`, `52bf0d80`…) **sólo viven en el historial de Git**: el 2026-10-30 el árbol se consolidó en el snapshot actual y las 16 ramas del repositorio comparten exactamente el mismo contenido.
 
 ```
 WoldVirtualP2P3D/
@@ -680,7 +680,7 @@ Por la política del proyecto (fases L5–L6): el **avatar 3D de LucIA, sus anim
 
 Mover el workflow a la raíz y corregir la ruta de tests son los arreglos recomendados.
 
-> **Excepción temporal (2026-10-30):** la 2.7.4 se validó en un Ubuntu 24.04 real con un workflow temporal en la rama `ci/prueba-linux-273` (run [40990210317](https://github.com/Chicook/WoldVirtualP2P3D/actions/runs/40990210317)): descargó el `.tar.gz` del borrador de la release, comprobó SHA-256, permisos `0755`, `--extraer`, `MOTOR --version`, `--comprobar` ×3 y el portal bajo Xvfb. Ese workflow **no está en `main`**; su destino sigue pendiente en el issue [#43](https://github.com/Chicook/WoldVirtualP2P3D/issues/43).
+> **Excepción temporal (2026-10-30):** la 2.7.4 se validó en un Ubuntu 24.04 real con un workflow temporal en la rama `ci/prueba-linux-273` (run [40990210317](https://github.com/Chicook/WoldVirtualP2P3D/actions/runs/40990210317)): descargó el `.tar.gz` del borrador de la release, comprobó SHA-256, permisos `0755`, `--extraer`, `MOTOR --version`, `--comprobar` ×3 y el portal bajo Xvfb. Ese workflow **nunca estuvo en `main`** y la rama se retiró el 2026-10-30 al cerrar la [issue #43](https://github.com/Chicook/WoldVirtualP2P3D/issues/43): el fichero sólo queda en el historial (commit `fba8992`) y en una copia local fuera del repositorio, así que la prueba de Ubuntu hay que recrearla si se quiere automatizar de forma permanente.
 
 ---
 
@@ -751,7 +751,7 @@ Checklist de publicación: [§7 de `REGLAS_DE_ACTUALIZACION.md`](VersionDe_sesio
 
 ## 16. Tareas pendientes
 
-> **Sección viva, actualizada el 2026-10-30** al publicar la 2.7.4 y alinear las 17 ramas. La fuente de verdad es el código y el [rastreador de issues](https://github.com/Chicook/WoldVirtualP2P3D/issues); cada fila apunta a su issue. Las etiquetas de estado siguen la convención de la cabecera.
+> **Sección viva, actualizada el 2026-10-30** al publicar la 2.7.4, alinear las ramas y retirar la rama temporal de pruebas. La fuente de verdad es el código y el [rastreador de issues](https://github.com/Chicook/WoldVirtualP2P3D/issues); cada fila apunta a su issue. Las etiquetas de estado siguen la convención de la cabecera.
 
 ### 16.1 Cerrado en la jornada 2026-10-28
 
@@ -772,7 +772,8 @@ Detalle y evidencias completas de la versión: [`README_desarrollo_20261028_2_6_
 | Visor nativo de Linux | `VSC#/VisorLinux/` (Avalonia 11.2.3) comparte el núcleo con el visor WPF y publica un ELF autocontenido con motor y PCK embebidos; validado en Ubuntu 24.04.5 real (run 40990210317) con `0755`, `--extraer`, motor `4.7.2.stable.official.ed1daf0bf` y portal `/` y `/api/p2p-status` 200 bajo Xvfb |
 | OTA real de punta a punta | 2.7.2 → 2.7.3 (2026-10-30T01:35Z) y 2.7.3 → 2.7.4 (03:36 local): el exe resultante coincide con el `digest` publicado, el anterior queda como `.old`, `STM_actualizar` vacío y el visor relanza con la versión nueva |
 | Release v2.7.4 | Cuatro assets verificados: `digest` de la API = SHA-256 local y descargas `200` con su `Content-Length` (365.072.249 / 207.221.630 / 215 / 276 B) |
-| Repositorio alineado | Las 17 ramas públicas comparten el mismo árbol (`3ef82e9…` = `main` `6fd8e11`) con avance rápido y respaldo del extremo anterior en `refs/presync/20261030/`; la instantánea única es `actualizacion_91883d55` |
+| Repositorio alineado | Las 16 ramas públicas comparten el mismo árbol (`b17797a…` = `main` `9acafaf`) con avance rápido y respaldo del extremo anterior en `refs/presync/20261030/` y `refs/presync/20261030b/`; la instantánea única es `actualizacion_91883d55` |
+| Rama temporal de pruebas retirada | `ci/prueba-linux-273` se borró en `origin` y en local el 2026-10-30, una vez publicada la 2.7.4; su historial sigue en `refs/presync/20261030b/ci/prueba-linux-273` y el workflow en el commit `fba8992`. La issue #43 se cierra con el resumen final de la jornada |
 
 Detalle y evidencias en [`README_desarrollo_20261030_2_7_4.md`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_91883d55/src/STM_DOC/README_desarrollo_20261030_2_7_4.md), [`README_peso_repositorio_20261030.md`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_91883d55/src/STM_DOC/README_peso_repositorio_20261030.md) y el comentario de [issue #43](https://github.com/Chicook/WoldVirtualP2P3D/issues/43).
 
@@ -781,15 +782,15 @@ Detalle y evidencias en [`README_desarrollo_20261030_2_7_4.md`](VersionDe_sesion
 | Prioridad | Tarea | Qué falta | Estado | Issue |
 |---|---|---|---|---|
 | P0 | Segundo arranque tras el reset total | Comprobar que `reset_total.txt` impide repetirlo y que la cuenta se reconoce (`Completa` → `acceso`). No se cerró la sesión del usuario para no cortar el túnel | Implementado, sin prueba real | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
-| P0 | OTA desde una versión anterior y OTA sin sesión | Ya verificadas 2.7.2 → 2.7.3 y 2.7.3 → 2.7.4; falta un equipo con una versión antigua (p. ej. la 2.6.3) y un arranque tras aplicar la OTA sin sesión iniciada | Implementado, sin prueba real | [#43](https://github.com/Chicook/WoldVirtualP2P3D/issues/43), [#23](https://github.com/Chicook/WoldVirtualP2P3D/issues/23) |
-| P0 | Sesión real entre dos máquinas | Chat, amigos, voz/webcam y construcción entre dos equipos, por LAN y por túnel; los selftests locales no lo sustituyen | Implementado, sin prueba real entre dos máquinas | [#43](https://github.com/Chicook/WoldVirtualP2P3D/issues/43), [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
+| P0 | OTA desde una versión anterior y OTA sin sesión | Ya verificadas 2.7.2 → 2.7.3 y 2.7.3 → 2.7.4; falta un equipo con una versión antigua (p. ej. la 2.6.3) y un arranque tras aplicar la OTA sin sesión iniciada | Implementado, sin prueba real | [#23](https://github.com/Chicook/WoldVirtualP2P3D/issues/23) |
+| P0 | Sesión real entre dos máquinas | Chat, amigos, voz/webcam y construcción entre dos equipos, por LAN y por túnel; los selftests locales no lo sustituyen | Implementado, sin prueba real entre dos máquinas | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
 | P0 | Flujo de identidad completo en equipos reales | Sesión vacía → llave + avatar; sesión ocupada → enlace de invitado con el `?host=` del portal; el reinicio automático de cuenta sólo está probado sobre directorios temporales | Implementado, sin prueba real | [#17](https://github.com/Chicook/WoldVirtualP2P3D/issues/17) |
 | P0 | Webcams con dos cámaras y sesión autenticada | La franja está validada en XAML/headless (26/26, incluida la vista local de la 2.6.2) pero no con dos cámaras reales | Implementado, sin prueba real | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
-| P0 | Portal `/api/info` y `/descargar` con la release 2.7.4 | En Linux `/api/info` responde 403 sin token, que es lo esperado; falta ver el portal anunciando y sirviendo el asset publicado de la 2.7.4 a través de un túnel real | Implementado, sin prueba real | [#43](https://github.com/Chicook/WoldVirtualP2P3D/issues/43) |
+| P0 | Portal `/api/info` y `/descargar` con la release 2.7.4 | En Linux `/api/info` responde 403 sin token, que es lo esperado; falta ver el portal anunciando y sirviendo el asset publicado de la 2.7.4 a través de un túnel real | Implementado, sin prueba real | [#38](https://github.com/Chicook/WoldVirtualP2P3D/issues/38) |
 | P1 | Actualizador accesible sin sesión | El botón sólo existe en la vista del mundo (`PanelMundo3D`); faltan un indicador en la bienvenida y una prueba `--update-selftest` sin cuenta | Parcial | [#23](https://github.com/Chicook/WoldVirtualP2P3D/issues/23) |
 | P1 | Bienvenida y `estado.json` tras registrarse | La bienvenida queda detrás del registro automático y `estado.json` sigue en `vacio` después de registrarse (evidencia 02:46:05 frente a 02:46:42) | Parcial | [#24](https://github.com/Chicook/WoldVirtualP2P3D/issues/24) |
 | P1 | Firma de código | 2.5.4–2.7.4 se publican sin firmar y SmartScreen sigue avisando | Planificado | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
-| P1 | CI y suite unitaria del visor | Sólo hay autopruebas del ejecutable (D15); el workflow anidado de `src/STM_HRTS/.github/workflows/ci.yml` nunca se dispara y el de Ubuntu de la 2.7.4 vive en la rama temporal `ci/prueba-linux-273` ([§14](#14-calidad-y-pruebas)) | Planificado | [#43](https://github.com/Chicook/WoldVirtualP2P3D/issues/43) |
+| P1 | CI y suite unitaria del visor | Sólo hay autopruebas del ejecutable (D15); el workflow anidado de `src/STM_HRTS/.github/workflows/ci.yml` nunca se dispara y la prueba de Ubuntu de la 2.7.4 fue un workflow temporal que se retiró con su rama ([§14](#14-calidad-y-pruebas)), así que falta un CI permanente del visor | Planificado | [#38](https://github.com/Chicook/WoldVirtualP2P3D/issues/38) |
 | P1 | Recolección de runtimes antiguos | Resuelto con `RuntimeCleaner` desde la 2.6.9: tras un arranque correcto conserva la versión vigente y la última buena | Implementado | [#22](https://github.com/Chicook/WoldVirtualP2P3D/issues/22) |
 | P2 | Nits del OTA y del perfil | El exe conserva el nombre anterior tras la OTA, `reset_total.txt` y `reset_cuenta.txt` duplican el marcador y los JSON de perfil llevan BOM | Implementado | [#25](https://github.com/Chicook/WoldVirtualP2P3D/issues/25) |
 | P2 | `release.json` / `SHA256SUMS` verificados por hash | Publicados desde la 2.6.1 hasta la 2.7.4; la verificación sigue siendo manual con `gh api`, sin automatizar | Parcial | [#19](https://github.com/Chicook/WoldVirtualP2P3D/issues/19) |
@@ -818,7 +819,7 @@ Las **33 etiquetas** y las **20 releases** se conservan íntegras: son el histor
 ### Tamaño y ramas
 
 - Contenido versionado: **480 ficheros, 12.689.533 B (≈12,1 MiB)**.
-- **17 ramas públicas** en `origin`: `main` (integración), ocho ramas de trabajo por asistente (`DevAntigravity`, `DevAntigravityIA`, `DevChatGPTIA`, `DevCursorIA`, `DevDeepSeekHarnessIA`, `DevOpencodeIA`, `DevQoderIA`, `DevTraeIA`), `feat/2.6.7`, la rama temporal de pruebas `ci/prueba-linux-273`, `backup/DevAntigravity-20261022` y cinco `respaldo/*` del 2026-10-22. **Las 17 comparten el mismo árbol desde el 2026-10-30**: la alineación se hizo por avance rápido (`git commit-tree` + `update-ref` + `push`, nunca `--force`) y el extremo anterior de cada rama queda como padre, recuperable en `<rama>^`.
+- **16 ramas públicas** en `origin`: `main` (integración), ocho ramas de trabajo por asistente (`DevAntigravity`, `DevAntigravityIA`, `DevChatGPTIA`, `DevCursorIA`, `DevDeepSeekHarnessIA`, `DevOpencodeIA`, `DevQoderIA`, `DevTraeIA`), `feat/2.6.7`, `backup/DevAntigravity-20261022` y cinco `respaldo/*` del 2026-10-22. **Las 16 comparten el mismo árbol desde el 2026-10-30**: la alineación se hizo por avance rápido (`git commit-tree` + `update-ref` + `push`, nunca `--force`) y el extremo anterior de cada rama queda como padre, recuperable en `<rama>^`. La rama temporal `ci/prueba-linux-273` se retiró el 2026-10-30 tras publicar la 2.7.4; su workflow de Ubuntu sólo vive en el historial (commit `fba8992`) y en `refs/presync/20261030b/ci/prueba-linux-273`.
 - Las ramas `respaldo/*` y `backup/*` conservan el trabajo anterior a la limpieza del 2026-10-22 (incluida la fuente del exe 2.5.2) y **no deben borrarse**.
 
 ### Configuración de agentes y scripts del autor

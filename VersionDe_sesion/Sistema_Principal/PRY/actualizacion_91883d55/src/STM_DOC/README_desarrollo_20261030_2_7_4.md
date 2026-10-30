@@ -132,10 +132,13 @@ Los tres `digest` que devuelve la API del borrador coinciden con los locales.
 
 ## Deuda y notas
 
-- La batería de Ubuntu vive en `.github/workflows/prueba-linux-real.yml`, en la rama
-  temporal `ci/prueba-linux-273`. Descarga el `.tar.gz` de la release **en borrador**
-  (con `GH_TOKEN`), así que sirve para verificar cualquier paquete antes de publicarlo.
-  Se puede borrar la rama cuando la 2.7.4 esté publicada; el workflow no va a `main`.
-- Queda pendiente el OTA real 2.7.3 → 2.7.4 sobre la copia instalada después de publicar.
+- La batería de Ubuntu vivió en `.github/workflows/prueba-linux-real.yml`, en la rama
+  temporal `ci/prueba-linux-273`, que se **retiró el 2026-10-30** al publicar la release;
+  el fichero sólo queda en el historial (commit `fba8992`). Descargaba el `.tar.gz` de la
+  release **en borrador** (con `GH_TOKEN`), así que servía para verificar cualquier
+  paquete antes de publicarlo.
+- El OTA real 2.7.3 → 2.7.4 se aplicó solo el 2026-10-30 a las 03:36 local, siete minutos
+  después de publicar: exe con el `digest` publicado, `.old` de la 2.7.3, `STM_actualizar`
+  vacío y `runtime\2.7.4` extraído.
 - El mismo defecto afectaba al túnel: un `Host` público reescrito a `localhost` habría dado
   404 igualmente con el listener interno, de modo que el arreglo cubre también ese camino.
