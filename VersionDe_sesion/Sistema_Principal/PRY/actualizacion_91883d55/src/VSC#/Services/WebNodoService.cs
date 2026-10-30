@@ -61,9 +61,15 @@ namespace Visor3D.Services
         public bool ChatEnabled { get; set; }
 
         public static readonly int Port = 3030;
-        private const string ExeNameFallback = "DMWoldVirtualP2P3Dv2.7.2.exe";
+
+        // El proxy conecta a IPAddress.Loopback, así que reescribe el Host a esa
+        // misma IP: el HttpListener gestionado de .NET en Linux empareja el prefijo
+        // por la IP del endpoint y el Host de forma literal, y con «localhost»
+        // (que allí resuelve a ::1) devuelve 404 en lugar de atender la petición.
+        private const string HostInterno = "127.0.0.1";
+        private const string ExeNameFallback = "DMWoldVirtualP2P3Dv2.7.4.exe";
         private const string ExeUrlFallback =
-            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.7.2/DMWoldVirtualP2P3Dv2.7.2.exe";
+            "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v2.7.4/DMWoldVirtualP2P3Dv2.7.4.exe";
 
         // Valor de arranque: el release.json empaquetado junto al .exe. En cuanto el
         // nodo arranca, RefrescarReleaseVigente() lo sustituye por la release vigente
@@ -470,11 +476,11 @@ namespace Visor3D.Services
 
                             if (hostRegex.IsMatch(headersStr))
                             {
-                                headersStr = hostRegex.Replace(headersStr, $"\r\nHost: localhost:{_internalPort}");
+                                headersStr = hostRegex.Replace(headersStr, $"\r\nHost: {HostInterno}:{_internalPort}");
                             }
                             else
                             {
-                                headersStr += $"\r\nHost: localhost:{_internalPort}";
+                                headersStr += $"\r\nHost: {HostInterno}:{_internalPort}";
                             }
 
                             byte[] headerBytes = Encoding.UTF8.GetBytes(headersStr);
