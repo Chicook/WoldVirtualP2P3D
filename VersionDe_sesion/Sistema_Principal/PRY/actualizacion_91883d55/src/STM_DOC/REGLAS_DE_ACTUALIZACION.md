@@ -52,13 +52,14 @@ el `.exe` nuevo estará en disco pero el mundo visible será el viejo.
 **R2 — Un binario nuevo exige `<Version>` nueva, y en los cuatro sitios a la vez.**
 `<Version>`, `<AssemblyVersion>`, `<FileVersion>` y `<AssemblyName>`
 (`<src/>VSC#/Visor3D.csproj:24,27-29`). `<AssemblyName>` debe ser exactamente el nombre del exe sin
-extensión: hoy `DMWoldVirtualP2P3Dv2.7.1`, que corresponde al exe `DMWoldVirtualP2P3Dv2.7.1.exe`,
-publicado el 2026-10-29 como release v2.7.1 (tag sobre `261864b` de `DevQoderIA`, assets verificados
-por API). Las releases anteriores v2.7.0, v2.6.9, v2.6.8, v2.6.7, v2.6.4, v2.6.3, v2.6.2, v2.6.1,
-v2.6.0 y v2.5.9 siguen con su propio asset. El árbol local y la release vigente están, por tanto,
-alineados en la 2.7.1. **Estado (2026-10-30):** el árbol de `DevQoderIA` ya compila la 2.7.2
-(`DMWoldVirtualP2P3Dv2.7.2`) con el mundo reempaquetado a 1K; la release vigente seguirá siendo la
-2.7.1 hasta que la 2.7.2 se publique. **Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
+extensión: hoy `DMWoldVirtualP2P3Dv2.7.2`, que corresponde al exe `DMWoldVirtualP2P3Dv2.7.2.exe`,
+publicado el 2026-10-30 como release v2.7.2 (tag sobre `7029ca0` de `DevQoderIA`, assets verificados
+por API: exe `13209947…de117f8a` 365.072.249 B, tar `3ceff5f2…3d6b0494` 209.120.431 B,
+`release.json` `74868e5e…a3fdc5ce` 215 B y `SHA256SUMS` `e5ad6665…e17c99d4be` 276 B; las cuatro
+coinciden con las huellas locales). Las releases anteriores v2.7.1, v2.7.0, v2.6.9, v2.6.8, v2.6.7,
+v2.6.4, v2.6.3, v2.6.2, v2.6.1, v2.6.0 y v2.5.9 siguen con su propio asset. El árbol local y la
+release vigente están, por tanto, alineados en la 2.7.2 (mundo reempaquetado a 1K).
+**Excepción autorizada (2026-10-29):** el responsable ordenó conservar el nombre
 `DMWoldVirtualP2P3Dv2.6.9.exe` al recompilar los arreglos de umbral de VM, recolector de runtimes y
 reintento del release, y sustituir el exe y `SHA256SUMS` en la misma release con
 `gh release upload --clobber` (exe `e7e27212…6d84d8`, 788.316.025 B); se aplicó sólo a la 2.6.9 y no
@@ -66,7 +67,7 @@ se repite. La regla sigue vigente: cada compilación sube `<Version>`.
 
 **R3 — La versión debe coincidir en los cuatro planos:** csproj ↔ tag de GitHub ↔ nombre del
 fichero del asset ↔ `release.json` (`version`, `tag`, `exe`, `url`). En la release publicada vigente
-los cuatro planos son `2.7.1` / `v2.7.1` / `DMWoldVirtualP2P3Dv2.7.1.exe` / `2.7.1`; la v2.7.0 y las
+los cuatro planos son `2.7.2` / `v2.7.2` / `DMWoldVirtualP2P3Dv2.7.2.exe` / `2.7.2`; la v2.7.1 y las
 anteriores siguen publicadas bajo su propio tag con sus planos alineados. El
 actualizador lee
 la versión del tag **y** del nombre del asset y toma la mayor
