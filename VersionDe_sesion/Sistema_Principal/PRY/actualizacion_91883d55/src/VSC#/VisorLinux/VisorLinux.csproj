@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>woldvirtual-linux</AssemblyName>
     <RootNamespace>Visor3D.Linux</RootNamespace>
-    <Version>2.7.3</Version>
+    <Version>2.7.4</Version>
     <AssemblyTitle>Wold Virtual P2P 3D — visor Linux</AssemblyTitle>
     <Description>Visor adaptado para Linux: cuenta local, portal WebNodo con tunel P2P, invitacion, chat de texto, amigos, lanzamiento del motor Godot y comprobacion de actualizaciones.</Description>
   </PropertyGroup>
