@@ -14,6 +14,7 @@ const REGISTRO_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor
 const PORTAL_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/scenesconstr/entornodeprueba.tscn")
 const MUNDO_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor/chunk3DBLOCK/ISLA3Dblock.tscn")
 const Sonda = preload("res://gdscrip/Sonda.gd")
+const Turnos = preload("res://gdscrip/Turnos.gd")
 
 var _carrusel: Node3D
 var _registro: Control
@@ -65,12 +66,41 @@ func _ready() -> void:
 		var saved_avatar: String = str(cfg.get_value("jugador", "avatar_scene", ""))
 		var saved_nick: String   = str(cfg.get_value("jugador", "nick", ""))
 		if not saved_avatar.is_empty() and not saved_nick.is_empty():
-			_avatar_scene = saved_avatar
+			_avatar_scene = _reparar_avatar(cfg, saved_avatar, saved_nick)
 			_nick         = saved_nick
 			_entrar_a_isla()
 			return
 	# Primera vez: carrusel -> registro -> portal -> isla
 	_mostrar_carrusel()
+
+
+## El registro del jugador (user://avatar_hash.json) guarda la escena que eligió
+## al registrarse. Si `avatar_scene` quedó con un sustituto de turno, se vuelve a
+## esa elección una sola vez por perfil (`avatar_reparado`), para no pisar un
+## cambio de avatar posterior.
+func _reparar_avatar(cfg: ConfigFile, guardado: String, nick: String) -> String:
+	if bool(cfg.get_value("jugador", "avatar_reparado", false)):
+		return guardado
+	if not FileAccess.file_exists("user://avatar_hash.json"):
+		return guardado
+	var datos = JSON.parse_string(FileAccess.get_file_as_string("user://avatar_hash.json"))
+	if typeof(datos) != TYPE_DICTIONARY:
+		return guardado
+	var registro: Dictionary = datos
+	if str(registro.get("estado", "")) != "REGISTRADO":
+		return guardado
+	if str(registro.get("usuario", "")) != nick:
+		return guardado
+	var elegido := str(registro.get("avatar_scene", ""))
+	if Turnos.indice(elegido) < 0:
+		return guardado
+	if elegido != guardado:
+		print("[Boot] avatar reparado desde el registro: ", elegido.get_file())
+		guardado = elegido
+		cfg.set_value("jugador", "avatar_scene", elegido)
+	cfg.set_value("jugador", "avatar_reparado", true)
+	cfg.save("user://registro.cfg")
+	return guardado
 
 
 

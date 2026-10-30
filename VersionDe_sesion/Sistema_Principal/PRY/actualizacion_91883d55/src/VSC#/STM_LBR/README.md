@@ -1,13 +1,13 @@
 # STM_LBR — el visor de WoldVirtualP2P3D en Linux
 
-El paquete de Linux de la release (`WoldVirtualP2P3Dv2.7.2-linux.tar.gz`) ya no
+El paquete de Linux de la release (`WoldVirtualP2P3Dv2.7.3-linux.tar.gz`) ya no
 lleva sólo el mundo de Godot: lleva **el visor completo adaptado a Linux**, la
-misma versión 2.7.2 del exe de Windows (selector de avatares, shape keys,
-animaciones de las 24 plazas, el sistema de construcción modular y el mundo
-reescalado a 1K), recompilada con Avalonia en lugar de WPF.
+misma versión 2.7.3 del exe de Windows (selector de avatares, shape keys,
+animaciones de las 24 plazas, el sistema de construcción modular, el mundo
+reescalado a 1K y las correcciones de avatar e islas fantasma), recompilada con Avalonia en lugar de WPF.
 
 ```
-WoldVirtualP2P3Dv2.7.2/
+WoldVirtualP2P3Dv2.7.3/
 ├── woldvirtual-linux          visor completo: interfaz + motor Godot 4.7.2 + wvp3d.pck
 ├── woldvirtual-linux.sh       lanzador: arranca el visor o, con --motor, sólo el mundo
 ├── diagnostico.sh             informe del equipo + sondeo del visor (--comprobar)
@@ -73,8 +73,8 @@ ninguna carpeta de Windows.
 ## Uso
 
 ```bash
-tar xzf WoldVirtualP2P3Dv2.7.2-linux.tar.gz
-cd WoldVirtualP2P3Dv2.7.2
+tar xzf WoldVirtualP2P3Dv2.7.3-linux.tar.gz
+cd WoldVirtualP2P3Dv2.7.3
 chmod +x woldvirtual-linux woldvirtual-linux.sh diagnostico.sh woldvirtual-wine.sh
 
 ./woldvirtual-linux --comprobar      # sin ventana: rutas, cuenta, portal, actualizaciones, LAN
@@ -173,7 +173,7 @@ queda como recurso de diagnóstico.
 ## Alcance
 
 `STM_LBR/` es la carpeta de referencia de estos guiones; el paquete publicado se
-arma desde `E:/areadetrabajo/wvp271/linux/`. El código del visor Linux vive en
+arma desde `E:/areadetrabajo/wvp273/linux/`. El código del visor Linux vive en
 `src/VSC#/VisorLinux/` y **no** entra en el exe de Windows: `Visor3D.csproj`
 excluye esa carpeta. El arreglo de webcam de la 2.6.9 y todo lo de la 2.7.x son
-código compartido y sí van dentro de `DMWoldVirtualP2P3Dv2.7.2.exe`.
+código compartido y sí van dentro de `DMWoldVirtualP2P3Dv2.7.3.exe`.

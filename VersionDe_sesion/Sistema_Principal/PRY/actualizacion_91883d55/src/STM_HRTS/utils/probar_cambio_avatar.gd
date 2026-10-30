@@ -1,6 +1,7 @@
 extends SceneTree
 ## Comprueba el cambio de avatar en caliente que usa la reasignacion de turnos.
-## No arranca la red ni escribe user://registro.cfg.
+## No arranca la red. El unico uso de user://registro.cfg es el bloque de
+## sustitucion, que respalda el perfil real con un nombre unico y lo restaura.
 ## El mundo falso queda fuera del arbol a proposito (evita abrir el WebSocket);
 ## por eso Personalizacion avisa de que no puede medir la altura global.
 
@@ -85,6 +86,44 @@ func _correr() -> void:
 	# Una ruta fuera del catalogo se ignora.
 	cm._aplicar_asignacion_local({"ruta": "res://no/existe.tscn", "turno": 9})
 	_check(cm.mi_turno() == 2, "una ruta invalida no altera el turno")
+
+	# El sustituto que asigna el anfitrion (plaza ocupada o migracion) cambia el
+	# avatar de la sesion, pero nunca reescribe el avatar elegido en el registro.
+	var avh3: String = Turnos.AVATARES[4]
+	_check(load(avh3) != null and avh3 != avh1, "AVH3 sirve como sustituto distinto")
+	var perfil := "user://registro.cfg"
+	var respaldo := "user://prueba_avatar_%d_%d.bak" % [
+		Time.get_unix_time_from_system(), randi()]
+	var habia_perfil := FileAccess.file_exists(perfil)
+	if habia_perfil:
+		var original := FileAccess.get_file_as_bytes(perfil)
+		var f := FileAccess.open(respaldo, FileAccess.WRITE)
+		f.store_buffer(original)
+		f.close()
+	var cfg := ConfigFile.new()
+	cfg.set_value("jugador", "nick", "Prueba")
+	cfg.set_value("jugador", "avatar_scene", avh1)
+	cfg.save(perfil)
+	cm._aplicar_asignacion_local({"ruta": avh3, "turno": 4, "reciclado": true})
+	_check(cm._avatar_local() == avh3, "el sustituto se aplica en la sesion")
+	_check(cm.mi_turno() == 4, "el turno del sustituto se guarda en memoria")
+	var releido := ConfigFile.new()
+	releido.load(perfil)
+	_check(str(releido.get_value("jugador", "avatar_scene", "")) == avh1,
+			"el sustituto no pisa el avatar elegido en el registro")
+	_check(str(releido.get_value("jugador", "nick", "")) == "Prueba",
+			"el sustituto no altera el resto del registro")
+	if habia_perfil:
+		var f2 := FileAccess.open(respaldo, FileAccess.READ)
+		var copia := f2.get_buffer(f2.get_length())
+		f2.close()
+		var f3 := FileAccess.open(perfil, FileAccess.WRITE)
+		f3.store_buffer(copia)
+		f3.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(perfil))
+	if FileAccess.file_exists(respaldo):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(respaldo))
 
 	cm.free()
 	print("== fin, fallos=%d ==" % _fallos)

@@ -184,6 +184,9 @@ func _asignar_avatar(id: int, ruta: String, avisar: bool) -> void:
 
 
 ## Aplica en este peer el avatar y turno confirmados por el anfitrion.
+## `avatar_scene` no se toca: el anfitrion puede asignar un sustituto temporal
+## (plaza ya reservada por otro, migracion de anfitrion) y esa sustitucion no
+## puede pisar el avatar que eligio el jugador, que es el que se usa al volver.
 func _aplicar_asignacion_local(asig: Dictionary) -> void:
 	var ruta := str(asig.get("ruta", ""))
 	var idx := Turnos.indice(ruta)
@@ -196,19 +199,10 @@ func _aplicar_asignacion_local(asig: Dictionary) -> void:
 	if ruta == anterior:
 		return
 	set_player_avatar(ruta)
-	_guardar_avatar_asignado(ruta)
 	if userbase != null and userbase.has_method("snap_camera"):
 		userbase.call("snap_camera")
 	avatar_asignado.emit(Turnos.nombre_de(Turnos.indice(anterior)), Turnos.nombre_de(idx),
 			_mi_turno, _mi_reciclado)
-
-
-func _guardar_avatar_asignado(ruta: String) -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load("user://registro.cfg") != OK:
-		return
-	cfg.set_value("jugador", "avatar_scene", ruta)
-	cfg.save("user://registro.cfg")
 
 
 ## IDs que ya no estan conectados (p. ej. tras migracion) dejan su plaza libre.

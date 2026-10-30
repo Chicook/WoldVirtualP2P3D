@@ -39,65 +39,44 @@ func _scan_islands() -> void:
 	if _chunk_manager == null:
 		return
 	var changed := false
-	# 1) Leer diccionario active_islands si existe (solo lectura, sin modificarlo)
+	var chunk_size: float = float(_chunk_manager.get("chunk_size"))
+	var per_row: int = int(_chunk_manager.get("islands_per_row"))
+	# Solo cuentan las islas que ChunkManager tiene instanciadas (`island_nodes`,
+	# que el RPC de creación mantiene también en los clientes) y las reservas del
+	# anfitrión (`active_islands`). Antes se escaneaba cualquier hijo Node3D y se
+	# le inventaba una celda: el nodo `Constructor`, situado en el origen, salía
+	# en el explorador como una isla que no existía en el mundo.
+	var nodos: Dictionary = {}
+	if _chunk_manager.get("island_nodes") != null:
+		nodos = _chunk_manager.get("island_nodes")
+	for idx in nodos.keys():
+		var i := int(idx)
+		if island_history.has(i):
+			continue
+		island_history[i] = _centro_isla(nodos[idx], i, chunk_size, per_row)
+		owner_offline[i] = false
+		changed = true
 	var active: Dictionary = {}
 	if _chunk_manager.get("active_islands") != null:
 		active = _chunk_manager.get("active_islands")
-	var chunk_size: float = float(_chunk_manager.get("chunk_size"))
-	var per_row: int = int(_chunk_manager.get("islands_per_row"))
-	if active != null:
-		for p_id in active.keys():
-			var idx := int(active[p_id])
-			if not island_history.has(idx):
-				island_history[idx] = _grid_pos(idx, chunk_size, per_row)
-				owner_offline[idx] = false
-				changed = true
-		# Marcar offline las que ya no estan activas pero se conservan visitables
-		for idx in island_history.keys():
-			if not active.values().has(idx) and island_history.size() > 0:
-				# Solo marcar offline si alguna vez hubo mas islas (evita falso offline al inicio)
-				if active.size() > 0 and not owner_offline.get(idx, false):
-					# No marcamos la isla 0 del host como offline mientras seamos server
-					pass
-	# 2) Deteccion por nodos: funciona tambien en clientes (active_islands solo vive en servidor).
-	# Los duplicados de duplicate() se llaman "@ISLA3DCHUNK@N", por eso no usamos begins_with.
-	# OJO: no meter "ISLA3DCHUNK"/"Oceano3D" en ignore: si Godot no renombra el
-	# duplicado, comparte nombre con el original y lo descartariamos.
-	# Los originales ya se excluyen por referencia (orig_island/orig_ocean).
-	var ignore := ["WorldEnvironment", "DirectionalLight3D",
-		"USERBASE", "TeleportManager", "TeleportPanel", "PlayerSync"]
-	var orig_island: Node = _chunk_manager.get("original_island")
-	var orig_ocean: Node = _chunk_manager.get("original_ocean")
-	for child in _chunk_manager.get_children():
-		if not (child is Node3D):
+	for p_id in active.keys():
+		var j := int(active[p_id])
+		if island_history.has(j):
 			continue
-		if child == orig_island or child == orig_ocean:
-			continue
-		if ignore.has(child.name):
-			continue
-		if String(child.name).begins_with("RemotePlayer_"):
-			continue
-		if child is MeshInstance3D:
-			continue # proxies remotos y mallas sueltas: no son islas (las islas son Node3D con hijos)
-		# NOTA: los duplicados de duplicate() se llaman "@ISLA3DCHUNK@N" (empiezan
-		# por @) y SI son islas: no filtrar por "@".
-		var p: Vector3 = (child as Node3D).position
-		# Sin filtro de cercania a (0,0): la isla 0 vive en el origen y los
-		# originales ya se excluyen por referencia arriba.
-		var flat := Vector3(p.x, 0, p.z)
-		var found := false
-		for k in island_history.keys():
-			if (island_history[k] as Vector3).distance_to(flat) < chunk_size * 0.5:
-				found = true
-				break
-		if not found:
-			var idx2 := _nearest_index(flat, chunk_size, per_row)
-			if not island_history.has(idx2):
-				island_history[idx2] = flat
-				owner_offline[idx2] = false
-				changed = true
+		island_history[j] = _grid_pos(j, chunk_size, per_row)
+		owner_offline[j] = false
+		changed = true
 	if changed:
 		islands_updated.emit(get_islands())
+
+
+## Centro plano de una isla instanciada (posición de su nodo) o su celda teórica
+## si el nodo ya no es válido.
+func _centro_isla(nodos: Array, index: int, chunk_size: float, per_row: int) -> Vector3:
+	if nodos.size() > 0 and is_instance_valid(nodos[0]) and nodos[0] is Node3D:
+		var p: Vector3 = (nodos[0] as Node3D).position
+		return Vector3(p.x, 0, p.z)
+	return _grid_pos(index, chunk_size, per_row)
 
 func _grid_pos(index: int, chunk_size: float, per_row: int) -> Vector3:
 	var row: int = int(index / float(per_row))
@@ -109,15 +88,6 @@ func _grid_pos(index: int, chunk_size: float, per_row: int) -> Vector3:
 	else:
 		pos_x = -(per_row - 1 - col) * chunk_size
 	return Vector3(pos_x, 0, pos_z)
-
-func _nearest_index(p: Vector3, chunk_size: float, per_row: int) -> int:
-	# Encaja la posicion observada con la cuadricula teorica (tolerancia media celda).
-	for i in range(0, 500):
-		if island_history.has(i):
-			continue
-		if _grid_pos(i, chunk_size, per_row).distance_to(p) < chunk_size * 0.5:
-			return i
-	return island_history.size()
 
 func get_islands() -> Array:
 	var out: Array = []
@@ -160,6 +130,8 @@ func _uuid_dueno(idx: int) -> String:
 
 ## Nombre del dueño de la isla (nick del registro, "—" si no se conoce).
 func _nombre_dueno(idx: int, active: Dictionary, names: Dictionary) -> String:
+	# Fuera del arbol (pruebas) no hay MultiplayerAPI: nadie es el jugador local.
+	var mi_id := multiplayer.get_unique_id() if multiplayer != null else -1
 	# 1) Mapa isla->dueño: vive en TODOS los peers (los clientes no ven active_islands).
 	if _chunk_manager != null and _chunk_manager.get("island_owners") != null:
 		var owners: Dictionary = _chunk_manager.get("island_owners")
@@ -167,7 +139,7 @@ func _nombre_dueno(idx: int, active: Dictionary, names: Dictionary) -> String:
 			var dato: Array = owners[idx]
 			var oid := int(dato[0])
 			var nick := str(dato[1])
-			if oid == multiplayer.get_unique_id():
+			if oid == mi_id:
 				var propio := _leer_nick()
 				return propio if propio != "" else "Tú"
 			if nick != "":
@@ -183,7 +155,7 @@ func _nombre_dueno(idx: int, active: Dictionary, names: Dictionary) -> String:
 			break
 	if owner_id < 0:
 		return "—"
-	if owner_id == multiplayer.get_unique_id():
+	if owner_id == mi_id:
 		var propio2 := _leer_nick()
 		return propio2 if propio2 != "" else "Tú"
 	var nombre := str(names.get(owner_id, ""))
