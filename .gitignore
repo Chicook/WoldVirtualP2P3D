@@ -188,8 +188,6 @@ venv/
 # 12. NODE / WEB
 # ──────────────────────────────────────────────────────────────────────────
 node_modules/
-.env
-.env.*
 !.env.example
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -198,7 +196,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/
 *.swp
 desktop.ini
 
@@ -256,3 +253,4 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 # Restos de herramientas de despliegue externas
 .vercel/
 
+config.bat
