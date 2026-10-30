@@ -84,7 +84,7 @@ while [ $# -gt 0 ]; do
 done
 
 # ── Visor completo ──────────────────────────────────────────────────────
-# El paquete de la 2.7.3 trae «woldvirtual-linux» junto a este guión. Si está,
+# El paquete de la 2.7.4 trae «woldvirtual-linux» junto a este guión. Si está,
 # se arranca él: es el visor completo (cuenta, portal, túnel, chat, motor).
 VISOR="$AQUI/woldvirtual-linux"
 if [ "$MODO_MOTOR" -eq 0 ] && [ -x "$VISOR" ]; then
@@ -203,7 +203,7 @@ if [ "$VERIFICAR" -eq 1 ]; then
   info "Calculando SHA-256 de $BYTES B (unos segundos)…"
   REAL="$(sha256sum "$PCK" | cut -d' ' -f1)"
   if [ "$REAL" = "$PCK_SHA256" ]; then
-    info "huella OK: $REAL (mundo de la 2.7.3)"
+    info "huella OK: $REAL (mundo de la 2.7.4)"
   else
     info "huella distinta: $REAL"
     info "esperada         : $PCK_SHA256"
