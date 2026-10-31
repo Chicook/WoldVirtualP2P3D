@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>woldvirtual-linux</AssemblyName>
+    <RootNamespace>Visor3D.Linux</RootNamespace>
+    <Version>2.7.4</Version>
+    <AssemblyTitle>Wold Virtual P2P 3D — visor Linux</AssemblyTitle>
+    <Description>Visor adaptado para Linux: cuenta local, portal WebNodo con tunel P2P, invitacion, chat de texto, amigos, lanzamiento del motor Godot y comprobacion de actualizaciones.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+  </ItemGroup>
+
+  <!--
+    Núcleo compartido con el visor WPF: mismos ficheros, sin copiar. Lo que no
+    se enlaza (App*, MainWindow, GodotHwndHost, SMTPLC, voz/webcam, WMI) es la
+    parte atada a Win32; las piezas Linux viven en Linux/.
+  -->
+  <ItemGroup>
+    <Compile Include="../Services/WebNodoService.cs" Link="Comun/Services/WebNodoService.cs" />
+    <Compile Include="../Services/DescubrimientoP2P.cs" Link="Comun/Services/DescubrimientoP2P.cs" />
+    <Compile Include="../Services/RateLimiter.cs" Link="Comun/Services/RateLimiter.cs" />
+    <Compile Include="../Services/VisorLog.cs" Link="Comun/Services/VisorLog.cs" />
+    <Compile Include="../RedP2P/*.cs" Link="Comun/RedP2P/%(Filename)%(Extension)" />
+    <Compile Include="../Chat/ChatProtocol.cs" Link="Comun/Chat/ChatProtocol.cs" />
+    <Compile Include="../Chat/ChatRelayServer.cs" Link="Comun/Chat/ChatRelayServer.cs" />
+    <Compile Include="../Chat/ChatClient.cs" Link="Comun/Chat/ChatClient.cs" />
+    <Compile Include="../Chat/FriendsStore.cs" Link="Comun/Chat/FriendsStore.cs" />
+    <Compile Include="../STM_actualizar/ReleaseInfo.cs" Link="Comun/Actualizar/ReleaseInfo.cs" />
+    <Compile Include="../STM_actualizar/UpdateChecker.cs" Link="Comun/Actualizar/UpdateChecker.cs" />
+    <Compile Include="../STM_actualizar/UpdateDownloader.cs" Link="Comun/Actualizar/UpdateDownloader.cs" />
+    <Compile Include="../Seguridad/PerfilUsuario.cs" Link="Comun/Seguridad/PerfilUsuario.cs" />
+    <Compile Include="../Seguridad/EstadoGlobal.cs" Link="Comun/Seguridad/EstadoGlobal.cs" />
+    <Compile Include="../Seguridad/Bip39.cs" Link="Comun/Seguridad/Bip39.cs" />
+    <Compile Include="../Seguridad/PasswordHasher.cs" Link="Comun/Seguridad/PasswordHasher.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="../Seguridad/bip39-english.txt" LogicalName="Visor3D.Seguridad.bip39-english.txt" />
+    <EmbeddedResource Include="../webnodo/public/index.html" LogicalName="Visor3D.webnodo.public.index.html" />
+    <EmbeddedResource Include="../webnodo/public/metaverso.jpg" LogicalName="Visor3D.webnodo.public.metaverso.jpg" />
+    <!-- Motor Godot de Linux y mundo, dentro del visor como en el exe de Windows.
+         -p:SkipGodotAssets=true compila la UI sola (sin motor ni mundo). -->
+    <EmbeddedResource Include="../godot_linux.zip" LogicalName="Visor3D.Linux.godot_linux.zip"
+                      Condition="'$(SkipGodotAssets)' != 'true'" />
+    <EmbeddedResource Include="../wvp3d.pck" LogicalName="Visor3D.Linux.wvp3d.pck"
+                      Condition="'$(SkipGodotAssets)' != 'true'" />
+  </ItemGroup>
+
+</Project>

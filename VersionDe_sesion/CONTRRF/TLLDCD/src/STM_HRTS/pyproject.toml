@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lucia-woldvirtualp2p3d"
+version = "2026.5.0"
+description = "Arquitectura Cognitiva Descentralizada P2P 3D LucIA"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Equipo WoldVirtualP2P3D", email = "dev@woldvirtualp2p3d.network" }
+]
+dependencies = [
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+lucia = "STMGNRL.mainLCSTM:main"
+hrts = "STM_HRTS.__main__:main"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
