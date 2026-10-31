@@ -1,0 +1,15 @@
+{
+  "name": "stm-hrts-opencode",
+  "version": "1.19.5",
+  "description": "Instalacion local y autonoma de OpenCode para STM_HRTS en WoldVirtualP2P3D",
+  "type": "module",
+  "scripts": {
+    "start": "./opencode.bat",
+    "postinstall": "node ./node_modules/opencode-ai/postinstall.mjs"
+  },
+  "dependencies": {
+    "opencode-ai": "1.19.5",
+    "@opencode-ai/plugin": "^1.19.5",
+    "@ai-sdk/openai-compatible": "^3.0.82"
+  }
+}

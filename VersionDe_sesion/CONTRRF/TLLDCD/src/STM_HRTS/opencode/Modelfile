@@ -1,0 +1,6 @@
+# Alias local para OpenCode: mismo modelo, contexto ampliado.
+# OpenCode envia ~6k tokens (system + 10 schemas de tools) y el endpoint
+# /v1 de Ollama usa el num_ctx del modelo; con el default (4096) trunca
+# las tools y el agente deja de editar ficheros.
+FROM qwen3.5:latest
+PARAMETER num_ctx 32768
