@@ -188,8 +188,6 @@ venv/
 # 12. NODE / WEB
 # ──────────────────────────────────────────────────────────────────────────
 node_modules/
-.env
-.env.*
 !.env.example
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -198,7 +196,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/
 *.swp
 desktop.ini
 
@@ -249,10 +246,12 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 # Capturas de las pruebas visuales de construcción (se regeneran con tools/)
 **/capturas_construccion/
 
-# Metadatos de release: se regeneran al publicar y viajan como asset
+# Metadatos y staging de release: se regeneran al publicar y viajan como asset
 **/release.json
 **/SHA256SUMS
+**/release_upload*/
 
 # Restos de herramientas de despliegue externas
 .vercel/
 
+config.bat

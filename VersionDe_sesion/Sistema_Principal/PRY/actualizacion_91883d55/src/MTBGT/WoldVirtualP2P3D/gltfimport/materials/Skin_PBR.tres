@@ -1,7 +1,0 @@
-[gd_resource type="StandardMaterial3D" format=3 uid="uid://bd8chax5846vs"]
-
-[resource]
-resource_name = "Skin_PBR"
-cull_mode = 2
-albedo_color = Color(0.86504203, 0.735357, 0.64995646, 1)
-roughness = 0.45
