@@ -24,7 +24,7 @@ Visor autónomo **C# / WPF (.NET 8)** que embebe **Godot 4.7.2** y el mundo 3D, 
 |:--:|:--:|
 | **Carrusel de avatares** · 24 plazas en 3 turnos | **Hangar y portal** · entrada al mundo |
 
-| <img src="docs/img/02_registro_jugador.png" alt="Registro de jugador con la pestaña de colores" width="390"> | <img src="docs/img/07_construccion_playa.png" alt="Pincel Playa aplanando la costa y tiñéndola de arena" width="390"> | <img src="docs/img/09_isla_ajena.png" alt="Isla ajena con la mira en rojo: no editable" width="390"> |
+| <img src="docs/img/02_registro_jugador.png" alt="Registro de jugador con la pestaña de colores" width="310"> | <img src="docs/img/07_construccion_playa.png" alt="Pincel Playa aplanando la costa y tiñéndola de arena" width="310"> | <img src="docs/img/09_isla_ajena.png" alt="Isla ajena con la mira en rojo: no editable" width="310"> |
 |:--:|:--:|:--:|
 | **Registro de jugador** · nick, cuerpo y cara | **Construcción** · pincel Playa | **Isla ajena** · solo lectura |
 
@@ -228,7 +228,7 @@ El jugador ya puede **esculpir el terreno** de su isla con seis herramientas (su
 
 | Vista general de la isla | Pincel Aplanar | Playa desde la costa |
 |:---:|:---:|:---:|
-| <a href="docs/img/10_construccion_isla.png"><img src="docs/img/10_construccion_isla.png" alt="Vista general de la isla antes de editar" width="390"></a> | <a href="docs/img/11_construccion_aplanar.png"><img src="docs/img/11_construccion_aplanar.png" alt="Pincel Aplanar con su disco de influencia sobre el terreno" width="390"></a> | <a href="docs/img/12_construccion_playa_costa.png"><img src="docs/img/12_construccion_playa_costa.png" alt="Playa aplanada y teñida de arena vista desde la costa" width="390"></a> |
+| <a href="docs/img/10_construccion_isla.png"><img src="docs/img/10_construccion_isla.png" alt="Vista general de la isla antes de editar" width="310"></a> | <a href="docs/img/11_construccion_aplanar.png"><img src="docs/img/11_construccion_aplanar.png" alt="Pincel Aplanar con su disco de influencia sobre el terreno" width="310"></a> | <a href="docs/img/12_construccion_playa_costa.png"><img src="docs/img/12_construccion_playa_costa.png" alt="Playa aplanada y teñida de arena vista desde la costa" width="310"></a> |
 
 ### 3.5 Chat de texto, voz y webcam
 
@@ -389,8 +389,8 @@ Capturas del **2026-10-24** del aspecto actual de `registro.tscn` a 1280×720, c
 
 | Colores | Cuerpo | Cara |
 |:---:|:---:|:---:|
-| <a href="docs/img/02_registro_jugador.png"><img src="docs/img/02_registro_jugador.png" alt="Pestaña Colores: piel, pelo, camiseta, pantalón y zapatillas" width="390"></a> | <a href="docs/img/05_registro_cuerpo.png"><img src="docs/img/05_registro_cuerpo.png" alt="Pestaña Cuerpo: altura y proporciones" width="390"></a> | <a href="docs/img/06_registro_cara.png"><img src="docs/img/06_registro_cara.png" alt="Pestaña Cara: rasgos faciales" width="390"></a> |
-| Tinte por material en 5 zonas: piel, pelo, camiseta, pantalón y zapatillas | Altura hasta **+30 cm** y seis volúmenes (complexión, cabeza, hombros, torso, brazos, piernas) | Nariz, labios, orejas y ojos de **0 %** (original) a **100 %** |
+| <a href="docs/img/02_registro_jugador.png"><img src="docs/img/02_registro_jugador.png" alt="Pestaña Colores: piel, pelo, camiseta, pantalón y zapatillas" width="310"></a> | <a href="docs/img/05_registro_cuerpo.png"><img src="docs/img/05_registro_cuerpo.png" alt="Pestaña Cuerpo: altura y proporciones" width="310"></a> | <a href="docs/img/06_registro_cara.png"><img src="docs/img/06_registro_cara.png" alt="Pestaña Cara: rasgos faciales" width="310"></a> |
+| Tinte por material<br>en 5 zonas: piel, pelo,<br>camiseta, pantalón<br>y zapatillas | Altura hasta **+30 cm**<br>y seis volúmenes<br>(complexión, cabeza,<br>hombros, torso,<br>brazos, piernas) | Nariz, labios,<br>orejas y ojos<br>de **0 %** (original)<br>a **100 %** |
 
 El botón **Restablecer aspecto** devuelve todos los valores a su estado original. La captura la genera [`probar_registro.gd`](VersionDe_sesion/Sistema_Principal/PRY/actualizacion_aeef1149/src/STM_HRTS/utils/probar_registro.gd), que además comprueba los 16 controles, que el tinte llegue al material correcto, que la altura crezca exactamente lo pedido y que aplicar el aspecto dos veces no acumule escala.
 
