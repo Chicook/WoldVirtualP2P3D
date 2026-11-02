@@ -10,7 +10,7 @@
 [![Windows x64 · Linux](https://img.shields.io/badge/Windows%20x64%20%C2%B7%20Linux-0078d6?style=for-the-badge&logo=windows&logoColor=white)](#5-descarga-y-primer-arranque)
 [![Licencia MIT](https://img.shields.io/badge/licencia-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**[⬇ Descargar la v2.7.5](https://github.com/Chicook/WoldVirtualP2P3D/releases/latest)** · **[Releases](https://github.com/Chicook/WoldVirtualP2P3D/releases)** · **[Documentación](#18-documentación-interna)** · **[Issues](https://github.com/Chicook/WoldVirtualP2P3D/issues)**
+**[⬇ Descargar la v2.7.5](https://github.com/Chicook/WoldVirtualP2P3D/releases/latest)** · **[Releases](https://github.com/Chicook/WoldVirtualP2P3D/releases)** · **[Documentación](#18-documentación-interna)** · **[Issues](https://github.com/Chicook/WoldVirtualP2P3D/issues)** · **[English](README_EN.md)**
 
 </div>
 
