@@ -214,7 +214,7 @@ def test_ollama_cache_y_fast_failover():
 
 
 def test_manifiesto_hrts_y_registro():
-    from STM_HRTS.registro_hrts import RegistroHRTS
+    from STM_HRTS.utils.add_utils.registro_hrts import RegistroHRTS
     reg = RegistroHRTS()
     assert reg.existe() is True, "El archivo pyproject.toml de STM_HRTS no existe o no fue detectado"
     assert reg.nombre() == "lucia-woldvirtualp2p3d", f"Nombre inesperado: {reg.nombre()}"

@@ -35,7 +35,7 @@ jobs:
           cache: "pip"
 
       - name: Instalar dependencias
-        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/STM_HRTS
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/STM_HRTS/utils/add_utils
         run: |
           pip install --upgrade pip
           pip install -e ".[dev]" || pip install numpy pytest pytest-timeout
@@ -44,7 +44,7 @@ jobs:
         working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src
         run: |
           python -c "
-          from STM_HRTS.rutas import verificar, faltantes
+          from STM_HRTS.utils.add_utils.rutas import verificar, faltantes
           inf = verificar()
           falt = faltantes(inf)
           print(f'Rutas OK: {len(inf) - len(falt)}/{len(inf)}')
@@ -55,20 +55,22 @@ jobs:
         working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src
         run: |
           python -m pytest tests/test_h1_contencion.py -v \
+            --rootdir . \
             --timeout=30 \
             --tb=short \
             -p no:cacheprovider \
-            -c STM_HRTS/pytest.ini
+            -c STM_HRTS/utils/add_utils/pytest.ini
 
       - name: Suite Python completa
         working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src
         run: |
           python -m pytest tests/ -v \
+            --rootdir . \
             --timeout=60 \
             --tb=short \
             --ignore=tests/test_h1_contencion.py \
             -p no:cacheprovider \
-            -c STM_HRTS/pytest.ini \
+            -c STM_HRTS/utils/add_utils/pytest.ini \
             -k "not ipfs_deteccion_resiliente"
         continue-on-error: true
 

@@ -7,10 +7,11 @@ from pathlib import Path
 SRC_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SRC_DIR))
 
+from STM_HRTS.utils.add_utils import __main__ as consola
 import pytest  # noqa: E402
 
-from STM_HRTS import __main__ as consola  # noqa: E402
-from STM_HRTS import herramientas, rutas  # noqa: E402
+from STM_HRTS.utils.add_utils import herramientas  # noqa: E402
+from STM_HRTS.utils.add_utils import rutas  # noqa: E402
 
 
 def test_rutas_clave_existen():
@@ -158,7 +159,7 @@ def test_consola_herramienta_desconocida():
 
 
 def test_manifiesto_declara_la_consola():
-    from STM_HRTS.registro_hrts import RegistroHRTS
+    from STM_HRTS.utils.add_utils.registro_hrts import RegistroHRTS
 
     scripts = RegistroHRTS().scripts()
     assert scripts.get("hrts") == "STM_HRTS.__main__:main"

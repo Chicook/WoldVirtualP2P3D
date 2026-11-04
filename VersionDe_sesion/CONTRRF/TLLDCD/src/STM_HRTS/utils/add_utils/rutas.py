@@ -17,8 +17,20 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 # ------------------------------------------------------------------ raices
+#
+# Este fichero vive en STM_HRTS/utils/add_utils/rutas.py, dentro de su carpeta.
+# Las raices se suben nivel a nivel desde aqui, de modo que el paquete puede
+# permanecer anidado sin editar codigo ni duplicar rutas en otros modulos.
+#
+#   add_utils/rutas.py
+#     add_utils/          <- ADD_UTILS_DIR (donde vive este paquete)
+#       utils/            <- UTILS_DIR     (herramientas del taller)
+#         STM_HRTS/       <- STM_HRTS_DIR
+#           src/          <- SRC_DIR
 
-STM_HRTS_DIR: Path = Path(__file__).resolve().parent
+ADD_UTILS_DIR: Path = Path(__file__).resolve().parent
+UTILS_DIR: Path = ADD_UTILS_DIR.parent
+STM_HRTS_DIR: Path = UTILS_DIR.parent
 SRC_DIR: Path = STM_HRTS_DIR.parent
 TLLDCD_DIR: Path = SRC_DIR.parent
 CONTRRF_DIR: Path = TLLDCD_DIR.parent
@@ -64,13 +76,14 @@ DOCS_REGLAS: Path = DOCS_DIR / "REGLAS_DE_ACTUALIZACION.md"
 # ------------------------------------------------------------ pruebas python
 
 TESTS_DIR: Path = SRC_DIR / "tests"
-# pytest.ini y su cache viven en STM_HRTS (no en la raiz de src)
-PYTEST_INI: Path = STM_HRTS_DIR / "pytest.ini"
+# La config de pytest viaja con el paquete (utils/add_utils/pytest.ini); su
+# cache canonica se mantiene en la raiz de STM_HRTS.
+PYTEST_INI: Path = ADD_UTILS_DIR / "pytest.ini"
 PYTEST_CACHE: Path = STM_HRTS_DIR / ".pytest_cache"
 
 # ---------------------------------------------------- herramientas y runtime
 
-HERRAMIENTAS_DIR: Path = STM_HRTS_DIR / "utils"
+HERRAMIENTAS_DIR: Path = UTILS_DIR
 STM_CH_DIR: Path = PAQUETE_CH
 PYCACHE_DIR: Path = STM_CH_DIR / "pycache"
 PSNRL_DIR: Path = STM_CH_DIR / "PSNRL"

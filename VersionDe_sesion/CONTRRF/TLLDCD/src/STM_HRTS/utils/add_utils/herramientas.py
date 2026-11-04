@@ -2,12 +2,12 @@
 
 Cada script suelto del directorio de herramientas se describe aqui a partir de
 su propio fichero (tipo por extension, resumen del encabezado y si necesita
-ventana). El comando se resuelve con las rutas de `STM_HRTS.rutas`, de modo que
-ninguna herramienta depende de donde este el arbol ni de una ruta absoluta
+ventana). El comando se resuelve con las rutas del paquete (``.rutas``), de modo
+que ninguna herramienta depende de donde este el arbol ni de una ruta absoluta
 escrita a mano.
 
 Uso desde Python:
-    from STM_HRTS.herramientas import catalogo, comando, ejecutar
+    from STM_HRTS.utils.add_utils.herramientas import catalogo, comando, ejecutar
     ejecutar("probar_shapekeys")
 
 Uso desde la consola:
@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from STM_HRTS import rutas
+from . import rutas
 
 
 class ErrorHerramienta(RuntimeError):
@@ -233,7 +233,10 @@ def comando(nombre: str, extra: Sequence[str] = ()) -> Dict[str, object]:
 
 
 def comando_pytest(extra: Sequence[str] = ()) -> Dict[str, object]:
+    # ``--rootdir`` fija el rootdir en src/ para que ``testpaths`` y ``cache_dir``
+    # (relativos) se resuelvan igual aunque la config viaje dentro del paquete.
     argv = [str(rutas.python_actual()), "-m", "pytest", "-q",
+            "--rootdir", str(rutas.SRC_DIR),
             "-c", str(rutas.PYTEST_INI), *extra]
     return {"argv": argv, "cwd": str(rutas.SRC_DIR)}
 

@@ -123,8 +123,48 @@ LM Studio (`http://localhost:1234/v1`) estaba apagado durante la configuración:
 
 ---
 
+## 🆕 Puesta a punto de la IA local (sesión 2026-11-04)
+
+Estado final: **la IA local lee y edita código de forma end-to-end, verificado**. Resumen de lo desarrollado en esta sesión:
+
+1. **Restauración de dependencias (`node_modules`).**
+   - Durante una limpieza previa se borró `node_modules` de esta carpeta; se restauró con:
+     ```powershell
+     npm ci --no-audit --no-fund
+     ```
+     → **37 paquetes, exit 0**. El `postinstall` regeneró `opencode.exe` (201,8 MB, v1.19.5) en la raíz.
+   - **Regla:** esta carpeta no se limpia; si por lo que sea se pierde `node_modules`, se recupera con `npm ci` (usa `package-lock.json`, reproducible). La carpeta completa ocupa ~870 MB y se conserva íntegra.
+
+2. **Solución del `ProviderHeaderTimeoutError` (bloqueador real tras restaurar).**
+   - Con el `headerTimeout` por defecto (300.000 ms) el primer `opencode run` abortaba: el modelo con razonamiento genera **>3.400 tokens** incluso para una tarea trivial, y con el prompt real de opencode (~6k tokens) se superaba el tiempo de cabecera.
+   - Fix en [`opencode.jsonc`](file:///E:/WoldVirtualP2P3D/VersionDe_sesion/CONTRRF/TLLDCD/src/STM_HRTS/opencode/opencode.jsonc) → `provider.ollama.options`:
+     ```jsonc
+     "timeout": false,
+     "headerTimeout": false,
+     "chunkTimeout": false
+     ```
+   - El modelo **sí generaba** (14,25 t/s); no era fallo de red ni de GPU.
+
+3. **Precarga del modelo (`keep_alive`).**
+   - Se precarga `wvp-opencode` con `keep_alive` largo (≈24 h) para evitar el arranque en frío de cada turno. Verificado con `/api/ps`: **5,89 GB de VRAM**, `expires_at` a ~24 h.
+
+4. **Verificación end-to-end (evidencia real).**
+   - Tool-calling: `prompt_tokens: 5647` **sin truncado**, `tool_calls: ["write"]` → veredicto **EDITABLE**.
+   - Escritura real: opencode creó `PRUEBA_IA_OK.txt` con el contenido `edicion local OK`; el log mostró `permission=edit → allow` y `touching file`.
+   - Test aislado del modelo: 267 tokens, 14,8 t/s, 19,3 s.
+   - Tras la prueba se eliminó el fichero `PRUEBA_IA_OK.txt` residual.
+
+5. **Hallazgo de rendimiento (pendiente de optimizar).**
+   - Cada turno tarda **minutos** porque el modelo gasta miles de tokens de "razonamiento" antes de responder. No impide editar, pero hace lento el uso interactivo.
+   - Propuestas: limitar `num_predict` en el `Modelfile`, o usar un modelo sin cadena de razonamiento (`qwen2.5:7b` ya confirmado para tool-calling).
+
+**Estado de la carpeta tras la sesión:** intacta y operativa (~870 MB), con `opencode.exe`, `node_modules`, `Modelfile`, `comprobar_ollama.mjs`, `opencode.jsonc` y este README.
+
+---
+
 ## ⏭️ Pendientes y límites honestos
 
+- **Rendimiento de la IA local:** reducir el tiempo por turno (limitar `num_predict` en `Modelfile` o valorar `qwen2.5:7b`, que ya emite `tool_calls`). Es la mejora prioritaria.
 - La **lista blanca de `bash`** está cargada y evaluada (aparece en los errores de denegación), pero no se ha verificado de forma end-to-end que un comando `allow` se ejecute en modo no interactivo.
 - `external_directory` se deja en `ask`: no se ha comprobado cómo clasifica opencode una ruta `../…` dentro del repo pero fuera de esta carpeta.
 - Con `opencode --auto` se saltan también los `ask` de bash; no es el modo por defecto de esta carpeta.

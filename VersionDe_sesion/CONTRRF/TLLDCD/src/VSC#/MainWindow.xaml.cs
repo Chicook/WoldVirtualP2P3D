@@ -628,6 +628,11 @@ namespace Visor3D
         /// Prioriza la baliza LAN (anfitrión con el mismo puerto UDP que usa Godot)
         /// y, si no hay nadie en la red local, consulta el portal del enlace de
         /// invitación. No abre el WebSocket del juego.
+        ///
+        /// Se incluye la propia máquina (<c>incluirPropio: true</c>): si un nodo
+        /// quedó activo en ESTE equipo (sesión anterior en curso, otra
+        /// instalación/versión del visor), su baliza llega con la IP local y, sin
+        /// este ajuste, se descartaba y la pantalla mostraba «Metaverso vacío».
         /// </summary>
         private async Task ActualizarEstadoRedAsync()
         {
@@ -641,7 +646,7 @@ namespace Visor3D
                 BtnBuscarRed.IsEnabled = false;
                 BtnUsarNodoRed.Visibility = Visibility.Collapsed;
 
-                var lan = await DescubrimientoP2P.BuscarEnLanAsync();
+                var lan = await DescubrimientoP2P.BuscarEnLanAsync(incluirPropio: true);
                 _nodosRedLan = lan.Nodos;
                 _puertosRedLan = lan.Puertos;
                 _indiceNodoSeleccionado = 0;

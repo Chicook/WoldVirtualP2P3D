@@ -24,7 +24,7 @@ _SRC_DIR = Path(__file__).resolve().parent.parent
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from STM_HRTS.rutas import (  # noqa: E402  (necesita el sys.path de arriba)
+from STM_HRTS.utils.add_utils.rutas import (  # noqa: E402  (necesita el sys.path de arriba)
     CACHE_IAFREE,
     CONTRRF_DIR,
     LEDGER_PATH,

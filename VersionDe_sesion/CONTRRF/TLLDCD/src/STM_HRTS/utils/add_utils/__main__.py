@@ -12,10 +12,12 @@ import json
 import sys
 from pathlib import Path
 
-if __package__ in (None, ""):  # ejecucion directa del fichero
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from STM_HRTS import herramientas, rutas
+if __package__ in (None, ""):
+    # Ejecucion directa del fichero: ancla src/ y entra por el paquete real.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from STM_HRTS.utils.add_utils import herramientas, rutas  # noqa: E402
+else:
+    from . import herramientas, rutas
 
 
 def _cmd_rutas(args: argparse.Namespace) -> int:

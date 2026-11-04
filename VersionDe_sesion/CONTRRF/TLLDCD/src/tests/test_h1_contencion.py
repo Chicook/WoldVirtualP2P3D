@@ -127,7 +127,7 @@ def test_h1_borrar_datos_rechazado_sin_confirmado(tmp_path):
 
 def test_h1_limpiar_no_toca_ledger(tmp_path):
     """limpiar() no debe tocar ledger ni PSNRL (H1, ahora es alias de limpiar_solo_cache)."""
-    import STM_HRTS.rutas as hrts_rutas
+    import STM_HRTS.utils.add_utils.rutas as hrts_rutas
     from STM_CH import rutas as ch_rutas
 
     # Guardar rutas originales
@@ -163,7 +163,7 @@ def test_h1_limpiar_no_toca_ledger(tmp_path):
 
 def test_h1_catalogo_no_lista_borrar_packs():
     """catalogo() no debe incluir borrar_packs_viejos ni purgar_repositorio (H1)."""
-    from STM_HRTS.herramientas import catalogo, HERRAMIENTAS_PRIVILEGIADAS
+    from STM_HRTS.utils.add_utils.herramientas import catalogo, HERRAMIENTAS_PRIVILEGIADAS
 
     cat = catalogo()
     nombres = {h.nombre.lower() for h in cat}
@@ -176,7 +176,7 @@ def test_h1_catalogo_no_lista_borrar_packs():
 
 def test_h1_catalogo_privilegiado_requiere_confirmacion():
     """catalogo_privilegiado(confirmado=False) devuelve lista vacía (H1)."""
-    from STM_HRTS.herramientas import catalogo_privilegiado
+    from STM_HRTS.utils.add_utils.herramientas import catalogo_privilegiado
 
     assert catalogo_privilegiado(confirmado=False) == [], (
         "H1 FALLO: catalogo_privilegiado sin confirmado=True devolvió herramientas"
@@ -185,7 +185,7 @@ def test_h1_catalogo_privilegiado_requiere_confirmacion():
 
 def test_h1_catalogo_privilegiado_con_confirmacion():
     """catalogo_privilegiado(confirmado=True) devuelve solo scripts privilegiados (H1)."""
-    from STM_HRTS.herramientas import catalogo_privilegiado, HERRAMIENTAS_PRIVILEGIADAS
+    from STM_HRTS.utils.add_utils.herramientas import catalogo_privilegiado, HERRAMIENTAS_PRIVILEGIADAS
 
     priv = catalogo_privilegiado(confirmado=True)
     nombres = {h.nombre.lower() for h in priv}

@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualP2P3Dv2.7.5</AssemblyName>
+    <AssemblyName>DMWoldVirtualP2P3Dv2.7.6</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.7.5</Version>
-    <AssemblyVersion>2.7.5.0</AssemblyVersion>
-    <FileVersion>2.7.5.0</FileVersion>
+    <Version>2.7.6</Version>
+    <AssemblyVersion>2.7.6.0</AssemblyVersion>
+    <FileVersion>2.7.6.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualP2P3D v2.7.5 (todo lo de la 2.7.4 más las correcciones H0–H4: cierre que preserva ledger y pesos locales sin persistencia IPFS real, OTA fail-closed sin SHA-256 válido, catálogo de herramientas sin scripts destructivos, fixtures sintéticos, arnés de regresión Python con 97 pruebas pasando, selftests C# —update/red/cuenta/chat/startup— con exit 0, endpoint LAN dinámico desde balizas UDP sin constante 8911 hardcodeada, extracción segura de runtime con hash en .extracted y bloqueo de Zip Slip, WebNodoService con metadatos de ensamblado y serialización invariante, y recálculo de estado de cuenta en cierre de sesión y RegistroWindow)</Description>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.7.6 (todo lo de la 2.7.5 más lo desarrollado el 2026-11-04: W-01/DT-11 resuelto —el WebNodo lee el release.json publicado con esquema {assets[]}, /descargar sirve el binario en ejecución bajo el nombre anunciado sin redirecciones 301, refresco de la release vigente cada 5 min y /api/info con version y version_instalada—, nueva autoprueba --webnodo-selftest, proyecto de pruebas unitarias xUnit Visor3DTests (34 superadas) y corrección de la pantalla de inicio de sesión para detectar un nodo activo en el propio equipo)</Description>
   </PropertyGroup>
 
   <!--
@@ -67,6 +67,16 @@
     <EmbeddedResource Remove="VisorLinux\**" />
     <None Remove="VisorLinux\**" />
     <Page Remove="VisorLinux\**" />
+    <!-- Tests es un proyecto hermano (xUnit) que referencia a éste: no forma parte del .exe -->
+    <Compile Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <Page Remove="Tests\**" />
+  </ItemGroup>
+
+  <!-- Los tests unitarios necesitan ver los puntos de sutura internos (W-01/DT-11) -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Visor3DTests" />
   </ItemGroup>
 
   <!-- Dependencias -->

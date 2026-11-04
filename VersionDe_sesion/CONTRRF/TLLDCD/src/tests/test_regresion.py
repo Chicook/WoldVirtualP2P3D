@@ -18,7 +18,9 @@ PAQUETES = [
     "STM_CH.rutas",
     "STM_SGR.vault_openrouter",
     "STM_JSON.registro_json",
-    "STM_HRTS.registro_hrts",
+    "STM_HRTS.utils.add_utils.rutas",
+    "STM_HRTS.utils.add_utils.herramientas",
+    "STM_HRTS.utils.add_utils.registro_hrts",
     "STMGNRL.mainLCSTM",
 ]
 
@@ -94,15 +96,26 @@ def test_vault_pbkdf2_determinista_opcional():
 
 
 def test_config_pytest_unica_en_raiz():
-    """pytest.ini vive en STM_HRTS/ (movido de src/ por peticion del usuario)."""
-    from STM_HRTS.rutas import PYTEST_INI, STM_HRTS_DIR
-    # La config esta ahora en STM_HRTS/, no en la raiz de src/
-    assert PYTEST_INI.exists(), f"Debe existir pytest.ini en STM_HRTS/: {PYTEST_INI}"
-    assert PYTEST_INI.parent == STM_HRTS_DIR, (
-        f"pytest.ini debe estar en STM_HRTS/, no en {PYTEST_INI.parent}"
+    """pytest.ini viaja con el paquete, en STM_HRTS/utils/add_utils/."""
+    from STM_HRTS.utils.add_utils.rutas import (
+        ADD_UTILS_DIR,
+        PYTEST_CACHE,
+        PYTEST_INI,
+        STM_HRTS_DIR,
+    )
+
+    assert PYTEST_INI.exists(), f"Debe existir pytest.ini junto al paquete: {PYTEST_INI}"
+    assert PYTEST_INI.parent == ADD_UTILS_DIR, (
+        f"pytest.ini debe vivir con el paquete, no en {PYTEST_INI.parent}"
     )
     assert not (SRC_DIR / "pytest.ini").exists(), (
-        "No debe haber pytest.ini en la raiz de src/ (se mueve a STM_HRTS/)"
+        "No debe haber pytest.ini en la raiz de src/"
+    )
+    assert not (STM_HRTS_DIR / "pytest.ini").exists(), (
+        "No debe duplicarse pytest.ini en STM_HRTS/"
+    )
+    assert PYTEST_CACHE == STM_HRTS_DIR / ".pytest_cache", (
+        "La cache de pytest debe vivir en STM_HRTS/"
     )
     assert "STM_HRTS" in PYTEST_INI.read_text(encoding="utf-8"), (
         "pytest.ini debe redirigir la cache a STM_HRTS/"

@@ -41,6 +41,14 @@ namespace Visor3D
                 return;
             }
 
+            // Autoprueba del WebNodo frente al OTA (W-01/DT-11): el portal anuncia
+            // la release instalada y /descargar sirve el binario local, no un 301.
+            if (Array.Exists(e.Args, a => a.Equals("--webnodo-selftest", StringComparison.OrdinalIgnoreCase)))
+            {
+                Environment.Exit(WebNodoSelfTest.Run());
+                return;
+            }
+
             // Autoprueba de actualización OTA sin GUI (H2 / H4): fail-closed sin digest,
             // rechazo de hash inválido, detección de truncado y verificación íntegra.
             if (Array.Exists(e.Args, a => a.Equals("--update-selftest", StringComparison.OrdinalIgnoreCase)))

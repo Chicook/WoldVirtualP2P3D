@@ -116,7 +116,7 @@ class GestorHRTLucIA:
     """Puerta del orquestador al manifiesto STM_HRTS/pyproject.toml."""
     def __init__(self) -> None:
         try:
-            from STM_HRTS.registro_hrts import get_registro_hrts
+            from STM_HRTS.utils.add_utils.registro_hrts import get_registro_hrts
             self.registro = get_registro_hrts()
         except Exception:
             self.registro = None
