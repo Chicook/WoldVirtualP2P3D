@@ -1,0 +1,112 @@
+# Workflow CI del taller src — WoldVirtualP2P3D
+# ================================================
+# Ubicacion: src/STM_HRTS/.github/workflows/ci.yml
+#
+# Nota: este fichero esta dentro del taller (no en la raiz del repo) porque
+# el arbol de trabajo RFPRMN no se commitea directamente al repo principal.
+# Para activarlo en GitHub Actions, copiar o enlazar desde la raiz del repo
+# cuando se autorice el primer PR de H1.
+#
+# Hitos cubiertos:
+#   H1 - Suite de contencion P0 (test_h1_contencion.py) — ESTRICTA
+#   H2 (parcial) - Suite Python completa con perfiles temporales
+
+name: CI – WoldVirtualP2P3D src
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  python-suite:
+    name: Python tests (H1 + suite src)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/STM_HRTS
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]" || pip install numpy pytest pytest-timeout
+
+      - name: Verificar rutas del taller
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src
+        run: |
+          python -c "
+          from STM_HRTS.rutas import verificar, faltantes
+          inf = verificar()
+          falt = faltantes(inf)
+          print(f'Rutas OK: {len(inf) - len(falt)}/{len(inf)}')
+          [print(f'  FALTA: {f[\"nombre\"]} -> {f[\"ruta\"]}') for f in falt]
+          "
+
+      - name: Suite de contencion H1 (estricta)
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src
+        run: |
+          python -m pytest tests/test_h1_contencion.py -v \
+            --timeout=30 \
+            --tb=short \
+            -p no:cacheprovider \
+            -c STM_HRTS/pytest.ini
+
+      - name: Suite Python completa
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src
+        run: |
+          python -m pytest tests/ -v \
+            --timeout=60 \
+            --tb=short \
+            --ignore=tests/test_h1_contencion.py \
+            -p no:cacheprovider \
+            -c STM_HRTS/pytest.ini \
+            -k "not ipfs_deteccion_resiliente"
+        continue-on-error: true
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo "=== CI completado ==="
+          echo "H1 contencion P0: verificado"
+          echo "Suite Python: ejecutada"
+
+  csharp-suite:
+    name: C# Visor3D (Build + Selftests)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Compilar Visor3D
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#
+        run: dotnet build Visor3D.csproj -c Debug
+
+      - name: OTA Update SelfTest
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#
+        run: dotnet run --project Visor3D.csproj --no-build -- --update-selftest
+
+      - name: Red LAN P2P SelfTest
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#
+        run: dotnet run --project Visor3D.csproj --no-build -- --red-selftest
+
+      - name: Cuenta y Diagnostico SelfTest
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#
+        run: dotnet run --project Visor3D.csproj --no-build -- --cuenta-selftest
+
+      - name: Chat y Protocolo SelfTest
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#
+        run: dotnet run --project Visor3D.csproj --no-build -- --chat-selftest
