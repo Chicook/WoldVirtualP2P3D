@@ -1,0 +1,40 @@
+<Project>
+
+  <!--
+    Segunda mitad de la version unica (ver Directory.Build.props): materializa src/VERSION.json como
+    constantes de compilacion, para que RutasLinux.Version y RutasLinux.NombreMotor no puedan
+    desviarse del binario que se compila. Se escribe en obj/ (nunca en el arbol fuente) y se regenera
+    solo cuando cambia VERSION.json.
+  -->
+
+  <PropertyGroup>
+    <WoldInfoVersionCs>$(IntermediateOutputPath)WoldInfoVersion.g.cs</WoldInfoVersionCs>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(WoldInfoVersionCs)" />
+  </ItemGroup>
+
+  <Target Name="WoldGenerarInfoVersion" BeforeTargets="BeforeCompile;CoreCompile"
+          Inputs="$(WoldVersionJsonPath)" Outputs="$(WoldInfoVersionCs)">
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <PropertyGroup>
+      <WoldInfoLines>
+// Generado por VSC#/Directory.Build.targets a partir de src/VERSION.json. No editar.
+namespace Visor3D
+{
+    internal static class WoldInfoVersion
+    {
+        public const string Version = &quot;$(WoldVersion)&quot;%3B
+        public const string Motor = &quot;$(WoldMotor)&quot;%3B
+        public const string PckSha256 = &quot;$(WoldPckSha256)&quot;%3B
+        public const string Fecha = &quot;$(WoldFecha)&quot;%3B
+    }
+}
+      </WoldInfoLines>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(WoldInfoVersionCs)" Lines="$(WoldInfoLines)"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" />
+  </Target>
+
+</Project>
