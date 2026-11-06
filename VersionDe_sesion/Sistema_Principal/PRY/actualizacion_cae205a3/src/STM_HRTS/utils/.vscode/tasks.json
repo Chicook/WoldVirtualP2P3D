@@ -1,0 +1,43 @@
+{
+    // workspaceFolder es src/STM_HRTS/utils (aqui vive .vscode), de ahi los ../../ hasta src/VSC#.
+    // Sin el nombre de la instantanea en la ruta: cambia en cada promocion RFPRMN.
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/../../VSC#/Visor3D.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/../../VSC#/Visor3D.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/../../VSC#/Visor3D.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}
