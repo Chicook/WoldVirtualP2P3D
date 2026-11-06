@@ -34,7 +34,7 @@ Upstream is `Chicook/WoldVirtualP2P3D` (issues and releases live there); this re
 All source lives five levels deep under one snapshot directory:
 
 ```
-SRC = VersionDe_sesion/Sistema_Principal/PRY/actualizacion_aeef1149/src
+SRC = VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3/src
 ```
 
 ```
@@ -61,7 +61,7 @@ VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN/    separate Python refactor tool (n
 docs/img/                                       README screenshots
 ```
 
-`$SRC` is a long path — set it once per shell: `SRC=VersionDe_sesion/Sistema_Principal/PRY/actualizacion_aeef1149/src`.
+`$SRC` is a long path — set it once per shell: `SRC=VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3/src`.
 
 ## Build
 
@@ -155,7 +155,7 @@ explicit user confirmation in the conversation, and read them first.
 ## Quick Reference
 
 ```bash
-SRC=VersionDe_sesion/Sistema_Principal/PRY/actualizacion_aeef1149/src
+SRC=VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3/src
 cd "$SRC" && python -m pytest                          # regression harness (98 tests)
 python "$SRC/STMGNRL/mainLCSTM.py"                     # run LucIA
 git ls-files | wc -l                                   # repo shape without slow ls

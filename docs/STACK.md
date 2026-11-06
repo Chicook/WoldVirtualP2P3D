@@ -16,7 +16,7 @@
 
 ## 0. Convenciones
 
-- `SRC = VersionDe_sesion/Sistema_Principal/PRY/actualizacion_aeef1149/src`.
+- `SRC = VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3/src`.
 - **As-is** = medido sobre v2.7.5 (`main` @ `19cc65e`). **To-be** = lo que las
   Etapas 0–6 del plan requieren, nada más.
 - «Simulado» no es un insulto: es el estado verificado del código (plan V1/V5/M13).

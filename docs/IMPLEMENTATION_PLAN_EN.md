@@ -4,7 +4,7 @@
 
 > Analyzed baseline: `main` @ `19cc65e` (v2.7.5, 2026-11-01). Repository: 514 tracked
 > files (≈130 Python / 80 C# / 65 GDScript), a README of 891 lines / 118.9 KB,
-> `SRC = VersionDe_sesion/Sistema_Principal/PRY/actualizacion_aeef1149/src`.
+> `SRC = VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3/src`.
 >
 > This document condenses an exhaustive analysis of the entire repository:
 > **82 findings** (6 adversarially verified + 76 from the catalog) and **9 completeness

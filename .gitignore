@@ -257,3 +257,19 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 # Restos de herramientas de despliegue externas
 .vercel/
 
+# ──────────────────────────────────────────────────────────────────────────
+# 18. R-01 — EVIDENCIA DE LA CUARENTENA (bytes plantados: locales, nunca en Git)
+#     El MANIFIESTO.md y los informes de STM_DOC sí se versionan; las cargas no.
+#     El repo es público: commitearlas las distribuiría, y rompería el criterio
+#     de WP-0 (los cuatro marcadores de R-01 tienen que dar 0 en el árbol).
+#     Se lista por nombre de fichero, no la carpeta entera: si Git excluye el
+#     directorio no desciende a él y el MANIFIESTO quedaría fuera por accidente.
+#     Las dos últimas reglas son la guardia anti-replantación: son las rutas
+#     exactas donde reviven A1-1 y A5-2 al fusionar las cuatro ramas.
+# ──────────────────────────────────────────────────────────────────────────
+*.orc
+**/cuarentena_r01_*/*
+!**/cuarentena_r01_*/MANIFIESTO.md
+**/rescate_zona_*/duplicados_utils_flat/transport.py
+**/STM_HRTS/utils/transport.py
+**/STM_HRTS/opencode/init

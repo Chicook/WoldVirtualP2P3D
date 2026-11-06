@@ -17,7 +17,7 @@
 
 ## 0. Conventions
 
-- `SRC = VersionDe_sesion/Sistema_Principal/PRY/actualizacion_aeef1149/src`.
+- `SRC = VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3/src`.
 - **As-is** = measured on v2.7.5 (`main` @ `19cc65e`). **To-be** = what Stages
   0–6 of the plan require, nothing more.
 - "Simulated" is not an insult: it is the verified state of the code

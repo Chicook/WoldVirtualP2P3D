@@ -9,7 +9,7 @@ agent you are.
 Decentralized P2P 3D metaverse: C#/.NET 8 viewers (Windows WPF + Linux Avalonia) embedding
 Godot 4.7.2, WebSocket multiplayer + UDP-beacon discovery, SHA-256 fail-closed OTA updater,
 and LucIA, a Python cognitive subsystem. Upstream: `Chicook/WoldVirtualP2P3D`. All source
-lives under `VersionDe_sesion/Sistema_Principal/PRY/actualizacion_aeef1149/src/` (call it
+lives under `VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3/src/` (call it
 `$SRC`).
 
 ## Hard rules
