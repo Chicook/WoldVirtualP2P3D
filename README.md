@@ -4,13 +4,13 @@
 
 ### Metaverso 3D P2P descentralizado · visor autónomo C# / WPF con Godot 4.7.2 incrustado
 
-[![Release](https://img.shields.io/badge/release-v2.7.4-2ea043?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Chicook/WoldVirtualP2P3D/releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.7.8-2ea043?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Chicook/WoldVirtualP2P3D/releases/latest)
 [![.NET 8 WPF](https://img.shields.io/badge/.NET-8.0%20WPF-512bd4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
 [![Godot 4.7.2](https://img.shields.io/badge/Godot-4.7.2-478cbf?style=for-the-badge&logo=godotengine&logoColor=white)](https://godotengine.org)
 [![Windows x64 · Linux](https://img.shields.io/badge/Windows%20x64%20%C2%B7%20Linux-0078d6?style=for-the-badge&logo=windows&logoColor=white)](#5-descarga-y-primer-arranque)
 [![Licencia MIT](https://img.shields.io/badge/licencia-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**[⬇ Descargar la v2.7.4](https://github.com/Chicook/WoldVirtualP2P3D/releases/latest)** · **[Releases](https://github.com/Chicook/WoldVirtualP2P3D/releases)** · **[Documentación](#18-documentación-interna)** · **[Issues](https://github.com/Chicook/WoldVirtualP2P3D/issues)**
+**[⬇ Descargar la v2.7.8](https://github.com/Chicook/WoldVirtualP2P3D/releases/latest)** · **[Releases](https://github.com/Chicook/WoldVirtualP2P3D/releases)** · **[Documentación](#19-documentación-interna)** · **[Issues](https://github.com/Chicook/WoldVirtualP2P3D/issues)**
 
 </div>
 
@@ -28,7 +28,7 @@ Visor autónomo **C# / WPF (.NET 8)** que embebe **Godot 4.7.2** y el mundo 3D, 
 |:---:|:---:|:---:|
 | **Construcción** · pincel Playa | **Prims y edición** · cubo, esfera, cilindro, cono y toro | **Isla ajena** · solo lectura |
 
-> **Fase actual: prueba de conexión P2P 3D (v2.7.4, 2026-10-30).** El objetivo es validar que varias personas se encuentren en el mundo, elijan avatar, lo personalicen y compartan sesión por túnel o LAN. **No es todavía un metaverso completo:** no hay economía ni blockchain, y LucIA no está integrada. La serie **2.6.x** consolidó chat de texto, voz y webcam, amigos, perfil persistente por PC, identidad con SMTPLC y actualizador OTA con verificación SHA-256. La **2.7.0** rehízo el selector de avatares (ratón, rueda, teclado), añadió siete *shape keys* analíticas y compartió las animaciones del avatar principal con las 24 plazas. La **2.7.1** trajo la construcción modular. La **2.7.2** reempaquetó el mundo a **1K** (PCK de 114,6 MB, −89 %). La **2.7.3** respeta el avatar elegido y retira las islas fantasma. La **2.7.4** arregla el **404 del portal en Linux** y publica el visor nativo para Linux sobre el mismo código. La sincronización entre dos máquinas sigue **sin prueba real**. Todo lo demás está en la hoja de ruta como **Planificado** (ver [§3](#3-visi%C3%B3n-del-metaverso-alcance-planificado)).
+> **Fase actual: prueba de conexión P2P 3D (v2.7.8, 2026-11-06).** El objetivo es validar que varias personas se encuentren en el mundo, elijan avatar, lo personalicen y compartan sesión por túnel o LAN. **No es todavía un metaverso completo:** no hay economía ni blockchain, y LucIA no está integrada. La serie **2.6.x** consolidó chat de texto, voz y webcam, amigos, perfil persistente por PC, identidad con SMTPLC y actualizador OTA con verificación SHA-256. La **2.7.0** rehízo el selector de avatares (ratón, rueda, teclado), añadió siete *shape keys* analíticas y compartió las animaciones del avatar principal con las 24 plazas. La **2.7.1** trajo la construcción modular. La **2.7.2** reempaquetó el mundo a **1K** (PCK de 114,6 MB, −89 %). La **2.7.3** respeta el avatar elegido y retira las islas fantasma. La **2.7.4** arregló el **404 del portal en Linux** y publicó el visor nativo para Linux. La **2.7.8** añade el **subsistema defensivo `STM_DEF`** (escaneo estático e historial, entropía de Shannon, integridad HMAC, cuarentena firmada, arranque *fail-closed* y firma Ed25519) y retira el vector R-01.b. La sincronización entre dos máquinas sigue **sin prueba real**. Todo lo demás está en la hoja de ruta como **Planificado** (ver [§3](#3-visi%C3%B3n-del-metaverso-alcance-planificado)).
 
 ## Índice
 
@@ -46,16 +46,17 @@ Visor autónomo **C# / WPF (.NET 8)** que embebe **Godot 4.7.2** y el mundo 3D, 
 12. [LucIA: subsistema cognitivo en Python](#12-lucia-subsistema-cognitivo-en-python)
 13. [Herramienta RFPRMN (CONTRRF)](#13-herramienta-rfprmn-contrrf)
 14. [Calidad y pruebas](#14-calidad-y-pruebas)
-15. [Hoja de ruta y deuda técnica](#15-hoja-de-ruta-y-deuda-t%C3%A9cnica)
-16. [Tareas pendientes](#16-tareas-pendientes)
-17. [Política del repositorio](#17-pol%C3%ADtica-del-repositorio)
-18. [Documentación interna](#18-documentaci%C3%B3n-interna)
-19. [Contribuir y licencia](#19-contribuir-y-licencia)
+15. [Blindaje y subsistema defensivo (STM_DEF)](#15-blindaje-y-subsistema-defensivo-stm_def)
+16. [Hoja de ruta y deuda técnica](#16-hoja-de-ruta-y-deuda-t%C3%A9cnica)
+17. [Tareas pendientes](#17-tareas-pendientes)
+18. [Política del repositorio](#18-pol%C3%ADtica-del-repositorio)
+19. [Documentación interna](#19-documentaci%C3%B3n-interna)
+20. [Contribuir y licencia](#20-contribuir-y-licencia)
 
 > **Convención de rutas:** `src/` es la abreviatura de
 > `VersionDe_sesion/CONTRRF/TLLDCD/src/`, el snapshot vigente
-> (**2.7.4**) que se exporta y compila; las instantáneas RFPRMN anteriores sólo viven en el historial de Git.
-> **Convención de estado:** cada capacidad se etiqueta como **Implementado**, **Implementado, sin prueba real**, **Parcial**, **Planificado** o **Fuera del repo**. La fuente de verdad es el código; las cifras de este documento se recalcularon el 2026-10-30 sobre el snapshot `actualizacion_91883d55` (versión 2.7.4) y los binarios de la release.
+> (**2.7.8**) que se exporta y compila; las instantáneas RFPRMN anteriores sólo viven en el historial de Git.
+> **Convención de estado:** cada capacidad se etiqueta como **Implementado**, **Implementado, sin prueba real**, **Parcial**, **Planificado** o **Fuera del repo**. La fuente de verdad es el código; las cifras de este documento se recalcularon el 2026-11-06 sobre la rama `DevTraeIA` (versión 2.7.8) y los binarios de la release.
 
 ---
 
@@ -117,12 +118,12 @@ Economía y blockchain, token WCVcoin, validación de identidad única anti-Sybi
 
 **Honestidad técnica — lee esto antes de usar el proyecto:**
 
-- Es un prototipo alpha, no un producto. Los binarios v2.5.4 a v2.7.4 se publican **sin firmar** (versiones anteriores usaron un certificado de desarrollo autofirmado): Windows SmartScreen mostrará un aviso.
-- El **visor de escritorio** funciona en **Windows x64** (WPF) y, desde la 2.7.4, también hay un **visor nativo para Linux** autocontenido (`WoldVirtualP2P3Dv2.7.4-linux.tar.gz`, 207.221.630 B) con el motor y el mundo embebidos y siete pestañas (cuenta, mundo, portal, red, chat de texto, actualizar y diagnóstico). En Linux no hay SMTPLC, voz/webcam ni firma Authenticode.
+- Es un prototipo alpha, no un producto. Los binarios v2.5.4 a v2.7.8 se publican **sin firmar** (versiones anteriores usaron un certificado de desarrollo autofirmado): Windows SmartScreen mostrará un aviso.
+- El **visor de escritorio** funciona en **Windows x64** (WPF) y, desde la 2.7.4, también hay un **visor nativo para Linux** autocontenido (`WoldVirtualP2P3Dv2.7.8-linux.tar.gz`, 207.220.008 B) con el motor y el mundo embebidos y siete pestañas (cuenta, mundo, portal, red, chat de texto, actualizar y diagnóstico). En Linux no hay SMTPLC, voz/webcam ni firma Authenticode.
 - La red es **P2P solo en el transporte**: cada sesión tiene un **anfitrión con autoridad** y el resto de nodos se conecta a él por WebSocket. No hay replicación descentralizada sin servidor de confianza.
 - La red y el mundo **no persisten** más allá de la sesión: los túneles son efímeros y las islas se reconstruyen al reconectar.
 - La "billetera DeFi" del visor está **en construcción**: la semilla BIP-39 y sus derivaciones son reales, pero no se conecta a ninguna blockchain ni gestiona fondos.
-- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/Visor3D.csproj) está en **2.7.4**, igual que su `AssemblyName` (`DMWoldVirtualP2P3Dv2.7.4`): es el **binario publicado vigente** (`v2.7.4`, *Latest* desde el 2026-10-30, tag `v2.7.4` sobre `b136b50` de `DevQoderIA`), con el arreglo del portal en Linux y el paquete nativo de Linux sobre el mismo código. Su asset `DMWoldVirtualP2P3Dv2.7.4.exe` tiene SHA-256 `f2dc55e0cb93d2a44e78c80b0b0f3312e7d5bfac7e74be2e01dd3327b0a322f8` y la descarga responde `200` con `Content-Length` 365.072.249. Las releases anteriores (`v2.7.3` `555fc9fb`, `v2.7.2` `13209947`, `v2.7.1` `9d780c6f`, `v2.7.0` `ceea0886`, `v2.6.9` `e7e27212`, `v2.6.8` `6ab640d1`, `v2.6.7` `902d5f43`, `v2.6.4` `8ec5d19c` y `v2.6.3` `9794cdb4`) siguen publicadas con sus assets.
+- El campo `<Version>` del [`Visor3D.csproj`](VersionDe_sesion/CONTRRF/TLLDCD/src/VSC%23/Visor3D.csproj) está en **2.7.8**, igual que su `AssemblyName` (`DMWoldVirtualP2P3Dv2.7.8`): es el **binario publicado vigente** (`v2.7.8`, *Latest* desde el 2026-11-06, tag `v2.7.8` sobre `main`), con el subsistema defensivo `STM_DEF` y la retirada del vector R-01.b (`.vscode` en la raíz). Su asset `DMWoldVirtualP2P3Dv2.7.8.exe` tiene SHA-256 `f9700aa18108c29e7005c0955be17490423e85f315d082c2bed4804c4eafd3e2` y la descarga responde `200` con `Content-Length` 365.088.633. Las releases anteriores (`v2.7.4` `f2dc55e0`, `v2.7.3` `555fc9fb`, `v2.7.2` `13209947`, `v2.7.1` `9d780c6f`, `v2.7.0` `ceea0886`, `v2.6.9` `e7e27212`, `v2.6.8` `6ab640d1`, `v2.6.7` `902d5f43`, `v2.6.4` `8ec5d19c` y `v2.6.3` `9794cdb4`) siguen publicadas con sus assets.
 - La prueba de registro con SMTPLC del 2026-10-28 (**11/11**: aprobación en hardware físico y denegación por cuota, enfriamiento, VM y VPN) destapó un **falso positivo**: el flag `HypervisorPresent` de Windows (VBS, Hyper-V, WSL2) marcaba «VM» en equipos físicos y bloqueaba el registro. Corregido en `VmDetector` y **ya incluido en los exes publicados de la 2.6.8 y la 2.6.9**; en la 2.6.7 y anteriores ese falso positivo sigue presente.
 
 ---

@@ -1,7 +1,0 @@
-[gd_resource type="StandardMaterial3D" format=3 uid="uid://kctrbuf5vm41"]
-
-[resource]
-resource_name = "AVMJ4_Pants"
-cull_mode = 2
-albedo_color = Color(0.26006746, 0.26006746, 0.2827793, 1)
-roughness = 0.6
