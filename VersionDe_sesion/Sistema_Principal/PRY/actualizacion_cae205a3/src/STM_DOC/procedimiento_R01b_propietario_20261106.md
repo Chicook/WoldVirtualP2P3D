@@ -195,9 +195,10 @@ cuerpo de releases ya publicadas salvo que lo pida el propietario (regla de nota
 deben quedar a 0 en el commit nuevo. Verificación post-promoción (comandos corregidos el 2026-11-06, ver nota):
 ```bash
 C=<commit-promocionado>
-git grep -nI -e 'runOn' -e 'allowAutomaticTasks' $C -- ':(exclude)*STM_DOC*' ':(exclude)docs'      # 0
-git ls-tree -r --name-only $C | grep -E '\.orc$|/transport\.py$|opencode/init$' | wc -l             # 0
-git ls-tree -r -l $C | grep 'STM_HRTS/__main__.py'                                                  # 194 B, no 3.970 B
+git grep -nI -e 'runOn' -e 'allowAutomaticTasks' $C -- ':(exclude)*STM_DOC*' ':(exclude)docs' ':(exclude).gitignore'   # 0
+git grep -nI -E '\.orc|transport\.py' $C -- ':(exclude)*STM_DOC*' ':(exclude)docs' ':(exclude).gitignore'             # 0
+git ls-tree -r --name-only $C | grep -E '\.orc$|/transport\.py$|opencode/init$' | wc -l                              # 0
+git ls-tree -r -l $C | grep 'STM_HRTS/__main__.py'                                                                   # 194 B, no 3.970 B
 ```
 El `__main__.py` limpio ya creado (WP-0 paso 4) sustituye al de A1-1 en el árbol de trabajo; confirmar que el promocionado
 lleva la versión limpia, no la de `main`.
@@ -208,16 +209,17 @@ lleva la versión limpia, no la de `main`.
 > (`…/src/STM_DOC`), así que se pierde el filtrado y aparecen los documentos del propio incidente. Con `:(exclude)*STM_DOC*`
 > queda correcto.
 
-**G.1 ejecutada el 2026-11-06 sobre el árbol alineado** (`0e17bfd` = merge local de `75eaff8` + `0938eb7`; el subárbol de
-la instantánea es idéntico al de `DevQoderIA`, así que la comprobación vale para las dos ramas):
+**G.1 ejecutada el 2026-11-06 sobre el árbol alineado** (el merge local de `75eaff8` + el tip de `DevQoderIA` de esta
+sesión; su sha no se cita porque estos ficheros viajan dentro de ese árbol y lo mudan. El subárbol de la instantánea es
+idéntico al de `DevQoderIA`, así que la comprobación vale para las dos ramas):
 
 | Comprobación | Resultado |
 |---|---|
 | `*.orc` / `transport.py` / `opencode/init` por nombre | **0** (sobre 661 ficheros rastreados) |
-| `runOn` · `allowAutomaticTasks` · `.orc` · `transport.py` por contenido, fuera de `STM_DOC/` y `docs/` | **0 / 0 / 0 / 0** |
-| `utils.transport` en todo el árbol | 1 coincidencia y es texto de configuración: la regla `**/STM_HRTS/utils/transport.py` del `.gitignore:274` |
+| `runOn` · `allowAutomaticTasks` · `.orc` · `transport.py` por contenido, fuera de `STM_DOC/`, `docs/` y `.gitignore` | **0 / 0 / 0 / 0** |
+| Los mismos patrones **sin** sacar `.gitignore` del barrido | 2 coincidencias, y son las líneas 270/273/274 de cuarentena (`*.orc`, `**/…/transport.py`) — texto de configuración |
 | `STM_HRTS/__main__.py` promocionado | 194 B, blob `b9a8cb75`, reenvío a `add_utils.__main__:main` (el de `main` pesa 3.970 B) |
-| Blobs de las cargas (`080b2e7a` / `0d38d528` / `0302eeba`) alcanzables desde `main` y `DevQoderIA` | **0** en ambas ramas |
+| Blobs de las cargas (`080b2e7a` / `0d38d528` / `0302eeba`) alcanzables desde `main` y `DevQoderIA` (`git rev-list --objects`) | **0** en ambas ramas |
 
 Queda pendiente la misma comprobación sobre el commit **empujado** (compuerta G.1): aquí se alineó el `main` local; el
 remoto no se ha tocado (R16).
@@ -241,7 +243,7 @@ Inventario de alcance medido (`git rev-list --objects` por ref, sin filtro):
   `origin/DevChatGPTIA` / `origin/DevCursorIA` / `origin/DevDeepSeekHarnessIA` / `origin/DevDevinIA` (2 cada una — son las
   ramas prohibidas por §0.6), `DevAntigravityIDEIA` local, un `stash`, y las tags `rescate/20261105/main`,
   `rescate/20261105/DevAntigravityIDEIA` y **`v2.7.6`**.
-- El `main` alineado (`0e17bfd`) y `DevQoderIA` (`0938eb7`) alcanzan **0**: la reescritura sólo hace falta en las refs de
+- El `main` alineado (merge de `75eaff8` + el tip de `DevQoderIA` de esta sesión) y `DevQoderIA` alcanzan **0**: la reescritura sólo hace falta en las refs de
   arriba, no en el tronco limpio.
 - El historial ya está truncado por la reducción de peso del 2026-10-30: `origin/main` son **215 commits** con dos raíces,
   la más antigua `575fccb` (2026-10-19). Reescribir no recupera nada de antes de esa fecha.
@@ -270,7 +272,7 @@ R-01 queda cerrado cuando se cumplen **todas**:
 - [ ] Fase E: alcance fijado (¿llegó a binario? qué máquinas) por escrito.
 - [ ] Fase F: aviso publicado en #66 (y #67 si toca clientes).
 - [ ] Fase G.1: árbol promocionado con los cuatro marcadores a 0 (se comprueba en el commit nuevo). **Medido y a 0 en el
-      `main` local alineado (`0e17bfd`) el 2026-11-06 — tabla en §8; falta repetir la comprobación sobre el commit
+      `main` local alineado el 2026-11-06 — tabla en §8; falta repetir la comprobación sobre el commit
       empujado, que es la compuerta.**
 - [ ] Decisión registrada sobre G.2 (purga de historial): hacer o no, y por qué. **Registrada la propuesta el
       2026-11-06: NO hacer, porque `v2.7.6` (tag publicada) contiene las tres cargas en su propio árbol y R4 impide

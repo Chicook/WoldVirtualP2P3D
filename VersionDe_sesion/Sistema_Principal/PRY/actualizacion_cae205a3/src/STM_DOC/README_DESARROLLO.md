@@ -816,7 +816,9 @@ zona de trabajo):
   `0d38d528` = `STM_HRTS/opencode/init`, `0302eeba` = `STM_HRTS/utils/transport.py`) **no están** en el árbol de `main`;
   ningún fichero de `main` se llama `transport.py`, `*.orc` ni `init` bajo `opencode`; `STM_HRTS/__main__.py` es el limpio
   de 194 B (blob `b9a8cb75`); los cuatro marcadores por contenido dan **0** fuera de `STM_DOC/` (`allowAutomaticTasks`
-  sólo aparece en la documentación del incidente) y no hay ni un `<<<<<<<`/`>>>>>>>` en todo el árbol.
+  sólo aparece en la documentación del incidente) y no hay ni un `<<<<<<<`/`>>>>>>>` en todo el árbol. Sacando también el
+  `.gitignore` del barrido, como hace §8: sus tres líneas de cuarentena son las únicas que casan con `.orc` y
+  `transport.py`, y son configuración.
 - **README de la raíz:** se conservó el de `main` (más reciente: describe la 2.7.5) re-apegando sus 85 referencias de
   `actualizacion_aeef1149` → `actualizacion_cae205a3` y dejando como prosa histórica las de
   `91883d55`/`52bf0d80`/`267f0a1c`/`f7bfd9ba`/`022321c8`. Comprobador de rutas contra el árbol de `main`: **0 enlaces
@@ -842,13 +844,17 @@ empujó —R16.
 ### 13.10 Sesión 2026-11-06 (fase G del procedimiento R-01b)
 
 - **G.1 (árbol promocionado) ejecutada y medida** sobre el `main` alineado: 0 cargas por nombre entre los 661 ficheros,
-  0/0/0/0 en los cuatro marcadores de contenido fuera de `STM_DOC/` y `docs/`, `__main__.py` promocionado = el limpio de
-  194 B (blob `b9a8cb75`), y **0 blobs de las cargas alcanzables** desde `main` y desde `DevQoderIA`. Tabla completa y
-  comandos en §8 del procedimiento. Queda la misma comprobación sobre el commit empujado —es la compuerta— y para eso
-  hace falta el push del propietario.
-- **Se corrigieron los comandos de verificación del propio procedimiento:** buscaban `runOn: folderOpen` (sin comillas, no
-  casa nunca) y excluían con `:!STM_DOC`, que aquí no excluye nada porque el directorio está anidado. Con `runOn` a secas
-  y `:(exclude)*STM_DOC*` el resultado es el de la tabla.
+  **0/0/0/0** en los cuatro marcadores de contenido fuera de `STM_DOC/`, `docs/` y `.gitignore`, `__main__.py` promocionado
+  = el limpio de 194 B (blob `b9a8cb75`), y **0 blobs de las cargas alcanzables** desde `main` y desde `DevQoderIA`. Tabla
+  completa y comandos en §8 del procedimiento. Queda la misma comprobación sobre el commit empujado —es la compuerta— y
+  para eso hace falta el push del propietario.
+- **Se corrigieron los comandos de verificación del propio procedimiento,** que daban falsos negativos: buscaban
+  `runOn: folderOpen` sin comillas (en `tasks.json` el valor va entrecomillado, así que no casa ni en un árbol infectado),
+  excluían con `:!STM_DOC` —pathspec que aquí no excluye nada porque el directorio está anidado en `…/src/STM_DOC`— y no
+  sacaban el `.gitignore` del barrido, donde las tres líneas de cuarentena (`*.orc`,
+  `**/rescate_zona_*/duplicados_utils_flat/transport.py`, `**/STM_HRTS/utils/transport.py`) son texto de configuración y
+  casarían con dos de los cuatro patrones. Con `runOn` a secas, `:(exclude)*STM_DOC*`, `:(exclude)docs` y
+  `:(exclude).gitignore` el resultado es el de la tabla.
 - **G.2 (purga de historial) NO se ejecuta: está bloqueada, no aplazada.** `v2.7.6` apunta a `3caf0e7` (merge del PR #47,
   2026-11-02) y **ese commit es la tag publicada**; su árbol incluye las tres cargas bajo `actualizacion_aeef1149` con los
   sha256 de §1. Reescribir el historial obliga a tocar esa tag, y R4 lo prohíbe; mientras `v2.7.6` esté en pie la purga no
