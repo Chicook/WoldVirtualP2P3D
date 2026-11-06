@@ -21,15 +21,15 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DMWoldVirtualP2P3Dv2.7.6</AssemblyName>
+    <AssemblyName>DMWoldVirtualP2P3Dv2.7.8</AssemblyName>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.7.6</Version>
-    <AssemblyVersion>2.7.6.0</AssemblyVersion>
-    <FileVersion>2.7.6.0</FileVersion>
+    <Version>2.7.8</Version>
+    <AssemblyVersion>2.7.8.0</AssemblyVersion>
+    <FileVersion>2.7.8.0</FileVersion>
 
     <Title>Wold Virtual p2p 3D</Title>
-    <Description>Visor 3D — DMWoldVirtualP2P3D v2.7.6 (todo lo de la 2.7.5 más lo desarrollado el 2026-11-04: W-01/DT-11 resuelto —el WebNodo lee el release.json publicado con esquema {assets[]}, /descargar sirve el binario en ejecución bajo el nombre anunciado sin redirecciones 301, refresco de la release vigente cada 5 min y /api/info con version y version_instalada—, nueva autoprueba --webnodo-selftest, proyecto de pruebas unitarias xUnit Visor3DTests (34 superadas) y corrección de la pantalla de inicio de sesión para detectar un nodo activo en el propio equipo)</Description>
+    <Description>Visor 3D — DMWoldVirtualP2P3D v2.7.8 (todo lo de la 2.7.6 más el subsistema defensivo STM_DEF desarrollado el 2026-11-06: escaneo estático e historial Git con allowlist, heurística de entropía de Shannon, integridad HMAC, cuarentena firmada, arranque fail-closed en App.xaml.cs vía ArranqueSeguro.cs, servicio de vigilancia y firma Ed25519 autocontenida con respaldo RFC 8032 puro)</Description>
   </PropertyGroup>
 
   <!--
