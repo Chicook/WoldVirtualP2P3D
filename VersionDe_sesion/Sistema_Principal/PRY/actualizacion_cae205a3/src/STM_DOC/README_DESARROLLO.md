@@ -802,9 +802,12 @@ compartido: hay sesiones concurrentes trabajando en él.
 Criterio de resolución, medido sobre el árbol resultante (`git ls-tree -r` / `git grep` contra el commit, no contra la
 zona de trabajo):
 
-- **Instantánea única.** Bajo `PRY/` sólo existe `actualizacion_cae205a3`: **661 ficheros rastreados** y **0** entradas de
-  `actualizacion_aeef1149`. El subárbol de la instantánea es **idéntico** al de `DevQoderIA` (ambos `18355713…`), así que
-  la rama no aporta una segunda copia del código.
+- **Instantánea única.** Bajo `PRY/` sólo existe `actualizacion_cae205a3`: **661 ficheros rastreados** (`git ls-tree -r`)
+  y **0** entradas de `actualizacion_aeef1149`. El subárbol de la instantánea es **idéntico** al de `DevQoderIA` —
+  comprobado comparando `git rev-parse <rama>:VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3` en las dos
+  ramas: mismo objeto. No se fija su sha en esta acta porque estos propios ficheros viven dentro de ese subárbol y lo
+  mudarían en cada corrección de documentación; la afirmación que hay que verificar es la **igualdad**, no el valor. Así
+  que la rama no aporta una segunda copia del código.
 - **Lo propio de `main` se conserva.** El árbol de `main` sólo difiere del de `DevQoderIA` en **23 ficheros**, todos de
   raíz: `docs/**` (16), `README_EN.md`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `.editorconfig`, `.env.example` y
   `.gitignore`. Los 12 PNG de `docs/img/` siguen ahí; un «alineado por árbol» ciego —copiar el árbol de `DevQoderIA`
