@@ -617,7 +617,7 @@ El manifiesto del proyecto es [`src/STM_HRTS/utils/add_utils/pyproject.toml`](Ve
 ### Cómo ejecutarla
 
 ```bash
-cd VersionDe_sesion/CONTRRF/TLLDCD/src
+cd VersionDe_sesion/Sistema_Principal/PRY/actualizacion_4e0f1cf6/src
 python STMGNRL/mainLCSTM.py        # o, tras pip install -e .: comando "lucia"
 ```
 
