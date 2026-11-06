@@ -192,19 +192,72 @@ cuerpo de releases ya publicadas salvo que lo pida el propietario (regla de nota
 ## 8. Fase G — purgar del repo (dos niveles, decisión aparte)
 
 **G.1 Árbol promocionado (obligatorio, bajo control):** al promocionar el árbol canónico (WP-1), los cuatro marcadores
-deben quedar a 0 en el commit nuevo. Verificación post-promoción:
+deben quedar a 0 en el commit nuevo. Verificación post-promoción (comandos corregidos el 2026-11-06, ver nota):
 ```bash
-git grep -nI -e 'runOn: folderOpen' -e 'allowAutomaticTasks' origin/main -- ':!STM_DOC' ':!docs'   # 0
-git ls-tree -r --name-only <commit-promocionado> | grep -E '\.orc$|/transport\.py$|opencode/init$'  # 0
+C=<commit-promocionado>
+git grep -nI -e 'runOn' -e 'allowAutomaticTasks' $C -- ':(exclude)*STM_DOC*' ':(exclude)docs'      # 0
+git ls-tree -r --name-only $C | grep -E '\.orc$|/transport\.py$|opencode/init$' | wc -l             # 0
+git ls-tree -r -l $C | grep 'STM_HRTS/__main__.py'                                                  # 194 B, no 3.970 B
 ```
 El `__main__.py` limpio ya creado (WP-0 paso 4) sustituye al de A1-1 en el árbol de trabajo; confirmar que el promocionado
 lleva la versión limpia, no la de `main`.
+
+> **Dos correcciones al comando original**, descubiertas al ejecutarlo: (1) `-e 'runOn: folderOpen'` no casa ni siquiera
+> en un árbol infectado porque en `tasks.json` el valor va entre comillas (`"folderOpen"`); hay que buscar `runOn` a
+> secas. (2) El pathspec `:!STM_DOC` sólo excluye un `STM_DOC/` de raíz; aquí el directorio está anidado
+> (`…/src/STM_DOC`), así que se pierde el filtrado y aparecen los documentos del propio incidente. Con `:(exclude)*STM_DOC*`
+> queda correcto.
+
+**G.1 ejecutada el 2026-11-06 sobre el árbol alineado** (`0e17bfd` = merge local de `75eaff8` + `0938eb7`; el subárbol de
+la instantánea es idéntico al de `DevQoderIA`, así que la comprobación vale para las dos ramas):
+
+| Comprobación | Resultado |
+|---|---|
+| `*.orc` / `transport.py` / `opencode/init` por nombre | **0** (sobre 661 ficheros rastreados) |
+| `runOn` · `allowAutomaticTasks` · `.orc` · `transport.py` por contenido, fuera de `STM_DOC/` y `docs/` | **0 / 0 / 0 / 0** |
+| `utils.transport` en todo el árbol | 1 coincidencia y es texto de configuración: la regla `**/STM_HRTS/utils/transport.py` del `.gitignore:274` |
+| `STM_HRTS/__main__.py` promocionado | 194 B, blob `b9a8cb75`, reenvío a `add_utils.__main__:main` (el de `main` pesa 3.970 B) |
+| Blobs de las cargas (`080b2e7a` / `0d38d528` / `0302eeba`) alcanzables desde `main` y `DevQoderIA` | **0** en ambas ramas |
+
+Queda pendiente la misma comprobación sobre el commit **empujado** (compuerta G.1): aquí se alineó el `main` local; el
+remoto no se ha tocado (R16).
 
 **G.2 Historial de git (opcional, radio de daño ALTO — decidir en frío):** los blobs viven en el historial desde
 `c395284`/`d510acd`. Borrarlos del historial = reescribir `main` + 12 ramas (`git filter-repo`/BFG) + force-push, lo que
 **invalida todos los clones y PRs abiertos** y **no puede tocar tags publicadas (R4)**. Esto NO lo exige el criterio de
 aceptación de R-01 (que es de árbol, no de historial). Recomienda y deja constancia; no lo ejecutes sin una ventana
 coordinada y sin decidir antes si compensa. Si se hace: antes, `git bundle`/copia de respaldo de todas las ramas.
+
+**G.2 medido el 2026-11-06 — bloqueante que el procedimiento no contemplaba:** la contaminación no está sólo en el
+historial, está **dentro del árbol de una release publicada**. `v2.7.6` → `3caf0e7` (merge del PR #47, 2026-11-02) y ese
+commit **es la tag publicada**; su árbol lleva las tres cargas bajo `actualizacion_aeef1149` con los sha256 de §1
+(`45f1e5c4…` 1.585 B · `89adac5b…` 30.627 B · `8f79baa4…` 32.436 B). Purgar el historial obliga a reescribir o borrar
+`v2.7.6`, y eso choca con R4 y con la regla de no tocar el cuerpo de releases ya publicadas. La 2.7.7 (`v2.7.7` →
+`294a72a`) está limpia de los cuatro marcadores.
+
+Inventario de alcance medido (`git rev-list --objects` por ref, sin filtro):
+
+- **25 de 116 refs** alcanzan alguno de los tres blobs: `origin/main` (los 3), `origin/DevAntigravityIDEIA` (los 3),
+  `origin/DevChatGPTIA` / `origin/DevCursorIA` / `origin/DevDeepSeekHarnessIA` / `origin/DevDevinIA` (2 cada una — son las
+  ramas prohibidas por §0.6), `DevAntigravityIDEIA` local, un `stash`, y las tags `rescate/20261105/main`,
+  `rescate/20261105/DevAntigravityIDEIA` y **`v2.7.6`**.
+- El `main` alineado (`0e17bfd`) y `DevQoderIA` (`0938eb7`) alcanzan **0**: la reescritura sólo hace falta en las refs de
+  arriba, no en el tronco limpio.
+- El historial ya está truncado por la reducción de peso del 2026-10-30: `origin/main` son **215 commits** con dos raíces,
+  la más antigua `575fccb` (2026-10-19). Reescribir no recupera nada de antes de esa fecha.
+- Herramientas: **`git filter-repo` no está instalado** (tampoco el módulo Python `git_filter_repo`) y **`bfg` no está**.
+  Ninguna purga es ejecutable hoy sin instalar código de terceros.
+
+**Decisión registrada (2026-11-06): NO se ejecuta G.2**, y no por prudencia genérica sino porque está bloqueado por R4.
+Si el propietario quiere seguir, el orden obligatorio es: (1) decidir en frío qué se hace con `v2.7.6` —retirar la
+release y su tag, o asumir formalmente que queda contaminada—; (2) `git bundle --all` de las 116 refs como único
+respaldo (el `.git` pesa ≈632 MiB, `E:` tiene ≈169 GiB libres); (3) instalar `git-filter-repo` y ejecutarlo en un clon
+nuevo, nunca sobre este árbol compartido; (4) aviso previo a quien tenga clones/PRs abiertos; (5) fuerza de los extremos
+en `origin` — **eso es un force-push sobre `main`, y no lo hago yo**: lo ejecuta el dueño, consciente del radio; (6)
+petición a soporte de GitHub para purgar los objetos ya publicados, porque borrarlos del historial propio no los
+despublica: siguen en forks, caches y en la propia release. Con `v2.7.6` en pie, G.2 no cierra el acceso a los blobs:
+sólo cambia de sitio la evidencia. Alternativa de radio bajo, que sí cierra el criterio de R-01: G.1 + Fase F (aviso
+público en #66 con los sha256) + cuarentena y `.gitignore` §18, que es lo que está hecho.
 
 **Compuerta G:** G.1 se valida tras el push del propietario. G.2 es decisión explícita, reversible sólo con respaldo
 previo, y con aviso a quien tenga clones.
@@ -216,8 +269,13 @@ R-01 queda cerrado cuando se cumplen **todas**:
 - [ ] Fase D: IOC de Ethereum documentado y estado del C2 (vivo/muerto) anotado.
 - [ ] Fase E: alcance fijado (¿llegó a binario? qué máquinas) por escrito.
 - [ ] Fase F: aviso publicado en #66 (y #67 si toca clientes).
-- [ ] Fase G.1: árbol promocionado con los cuatro marcadores a 0 (se comprueba en el commit nuevo).
-- [ ] Decisión registrada sobre G.2 (purga de historial): hacer o no, y por qué.
+- [ ] Fase G.1: árbol promocionado con los cuatro marcadores a 0 (se comprueba en el commit nuevo). **Medido y a 0 en el
+      `main` local alineado (`0e17bfd`) el 2026-11-06 — tabla en §8; falta repetir la comprobación sobre el commit
+      empujado, que es la compuerta.**
+- [ ] Decisión registrada sobre G.2 (purga de historial): hacer o no, y por qué. **Registrada la propuesta el
+      2026-11-06: NO hacer, porque `v2.7.6` (tag publicada) contiene las tres cargas en su propio árbol y R4 impide
+      reescribirla; con esa tag en pie la purga no cierra el acceso a los blobs. Pendiente de la confirmación del
+      propietario.**
 - [ ] Actualizar el checkbox **R-01 / R-01b** en el issue #66 con los sha256 y la fecha de cierre.
 
 Mientras alguna casilla esté abierta, **R-01 sigue en pie** y no se promueven las ramas de §0.6 ni se recompila para

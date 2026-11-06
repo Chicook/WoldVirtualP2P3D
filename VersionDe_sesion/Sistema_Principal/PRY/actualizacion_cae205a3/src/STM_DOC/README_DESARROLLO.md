@@ -839,6 +839,28 @@ delante de él). Esos 38 traen las cargas vivas bajo `actualizacion_aeef1149` y 
 A–F del procedimiento) y decidir la fase G (purga del árbol promocionado en `origin/main` e historial). Nada de esto se
 empujó —R16.
 
+### 13.10 Sesión 2026-11-06 (fase G del procedimiento R-01b)
+
+- **G.1 (árbol promocionado) ejecutada y medida** sobre el `main` alineado: 0 cargas por nombre entre los 661 ficheros,
+  0/0/0/0 en los cuatro marcadores de contenido fuera de `STM_DOC/` y `docs/`, `__main__.py` promocionado = el limpio de
+  194 B (blob `b9a8cb75`), y **0 blobs de las cargas alcanzables** desde `main` y desde `DevQoderIA`. Tabla completa y
+  comandos en §8 del procedimiento. Queda la misma comprobación sobre el commit empujado —es la compuerta— y para eso
+  hace falta el push del propietario.
+- **Se corrigieron los comandos de verificación del propio procedimiento:** buscaban `runOn: folderOpen` (sin comillas, no
+  casa nunca) y excluían con `:!STM_DOC`, que aquí no excluye nada porque el directorio está anidado. Con `runOn` a secas
+  y `:(exclude)*STM_DOC*` el resultado es el de la tabla.
+- **G.2 (purga de historial) NO se ejecuta: está bloqueada, no aplazada.** `v2.7.6` apunta a `3caf0e7` (merge del PR #47,
+  2026-11-02) y **ese commit es la tag publicada**; su árbol incluye las tres cargas bajo `actualizacion_aeef1149` con los
+  sha256 de §1. Reescribir el historial obliga a tocar esa tag, y R4 lo prohíbe; mientras `v2.7.6` esté en pie la purga no
+  cierra el acceso a los blobs (seguirían en la release, en caches y en forks), así que sólo movería de sitio la evidencia.
+  Alcance medido: 25 de 116 refs alcanzan alguno de los tres objetos — `origin/main` (3), `origin/DevAntigravityIDEIA` (3),
+  las cuatro ramas prohibidas (2 cada una), `DevAntigravityIDEIA` local, un `stash`, dos tags `rescate/20261105/*` y
+  `v2.7.6`. Además `git filter-repo` y `bfg` **no están instalados**, y el historial ya está truncado por la reducción del
+  2026-10-30 (`origin/main` = 215 commits, raíz más antigua `575fccb`, 2026-10-19). La secuencia por si el propietario
+  decide romper `v2.7.6` está escrita en §8; el paso 5 es un force-push sobre `main`, que no ejecuto.
+- **Lo que sí cierra el criterio de R-01** (que es de árbol, no de historial) es G.1 + Fase F: aviso público con los
+  sha256. Eso sigue pendiente del propietario en #66.
+
 ## 14. Plan de cierre por issue
 
 Regla: **un issue sólo se cierra cuando todas sus casillas están marcadas y su evidencia está adjunta** (log, captura, artefacto o ejecución reproducible). Sin evidencia, la casilla se queda abierta aunque el código parezca correcto.
