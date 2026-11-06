@@ -789,6 +789,43 @@ bajo `STM_DOC/rescate_zona_20261105/`, y en el árbol activo los cuatro marcador
   código fuera de `STM_DOC/`, `bin/` y `obj/` = sólo los cuatro casos de arriba · `Visor3D.csproj` y el apphost
   resuelven desde los `.vscode` · `tasks.json` y `launch.json` parsean como JSONC.
 
+#### 13.9.1 Merge local a `main` (hecho sobre este mismo árbol, sin push)
+
+`main` = `d11bdef`, con padres `75eaff8` (el `main` local previo, merge del PR #47) y `45a1fcf` (la promoción con las
+rutas fijadas, en `DevQoderIA`). Simulado con `git merge-tree --write-tree` antes de ejecutarlo: **1.388 rutas en
+conflicto**, casi todas *rename/rename* — `main` había movido la zona a `actualizacion_aeef1149` y esta rama a
+`actualizacion_cae205a3`, así que Git veía cada fichero renombrado dos veces. El merge se montó en un worktree
+desechable (`git worktree add --detach`), **nunca con `git checkout main`** sobre el árbol compartido: hay sesiones
+concurrentes trabajando en él.
+
+Criterio de resolución y su medición sobre el árbol resultante:
+
+- **Instantánea única.** En `main` sólo existe `PRY/actualizacion_cae205a3` (661 entradas bajo ese prefijo) y ningún
+  `actualizacion_aeef1149`. El subárbol de la instantánea es **idéntico** al de `DevQoderIA` (ambos `18355713…`), así que
+  la rama no aporta una segunda copia del código.
+- **Lo propio de `main` se conserva.** `main` mantiene los 21 ficheros de raíz que `DevQoderIA` no tiene: `.editorconfig`,
+  `.env.example`, `AGENTS.md`, `CLAUDE.md`, `README_EN.md` y `docs/**` (los 12 PNG de `docs/img/`). Un «alineado por árbol»
+  ciego —copiar el árbol de `DevQoderIA` encima— los habría borrado, y son los que sostienen el README profesional.
+- **R-01 sigue cerrado en el resultado.** Los tres payloads que trae `origin/main` (`080b2e7a` = `fa-brand-400.orc`,
+  `0d38d528` = `STM_HRTS/opencode/init`, `0302eeba` = `STM_HRTS/utils/transport.py`) **no están** en el árbol de `main`;
+  ningún fichero de `main` se llama `transport.py`, `*.orc` ni `opencode/init`; `STM_HRTS/__main__.py` es el limpio de
+  194 B; y los cuatro marcadores por contenido dan **0** fuera de `STM_DOC/` (`allowAutomaticTasks` sólo aparece en la
+  documentación del incidente). Cero ficheros con marcadores de conflicto (`<<<<<<<`/`>>>>>>>`) en el árbol.
+- **README de la raíz:** se conservó el de `main` (más reciente: describe la 2.7.5) re-apegando su referencia a
+  `actualizacion_aeef1149` → `actualizacion_cae205a3` (85 ocurrencias) y dejando como prosa histórica las de
+  `91883d55`/`52bf0d80`/`267f0a1c`/`f7bfd9ba`/`022321c8`. Medido con el comprobador de rutas: 56 candidatas de
+  instantánea, **0 enlaces rotos**.
+- **Deuda que este merge NO cierra:** el README de la raíz describe la **2.7.5** como vigente mientras
+  `src/VERSION.json` dice **2.7.7** —la cifra del README hay que recalcularla en el re-medido de §1.2 (WP-1/WP-3), no
+  la cambió este merge. Y `docs/img/` + `README_EN.md` viven sólo en `main`, así que `DevQoderIA` no puede validar su
+  peso desde la zona.
+
+**`origin/main` no está fusionado, a propósito.** Va 38 commits por delante de este `main` local (y este `main` 3 por
+delante de él). Esos 38 traen las cargas vivas bajo `actualizacion_aeef1149` y el `import utils.transport` en
+`__main__.py:10`, así que un `git pull` en `main` **reintroduce R-01**. Antes de tocar el remoto: cerrar R-01b (fases
+A–F del procedimiento) y decidir la fase G (purga del árbol promocionado en `origin/main` e historial). Nada de esto se
+empujó —R16.
+
 ## 14. Plan de cierre por issue
 
 Regla: **un issue sólo se cierra cuando todas sus casillas están marcadas y su evidencia está adjunta** (log, captura, artefacto o ejecución reproducible). Sin evidencia, la casilla se queda abierta aunque el código parezca correcto.
