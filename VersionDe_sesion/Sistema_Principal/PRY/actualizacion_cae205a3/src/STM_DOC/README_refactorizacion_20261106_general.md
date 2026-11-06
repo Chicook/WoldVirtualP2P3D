@@ -133,15 +133,18 @@ Queda R-01b (del dueño, fuera de este taller).
 
 **Estado (2026-11-06): 🟨 mitad local hecha, falta el remoto.** La zona se promocionó a
 `VersionDe_sesion/Sistema_Principal/PRY/actualizacion_cae205a3/src` y quedó commiteada en `DevQoderIA` (`45a1fcf`) con sus
-rutas interiores corregidas (§13.9 de `README_DESARROLLO.md`). Luego `main` **local** absorbió ese árbol en el merge
-`d11bdef` (padres `75eaff8` + `45a1fcf`; 1.388 conflictos *rename/rename* por el cambio de nombre de instantánea,
-resueltos con subárbol idéntico y los 21 ficheros de raíz de `main` conservados) — evidencia medida en §13.9.1.
+rutas interiores corregidas (§13.9 de `README_DESARROLLO.md`). Luego `main` **local** absorbió ese árbol en un merge con
+padres `75eaff8` + `45a1fcf` (1.388 conflictos *rename/rename* por el cambio de nombre de instantánea, resueltos con
+subárbol idéntico y los docs de raíz de `main` conservados; el sha del commit no se cita porque estos ficheros viajan
+dentro de su árbol) — evidencia medida en §13.9.1.
 Lo del entregable que **no** se cumplió tal como estaba escrito: los «73 paths de `main`» y «49 ficheros nuevos» eran la
-foto de noviembre sobre otro layout; hoy el árbol de la instantánea son **661 entradas** compartidas byte a byte entre
+foto de noviembre sobre otro layout; hoy el árbol de la instantánea son **661 ficheros rastreados** idénticos entre
 `main` y `DevQoderIA`, y el README profesional de la raíz **no** se restauró desde el blob `722bbdb8` sino que se conservó
-el de `main` (más reciente) re-apegando `aeef1149` → `cae205a3`. Sin hacer: `git push`/PR, el re-medido de la tabla §1.2 y
-que el tag siguiente nazca de un commit real. **No se fusiona `origin/main`** (38 commits por delante con las cargas vivas
-bajo `aeef1149` y `__main__.py:10 import utils.transport`): eso es R-01b + fase G.
+el de `main` (más reciente) re-apegando `aeef1149` → `cae205a3` — en las dos lenguas: la documentación en inglés
+(`README_EN.md`, `docs/STACK*`, `AGENTS.md`, `CLAUDE.md`) es privativa de `main` y seguía apuntando a la instantánea
+muerta. Sin hacer: `git push`/PR, el re-medido de la tabla §1.2 y que el tag siguiente nazca de un commit real.
+**No se fusiona `origin/main`** (38 commits por delante con las cargas vivas bajo `aeef1149` y
+`__main__.py:10 import utils.transport`): eso es R-01b + fase G.
 
 ### WP-2 — CI real en la raíz
 - **Qué cierra:** #48 DT-01/DT-10/DT-15 · #65 D-04/D-06 · la mitad de F1 de #48.
@@ -255,9 +258,9 @@ reproducible, la casilla sigue abierta aunque el código parezca correcto.
 - **WP-0:** `grep` del repo = 0 para los cuatro marcadores; `__main__.py` limpio en su ruta; `python -m STM_HRTS`
   resuelve sin ejecutar nada importado; sha256 de lo cuarentenado anotados en el issue de incidente.
 - **WP-1:** commit con el árbol completo; la tabla de §1.2 re-medida y verde; tag siguiente nacido de un commit real.
-  🟨 **2026-11-06:** primer punto cumplido en local (`45a1fcf` en `DevQoderIA`, `main` local `d11bdef` con el mismo
-  subárbol de 661 entradas y 0 marcadores de R-01); faltan el re-medido de §1.2 y que el tag nazca de un commit — ambos
-  tras R-01b y a discreción del dueño (R16, no se empuja).
+  🟨 **2026-11-06:** primer punto cumplido en local (`45a1fcf` en `DevQoderIA` y un merge en `main` local cuyo árbol
+  reproduce el subárbol de 661 ficheros y da 0 marcadores de R-01); faltan el re-medido de §1.2 y que el tag nazca de un
+  commit — ambos tras R-01b y a discreción del dueño (R16, no se empuja).
 - **WP-2:** los 4 jobs de `ci.yml` ejecutándose en GitHub Actions con run verde (no «creídos»: run real enlazado).
 - **WP-3:** `--comprobar` en verde con el PCK reexportado; `publicar_version.ps1` rechaza un `.exe` con PCK ajeno
   (prueba negativa); §7 con 12/12; OTA e2e documentada con captura/log.

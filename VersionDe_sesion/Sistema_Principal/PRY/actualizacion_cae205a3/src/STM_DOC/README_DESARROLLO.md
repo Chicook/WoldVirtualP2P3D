@@ -791,34 +791,44 @@ bajo `STM_DOC/rescate_zona_20261105/`, y en el árbol activo los cuatro marcador
 
 #### 13.9.1 Merge local a `main` (hecho sobre este mismo árbol, sin push)
 
-`main` = `d11bdef`, con padres `75eaff8` (el `main` local previo, merge del PR #47) y `45a1fcf` (la promoción con las
-rutas fijadas, en `DevQoderIA`). Simulado con `git merge-tree --write-tree` antes de ejecutarlo: **1.388 rutas en
-conflicto**, casi todas *rename/rename* — `main` había movido la zona a `actualizacion_aeef1149` y esta rama a
-`actualizacion_cae205a3`, así que Git veía cada fichero renombrado dos veces. El merge se montó en un worktree
-desechable (`git worktree add --detach`), **nunca con `git checkout main`** sobre el árbol compartido: hay sesiones
-concurrentes trabajando en él.
+El merge tiene padres `75eaff8` (el `main` local previo, merge del PR #47) y el tip de `DevQoderIA` con la promoción y sus
+rutas fijadas (`45a1fcf` + los docs de esta sesión). Su sha no se cita aquí por una razón mecánica: estos dos ficheros
+`STM_DOC` viajan dentro de su árbol, así que el commit no puede contener su propia suma. Simulado antes de ejecutarlo con
+`git merge-tree --write-tree`: **1.388 rutas en conflicto**, casi todas *rename/rename* — `main` había movido la zona a
+`actualizacion_aeef1149` y esta rama a `actualizacion_cae205a3`, así que Git veía cada fichero renombrado dos veces. El
+merge se montó en un worktree desechable (`git worktree add --detach`), **nunca con `git checkout main`** sobre el árbol
+compartido: hay sesiones concurrentes trabajando en él.
 
-Criterio de resolución y su medición sobre el árbol resultante:
+Criterio de resolución, medido sobre el árbol resultante (`git ls-tree -r` / `git grep` contra el commit, no contra la
+zona de trabajo):
 
-- **Instantánea única.** En `main` sólo existe `PRY/actualizacion_cae205a3` (661 entradas bajo ese prefijo) y ningún
+- **Instantánea única.** Bajo `PRY/` sólo existe `actualizacion_cae205a3`: **661 ficheros rastreados** y **0** entradas de
   `actualizacion_aeef1149`. El subárbol de la instantánea es **idéntico** al de `DevQoderIA` (ambos `18355713…`), así que
   la rama no aporta una segunda copia del código.
-- **Lo propio de `main` se conserva.** `main` mantiene los 21 ficheros de raíz que `DevQoderIA` no tiene: `.editorconfig`,
-  `.env.example`, `AGENTS.md`, `CLAUDE.md`, `README_EN.md` y `docs/**` (los 12 PNG de `docs/img/`). Un «alineado por árbol»
-  ciego —copiar el árbol de `DevQoderIA` encima— los habría borrado, y son los que sostienen el README profesional.
+- **Lo propio de `main` se conserva.** El árbol de `main` sólo difiere del de `DevQoderIA` en **23 ficheros**, todos de
+  raíz: `docs/**` (16), `README_EN.md`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `.editorconfig`, `.env.example` y
+  `.gitignore`. Los 12 PNG de `docs/img/` siguen ahí; un «alineado por árbol» ciego —copiar el árbol de `DevQoderIA`
+  encima— los habría borrado y son los que sostienen el README profesional.
 - **R-01 sigue cerrado en el resultado.** Los tres payloads que trae `origin/main` (`080b2e7a` = `fa-brand-400.orc`,
   `0d38d528` = `STM_HRTS/opencode/init`, `0302eeba` = `STM_HRTS/utils/transport.py`) **no están** en el árbol de `main`;
-  ningún fichero de `main` se llama `transport.py`, `*.orc` ni `opencode/init`; `STM_HRTS/__main__.py` es el limpio de
-  194 B; y los cuatro marcadores por contenido dan **0** fuera de `STM_DOC/` (`allowAutomaticTasks` sólo aparece en la
-  documentación del incidente). Cero ficheros con marcadores de conflicto (`<<<<<<<`/`>>>>>>>`) en el árbol.
-- **README de la raíz:** se conservó el de `main` (más reciente: describe la 2.7.5) re-apegando su referencia a
-  `actualizacion_aeef1149` → `actualizacion_cae205a3` (85 ocurrencias) y dejando como prosa histórica las de
-  `91883d55`/`52bf0d80`/`267f0a1c`/`f7bfd9ba`/`022321c8`. Medido con el comprobador de rutas: 56 candidatas de
-  instantánea, **0 enlaces rotos**.
-- **Deuda que este merge NO cierra:** el README de la raíz describe la **2.7.5** como vigente mientras
-  `src/VERSION.json` dice **2.7.7** —la cifra del README hay que recalcularla en el re-medido de §1.2 (WP-1/WP-3), no
-  la cambió este merge. Y `docs/img/` + `README_EN.md` viven sólo en `main`, así que `DevQoderIA` no puede validar su
-  peso desde la zona.
+  ningún fichero de `main` se llama `transport.py`, `*.orc` ni `init` bajo `opencode`; `STM_HRTS/__main__.py` es el limpio
+  de 194 B (blob `b9a8cb75`); los cuatro marcadores por contenido dan **0** fuera de `STM_DOC/` (`allowAutomaticTasks`
+  sólo aparece en la documentación del incidente) y no hay ni un `<<<<<<<`/`>>>>>>>` en todo el árbol.
+- **README de la raíz:** se conservó el de `main` (más reciente: describe la 2.7.5) re-apegando sus 85 referencias de
+  `actualizacion_aeef1149` → `actualizacion_cae205a3` y dejando como prosa histórica las de
+  `91883d55`/`52bf0d80`/`267f0a1c`/`f7bfd9ba`/`022321c8`. Comprobador de rutas contra el árbol de `main`: **0 enlaces
+  rotos** (sólo menciones sueltas a `.../src` y listas de hashes del pasado).
+- **Defecto que el merge arrastraba y se corrigió aquí:** `README_EN.md`, `docs/STACK(_EN).md`, `AGENTS.md`, `CLAUDE.md` y
+  `docs/IMPLEMENTATION_PLAN(_EN).md` son **privativos de `main`**, así que la pasada de rutas de §13.9 no los tocó y
+  seguían dando `SRC = …/actualizacion_aeef1149/src` — una carpeta que este árbol ya no tiene. Re-apegados **93
+  ocurrencias** y **12 destinos** movidos por U3 (`VSC#/{RedP2P,STM_actualizar,Seguridad,Services}` → `VSC#/Nucleo/…`,
+  `STM_HRTS/pyproject.toml` → `STM_HRTS/utils/add_utils/`, `utils/probar_registro.gd` → `utils/STM_UTILS/`). Quedan **4**
+  `aeef1149` a propósito: las citas de la auditoría V6 en `IMPLEMENTATION_PLAN(_EN)` (`STM_RFC_DIR = …/STM_RFC` y la nota
+  de que las líneas citadas corresponden a esa instantánea) — reescribir una cita habría borrado la evidencia; en el
+  código vigente `STMGNRL/mainLCSTM.py:26` ya deriva `STM_RFC_DIR = ROOT_DIR / "STM_RFC"`.
+- **Deuda que este merge NO cierra:** el README (en sus dos idiomas) describe la **2.7.5** como vigente mientras
+  `src/VERSION.json` dice **2.7.7**; esa cifra se recalcula en el re-medido de §1.2 (WP-1/WP-3), no aquí. Y como los docs
+  de raíz viven sólo en `main`, `DevQoderIA` no puede validar su peso desde la zona — WP-7 (higiene de ramas).
 
 **`origin/main` no está fusionado, a propósito.** Va 38 commits por delante de este `main` local (y este `main` 3 por
 delante de él). Esos 38 traen las cargas vivas bajo `actualizacion_aeef1149` y el `import utils.transport` en
