@@ -273,3 +273,5 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 **/rescate_zona_*/duplicados_utils_flat/transport.py
 **/STM_HRTS/utils/transport.py
 **/STM_HRTS/opencode/init
+
+config.bat

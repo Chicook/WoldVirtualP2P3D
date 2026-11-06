@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Callable, Optional
 try:
     from .stm_base import (E, informar, exito, advertir, reportar_error, pedir_confirmacion, ErrorProyecto, RaizProyectoNoEncontrada, encontrar_raiz, RAIZ, ORIGEN, DESTINO, CONFIG_IA_LOCAL, RFC_DIR, PRY_DIR, SRC_DIR, MODULO_DIR, TLLDCD_DIR, CONTRRF_DIR, _caja, _panel, ANCHO_TERMINAL, _imprimir_seguro, RESPUESTAS_AFIRMATIVAS, LIMITE_TAMANO_ANALISIS, EXTENSIONES_POR_LENGUAJE, PATRON_MARCADOR_PENDIENTE, carpetas_creadas, __version__)
+    # Una sola fuente de verdad para el registro de envíos: se comparte con
+    # stm_registro (quien redacta/borra el registro) para que quien escribe y
+    # quien lee apunten SIEMPRE al mismo archivo.
+    from .stm_registro import DIR_REGISTRO as DIR_REGISTRO_JSON, RUTA_JSON as REGISTRO_ENVIOS
 except ImportError:
     pass
 # --- Utilidades de sistema de archivos --------------------------------------
@@ -220,12 +224,13 @@ def comando_crear_archivo() -> None:
 
 
 #: Carpeta de la herramienta dentro de TLLDCD: SIEMPRE se conserva al limpiar
-#: TLLDCD (contiene el registro de envíos, que debe viajar con el proyecto).
+#: TLLDCD (contiene la herramienta, que debe viajar con el proyecto).
 CARPETA_HERRAMIENTA = TLLDCD_DIR / "STM_RFC"
-#: Registro de envíos ("github minimalista"): vive en TLLDCD/STM_RFC/envios.json
-#: para viajar con TLLDCD y sobrevivir al vaciado de RFC.
-DIR_REGISTRO_JSON = CARPETA_HERRAMIENTA
-REGISTRO_ENVIOS = DIR_REGISTRO_JSON / "envios.json"
+#: Registro de envíos ("github minimalista"): vive junto al paquete, en
+#: stm_registro_json/STM_RFC/envios.json (ver stm_registro), de modo que
+#: viaja con STM_RFC y sobrevive al vaciado de RFC.
+#: ``DIR_REGISTRO_JSON`` y ``REGISTRO_ENVIOS`` se importan de stm_registro
+#: (arriba) para que escritor y lector compartan la MISMA ruta.
 
 
 def _contar_ficheros(carpeta: Path) -> int:
