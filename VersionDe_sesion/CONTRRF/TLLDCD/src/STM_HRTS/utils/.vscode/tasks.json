@@ -7,7 +7,8 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_049ac229/src/VSC#/Visor3D.csproj",
+                "${workspaceFolder}/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/Visor3D.csproj",
+                "-p:Platform=x64",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -19,7 +20,8 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_049ac229/src/VSC#/Visor3D.csproj",
+                "${workspaceFolder}/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/Visor3D.csproj",
+                "-p:Platform=x64",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -33,7 +35,8 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_049ac229/src/VSC#/Visor3D.csproj"
+                "${workspaceFolder}/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/Visor3D.csproj",
+                "--property:Platform=x64"
             ],
             "problemMatcher": "$msCompile"
         }

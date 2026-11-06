@@ -10,9 +10,9 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_049ac229/src/VSC#/bin/Debug/net8.0-windows/win-x64/DMWoldVirtualp2pCNXv0.0.012_actualizacion_049ac229.dll",
+            "program": "${workspaceFolder}/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/bin/x64/Debug/net8.0-windows/win-x64/DMWoldVirtualP2P3Dv2.7.6.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/VersionDe_sesion/Sistema_Principal/PRY/actualizacion_049ac229/src/VSC#",
+            "cwd": "${workspaceFolder}/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false
