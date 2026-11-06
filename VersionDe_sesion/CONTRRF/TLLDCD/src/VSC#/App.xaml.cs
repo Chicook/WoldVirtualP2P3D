@@ -80,6 +80,22 @@ namespace Visor3D
                 return;
             }
 
+            // ── PUERTA DE ARRANQUE STM_DEF (fail-closed) ────────────────────────
+            // Antes de abrir el visor se corre el hook del subsistema defensivo
+            // (STM_HRTS\STM_DEF): escaneo estatico del arbol + verificacion del
+            // sello de integridad. Un hallazgo ALTA o un sello manipulado detienen
+            // el arranque, invirtiendo el paso del dropper (aquel ejecutaba sin
+            // comprobar; aqui no se abre ventana sin comprobar antes).
+            if (Visor3D.Seguridad.ArranqueSeguro.Bloquea())
+            {
+                MessageBox.Show(
+                    "El analisis de seguridad (STM_DEF) ha detenido el arranque.\n" +
+                    "Revisa los registros en %LOCALAPPDATA%\\WoldVirtualP2P3D\\logs.",
+                    "WoldVirtualP2P3D — Seguridad", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Shutdown(1);
+                return;
+            }
+
             // ── PERSISTENCIA DE USUARIO ─────────────────────────────────────────
             // El perfil vive fuera de runtime\<versión>, así que una actualización
             // NO debe borrarlo. El reinicio de la base local sólo se ejecuta si se

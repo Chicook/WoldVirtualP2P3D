@@ -8,7 +8,10 @@ TODO el trabajo de arranque se hace desde ESTE fichero:
   2. Anade ``src/`` a ``sys.path`` y carga el motor de consola real
      (``STM_HRTS.utils.add_utils.__main__``), con las ordenes ``rutas``,
      ``verificar``, ``herramientas`` y ``ejecutar``.
-  3. Si se lanza sin argumentos muestra la ayuda en vez de fallar.
+  3. Antes de delegar en el motor, corre el hook *fail-closed* de STM_DEF
+     (``STM_HRTS.STM_DEF.arranque``): escaneo + integridad; un hallazgo ALTA o
+     un sello manipulado detienen el arranque.
+  4. Si se lanza sin argumentos muestra la ayuda en vez de fallar.
 
 Arranques soportados:
 
@@ -81,10 +84,22 @@ class ConsolaHRTS:
 
     # ── ejecucion ────────────────────────────────────────────────────────
     def ejecutar(self, argv: list[str] | None = None) -> int:
-        """Ejecuta la consola; sin argumentos muestra la ayuda, no un error."""
+        """Ejecuta la consola; sin argumentos muestra la ayuda, no un error.
+
+        Antes de delegar en el motor corre el hook *fail-closed* de STM_DEF
+        (escaneo + integridad): si detecta un hallazgo **ALTA** o un sello
+        manipulado, detiene el arranque y devuelve 1.
+        """
         argumentos = list(sys.argv[1:] if argv is None else argv)
         if not argumentos:
             return self.ayuda()
+        self.preparar()
+        from STM_HRTS.STM_DEF.arranque import bloquea
+
+        if bloquea():
+            print("[STM_PY] STM_DEF detuvo el arranque: hallazgo ALTA o sello manipulado.",
+                  file=sys.stderr)
+            return 1
         return int(self.motor.main(argumentos))
 
 

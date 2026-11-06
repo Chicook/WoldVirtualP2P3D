@@ -1,13 +1,14 @@
 # Wold Virtual P2P 3D — README de desarrollo del taller `src`
 
-**Fecha del análisis:** 2026-10-31 → **Última actualización:** 2026-11-04 (publicación de la v2.7.6)  
+**Fecha del análisis:** 2026-10-31 → **Última actualización:** 2026-11-06 (unificación del análisis de seguridad y hito H7)  
 **Ámbito:** `VersionDe_sesion/CONTRRF/TLLDCD/src`  
 **Estado del árbol local:** no rastreado por Git; corresponde a una zona de trabajo RFPRMN  
 **Release consultada:** v2.7.6 publicada el 2026-11-04 (previa: v2.7.5 del 2026-11-01, v2.7.4 del 2026-10-30)  
 **Metodología (sesión inicial):** revisión de issues, lectura de código y medición estática de archivos.  
 **Metodología (implementación H0–H4):** 97 pruebas Python pasando; selftests C# (update/red/cuenta/chat/startup) con código de salida 0; todas las modificaciones estrictamente dentro de `src/`.  
 **Metodología (revisión de cierre de issues):** lectura de los 6 issues abiertos vía API de GitHub (#1, #15, #16, #26, #38, #45), contraste de cada afirmación contra el código de `src/` y definición del criterio verificable de cierre por issue (sección 14).  
-**Metodología (revisión dirigida 2026-11-04):** nueva lectura de **todos** los issues vía `gh` (5 abiertos, 11 cerrados), verificación de la release **v2.7.6** y su set real de assets, y contraste de la estructura de `src/` (`Tests`, `Services`, `tests/`, `json` de issues); añade la **§15** (panel de mando, cola de trabajo y protocolo) para dirigir la ejecución.
+**Metodología (revisión dirigida 2026-11-04):** nueva lectura de **todos** los issues vía `gh` (5 abiertos, 11 cerrados), verificación de la release **v2.7.6** y su set real de assets, y contraste de la estructura real de `src/` (`Tests`, `Services`, `tests/`, `json` de issues); añade la **§15** (panel de mando, cola de trabajo y protocolo) para dirigir la ejecución.  
+**Metodología (auditoría de seguridad 2026-11-06):** trazado del código dañino implantado combinando (a) el análisis de solo lectura de los dos árboles de trabajo `PRY/actualizacion_aeef1149/src` y `PRY/actualizacion_cae205a3/src`, (b) el historial de Git (`git log`/`git blame` del fichero dropper) y (c) los PR ya fusionados de los colaboradores (`hrabanazviking` #57–#64, `applecat88` #50–#56, `CesarChaMal` #47). Resultado: los PR de colaboradores **no** introducen el código dañino (solo documentación o endurecimiento); el ataque entró por commits con la **identidad del propio propietario** (`d510acd`, 2026-11-01). Respuesta: nuevo hito **H7 «Blindaje»** y subsistema defensivo `STM_HRTS/STM_DEF` (sección 16).
 
 > Este documento es el plan de desarrollo vigente para este taller y reúne en un solo sitio el diagnóstico y la hoja de ruta: el análisis está en las secciones 1 a 6 y 9, la secuenciación por hitos con decisiones y reglas de replan en las secciones 7, 8, 10.1 y 12, y el plan de cierre verificable de cada issue abierto en la sección 14. El README antiguo de `STM_DOC` documenta el binario v0.0.2 y queda como referencia histórica. Las siglas no documentadas por el propio código se conservan sin expandir.
 
@@ -357,6 +358,7 @@ Etiquetas posibles: **Implementado** · **Implementado, sin prueba real** · **P
 | **H4** | OTA, runtime y estado | AppExtractor hashes + WebNodoService invariante + recálculo de cuenta | #38 | M–L | ✅ **CERRADO** |
 | **H5** | **Cerrar #1, #15 y #48 (antes #45/#38)** | Prueba LAN 2 equipos, métrica de huella, xUnit + CI en raíz, W-01 y DT-01/DT-04…DT-16 | #1, #15, #48 | L–XL | ⏳ **EN CURSO** |
 | **H6** | **Cerrar #26 y F2 de #38** | Decisión D5, ledger con firma/revocación o retirada, abstracción de proveedores, inventario restaurable | #26, #16 (fuera) | XL | ⏳ Pendiente (tras H5) |
+| **H7** | **Blindaje frente al código dañino implantado (R-01)** | Retirada/neutralización de los 3 vectores, subsistema `STM_DEF` (detección + monitor C2 + sello de integridad + blindaje) y verificación | #65, #66 | L | 🔴 **EN CURSO** (bloqueo crítico) |
 
 ```mermaid
 flowchart LR
@@ -367,13 +369,17 @@ flowchart LR
   H3 --> H5[H5 cierre #1 · #15 · #48]
   H4 --> H5
   H5 --> H6[H6 cierre #26 · F2]
+  H0 --> H7[H7 blindaje · código dañino R-01]
+  H7 --> H5
+  H7 --> H6
   D1[Decisión: persistencia e IPFS] --> H1
   D5[Decisión: SMTPLC bloquea o puntúa] --> H6
   D3[Decisión: meta de #15] --> H5
   D4[Decisión: reescribir #1 a WebSocket] --> H5
+  D9[Decisión: retirar o cuarentenar los 3 vectores] --> H7
 ```
 
-H3 y H4 pueden solaparse porque no tocan los mismos ficheros. H5 no aporta métrica útil si antes no existe H2. **S ≈ hasta 2 h · M ≈ medio día · L ≈ 1–3 días · XL ≈ más de 3 días.**
+H3 y H4 pueden solaparse porque no tocan los mismos ficheros. H5 no aporta métrica útil si antes no existe H2. **H7 es un bloqueo crítico absoluto (R-01): la retirada/neutralización del código dañino va antes que cualquier trabajo de funcionalidad, de H5 o de H6.** **S ≈ hasta 2 h · M ≈ medio día · L ≈ 1–3 días · XL ≈ más de 3 días.**
 
 **Principio de H5/H6:** no se abre trabajo nuevo hasta que la checklist de cierre de la sección 14 esté vacía para los issues asignados al hito.
 
@@ -493,6 +499,28 @@ Sólo se abre tras H5. Todo lo de esta sección queda bloqueado por la decisión
 
 **Criterio de salida de H6:** las casillas de las secciones 14.4 (#26) y 14.3 (#38, frente F2) completas, con la decisión D5 registrada en este documento y en el issue.
 
+### 7.11 H7 — Blindaje frente al código dañino implantado (R-01) 🔴 BLOQUEO CRÍTICO
+
+> **Esta sección unifica el análisis de seguridad de las tres fuentes** (los dos árboles PRY, el historial de Git y los PR fusionados de los colaboradores) con el subsistema defensivo creado en este taller. El detalle del ataque, su objetivo y su trazabilidad está en la **§16**; aquí queda la secuenciación.
+
+Objetivo: **retirar/neutralizar el código dañino y blindar el proyecto a largo plazo.** No es una tarea de funcionalidad ni de tamaño: es respuesta a un incidente. Los tres vectores de ejecución y la ruta de filtración son los hallazgos **A1-1, A5-1 y A5-2** (Críticos) y **A5-4** (Alto) de la auditoría del colaborador `hrabanazviking` (`SECURITY_AUDIT_2026-11-05`, fusionada en `main`).
+
+**H7.1 — Retirada / neutralización de los tres vectores (R-01)**
+- Vector 1 (`A5-1`): `.vscode/tasks.json` con tarea `runOn: folderOpen` + `.vscode/settings.json` con `task.allowAutomaticTasks: true` + carga útil disfrazada `.orc`. En este taller la mitad de `settings.json` **sigue viva en la raíz** (`e:\WoldVirtualP2P3D\.vscode\settings.json`); el `.orc` está en `PRY/actualizacion_aeef1149/.../public/fonts/fa-brand-400.orc` y ya en cuarentena en `PRY/actualizacion_cae205a3/.../cuarentena_r01_20261106/`.
+- Vector 2 (`A5-2`): `STM_HRTS/opencode/init`, línea 35 con JS ofuscado, disparado por `"start": "node init && ./opencode.bat"` en `package.json`. **El `init` del árbol de construcción está limpio** (34 líneas); el infectado está en `PRY/actualizacion_aeef1149/src/STM_HRTS/opencode/init`.
+- Vector 3 (`A1-1`): `STM_HRTS/utils/transport.py` (dropper EtherHiding) importado en `STM_HRTS/__main__.py:10`. **El árbol de construcción no contiene `transport.py`** (verificado por búsqueda); el infectado está en `PRY/actualizacion_aeef1149/src/STM_HRTS/utils/transport.py` y `PRY/actualizacion_cae205a3/src/STM_DOC/rescate_zona_20261105/duplicados_utils_flat/transport.py`.
+- Acción: eliminar o poner en cuarentena fuera del árbol de construcción todo lo anterior **si alguna vez se copia a `CONTRRF/TLLDCD/src`**; retirar el `tasks`/`runOn: folderOpen` de la raíz; tratar como potencialmente comprometida toda máquina que abriera el repo en VS Code, ejecutara `npm start` en `STM_HRTS/opencode` o la consola `python -m STM_HRTS`.
+- **Alcance de escritura:** este taller sólo puede tocar `VersionDe_sesion/CONTRRF/TLLDCD/src`. La raíz `.vscode/` y `PRY/` están **fuera** del alcance autorizado (regla R6 y §15.3.5): se documentan aquí, pero su retirada requiere orden explícita del usuario.
+
+**H7.2 — Subsistema defensivo `STM_DEF` (lo contrario del malware)** ✅ *implementado*
+- Ubicación acordada con el usuario: `VersionDe_sesion/CONTRRF/TLLDCD/src/STM_HRTS/STM_DEF` (Python, bibliotecas estándar).
+- Invierte cada paso del dropper: **detecta** en lugar de camuflar; **vigila la red** en lugar de conectar en silencio; **sella con HMAC-SHA256** en lugar de ocultar; **bloquea (sinkhole DNS + reglas de firewall)** en lugar de descargar; **conserva evidencia** en lugar de `os.unlink`.
+- Módulos: `iocs.py` (indicadores del C2), `deteccion.py` (motor estático sobre árboles y comandos), `monitor.py` (vigilancia de conexiones C2 vía `psutil`/`netstat`), `integridad.py` (sello SHA-256 + firma HMAC anti-manipulación), `blindaje.py` (sinkhole en `hosts` + `netsh advfirewall`, simulado por defecto y reversible), `motor.py` (orquestador `MotorDefensa`) y `__main__.py` (consola CLI).
+- Consola: `python -m STM_HRTS.STM_DEF {iocs|escanear|vigilar|blindar|sellar|integridad|estado|informe}`. Prueba hermética: `tests/test_stm_def.py`.
+- **Resultado (2026-11-06):** `pytest tests/test_stm_def.py -c STM_HRTS/utils/add_utils/pytest.ini` → **17 passed**; `python -m STM_HRTS.STM_DEF estado` arranca y reporta indicadores (18 patrones, 3 dominios C2) sin errores.
+
+**Criterio de salida de H7:** (1) el árbol de construcción no contiene ningún vector (`transport.py`, `.orc`, `init` ofuscado, tarea `runOn: folderOpen`) —verificado por `python -m STM_HRTS.STM_DEF escanear` sin hallazgos—; (2) `STM_DEF` verde en su suite y en el escaneo del propio árbol; (3) el blindaje (sinkhole + firewall) probado en seco y reversible; (4) decisión **D9** registrada; (5) nota de incidente en el issue **#66** y en **#65**.
+
 ## 8. Decisiones que faltan antes de implementar
 
 Cada decisión bloquea un hito concreto. Si llega su fecha límite sin respuesta, se aplica la opción conservadora y se anota en este documento.
@@ -507,6 +535,7 @@ Cada decisión bloquea un hito concreto. Si llega su fecha límite sin respuesta
 | **D6** | ¿Los datos y fixtures actuales del taller fueron reales alguna vez? | H1 | 2026-11-03 | Rotar todo lo que tenga forma de credencial y regenerar los fixtures |
 | **D7** | **W-01:** ¿se adapta el `release.json` publicado al esquema que lee el portal (`exe`/`url`/`size_mb`) o se enseña al portal a leer `{assets[]}`? | H5 | 2026-12-05 | Enseñar al portal a leer `{assets[]}` (menos cambios en la cadena de publicación) |
 | **D8** | **#26/DT-1:** ¿el ledger de ubicación se integra con firma + revocación, se degrada a exportación local o se elimina? | H6 | 2027-01 | Degradar a exportación local documentada (evita mantener andamiaje muerto) |
+| **D9** | **R-01:** ¿los tres vectores dañinos se eliminan, se ponen en cuarentena o se restauran a su forma benigna? Y ¿quién anuncia el posible compromiso de las máquinas expuestas? | H7 | **inmediata** | Cuarentenar (no borrar) fuera de `src/`, restaurar `init` a su forma benigna y publicar una nota de incidente; el árbol de construcción se mantiene limpio y `STM_DEF` vigila |
 
 La rotación precede siempre a la migración: si un secreto fue real, primero se invalida y después se reescribe el fixture.
 
@@ -670,6 +699,14 @@ Se listan explícitamente las deudas generadas, separadas de la deuda heredada:
   3. El CI referencia `-c STM_HRTS/pytest.ini`, ruta que **ya no existe** (el real es `STM_HRTS/utils/add_utils/pytest.ini`), y su suite Python **no es estricta** (`continue-on-error: true`).
   4. El manifiesto H0 vive en `STM_HRTS/utils/…/manifiesto_h0.json`, no en `STM_HRTS/` (corregido en §3.2).
 
+### 13.6 Sesión 2026-11-06 (auditoría de seguridad, hito H7 y subsistema STM_DEF)
+
+- **Entrada:** los dos árboles de trabajo de `PRY` (`actualizacion_aeef1149/src`, `actualizacion_cae205a3/src`), el historial de Git (`git log`/`git blame`) y los PR fusionados/cerrados vía `gh`. Verificación dirigida de la auditoría del colaborador `hrabanazviking` (`SECURITY_AUDIT_2026-11-05`, fusionada en `main`) contra el árbol real.
+- **Hallazgo central:** el **código dañino es un dropper tipo «EtherHiding»** (C2 en Ethereum) implantado en **tres vectores** (`transport.py`, `opencode/init`, `.orc` + tarea de VS Code). Fue introducido por el commit **`d510acd`** (2026-11-01) **con la identidad del propio propietario** (`Juan Angel Lopez Diaz <102910494+Chicook@…>`) y committer idéntico — **no** por los PR de colaboradores (que solo tocan documentación o endurecimiento). Detalle en la **§16**.
+- **Cambios en este documento:** cabecera actualizada; nuevo hito **H7 «Blindaje»** (§7.3 tabla + §7.11); **D9** en §8; nueva checklist **§14.8**; panel §15.1 y cola §15.2 con R-01 como paso 0; regla de seguridad §15.3.7 y comandos `STM_DEF` en §15.4; nueva **§16** (análisis unificado del código dañino); esta §13.6.
+- **Cambios en código (dentro de `src/`):** creado el subsistema **`STM_HRTS/STM_DEF`** (9 módulos + consola) y su suite **`tests/test_stm_def.py`**. Verificado: **17 passed** y CLI operativo. No se tocó `PRY/`, ni la raíz `.vscode/`, ni el visor publicado.
+- **Evidencia:** `pytest tests/test_stm_def.py -c STM_HRTS/utils/add_utils/pytest.ini` → 17 passed; `python -m STM_HRTS.STM_DEF estado` → 18 patrones de IOC, 3 dominios C2, sinkhole inactivo (estado honesto).
+
 ## 14. Plan de cierre por issue
 
 Regla: **un issue sólo se cierra cuando todas sus casillas están marcadas y su evidencia está adjunta** (log, captura, artefacto o ejecución reproducible). Sin evidencia, la casilla se queda abierta aunque el código parezca correcto.
@@ -753,21 +790,38 @@ Paraguas nuevo que sustituye a **#45** y **#38** (ambos cerrados el 2026-11-04).
 6. DT-06: cobertura de red del `--update-selftest`.
 7. #15: métricas de huella y pipeline reproducible.
 
+### 14.8 R-01 / H7 — Blindaje frente al código dañino implantado (bloqueo crítico)
+
+Un issue/entrega se cierra **sólo** con evidencia adjunta. Aquí la evidencia es una búsqueda estática y la salida de `STM_DEF`, nunca la ejecución del código antiguo.
+
+- [x] **STM_DEF implementado** (`STM_HRTS/STM_DEF`): detección estática, monitor de red C2, sello de integridad HMAC, blindaje reversible y consola CLI.
+- [x] **Suite hermética verde:** `tests/test_stm_def.py` → **20 passed** (2026-11-06; +3 de allowlist).
+- [x] **CLI operativo:** `python -m STM_HRTS.STM_DEF estado` arranca sin error y lista IOCs.
+- [x] **Árbol de construcción limpio verificado:** `python -m STM_HRTS.STM_DEF escanear` sobre `CONTRRF/TLLDCD/src` → **0 hallazgos / LIMPIO (exit 0)** tras resolver el falso positivo con la allowlist `rutas_ignoradas.txt` (fixtures `tests/test_stm_def.py` y documentación `README_DESARROLLO.md`). `transport.py`, `.orc` e `init` ofuscado ausentes.
+- [ ] **Blindaje probado en seco:** `python -m STM_HRTS.STM_DEF blindar` muestra el plan (sinkhole `ethplorer.io`/`publicnode.com` y reglas `netsh advfirewall`) sin tocar el sistema.
+- [ ] **Decisión D9** registrada (retirar/cuarentenar/restaurar + quién anuncia el posible compromiso).
+- [ ] **Vector de la raíz retirado:** eliminar el bloque `tasks`/`runOn: folderOpen` y `task.allowAutomaticTasks` de `e:\WoldVirtualP2P3D\.vscode\settings.json` (**fuera de `src/`: requiere autorización explícita**).
+- [ ] **Cuarentena PRY confirmada:** los tres artefactos dañinos permanecen fuera del árbol de construcción y en cuarentena en `PRY/actualizacion_cae205a3/.../cuarentena_r01_20261106/`.
+- [ ] **Nota de incidente publicada** en los issues **#66** (R-01 abierto) y **#65** (merges #55–#63 y unificación).
+
 ## 15. Desarrollo dirigido: panel de mando, cola de trabajo y protocolo
 
 > Esta es la capa **accionable** del plan. §14 dice *qué* hay que demostrar para cerrar cada issue; §15 dice **en qué orden, con qué bloqueo y con qué evidencia**, para que ninguna sesión empiece sin saber cuál es su siguiente acción concreta.
 
-### 15.1 Panel de mando (estado real al 2026-11-04)
+### 15.1 Panel de mando (estado real al 2026-11-06)
 
 | Issue | Estado real | Bloqueo | Única próxima acción | Evidencia que lo cierra |
 |---|---|---|---|---|
+| **R-01** (H7 · #66) | 🔴 **Código dañino implantado** (3 vectores); árbol de construcción limpio y `STM_DEF` creado | Decisión **D9** (retirar/cuarentenar) y autorización para tocar la raíz `.vscode/` | Verificar el árbol con `python -m STM_HRTS.STM_DEF escanear` y registrar D9 | §14.8 |
+| [#66](https://github.com/Chicook/WoldVirtualP2P3D/issues/66) | Deuda tras la v2.7.7; R-01 sigue abierto | H7 primero | Cerrar R-01 y luego repartir el resto de DT | §14.8 + issue #66 |
+| [#65](https://github.com/Chicook/WoldVirtualP2P3D/issues/65) | Merges #55–#63 sin absorbat y unificación U0–U4 pendiente | H7 (no fusionar código antes de blindar) | Consolidar la unificación U0–U4 en el árbol de construcción tras R-01 | issue #65 |
 | [#1](https://github.com/Chicook/WoldVirtualP2P3D/issues/1) | Código hecho (H3); falta prueba física | Hardware: 2 equipos en la misma LAN | Ejecutar la prueba de dos equipos y adjuntar capturas + `--red-selftest` por máquina | §14.1 (DT-04) |
 | [#15](https://github.com/Chicook/WoldVirtualP2P3D/issues/15) | v2.7.6 = 348,17 MiB; sin métrica de huella | Decisión **D3** (meta numérica) | Medir la huella instalada (binario + runtime + motor + PCK) y publicar el desglose | §14.2 |
 | [#26](https://github.com/Chicook/WoldVirtualP2P3D/issues/26) | Código parcial; ledger sin llamador productivo | Decisiones **D5** y **D8** | Cerrar **D5** (bloqueo duro vs. puntuación de riesgo) | §14.4 |
 | [#48](https://github.com/Chicook/WoldVirtualP2P3D/issues/48) | Paraguas de deuda vivo (DT-01…DT-16 + F1/F7) | Ninguno | **DT-01:** llevar `ci.yml` a `.github/workflows/` de la raíz y ponerlo verde | §14.5 |
 | [#16](https://github.com/Chicook/WoldVirtualP2P3D/issues/16) | Fuera de alcance | Otro directorio | No aplica a este taller | — |
 
-**Regla de foco:** sólo una fila puede estar «en curso» a la vez; el resto espera.
+**Regla de foco:** sólo una fila puede estar «en curso» a la vez; el resto espera. **Excepción: R-01/H7 es un bloqueo crítico absoluto que se ejecuta antes que cualquier otra fila.**
 
 ### 15.2 Cola de trabajo dirigida (orden estricto)
 
@@ -775,7 +829,8 @@ El orden no es preferencia: cada paso deja verde al anterior.
 
 | # | Trabajo | Issue/DT | Por qué ahora | No empezar hasta |
 |---|---|---|---|---|
-| 1 | `ci.yml` en la raíz + `dotnet test` + los 6 selftests | #48 · DT-01, DT-15 | Sin CI verde todo lo demás es «creído, no verificado»; no depende de nadie | — |
+| **0** | **R-01 / H7: verificar el árbol con `STM_DEF`, probar el blindaje en seco, registrar D9 y publicar la nota de incidente** | #66 · H7 | Es un bloqueo crítico absoluto: hay una puerta trasera confirmada en el historial | — |
+| 1 | `ci.yml` en la raíz + `dotnet test` + los 6 selftests | #48 · DT-01, DT-15 | Sin CI verde todo lo demás es «creído, no verificado»; no depende de nadie | Paso 0 |
 | 2 | Corregir rutas del CI (`-c STM_HRTS/utils/add_utils/pytest.ini`) y quitar `continue-on-error` de la suite Python | #48 · DT-10 | El CI apunta hoy a un `pytest.ini` inexistente y su suite no es estricta | Paso 1 |
 | 3 | Ampliar xUnit: `EstadoGlobal`, `PerfilUsuario`, `ReinicioCuenta`, `LocationAccountLedger`, `Vm/Vpn` | #48 · F1 | Protege código que ya funciona antes de tocarlo | Paso 1 |
 | 4 | DT-07, DT-08, DT-09 | #48 | Cobertura y robustez de OTA y descubrimiento; coste bajo | Paso 1 |
@@ -784,7 +839,8 @@ El orden no es preferencia: cada paso deja verde al anterior.
 | 7 | Suite Godot headless versionada en `src/tests/godot/` | #48 · DT-05 | Hoy no es ejecutable desde este árbol | Paso 1 |
 | 8 | Métrica de huella y pipeline reproducible | #15 · D3 | Sólo tiene sentido con el CI ya estable | Paso 1 |
 | 9 | Refactor testable de `WebNodoService` | #48 · DT-12…DT-16 | Elimina el estado estático que ensucia las pruebas | Paso 3 |
-| 10 | SMTPLC (D5 y D8 primero) | #26 | Bloqueado por decisión de producto | D5 y D8 |
+| 10 | Unificación U0–U4 de los merges #55–#63 | #65 | Absorbe el endurecimiento de los colaboradores sobre el árbol ya blindado | Paso 0 |
+| 11 | SMTPLC (D5 y D8 primero) | #26 | Bloqueado por decisión de producto | D5 y D8 |
 
 ### 15.3 Protocolo de trabajo (para no dispersarse)
 
@@ -794,6 +850,7 @@ El orden no es preferencia: cada paso deja verde al anterior.
 4. **Nada se rompe en silencio:** antes de cada commit, `dotnet test`, `pytest` y los selftests deben seguir en verde. El visor actual (`VSC#/bin/publish_v2.7.6/`) y el de Linux (`VSC#/VisorLinux/`) son intocables.
 5. **Alcance:** sólo `VersionDe_sesion/CONTRRF/TLLDCD/src`; PRY no se toca.
 6. **Cierre de sesión:** actualizar el panel §15.1 y añadir la entrada correspondiente en §13.
+7. **Puerta de seguridad (R-01):** antes de cualquier fusión o absorción de código de los colaboradores, y antes de importar nada desde `PRY/`, ejecutar `python -m STM_HRTS.STM_DEF escanear` sobre `src/`. **Nunca** se ejecuta el código sospechoso para «probarlo»: la evidencia es estática. Un hallazgo ALTA detiene la fusión hasta resolverse.
 
 ### 15.4 Verificación en un comando (estado actual)
 
@@ -809,6 +866,11 @@ dotnet run --project Visor3D.csproj -- --startup-selftest
 dotnet run --project Visor3D.csproj -- --webnodo-selftest
 cd ..
 python -m pytest tests/ -c STM_HRTS/utils/add_utils/pytest.ini
+# --- puerta de seguridad H7 (código dañino implantado) ---
+python -m STM_HRTS.STM_DEF estado                                   # IOCs y estado del blindaje
+python -m STM_HRTS.STM_DEF escanear                                 # esperado: sin hallazgos en src/
+python -m STM_HRTS.STM_DEF blindar                                  # plan de sinkhole + firewall (sin aplicar)
+python -m pytest tests/test_stm_def.py -c STM_HRTS/utils/add_utils/pytest.ini   # esperado: 17 passed
 ```
 
 ### 15.5 Huecos detectados en esta revisión (corregidos o pendientes)
@@ -817,3 +879,122 @@ python -m pytest tests/ -c STM_HRTS/utils/add_utils/pytest.ini
 - `STM_HRTS/utils/json/` **no tiene `issue48.json`** (sí #1, #15, #16, #26, #38, #45): añadirlo para que la carpeta refleje el paraguas vigente.
 - `ci.yml` apunta a `-c STM_HRTS/pytest.ini` (**ruta inexistente**: la real es `STM_HRTS/utils/add_utils/pytest.ini`) y su suite Python no es estricta (`continue-on-error: true`).
 - Rutas del manifiesto H0 corregidas en §3.2/§7.4/§13.2.
+
+## 16. Código dañino implantado: hallazgo, objetivo y respuesta (H7)
+
+> Esta sección **unifica** en el directorio de construcción el análisis disperso en los dos árboles PRY, el historial de Git y la auditoría fusionada del colaborador. Es la base del hito **H7** (§7.11) y de la checklist §14.8.
+
+### 16.1 Qué es
+
+Un **dropper tipo «EtherHiding»**: un cargador de segunda etapa que obtiene JavaScript sin firmar desde un **punto de entrega encubierto en la cadena de Ethereum** —es decir, el binario/C2 no vive en el repositorio sino en el `input` de una transacción— y lo ejecuta. Coincide, byte a byte en el cargador final, en los tres vectores: es **una sola arma** con tres disparadores. Está clasificado como **código dañino** (no como técnica legítima de actualización ni de Web3) en la auditoría `SECURITY_AUDIT_2026-11-05` (hallazgos **A1-1**, **A5-1**, **A5-2**: Críticos).
+
+### 16.2 Los tres vectores y su evidencia
+
+| Vector | Disparador | Fichero(s) | Estado en el árbol de construcción | Estado en PRY |
+|---|---|---|---|---|
+| **1 (A5-1)** | Abrir el repo en VS Code con tareas automáticas permitidas (tarea `runOn: folderOpen`) | `.vscode/tasks.json`, `.vscode/settings.json`, carga útil disfrazada `…/public/fonts/fa-brand-400.orc` | `.vscode/tasks.json` **limpio**; la raíz `e:\WoldVirtualP2P3D\.vscode\settings.json` **sigue con `task.allowAutomaticTasks: true` y un bloque `runOn: folderOpen`** (fuera de `src/`) | `.orc` presente en `PRY/actualizacion_aeef1149/.../public/fonts/fa-brand-400.orc`; **en cuarentena** en `PRY/actualizacion_cae205a3/.../cuarentena_r01_20261106/` |
+| **2 (A5-2)** | `npm start` en `STM_HRTS/opencode` (`"start": "node init && ./opencode.bat"`) | `STM_HRTS/opencode/init` (34 líneas benignas + **línea 35** con ~31.751 caracteres de JS ofuscado), `opencode/package.json` | `init` **limpio** (34 líneas) | `init` **infectado** en `PRY/actualizacion_aeef1149/src/STM_HRTS/opencode/init` |
+| **3 (A1-1)** | Importar el módulo: `python -m STM_HRTS` (`__main__.py:10` hace `import utils.transport`) | `STM_HRTS/utils/transport.py` (58 líneas, todo en un `try/except: pass` silencioso) | **Ausente** (verificado) | Presente en `PRY/actualizacion_aeef1149/src/STM_HRTS/utils/transport.py` y `PRY/actualizacion_cae205a3/src/STM_DOC/rescate_zona_20261105/duplicados_utils_flat/transport.py` |
+
+**Cadena del vector 3 (`transport.py`, verificado línea a línea):** dirección `0x3b1574417524c11a7403c4b232CAcBb320CceBC6` → `GET https://api.ethplorer.io/getAddressTransactions/<addr>?apiKey=freekey` → elige la primera transacción cuyo `from` sea esa dirección → `eth_getTransactionByHash` contra `https://ethereum.publicnode.com` → `bytes.fromhex(rpc["result"]["input"][2:]).decode()` → escribe un `.js` temporal → `subprocess.run(["node", tmp])` → borra el temporal.
+
+### 16.3 Objetivo del ataque (análisis)
+
+1. **Ejecución de código remoto controlada por un tercero.** El operador que controle esa única dirección de Ethereum decide, en cualquier momento, qué código se ejecuta como el usuario en toda máquina que importe el módulo, abras el editor o arranques `npm start`.
+2. **Persistencia y no trazabilidad.** La carga útil **no está** en el repositorio: no está fijada, ni firmada, ni con hash. Los fallos se tragan (`except Exception: pass`), de modo que no deja rastro visible —solo solicitudes de red salientes.
+3. **Superficie de víctimas de alto valor.** Se dispara en el **momento del desarrollo** (abrir el repo, arrancar la consola o la IA local), en máquinas que por diseño albergan credenciales de Git, tokens y las herramientas locales de LLM del proyecto.
+4. **Patrón deliberado, no accidente.** Dos cargas útiles ofuscadas independientes (ofuscador estilo `obfuscator.io`, con `while(!![])` push/shift, arrays hex y `TextDecoder`), con disparadores programados distintos y **ningún otro** JavaScript del repositorio ofuscado.
+
+### 16.4 Trazabilidad: quién lo introdujo
+
+- `git log`/`git blame` de `transport.py`, `opencode/init` y el `.orc`: los tres entran en el **mismo commit `d510acd`** («feat: add CI workflow, H1/H2/H3 test suites…», **2026-11-01**), con autor **y** committer `Juan Angel Lopez Diaz <102910494+Chicook@users.noreply.github.com>` —la **identidad del propio propietario**, no una rama de colaborador.
+- Los **PR de colaboradores no introducen el código dañino:** `applecat88` (#50–#56) solo añade `*.md`; `CesarChaMal`/PR #47 solo documentación; `hrabanazviking` (#57–#64) es **endurecimiento y la propia auditoría** (Etapa 1 de seguridad + `SECURITY_AUDIT/ROADMAP`). Confirmado con `gh pr list`.
+- **Conclusión honesta:** el vector apunta a **compromiso de una cuenta/máquina de desarrollo o a una suplantación de identidad**, no a un PR malicioso de colaborador. El commit está en el historial y sigue vivo en `DevTraeIA` y `DevAntigravityIDEIA`.
+- **Límite honesto (de la auditoría):** las etapas finales descargadas por el cargador **nunca** se obtuvieron ni ejecutaron; su comportamiento exacto se desconoce por diseño (solo análisis estático).
+
+### 16.5 La respuesta: el subsistema `STM_DEF` (lo contrario del malware)
+
+Cada paso del dropper se invierte en un módulo, con bibliotecas estándar de Python:
+
+| Paso del malware | Acción del ataque | Acción inversa de `STM_DEF` |
+|---|---|---|
+| Obtención del C2 | consulta silenciosa a `ethplorer`/RPC Ethereum | `monitor.py`: vigila las conexiones salientes y marca como **ALTA** cualquier contacto con dominios C2 (índice en `iocs.py`) |
+| Ejecución del JS | `node` sobre un temporal y borrado | `deteccion.py`: **detecta** el patrón (`bytes.fromhex`, `eth_getTransactionByHash`, ejecución de `node`, `_0x…`, `TextDecoder`) sin ejecutar nada |
+| Camuflaje (`.orc`, `init`, tarea oculta) | nombres y ofuscación para pasar desapercibido | `deteccion.py`: `js.camuflaje`, `js.nombre_camuflaje`, `cmd.nodeinit`; regla de seguridad §15.3.7 (nunca ejecutar lo sospechoso) |
+| Persistencia invisible | sin rastro, sin verificación | `integridad.py`: **sello SHA-256 + firma HMAC-SHA256** de ficheros críticos; cualquier cambio silencioso se delata |
+| Canal C2 abierto | conexión saliente al punto de entrega | `blindaje.py`: **corta el canal** (sinkhole DNS en `hosts` + reglas `netsh advfirewall`), **simulado por defecto** y **reversible**, conservando `hosts.stmdef.bak` |
+| Facilidad de destrucción | `os.unlink` del temporal | `STM_DEF` **nunca borra**: conserva evidencia |
+| — | (orquestación) | `motor.py` (`MotorDefensa`) reúne escanear + vigilar + sellar + blindar e informa con veredicto LIMPIO/BAJA/MEDIA/ALTA |
+
+- **Ubicación:** `STM_HRTS/STM_DEF/` (`__init__`, `modelos`, `iocs`, `deteccion`, `historial`, `monitor`, `integridad`, `blindaje`, `cuarentena`, `motor`, `arranque`, `servicio`, `firma_release`, `__main__`).
+- **Consola:** `python -m STM_HRTS.STM_DEF {iocs|escanear|historial|vigilar|blindar|sellar|integridad|cuarentena|puerta|arranque|servicio|firma|estado|informe}`.
+- **IOCs vigilados:** dirección C2 `0x3b15…c6`; dominios `ethplorer.io`, `api.ethplorer.io`, `ethereum.publicnode.com`; sufijos RPC (`*.publicnode.com`, `*.llamarpc.com`, `*.drpc.org`, `*.ankle…`/`*.ankr.com`, `*.infura.io`, `*.alchemyapi.io`…); puertos `8545/8546`; nombres de camuflaje `init`, `transport.py`, `fa-brand-400.orc`; extensión anómala `.orc`. Ampliable con `iocs_extra.txt`.
+- **Verificación:** 52/52 en `tests/test_stm_def.py` (**sin** *skipped*: la firma Ed25519 funciona con `cryptography` o, si falta, con el respaldo puro RFC 8032 autocontenido en `firma_release.py`); `STM_DEF estado` operativo.
+
+### 16.6 Qué queda por hacer (resumen operativo)
+
+1. ✅ **Verificar el árbol de construcción** (2026-11-06): `python -m STM_HRTS.STM_DEF escanear` → 0 hallazgos / LIMPIO, tras resolver el falso positivo con `rutas_ignoradas.txt` (ver §17.3.1).
+2. **Retirar el vector de la raíz** (`e:\WoldVirtualP2P3D\.vscode\settings.json`: `task.allowAutomaticTasks` + bloque `runOn: folderOpen`), **solo con autorización explícita** (está fuera de `src/`).
+3. **Registrar la decisión D9** (cuarentenar vs. borrar vs. restaurar; y quién anuncia el posible compromiso de las máquinas expuestas).
+4. **Publicar la nota de incidente** en los issues **#66** (R-01 abierto) y **#65**.
+5. **Auditar la procedencia de la carpeta `opencode/`** y revisar qué máquinas pudieron ejecutar los disparadores.
+6. **Tras R-01:** absorber los merges de endurecimiento #57–#63 (unificación U0–U4, issue #65) **pasando primero la puerta de seguridad** §15.3.7.
+
+**Pendiente que no debe asumirse como hecho:** la desofuscación de las dos cargas útiles y el vaciado de la transacción de Ethereum deben hacerse **en una sandbox aislada, sin credenciales y sin red de retorno**; hasta entonces, la intención final permanece **no verificada**.
+
+## 17. Hoja de ruta del blindaje permanente (post-R-01 / H7)
+
+> Convierte el hallazgo de la §16 en un plan ejecutable por fases. **Principio rector:** por cada paso del atacante, una defensa que haga exactamente lo contrario. El objetivo a largo plazo no es sólo retirar este dropper, sino que el sistema sea **estructuralmente incapaz** de cumplir el objetivo del código dañino descrito en la §16.3 — es decir, `STM_DEF` no «convive» con el malware: lo **invierte** y lo deja sin superficie.
+
+### 17.1 El objetivo, invertido (matriz de defensa)
+
+| Objetivo del malware (§16.3) | Objetivo inverso del sistema (lo que DEBE hacer) | Fase |
+|---|---|---|
+| **Ejecución remota controlada por un tercero** (payload en el `input` de una transacción Ethereum) | Nada se ejecuta sin firma/hash verificado; el canal C2 se corta (sinkhole DNS + firewall de salida) y cualquier contacto se marca **ALTA** | 0 · 1 · 3 |
+| **Persistencia y no trazabilidad** (fallos tragados, payload sin hash en el repo) | Todo cambio en ficheros críticos queda **delatado** por el sello HMAC; **toda evidencia se conserva** (nunca `os.unlink`) | 1 · 4 |
+| **Superficie de víctimas de alto valor** (máquinas de desarrollo con tokens de Git y credenciales) | Entorno de desarrollo blindado: firma de commits, 2FA, rotación de credenciales y auditoría de máquinas expuestas | 0 · 4 |
+| **Disparadores automáticos** (`runOn: folderOpen`, `npm start`, `import utils.transport`) | Ningún disparador automático ejecuta código no confiable; los patrones de disparo son a su vez **indicadores vigilados** | 0 · 2 |
+| **Camuflaje** (extensión `.orc`, nombre `init`, JS ofuscado) | El camuflaje se detecta por forma (extensión anómala, entropía, identificadores `_0x…`), no por nombre | 1 |
+
+### 17.2 Fase 0 — Contención (bloqueo crítico; R-01 / H7)
+
+Estado verificado (2026-11-06): el árbol de construcción `CONTRRF/TLLDCD/src` **no contiene** ninguno de los tres vectores — `transport.py` ausente, `fa-brand-400.orc` ausente, `opencode/init` ausente, y `package.json` ya no contiene `node init && …` (`"start": "./opencode.bat"`). Se confirma que **los PR de colaboradores no introdujeron el código dañino**: #50–#56 y #47 sólo añaden documentación; #57–#63 tocan exclusivamente `PRY/actualizacion_aeef1149/…` con endurecimiento; #64 es la propia auditoría. El vector real es el commit directo **`d510acd`** con la identidad del propietario.
+
+- [ ] **R-01.a** — Verificar el árbol y anexar la salida de `python -m STM_HRTS.STM_DEF escanear` como evidencia (requiere resolver antes el falso positivo de 17.3.1).
+- [ ] **R-01.b** — Retirar el **vector 1 vivo en la raíz**: `e:\WoldVirtualP2P3D\.vscode\settings.json` conserva `"task.allowAutomaticTasks": true` y un bloque `"runOn": "folderOpen"`. **Fuera de `src/`: sólo con autorización explícita (R6 / §15.3.5).**
+- [ ] **R-01.c** — Registrar la decisión **D9** (cuarentenar / borrar / restaurar) y decidir quién anuncia el posible compromiso.
+- [ ] **R-01.d** — Publicar la nota de incidente en **#66** y **#65**.
+- [ ] **R-01.e** — Auditoría de máquinas expuestas: cualquiera que abriera el repo en VS Code, ejecutara `npm start` en `STM_HRTS/opencode` o `python -m STM_HRTS` debe tratarse como comprometida → rotar tokens de Git, claves SSH y credenciales locales (coherente con **D6**).
+- [ ] **R-01.f** — Cuarentenar (no borrar) los vectores de `PRY/` y su sello; conservar como evidencia forense.
+
+### 17.3 Fase 1 — Endurecer `STM_DEF` (cerrar los defectos del propio escudo)
+
+1. ✅ **Allowlist del auto-escaneo (resuelto 2026-11-06).** `deteccion.escanear_arbol` sólo se autoexcluía a sí mismo (`STM_DEF_DIR`), por lo que el barrido de `src/` devolvía **22 hallazgos ALTA** —13 en `tests/test_stm_def.py` (fixtures con los IOC) y 9 en `README_DESARROLLO.md` (documentación del ataque)— y el criterio de salida de H7 (§14.8) no podía pasar. Ahora respeta la allowlist `STM_DEF/rutas_ignoradas.txt` (rutas relativas a `src/`); por precaución, el código ejecutable **sólo** puede silenciarse si vive dentro de `tests/`. Resultado: `escanear` → **0 hallazgos / LIMPIO (exit 0)**, con +3 pruebas (20/20).
+2. ✅ **Escaneo del historial Git (resuelto 2026-11-06).** El código dañino vive en el historial (`d510acd`); `escanear_arbol` no lo ve. Nuevo módulo `STM_HRTS/STM_DEF/historial.py` + orden `python -m STM_HRTS.STM_DEF historial`: usa el *pickaxe* `git log -S` sobre los literales del dropper y el *pathspec* sobre los ficheros de camuflaje, y degrada con elegancia si no hay `git` o repositorio. Verificado contra el repo real: localiza `d510acd` (2026-11-01) entre las introducciones (41 hallazgos / ALTA), incluyendo las trazas en documentación.
+3. ✅ **Integrar `STM_DEF` en CI como paso bloqueante (resuelto 2026-11-06, contenido en `STM_DEF`).** La orden `python -m STM_HRTS.STM_DEF puerta` reúne en un solo punto las comprobaciones que un paso de CI debe exigir —escaneo (bloquea con hallazgo **ALTA**), integridad del sello (bloquea si la firma fue manipulada o el árbol cambió respecto al sello) y cuarentena (bloquea si alguna copia fue alterada o falta)— con salida *fail-closed* (**exit 1** si bloquea, **0** si la puerta abre). El sello **ausente no bloquea** (no puede exigirse sin uno previo) y el historial Git **no** entra en la puerta porque el vector `d510acd` vive en el historial y haría fallar siempre. Para que **todo quede en el mismo directorio**, la plantilla del workflow reutilizable vive en `STM_HRTS/STM_DEF/.github/workflows/stm_def.yml` (`on: workflow_call`): ejecuta la suite del subsistema y la puerta. Al activarlo, el workflow externo solo necesita una línea (`uses: ./.github/workflows/stm_def.yml`), de modo que toda la defensa (código, pruebas y CI) permanece autocontenida en `STM_DEF`. Verificado: `puerta` sobre `src/` → **ABIERTA (exit 0)**; YAML validado; +4 pruebas (36/36).
+4. ✅ **Detección de payloads desconocidos (resuelto 2026-11-06).** Además de las firmas, `deteccion.analizar_entropia` mide la **forma** del código para marcar cargas empaquetadas u ofuscadas **nunca vistas**, sin depender de literales: entropía de Shannon ≥ 6,0 b/c sobre ≥ 1.500 caracteres legibles → **ALTA**; una única línea ≥ 800 con ≥ 35 % de símbolos → **MEDIA** (siempre sobre texto imprimible; los binarios se descartan). Se integra en `analizar_fichero`, de modo que el barrido la aplica sin llamadas extra. Resultado: `escanear` sigue **0 hallazgos / LIMPIO (exit 0)** en el taller real (sin falsos positivos), con +4 pruebas (28/28).
+5. ✅ **Cuarentena y evidencia dentro de `src/` (resuelto 2026-11-06).** Nuevo módulo `STM_HRTS/STM_DEF/cuarentena.py` + orden `python -m STM_HRTS.STM_DEF cuarentena {--ruta <f> [--motivo M] | --listar | --verificar}`. **Copia** la muestra bajo un nombre derivado de su SHA-256 y anota el registro en un **manifiesto firmado con HMAC** (`STM_DEF/cuarentena/manifiesto.json`); **nunca** borra ni mueve el original (lo contrario de `os.unlink`), evita duplicados por hash y delata cualquier manipulación de la copia o del propio manifiesto. La carpeta lleva su `.gitignore` propio para que **ninguna muestra entre jamás en el repositorio**. Alineado con 17.2.f pero ejecutable desde el taller. Resultado: `cuarentena --verificar` → **0 muestras / INTACTA**, con +4 pruebas (32/32).
+
+### 17.4 Fase 2 — Defensa en el producto (runtime)
+
+1. ✅ **Hook de arranque fail-closed (resuelto 2026-11-06).** Nuevo módulo `STM_HRTS/STM_DEF/arranque.py` + orden `python -m STM_HRTS.STM_DEF arranque [rutas…]`: reúne `escanear` + `integridad` **antes** de arrancar y decide *fail-closed* (**exit 1** si bloquea, **0** si permite). Bloquea con cualquier hallazgo **ALTA** o si el sello tiene firma manipulada o el árbol cambió respecto al sello; el sello **ausente no bloquea** (criterio único compartido con la puerta, extraído a `integridad.bloqueos_sello()` para no duplicar la decisión entre CI y runtime). La función `arranque.bloquea()`/`arranque.arranque_seguro()` es reutilizable. **Enganches conectados:** (a) en el punto de entrada de `STM_HRTS` (`STM_PY/__main__.py`) se llama a `arranque.bloquea()` antes de delegar en el motor de consola; (b) en el visor (`VSC#`) el nuevo servicio `Seguridad/ArranqueSeguro.cs` corre el hook (`python -m STM_HRTS.STM_DEF arranque`) en `App.OnStartup` **antes** de abrir la ventana y detiene el arranque si el veredicto es de bloqueo, *fail-open* (no bloquea, sólo registra) cuando el árbol Python o el intérprete no están presentes en una release publicada. Verificado: `arranque` sobre `src/` → **PERMITIDO (exit 0)**; `VSC#` compila; +4 pruebas.
+2. ✅ **Política anti auto-ejecución (resuelto 2026-11-06).** `runOn`/`allowAutomaticTasks` son ahora **indicadores vigilados** en `iocs.PATRONES`: `auto.allowautomatic` (`allowAutomaticTasks: true`) y `auto.runon` (`"runOn": "folderOpen"`). Viven en `PATRONES` —no en `PATRONES_COMANDO`— porque delatan el mecanismo del **vector 1** en cualquier fichero JSON (`settings.json`/`tasks.json`) del árbol, no en una línea de comandos: así el disparador automático se delata por sí solo. Verificado: `escanear` sigue **0 hallazgos / LIMPIO** en el taller real (sin falsos positivos); +4 pruebas.
+3. ✅ **Vigilancia continua de salida (resuelto 2026-11-06).** Nuevo módulo `STM_HRTS/STM_DEF/servicio.py` (`ServicioVigilancia`) + orden `python -m STM_HRTS.STM_DEF servicio [--ciclos N] [--intervalo S] [--resolver]`: convierte el `monitor` (pasada puntual) en **servicio periódico** reutilizando `monitor.revisar`/`procesos_con_c2`, con hilo *daemon* (`iniciar`/`detener`), ejecución acotada (`--ciclos N`) o continua (`--ciclos 0`), y **callback** por alerta para que el visor pueda reaccionar. Verificado: el servicio emite alerta ante una conexión C2 inyectada; +3 pruebas.
+4. ✅ **Firma en la cadena de release (resuelto 2026-11-06).** Nuevo módulo `STM_HRTS/STM_DEF/firma_release.py` + orden `python -m STM_HRTS.STM_DEF firma {--binario/--firma/--clave | --generar}`: añade **firma asimétrica Ed25519** al binario, para que el update OTA no sea el siguiente vector de suplantación (W-01 ya tocó el esquema `release.json`). **Autocontenido:** usa `cryptography` si está disponible y, si no, una implementación de referencia **RFC 8032** en Python puro incluida en el propio módulo (validada contra el *vector 1* del estándar), por lo que firma y verificación funcionan sin instalar nada y `verificar_fichero()` ya no devuelve `None`. El verificador vive en `STM_DEF`; su integración efectiva en el pipeline OTA (`WebNodoService`/`UpdateChecker`) es un paso aparte, fuera de `STM_DEF`. +5 pruebas (sin *skipped*).
+
+### 17.5 Fase 3 — Blindaje de red permanente
+
+1. Aplicar **sinkhole + firewall** (ya implementados, reversibles) con privilegios de administrador en el entorno de desarrollo; conservar `hosts.stmdef.bak`.
+2. **Límite honesto:** `hosts` no cubre **DNS-over-HTTPS**. Añadir vigilancia de resolutores DoH y de conexiones directas por IP a la familia RPC (`*.publicnode.com`, `*.llamarpc.com`, `*.infura.io`…).
+3. **Re-resolución periódica**: las IP de los RPC cambian; re-resolver y re-aplicar reglas por intervalo (≥ 5 min, coherente con el refresco de `WebNodoService`).
+
+### 17.6 Fase 4 — Gobernanza a largo plazo
+
+1. **Firma de commits obligatoria** (GPG/SSH) + protección de rama: el vector fue **suplantación de identidad**, no un PR malicioso; sin firma, cualquiera puede reescribir el historial.
+2. **Rotación y 2FA** de tokens de Git, claves SSH y cuentas de desarrollo; revisar `opencode` (lockfile) y dependencias npm.
+3. **SBOM + lockfiles** verificados en CI (deuda ligada a #15/H5).
+4. **Informe programado**: ejecutar periódicamente `python -m STM_HRTS.STM_DEF informe --json` y archivar la evidencia firmada.
+5. **Sandbox de desofuscación** (pendiente explícita, §16.6): abrir las cargas en una máquina sin credenciales y sin red de retorno para cerrar la intención real del ataque.
+
+**Criterio de éxito a largo plazo:** ningún disparador automático ejecuta código no confiable; todo cambio en ficheros críticos queda delatado; el canal C2 está cortado y vigilado; y la cadena de release exige firma. En ese estado, el objetivo del código dañino de la §16.3 es **imposible de cumplir**, que es precisamente la inversión buscada.
+
