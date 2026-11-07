@@ -33,7 +33,8 @@ except ImportError:  # ejecución directa fuera del paquete
 
 #: Carpeta de registro del sistema (queda vacía tras publicar).
 DIR_REGISTRO = MODULO_DIR / "stm_registro_json"
-RUTA_JSON = DIR_REGISTRO / "envios.json"
+#: El registro de envíos vive en el espejo STM_RFC (viaja con la herramienta).
+RUTA_JSON = DIR_REGISTRO / "STM_RFC" / "envios.json"
 RUTA_MD = DIR_REGISTRO / "registro.md"
 RUTA_PESOS = DIR_REGISTRO / "registro_pesos.json"
 

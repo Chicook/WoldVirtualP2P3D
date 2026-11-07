@@ -41,7 +41,7 @@ Las 7 impresiones de cajas/paneles Unicode (`_caja/_panel`) usan
 
 ### 1.4 Publicación del registro al actualizar
 
-`stm_registro_json/envios.json` → `registro.md` en lenguaje natural
+`stm_registro_json/STM_RFC/envios.json` → `registro.md` en lenguaje natural
 → borrado del json → pesos neuronales v2 (vector global 64 + vector por
 sección + cuantizado int8) → subida IPFS en 4 niveles
 (IPFSManager → API `127.0.0.1:5001` → `ipfs.exe` del sistema → CID

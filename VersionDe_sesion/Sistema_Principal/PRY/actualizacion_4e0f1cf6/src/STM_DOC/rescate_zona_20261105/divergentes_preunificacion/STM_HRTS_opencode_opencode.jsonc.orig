@@ -1,0 +1,122 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1"
+      },
+      "models": {
+        "wvp-opencode": {
+          "name": "Qwen 3.5 32k ctx (alias local)",
+          "tool_call": true,
+          "reasoning": true
+        },
+        "qwen3.5:latest": {
+          "name": "Qwen 3.5 (Ollama)",
+          "tool_call": true,
+          "reasoning": true
+        },
+        "qwen3:1.7b": { "name": "Qwen 3 1.7B (Ollama)" },
+        "qwen2.5-coder:7b": { "name": "Qwen2.5 Coder 7B (Ollama)" },
+        "qwen2.5-coder:3b": { "name": "Qwen2.5 Coder 3B (Ollama)" },
+        "qwen2.5:7b": { "name": "Qwen2.5 7B (Ollama)" },
+        "llama3.1:latest": { "name": "Llama 3.1 (Ollama)" },
+        "cogito:3b": { "name": "Cogito 3B (Ollama)" },
+        "gemma2:2b": { "name": "Gemma 2 2B (Ollama)" },
+        "llama3.2:1b": { "name": "Llama 3.2 1B (Ollama)" },
+        "qwen2-math:1.5b": { "name": "Qwen 2 Math 1.5B (Ollama)" },
+        "qwen2.5-coder:latest": { "name": "Qwen 2.5 Coder Latest (Ollama)" }
+      }
+    },
+    "lmstudio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LM Studio",
+      "options": {
+        "baseURL": "http://localhost:1234/v1"
+      },
+      "models": {
+        "qwen/qwen3.5-9b": { "name": "Qwen 3.5 9B (LMStudio)" },
+        "qwen/qwen3-4b-2507": { "name": "Qwen 3 4B (LMStudio)" },
+        "mistralai/mistral-7b-instruct-v0.3": { "name": "Mistral 7B (LMStudio)" },
+        "google/gemma-3-4b": { "name": "Gemma 3 4B (LMStudio)" },
+        "ibm/granite-3.2-8b": { "name": "Granite 3.2 8B (LMStudio)" },
+        "nvidia/nemotron-3-nano-4b": { "name": "Nemotron 3 Nano (LMStudio)" }
+      }
+    }
+  },
+  "model": "ollama/wvp-opencode",
+  "small_model": "ollama/wvp-opencode",
+  "agent": {
+    "build": { "model": "ollama/wvp-opencode" },
+    "general": { "model": "ollama/wvp-opencode" },
+    "plan": { "model": "ollama/wvp-opencode" }
+  },
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "lsp": "allow",
+    "skill": "allow",
+    "task": "allow",
+    "todowrite": "allow",
+    "question": "allow",
+    "webfetch": "ask",
+    "websearch": "ask",
+    "external_directory": "ask",
+    "edit": {
+      "*": "allow",
+      "*.env": "deny",
+      ".env.*": "deny",
+      "*.pem": "deny",
+      "*.key": "deny",
+      "*credentials*": "deny",
+      "*secret*": "deny",
+      "node_modules/*": "deny",
+      "opencode.exe": "deny",
+      "*.exe": "deny"
+    },
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "ls*": "allow",
+      "dir*": "allow",
+      "cat*": "allow",
+      "type*": "allow",
+      "head*": "allow",
+      "tail*": "allow",
+      "find*": "allow",
+      "grep*": "allow",
+      "rg*": "allow",
+      "wc*": "allow",
+      "pwd*": "allow",
+      "where*": "allow",
+      "whoami": "allow",
+      "node *": "allow",
+      "npm *": "allow",
+      "npx *": "allow",
+      "curl -s http*11434*": "allow",
+      "rm -rf *": "deny",
+      "rm -fr *": "deny",
+      "rm -r *": "deny",
+      "del *": "deny",
+      "erase *": "deny",
+      "rd /s *": "deny",
+      "rmdir /s *": "deny",
+      "git push*": "deny",
+      "git reset --hard*": "deny",
+      "git clean*": "deny",
+      "git checkout .": "deny",
+      "git restore .": "deny",
+      "shutdown*": "deny",
+      "format *": "deny",
+      "npm publish*": "deny",
+      "npm uninstall*": "deny"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# La cuarentena aloja muestras maliciosas: NUNCA deben entrar en el repositorio.
+# Se conserva solo este fichero para mantener la carpeta en el arbol.
+*
+!.gitignore

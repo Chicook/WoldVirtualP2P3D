@@ -1,0 +1,39 @@
+# EditorConfig — https://editorconfig.org
+# Coherente con .gitattributes (eol por tipo de fichero) y con el estilo
+# existente: 4 espacios en .cs/.py, tabuladores en .gd (convención Godot 4).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Windows-only scripts (ver .gitattributes)
+[*.{bat,cmd,ps1}]
+end_of_line = crlf
+
+# Godot 4: tabuladores (igual que gdscrip/ existente y los .tscn/.tres)
+[*.{gd,tscn,tres,godot,cfg}]
+indent_style = tab
+
+# C# y Python
+[*.{cs,py}]
+indent_style = space
+indent_size = 4
+
+# Markdown: 2 espacios; NO recortar espacios finales (doble espacio = salto de línea)
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# JSON/YAML
+[*.{json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Shell
+[*.sh]
+indent_style = space
+indent_size = 2

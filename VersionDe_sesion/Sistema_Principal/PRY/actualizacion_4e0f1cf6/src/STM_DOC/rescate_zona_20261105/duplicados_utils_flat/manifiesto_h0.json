@@ -1,0 +1,63 @@
+{
+  "version": "H0",
+  "fecha_generacion": "2026-11-01T01:04:57+0100",
+  "src_dir": "E:\\WoldVirtualP2P3D\\VersionDe_sesion\\CONTRRF\\TLLDCD\\src",
+  "arbol": {
+    "ficheros": 5834,
+    "bytes": 1206547985
+  },
+  "artefactos_fijos": [
+    {
+      "rol": "pck_visor",
+      "ruta": "VSC#/wvp3d.pck",
+      "existe": true,
+      "bytes": 114591724,
+      "sha256": "ebeff90c752e4680dbd1f3763b1869643f1980316a44523990ec25fb97ae5e14"
+    },
+    {
+      "rol": "godot_exe_win",
+      "ruta": "VSC#/godot_exe.zip",
+      "existe": true,
+      "bytes": 86155888,
+      "sha256": "ef472613f249c1123f17655417aeade55a628c59994be0c4befd508bb9ca6137"
+    },
+    {
+      "rol": "godot_exe_linux",
+      "ruta": "VSC#/godot_linux.zip",
+      "existe": true,
+      "bytes": 79135021,
+      "sha256": "b75b6f962c3c3638664fab83282fbfe363782defb4be283cb86a4966d99c3605"
+    }
+  ],
+  "binarios_grandes": [
+    {
+      "rol": "binario_windows",
+      "ruta": "STM_HRTS/opencode/node_modules/opencode-ai/bin/opencode.exe",
+      "existe": true,
+      "bytes": 211564424,
+      "sha256": "d7b473388cb62555970e400ce54cdfb6d6573608beea6f8fdf382cd1a698a3fa"
+    },
+    {
+      "rol": "binario_windows",
+      "ruta": "STM_HRTS/opencode/node_modules/opencode-windows-x64/bin/opencode.exe",
+      "existe": true,
+      "bytes": 211564424,
+      "sha256": "d7b473388cb62555970e400ce54cdfb6d6573608beea6f8fdf382cd1a698a3fa"
+    },
+    {
+      "rol": "binario_windows",
+      "ruta": "STM_HRTS/opencode/node_modules/opencode-windows-x64-baseline/bin/opencode.exe",
+      "existe": true,
+      "bytes": 211564424,
+      "sha256": "6f15c8f241f3df22375f174753193a71c488f6c0a6bbbae3f9fa34d112673b7b"
+    },
+    {
+      "rol": "binario_windows",
+      "ruta": "STM_HRTS/opencode/opencode.exe",
+      "existe": true,
+      "bytes": 211564424,
+      "sha256": "d7b473388cb62555970e400ce54cdfb6d6573608beea6f8fdf382cd1a698a3fa"
+    }
+  ],
+  "notas": "Manifiesto de solo lectura. No se modifico codigo ni se ejecutaron pruebas. SHA-256 calculado byte a byte. Criterio H0: con este manifiesto se puede responder 'que cambio?' sin necesidad de preguntar."
+}
