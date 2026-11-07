@@ -455,6 +455,7 @@ la ruta vieja corregida; notas de release movidas de `publish_release_v278.ps1` 
 | F5-03 | Vault a AEAD (`vault_openrouter.py` hoy es XOR sin MAC, con semilla hardcodeada) | M |
 | F5-04 | Lista blanca/apelación o ausencia documentada | M |
 | F5-05 | Huella Wi-Fi con BSSID real | S |
+| F5-06 | Falso positivo de VM en equipos físicos con Hyper-V/VBS/WSL2 (§Anexo E.5) — ✅ **hecho** el 2026-11-07 | S |
 
 ### F6 — LucIA (#16)
 
@@ -980,12 +981,55 @@ Sin parciales: hoy es un único fichero de 926 líneas, no los `WebNodoService.{
 
 `--startup-selftest` y `--red-selftest` fallan en «Portal WebNodo escucha — Controlador no válido». En este entorno de análisis no hay sesión interactiva plena y el error es el que devuelve `HTTP.sys` cuando no está disponible. **Debe re-medirse en un escritorio normal antes de abrir un defecto de producto** (F0-05).
 
+#### E.5 · SMTPLC — falso positivo de VM (incidente real, 2026-11-07)
+
+Un usuario recibió el veto duro del registro: «Entorno Virtualizado No Permitido …
+(Hipervisor de CPU, Microsoft Hyper-V)». **No estaba en una máquina virtual.**
+
+**Causa.** `VmDetector.Analyze()` suma señales hasta 0,50. En un equipo **físico** con
+Hyper-V, VBS o WSL2 activos:
+
+| Señal | Puntos | ¿Prueba de VM? |
+|---|---:|---|
+| `Win32_ComputerSystem.HypervisorPresent = true` (VBS/Hyper-V/WSL2 encienden este flag en hardware real) | +0,25 | **No**, solo corrobora |
+| Adaptador `vEthernet (Default Switch)` / `vEthernet (WSL)`: Windows lo crea por software y le asigna la OUI de Hyper-V `00:15:5D` | +0,50 | **No**, es del anfitrión |
+
+0,25 + 0,50 = 0,75 ≥ 0,50 → `IsVm = true` → `SmtplcSecurityService.cs:54-71` veta el registro y
+`FormularioUsuarioWindow.xaml.cs:90-95` lo muestra. La política viene con
+`BlockVirtualMachines = true` por defecto, así que afecta a **cualquier** usuario con Hyper-V/WSL2/VBS.
+
+Además, tres categorías sumaban **por cada coincidencia** (una por NIC, una por controlador, una por
+proceso), de modo que varias NIC del mismo conmutador inflaban la puntuación por sí solas.
+
+**Corrección aplicada.**
+
+1. `VmDetector.EsAdaptadorNoFisico()` (función pura, pública y testeable): excluye como evidencia los
+   adaptadores que Windows crea por software — `Hyper-V Virtual Ethernet Adapter` / `vEthernet`,
+   `VMware Virtual Ethernet Adapter`, `VirtualBox Host-Only`, `Wintun`/`WireGuard`, `Teredo`, `ISATAP`,
+   loopback y túneles.
+2. El adaptador de un **invitado** de Hyper-V se llama `Microsoft Hyper-V Network Adapter` (sin
+   «Virtual Ethernet») y **sigue contando**: la corrección no abre la puerta a las VM reales.
+3. Una sola puntuación por categoría (NIC, controladores, procesos).
+4. `Hipervisor de CPU` deja de anunciarse como hipervisor detectado por el mero flag: solo se nombra
+   si el veredicto final es VM, para que el mensaje no acuse a un hipervisor que no existe.
+
+**Verificación.** 11 casos en `VSC#/Tests/SmtplcVmPruebas.cs` (xUnit): 5 conmutadores por software
+excluidos, 4 NIC reales/de invitado que sí cuentan, 2 loopback/túnel. Compilado y ejecutado en
+aislamiento con Roslyn: `RESULTADO: OK`, exit 0. **No se ha compilado el proyecto completo** en este
+entorno (el sandbox bloquea `VSC#/obj` y los *named pipes* de MSBuild): hay que pasar
+`dotnet build` + `dotnet test` antes de publicar.
+
+**Pendiente de decisión (D5).** Esta corrección arregla el falso positivo, no el modelo: el bloqueo
+sigue siendo duro y sin recurso. Convertirlo en puntuación con fricción (o en aval) sigue siendo
+decisión de producto.
+
 ### Anexo F · Registro de cambios de este documento
 
 | Fecha | Cambio |
 |---|---|
 | 2026-11-07 | Versión inicial. Medición completa del snapshot `actualizacion_4e0f1cf6`, 8 hallazgos bloqueantes, 8 fases y 48 tareas |
 | 2026-11-07 | **F1-01 y F1-02 ejecutadas** (rama `DevDeepSeekHarnessIA`). Puerta de seguridad en verde: `escanear` 0/LIMPIO, `arranque` PERMITIDO, `puerta` ABIERTA. El visor ya no se autobloquea. Causa exacta de los 37 errores de pytest identificada (sandbox `0700`, no el código) |
+| 2026-11-07 | **F5-06: falso positivo de VM corregido** (incidente real: veto del registro a un usuario en equipo físico con Hyper-V/VBS). `VmDetector.EsAdaptadorNoFisico()`, puntuación única por categoría y `Hipervisor de CPU` solo si el veredicto es VM. 11 casos xUnit; compilado en aislamiento con Roslyn (el sandbox no permite `dotnet build`) |
 
 ---
 
