@@ -659,7 +659,7 @@ Por la política del proyecto (fases L5–L6): el **avatar 3D de LucIA, sus anim
 `VersionDe_sesion/CONTRRF/STM_RFC/` contiene la herramienta interna de flujo de trabajo del autor (documentada en [`STM_RFC/README.md`](VersionDe_sesion/CONTRRF/STM_RFC/README.md)):
 
 - **`STM_RFPRMN/RFPRMN.py`**: punto de entrada de la utilidad de refactorización y sincronización, con los comandos **`enviar`**, **`refactorizar`**, **`actualizar`**, **`ia local`** y **`ds ialocal`**. Aplica un tope de **450 líneas por fichero**: el `RFPRMN.py` original de 1.813 líneas se dividió en los módulos `STM_RFPRMN_stmDL/stm_*.py` (base, análisis, refactor, flujo, gestión, modelos y registro) sin cambiar firmas ni comportamiento.
-- **Flujo `enviar` → RFC → `actualizar`**: produce las instantáneas `PRY/actualizacion_<id>` que dieron nombre al modelo de versionado del [§4](#4-mapa-del-repositorio). Desde el 2026-10-30 el árbol conserva sólo la instantánea vigente (`actualizacion_91883d55`); las anteriores siguen recuperables en el historial de Git.
+- **Flujo `enviar` → RFC → `actualizar`**: produce las instantáneas `PRY/actualizacion_<id>` que dieron nombre al modelo de versionado del [§4](#4-mapa-del-repositorio). Desde el 2026-10-30 el árbol conserva sólo la instantánea vigente (`actualizacion_4e0f1cf6`); las anteriores siguen recuperables en el historial de Git.
 - El taller aislado `TLLDCD/` de las instantáneas antiguas ya no forma parte del árbol actual; su contenido quedó en el historial y en las ramas `respaldo/*`.
 
 *(`CONTRRF`, `STM_RFC`, `STM_RFPRMN` y `RFPRMN` son también siglas sin expandir en el repositorio; su función sí está documentada en el README citado.)*
