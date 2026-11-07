@@ -41,20 +41,17 @@ ALLOWLIST_PATH: Path = Path(__file__).resolve().parent / "rutas_ignoradas.txt"
 #: Rutas que contienen los IOC de forma documental o de prueba (falsos positivos).
 IGNORADOS_POR_DEFECTO: Tuple[str, ...] = (
     "tests/test_stm_def.py",
-    "README_DESARROLLO.md",
 )
 
 #: Extensiones de codigo ejecutable: nunca deberian silenciarse por allowlist.
 EXTENSIONES_EJECUTABLES = frozenset({".py", ".pyw", ".js", ".mjs", ".cjs", ".ps1", ".bat", ".cmd", ".sh"})
 
 
-def rutas_ignoradas() -> Tuple[Path, ...]:
-    """Rutas del taller excluidas del escaneo (fixtures y documentacion).
+def entradas_allowlist() -> Tuple[str, ...]:
+    """Rutas declaradas en la allowlist, tal cual (sin resolver ni validar).
 
-    Lee ``rutas_ignoradas.txt`` (relativa a ``src/``, ``#`` comenta) y suma las
-    de por defecto. Sirve para que el barrido no se delate con sus propias
-    muestras sin renunciar a la deteccion real: por precaucion, el codigo
-    ejecutable solo puede silenciarse si vive dentro de ``tests/`` (fixtures).
+    Suma las de por defecto con las de ``rutas_ignoradas.txt`` (relativas a
+    ``src/``, ``#`` comenta).
     """
     relativas = list(IGNORADOS_POR_DEFECTO)
     if ALLOWLIST_PATH.is_file():
@@ -62,14 +59,52 @@ def rutas_ignoradas() -> Tuple[Path, ...]:
             limpio = linea.split("#", 1)[0].strip()
             if limpio:
                 relativas.append(limpio)
+    return tuple(relativas)
+
+
+def rutas_ignoradas() -> Tuple[Path, ...]:
+    """Rutas del taller excluidas del escaneo (fixtures y documentacion).
+
+    Sirve para que el barrido no se delate con sus propias muestras sin
+    renunciar a la deteccion real: por precaucion, el codigo ejecutable solo
+    puede silenciarse si vive dentro de ``tests/`` (fixtures).
+    """
     rutas: List[Path] = []
-    for relativa in relativas:
+    for relativa in entradas_allowlist():
         candidata = (SRC_DIR / relativa).resolve()
         ejecutable = candidata.suffix.lower() in EXTENSIONES_EJECUTABLES
         if ejecutable and "tests" not in candidata.parts:
             continue  # nunca se silencia codigo ejecutable fuera de pruebas
         rutas.append(candidata)
     return tuple(rutas)
+
+
+def allowlist_obsoleta() -> Tuple[str, ...]:
+    """Entradas de la allowlist que ya no existen en el arbol.
+
+    Una entrada que apunta a una ruta inexistente no protege de nada: si el
+    fichero se movio, el barrido vuelve a delatarse con sus propios IOC. Es lo
+    que ocurrio el 2026-11-07 al mover la documentacion a ``STM_DOC/`` mientras
+    la allowlist seguia nombrando ``README_DESARROLLO.md`` en la raiz de
+    ``src/``: 26 hallazgos ALTA y, por el hook ``arranque``, el visor bloqueado.
+
+    Se denuncia en vez de silenciarse, para que el siguiente movimiento de
+    ficheros lo detecte el CI y no el usuario al abrir el visor.
+    """
+    return tuple(r for r in entradas_allowlist() if not (SRC_DIR / r).exists())
+
+
+def hallazgos_allowlist() -> List[Hallazgo]:
+    """Convierte la allowlist obsoleta en hallazgos MEDIA (bloquean el CI)."""
+    return [
+        Hallazgo(
+            id="config.allowlist_obsoleta",
+            severidad=MEDIA,
+            descripcion="entrada de allowlist que no existe: una ruta movida deja el barrido sin proteccion",
+            origen=str(SRC_DIR / relativa),
+        )
+        for relativa in allowlist_obsoleta()
+    ]
 
 
 #: Extensiones con texto analizable.
@@ -322,7 +357,8 @@ def es_comprometido(hallazgos: List[Hallazgo]) -> bool:
 __all__ = [
     "analizar_texto", "analizar_fichero", "analizar_comando", "escanear_arbol",
     "es_escaneable", "parece_javascript", "resumen", "es_comprometido",
-    "rutas_ignoradas", "entropia_shannon", "ratio_imprimible", "ratio_simbolos",
+    "rutas_ignoradas", "entradas_allowlist", "allowlist_obsoleta",
+    "hallazgos_allowlist", "entropia_shannon", "ratio_imprimible", "ratio_simbolos",
     "linea_mas_larga", "analizar_entropia",
     "LIMITE_BYTES", "DIRS_IGNORADOS", "EXTENSIONES_TEXTO",
     "ALLOWLIST_PATH", "IGNORADOS_POR_DEFECTO", "EXTENSIONES_EJECUTABLES",

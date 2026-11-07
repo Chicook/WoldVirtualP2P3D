@@ -6,5 +6,17 @@
 #
 # Nota de seguridad: esta allowlist reduce la deteccion en esas rutas concretas.
 # Mantenerla corta y revisada; nunca anadir codigo ejecutable (.py/.js/.orc).
+#
+# Toda entrada DEBE existir. Una ruta movida que se queda aqui no protege de
+# nada y el barrido se delata con sus propios IOC: es exactamente lo que paso
+# el 2026-11-07, cuando la documentacion se movio a STM_DOC/ y esta lista siguio
+# apuntando a `README_DESARROLLO.md` en la raiz -> 26 hallazgos ALTA y el visor
+# bloqueado en el arranque. `deteccion.allowlist_obsoleta()` lo denuncia.
 tests/test_stm_def.py
-README_DESARROLLO.md
+README_PLAN_DE_DESARROLLO.md
+STM_DOC/Desarrollo/README_DESARROLLO.md
+STM_DOC/informe_r01b_auditoria_20261106.md
+STM_DOC/procedimiento_R01b_propietario_20261106.md
+STM_DOC/issue_deuda_v2.7.7.md
+STM_DOC/rescate_zona_20261105/cuarentena_r01_20261106/MANIFIESTO.md
+STM_HRTS/utils/add_utils/notas_v278.md

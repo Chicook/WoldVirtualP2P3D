@@ -370,7 +370,40 @@ def test_allowlist_ignora_fixtures_y_documentacion():
 
     permitidas = {p.as_posix() for p in deteccion.rutas_ignoradas()}
     assert (SRC_DIR / "tests" / "test_stm_def.py").as_posix() in permitidas
-    assert (SRC_DIR / "README_DESARROLLO.md").as_posix() in permitidas
+    assert (SRC_DIR / "STM_DOC" / "Desarrollo" / "README_DESARROLLO.md").as_posix() in permitidas
+
+
+def test_allowlist_no_tiene_entradas_obsoletas():
+    """Toda entrada de la allowlist debe apuntar a una ruta que exista.
+
+    Regresion del 2026-11-07: la documentacion se movio a ``STM_DOC/`` y la
+    lista siguio nombrando ``README_DESARROLLO.md`` en la raiz de ``src/``. La
+    entrada no protegia de nada, el barrido se delato con sus propios IOC (26
+    hallazgos ALTA) y, por el hook ``arranque``, el visor no abria.
+    """
+    from STM_HRTS.STM_DEF import deteccion
+
+    assert deteccion.allowlist_obsoleta() == ()
+
+
+def test_allowlist_obsoleta_se_denuncia_como_hallazgo(tmp_path, monkeypatch):
+    """Una entrada que no existe produce un hallazgo MEDIA (bloquea el CI)."""
+    from STM_HRTS.STM_DEF import deteccion
+    from STM_HRTS.STM_DEF.modelos import MEDIA
+
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "existe.py").write_text(MUESTRA_DROPPER, encoding="utf-8")
+    (tmp_path / "lista.txt").write_text("tests/existe.py\ntests/fantasma.py\n", encoding="utf-8")
+
+    monkeypatch.setattr(deteccion, "SRC_DIR", tmp_path)
+    monkeypatch.setattr(deteccion, "IGNORADOS_POR_DEFECTO", ())
+    monkeypatch.setattr(deteccion, "ALLOWLIST_PATH", tmp_path / "lista.txt")
+
+    assert deteccion.allowlist_obsoleta() == ("tests/fantasma.py",)
+    hallazgos = deteccion.hallazgos_allowlist()
+    assert [h.id for h in hallazgos] == ["config.allowlist_obsoleta"]
+    assert hallazgos[0].severidad == MEDIA
+    assert Path(hallazgos[0].origen) == tmp_path / "tests" / "fantasma.py"
 
 
 def test_allowlist_no_silencia_codigo_ejecutable_fuera_de_tests(tmp_path, monkeypatch):
