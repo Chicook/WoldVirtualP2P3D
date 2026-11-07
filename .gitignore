@@ -188,6 +188,8 @@ venv/
 # 12. NODE / WEB
 # ──────────────────────────────────────────────────────────────────────────
 node_modules/
+.env
+.env.*
 !.env.example
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -196,6 +198,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 .idea/
+.vscode/
 *.swp
 desktop.ini
 
@@ -254,8 +257,6 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 # Restos de herramientas de despliegue externas
 .vercel/
 
-<<<<<<< HEAD
-=======
 # ──────────────────────────────────────────────────────────────────────────
 # 18. R-01 — EVIDENCIA DE LA CUARENTENA (bytes plantados: locales, nunca en Git)
 #     El MANIFIESTO.md y los informes de STM_DOC sí se versionan; las cargas no.
@@ -273,5 +274,4 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 **/STM_HRTS/utils/transport.py
 **/STM_HRTS/opencode/init
 
->>>>>>> c408a1727e2307f6ab250ccefe56ac294c179b00
 config.bat
