@@ -7,9 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>woldvirtual-linux</AssemblyName>
     <RootNamespace>Visor3D.Linux</RootNamespace>
-    <Version>2.7.8</Version>
+    <Version>2.7.9</Version>
     <AssemblyTitle>Wold Virtual P2P 3D — visor Linux</AssemblyTitle>
-    <Description>Visor adaptado para Linux v2.7.8: cuenta local, portal WebNodo con tunel P2P, invitacion, chat de texto, amigos, lanzamiento del motor Godot y comprobacion de actualizaciones. Incluye el subsistema defensivo STM_DEF (escaneo estatico, historial Git, integridad HMAC, cuarentena firmada, arranque fail-closed, servicio de vigilancia y firma Ed25519).</Description>
+    <Description>Visor adaptado para Linux v2.7.9: cuenta local, portal WebNodo con tunel P2P, invitacion, chat de texto, amigos, lanzamiento del motor Godot y comprobacion de actualizaciones. Incluye el subsistema defensivo STM_DEF (escaneo estatico, historial Git, integridad HMAC, cuarentena firmada, arranque fail-closed, servicio de vigilancia y firma Ed25519).</Description>
   </PropertyGroup>
 
   <ItemGroup>
