@@ -1,14 +1,15 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.7.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.8.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
 Cierra los issues **#80** y **#81**, corrige el fallo de descarga de modelos,
 resuelve las fases R1–R6 de la discusión #84, añade el **puente LucIA ↔ red
 neuronal** (embeddings reales y semilla con código real), deja la deuda
-P1/P2/P4 resuelta y suma el **subsistema seq2seq**, que genera en vez de solo
-evaluar.
+P1/P2/P4 resuelta, suma el **subsistema seq2seq** y el comando
+**`crear codigo`**, que escribe un archivo nuevo a partir de un diagnóstico de
+LucIA.
 
 ## 1. Lo implementado
 
@@ -35,7 +36,8 @@ evaluar.
 | `stm_modelos.py` | 428 | Política de modelos (ligero primero) y ciclo de vida |
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
 | `stm_openrouter.py` | 193 | Respaldo OpenRouter (desactivado por defecto) |
-| `stm_refactor.py` | 337 | Fragmentos + validación + `comando_ds_ialocal` |
+| `stm_refactor.py` | 350 | Fragmentos + validación + `comando_ds_ialocal` |
+| `stm_creacion.py` | 213 | **Nuevo**: comando `crear codigo` (diagnóstico → archivo nuevo) |
 | `stm_flujo.py` | 444 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
 | `stm_registro.py` | 194 | Publicación del registro y limpieza |
 | `stm_pesos.py` | 137 | Vectorización, cuantización y verificación |
@@ -160,14 +162,42 @@ python RFPRMN.py --seq2seq     # pares memorizados, umbral y ruta
 La memoria vive en `STM_RFPRMN/.modelos/seq2seq.json` y el umbral se ajusta con
 `RFPRMN_SEQ2SEQ_UMBRAL`.
 
-### 1.9 Registro e IPFS
+### 1.9 Crear código desde un diagnóstico (`crear codigo`)
+
+El otro sentido del ciclo: en vez de refactorizar lo que existe, se crea un
+archivo nuevo a partir de una **descripción en lenguaje natural**.
+
+```bash
+python RFPRMN.py            # y dentro:  crear codigo
+```
+
+Pide ruta, qué debe hacer y lenguaje; después:
+
+1. **Diagnóstico de creación**: LucIA (modelo local) propone responsabilidades,
+   API pública, entradas/salidas, errores y criterios de aceptación. Si el
+   modelo no responde, hay un plan de respaldo determinista.
+2. Se muestra el plan y se pide confirmación.
+3. **Generación** del archivo completo con el plan como contexto (mismo
+   vigilante de CPU y política de modelo ligero que el refactor).
+4. **Validación**: no vacío, tope de líneas y sintaxis (AST en Python). Si no
+   pasa, **no se escribe nada**.
+5. **Escritura atómica** y aprendizaje del par (descripción → código) para el
+   `seq2seq`.
+
+También sin interacción:
+
+```bash
+python RFPRMN.py --comando "crear codigo"
+```
+
+### 1.10 Registro e IPFS
 
 `envios.json` → `registro.md` → pesos (`stm_pesos`) → IPFS en cuatro niveles
 (`stm_ipfs`) → limpieza. **P1 resuelta**: un CID sintético del shim
 (`QmLocal…` con `ok=False`) ya **no** cuenta como subida; el flujo baja a la
 API, al binario y, si no hay nada, a un CID local honesto.
 
-### 1.10 Registro de símbolos por AST (D4) y consola
+### 1.11 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
@@ -179,7 +209,7 @@ Todas las salidas toleran consolas cp1252.
 
 ## 2. Pruebas y CI
 
-**160 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
+**186 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
 
 ```bash
 cd VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN
@@ -201,6 +231,7 @@ python -m pytest tests -q -p no:cacheprovider
 | `test_embeddings.py` | Detección, endpoints, caché, contracción |
 | `test_corpus.py` | Semilla con código real y muestra negativa |
 | `test_seq2seq.py` | Tokenizador, vectorizador, memoria, generador, neurona y puente |
+| `test_creacion.py` | `crear codigo`: extensión, plan, validación y escritura |
 | `test_ipfs.py` | P1: el shim no cuenta como subida |
 
 **CI**: `.github/workflows/rfprmn-tests.yml` ejecuta lint crítico, presupuesto,

@@ -29,21 +29,27 @@ from .stm_modelos import (  # noqa: F401
 from .stm_openrouter import describir_estado, habilitado as openrouter_habilitado
 
 
+#: Prompt por defecto al refactorizar un fragmento.
+SISTEMA_REFACTOR = (
+    "Eres LucIA. Refactoriza el fragmento SIN cambiar su comportamiento "
+    "ni los nombres de funciones, clases o métodos públicos: documenta, "
+    "elimina duplicados y aclara dentro del cuerpo. "
+    "Responde SOLO con código, sin explicaciones ni cercas.")
+
+
 def _generar_fragmento(endpoint: str, modelo: str, nombre_archivo: str,
                        fragmento: str, num: int, total: int,
-                       timeout_primer_token: int, contexto: str = "") -> str:
-    """Refactoriza UN fragmento (~60 líneas) con el modelo local en stream.
+                       timeout_primer_token: int, contexto: str = "",
+                       sistema: str = "") -> str:
+    """Genera un fragmento con el modelo local en stream.
 
     ``contexto`` lleva el expediente de LucIA (descripción funcional y deuda
-    técnica del archivo) para que el modelo sepa qué está tocando.
+    técnica del archivo) y ``sistema`` permite cambiar el rol del modelo (por
+    ejemplo, crear código nuevo en vez de refactorizar).
     """
     import threading as _th, time as _tm
     carga = {"model": modelo, "messages": [
-        {"role": "system", "content": (
-            "Eres LucIA. Refactoriza el fragmento SIN cambiar su comportamiento "
-            "ni los nombres de funciones, clases o métodos públicos: documenta, "
-            "elimina duplicados y aclara dentro del cuerpo. "
-            "Responde SOLO con código, sin explicaciones ni cercas.")},
+        {"role": "system", "content": sistema or SISTEMA_REFACTOR},
         {"role": "user", "content": (f"Archivo: {nombre_archivo} (parte {num}/{total})\n"
                                      f"{contexto}{fragmento}")}],
         "stream": True, "keep_alive": "10m",

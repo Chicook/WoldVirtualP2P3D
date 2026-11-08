@@ -8,10 +8,9 @@ Un único ``ejecutar()`` orquesta las fases [1/5]…[5/5] con estas garantías:
 - **Solape real**: cada fragmento recibe como contexto la cola del fragmento
   *original* anterior y el ensamblado elimina la repetición.
 - **Sin truncamiento silencioso**: si el resultado excede el tope se rechaza
-  con ``ErrorProyecto`` y el archivo original queda intacto.
+  con ``ErrorProyecto`` y el original queda intacto.
 - **Rotación y validación**: los modelos fallidos se excluyen (sin borrarlos
-  salvo ``--consumir-modelos``), la limpieza de pesos está garantizada y LucIA
-  valida el candidato con su red neuronal antes de escribir.
+  salvo ``--consumir-modelos``) y LucIA valida el candidato con su red.
 """
 from __future__ import annotations
 
@@ -46,6 +45,7 @@ from .stm_refactor import (
     comando_ds_ialocal, _generar_fragmento, _validar_refactor,
     _registrar_refactor_md, _pedir_extra_o_diagnostico, _fallback_openrouter,
 )
+from .stm_creacion import comando_crear_codigo
 from .stm_rutas import comando_configurar_rutas, comando_rutas
 
 # --- Flujo -------------------------------------------------------------------
@@ -400,6 +400,7 @@ def mostrar_menu() -> None:
         ("enviar", "Enviar una carpeta con su contenido a CONTRRF/RFC"),
         ("ia local", "Analizar un archivo con LucIA y crear un plan"),
         ("ds ialocal", "Plan de LucIA + refactor con modelo local y registro .md"),
+        ("crear codigo", "Crear un archivo nuevo a partir de un diagnóstico de LucIA"),
         ("rutas", "Ver las rutas activas de RFC/PRY y su origen"),
         ("configurar rutas", "Elegir los directorios de RFC y PRY"),
         ("cerrar", "Cerrar el sistema"),
@@ -419,6 +420,7 @@ def ejecutar_comandos() -> None:
         "enviar": comando_enviar,
         "ia local": comando_ia_local,
         "ds ialocal": comando_ds_ialocal,
+        "crear codigo": comando_crear_codigo,
         "rutas": comando_rutas,
         "configurar rutas": comando_configurar_rutas,
     }

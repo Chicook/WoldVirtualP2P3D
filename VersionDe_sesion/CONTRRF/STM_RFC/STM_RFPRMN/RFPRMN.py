@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.7.1"
+__version__ = "2.8.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -69,6 +69,7 @@ from STM_RFPRMN_stmDL.stm_rutas import (  # noqa: E402,F401
 from STM_RFPRMN_stmDL.stm_lucia import describir as describir_lucia  # noqa: E402
 from STM_RFPRMN_stmDL.stm_corpus import sembrar_corpus  # noqa: E402
 from STM_RFPRMN_stmDL.stm_seq2seq import describir as describir_seq2seq  # noqa: E402
+from STM_RFPRMN_stmDL.stm_creacion import comando_crear_codigo  # noqa: E402
 
 __all__ = sorted(set(_Registro.nombres()) | {"RFPRMN", "cerrar", "mostrar_menu",
     "ejecutar_comandos", "__version__"})
@@ -250,6 +251,7 @@ _COMANDOS_AYUDA: dict[str, str] = {
     "ia local": "Analiza un archivo con LucIA y crea un plan de refactorización.",
     "ds ialocal": "Plan de LucIA + refactor local con registro .md "
                   "(--consumir-modelos borra el modelo; --openrouter lo activa).",
+    "crear codigo": "Crea un archivo nuevo a partir de un diagnóstico de LucIA.",
     "cerrar": "Cierra el sistema limpiando modelos descargados.",
     "estado": "Muestra el estado de los submódulos y su nº de líneas.",
     "presupuesto": "Verifica que ningún módulo supere el tope de 450 líneas.",
@@ -276,12 +278,9 @@ def imprimir_ayuda() -> None:
 
 def version_info() -> dict:
     """Versión de la fachada y nº de símbolos públicos re-exportados."""
+    from STM_RFPRMN_stmDL import modulos_estado
     return {"version": __version__, "simbolos": len(__all__),
-            "modulos": ["stm_base", "stm_rutas", "stm_fs", "stm_fragmentos",
-                        "stm_gestion", "stm_analisis", "stm_lucia", "stm_embeddings",
-                        "stm_calidad", "stm_corpus", "stm_seq2seq", "stm_modelos",
-                        "stm_descarga", "stm_openrouter", "stm_refactor",
-                        "stm_flujo", "stm_registro", "stm_pesos", "stm_ipfs"]}
+            "modulos": list(modulos_estado())}
 
 
 def estado_sistema() -> dict:
@@ -430,6 +429,7 @@ def main(argv: list[str] | None = None) -> int:
             "crear archivo": fachada.crear_archivo_cmd,
             "ia local": fachada.ia_local,
             "ds ialocal": fachada.ds_ialocal,
+            "crear codigo": comando_crear_codigo,
             "rutas": comando_rutas,
             "configurar rutas": comando_configurar_rutas,
         }
