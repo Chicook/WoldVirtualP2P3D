@@ -434,7 +434,11 @@ def ejecutar_comandos() -> None:
             if accion is None:
                 reportar_error(f"Comando no reconocido: '{entrada}'")
                 continue
-            accion()
+            try:
+                accion()
+            except (ErrorProyecto, OSError) as error:
+                # La shell sobrevive a cualquier fallo de un comando.
+                reportar_error(f"El comando falló: {error}")
     except (KeyboardInterrupt, EOFError):
         _borrar_peso_local()
         informar("Sesión interrumpida; se limpiaron los modelos descargados.")

@@ -251,13 +251,20 @@ def comando_ds_ialocal(consultor: Optional[ConsultorIA] = None,
     except OSError as error:
         reportar_error(f"No se pudo leer: {error}")
         return False
+    if not contenido.strip():
+        reportar_error(f"El archivo está vacío ({ruta}): no hay nada que refactorizar.")
+        return False
     try:
         from .stm_flujo import FlujoRefactorLucIA  # diferido: evita el ciclo de import
     except ImportError as error:
         reportar_error(f"No se pudo cargar el flujo de refactor: {error}")
         return False
-    return FlujoRefactorLucIA(ruta, contenido, consultor,
-                              consumir_modelos=consumir_modelos).ejecutar()
+    try:
+        return FlujoRefactorLucIA(ruta, contenido, consultor,
+                                  consumir_modelos=consumir_modelos).ejecutar()
+    except ErrorProyecto as error:
+        reportar_error(str(error))
+        return False
 
 
 def _generar_con_memoria(ruta: Path, contenido: str, modelo_local: str) -> bool:

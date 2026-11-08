@@ -249,19 +249,30 @@ def _liberar_ollama(excepto: str = "") -> None:
     """Descarga de CPU/RAM los modelos Ollama cargados salvo ``excepto``.
 
     Ollama en este equipo corre 100 % CPU (GPU Intel Arc no soportada): dos
-    modelos a la vez se reparten el Ryzen y ninguno genera a tiempo.
+    modelos a la vez se reparten el Ryzen y ninguno genera a tiempo. El modelo
+    de *embeddings* tampoco se toca: lo necesita LucIA para el expediente.
     """
+    try:
+        from .stm_embeddings import detectar_modelo
+
+        embebedor = detectar_modelo().lower().split(":")[0]
+    except Exception:  # noqa: BLE001 - si no hay embeddings, no hay nada que cuidar
+        embebedor = ""
     try:
         proc = subprocess.run(["ollama", "ps"], timeout=30, capture_output=True, text=True)
         for linea in proc.stdout.splitlines()[1:]:
             nombre = linea.split()[0] if linea.split() else ""
-            if nombre and nombre.lower() != excepto.lower():
-                _imprimir_seguro(f"[VIGILANTE] Liberando CPU: ollama stop {nombre}")
-                try:
-                    subprocess.run(["ollama", "stop", nombre], timeout=120,
-                                   capture_output=True)
-                except Exception:  # noqa: BLE001
-                    pass
+            if not nombre:
+                continue
+            base = nombre.lower().split(":")[0]
+            if base == excepto.lower().split(":")[0] or (embebedor and base == embebedor):
+                continue
+            _imprimir_seguro(f"[VIGILANTE] Liberando CPU: ollama stop {nombre}")
+            try:
+                subprocess.run(["ollama", "stop", nombre], timeout=120,
+                               capture_output=True)
+            except Exception:  # noqa: BLE001
+                pass
     except Exception as error:  # noqa: BLE001 - sin CLI no hay nada que liberar
         advertir(f"No se pudo liberar Ollama ({error}).")
 
