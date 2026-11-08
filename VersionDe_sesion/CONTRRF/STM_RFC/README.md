@@ -72,6 +72,12 @@ resultados que exceden el tope (sin truncar), rotación que excluye modelos
 fallidos y limpieza garantizada. El prompt prohíbe renombrar funciones y clases
 públicas, en línea con la validación.
 
+**Si el modelo devuelve el mismo código** no se considera un fallo del modelo:
+el fragmento se reintenta una vez con la instrucción «aplica al menos una
+mejora» y, si sigue igual, se pregunta si se da el archivo por terminado. Antes
+se rotaba de modelo y se agotaban las tres IAs en un archivo que no necesitaba
+cambios.
+
 ### 1.4 Issue #81 — gestión de ficheros
 
 Copia a `.tmp` + verificación por SHA-256 + intercambio con rollback, borrado

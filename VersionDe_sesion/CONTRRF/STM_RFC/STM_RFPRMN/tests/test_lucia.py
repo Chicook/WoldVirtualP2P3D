@@ -77,6 +77,7 @@ def test_el_contexto_es_compacto_y_menciona_la_deuda(tmp_path):
     contexto = expediente.contexto
     assert "[CONTEXTO DEL ARCHIVO" in contexto
     assert "[DEUDA TÉCNICA" in contexto
+    assert "[LENGUAJE] .py" in contexto
     assert len(contexto) < 900
 
 

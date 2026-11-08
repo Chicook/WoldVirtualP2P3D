@@ -157,6 +157,7 @@ class Expediente:
         deuda = "; ".join(self.deuda[:6]) or "sin hallazgos relevantes"
         descripcion = " ".join(self.descripcion.split())[:400]
         return (f"[CONTEXTO DEL ARCHIVO — según LucIA] {descripcion}\n"
+                f"[LENGUAJE] {self.ruta.suffix or 'desconocido'}\n"
                 f"[DEUDA TÉCNICA A RESOLVER] {deuda}\n")
 
 

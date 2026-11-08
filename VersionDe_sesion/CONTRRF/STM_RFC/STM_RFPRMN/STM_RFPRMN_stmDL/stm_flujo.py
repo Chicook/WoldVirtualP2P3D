@@ -180,8 +180,11 @@ class FlujoRefactorLucIA:
         _imprimir_seguro(f"[REFACTOR] {len(lineas)} líneas en "
                          f"{len(self.fragmentos)} fragmentos con {self.modelo}.")
 
-    def _validar_salida_frag(self, texto: str) -> None:
-        """Valida un fragmento ``.py`` con ast (detecta cortes a mitad de bloque)."""
+    def _validar_salida_frag(self, texto: str, original: str = "") -> None:
+        """Valida sintaxis y que el fragmento no sea idéntico (mejora obligatoria)."""
+        if original and texto.strip() == original.strip():
+            raise ErrorProyecto("no has cambiado nada; aplica al menos una mejora "
+                                "(documenta, valida entradas o extrae constantes)")
         if self.ruta.suffix.lower() == ".py":
             try:
                 ast.parse(texto, filename=str(self.ruta))
@@ -219,7 +222,7 @@ class FlujoRefactorLucIA:
                                             if self.expediente else "")
                 if not salida.strip():
                     raise ErrorProyecto("devolvió una salida vacía")
-                self._validar_salida_frag(salida)
+                self._validar_salida_frag(salida, frag["original"])
                 frag["salida"] = salida
                 _imprimir_seguro(f"[REFACTOR {numero}/{total}] OK (intento {intento})")
                 return True
@@ -333,17 +336,10 @@ class FlujoRefactorLucIA:
                 if not self.nuevo_diagnostico():
                     return False
                 continue
-            # Detecta refactor no-op (IA que devuelve el input sin tocarlo).
+            # Si la IA devuelve el mismo código, no es un fallo: se pregunta.
             if nuevo.strip() == self.contenido.strip():
-                self.errores.append("- [global] el modelo devolvió el código sin cambios")
-                reportar_error("La IA no cambió nada (refactor no-op); se rota de modelo.")
-                self.rotar_ia("refactor no-op")
-                self.registrar(self.modelo, "FALLO: refactor no-op (código idéntico).")
-                if intento >= self.MAX_IAS:
-                    return self._cierre_openrouter("refactor no-op")
-                if not self.nuevo_diagnostico():
-                    return False
-                continue
+                advertir("La IA devolvió el código sin cambios; no se modifica nada.")
+                return pedir_confirmacion("¿Se da el archivo por terminado igual?")
             # LucIA puntúa con su red (aprende del par expediente → calidad).
             if self.expediente is not None:
                 veredicto = evaluar_y_aprender(self.expediente, nuevo, self.contenido)

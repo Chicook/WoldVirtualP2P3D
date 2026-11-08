@@ -205,6 +205,21 @@ def test_aplicar_no_toca_el_archivo_si_se_cancela(tmp_path, monkeypatch):
     assert flujo.ruta.read_text(encoding="utf-8") == ORIGEN_VALIDO
 
 
+def test_un_fragmento_identico_se_rechaza(tmp_path):
+    flujo = _flujo(tmp_path)
+    original = "def sumar(a, b):\n    return a + b\n"
+    with pytest.raises(ErrorProyecto) as error:
+        flujo._validar_salida_frag(original, original)
+    assert "no has cambiado nada" in str(error.value)
+
+
+def test_un_fragmento_cambiado_se_acepta(tmp_path):
+    flujo = _flujo(tmp_path)
+    original = "def sumar(a, b):\n    return a + b\n"
+    flujo._validar_salida_frag('def sumar(a, b):\n    """Suma."""\n    return a + b\n',
+                               original)  # no debe lanzar
+
+
 def test_el_registro_no_rompe_el_flujo_si_es_ilegible(tmp_path, monkeypatch):
     """Si el registro no se puede escribir, se avisa y se sigue (no OSError)."""
     from STM_RFPRMN_stmDL import stm_refactor
