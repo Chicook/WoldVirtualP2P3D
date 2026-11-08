@@ -97,16 +97,43 @@ def test_ensamblar_conserva_el_original_del_fragmento_irreparable(tmp_path):
     assert "def a()" in resultado and "def b()" in resultado
 
 
-def test_ensamblar_rechaza_sin_truncar_cuando_excede_el_tope(tmp_path):
+def test_ensamblar_entrega_el_exceso_para_guardarlo(tmp_path):
     contenido = "def a():\n    return 1\n"
     flujo = _flujo(tmp_path, contenido)
     relleno = "\n".join(f"valor_{i} = {i}" for i in range(stm_flujo.LIMITE_LINEAS_REFACTOR + 50))
     flujo.fragmentos = [{"num": 1, "original": "def a():\n    return 1",
                          "salida": "def a():\n    return 1\n" + relleno,
                          "irreparable": False}]
-    with pytest.raises(ErrorProyecto) as error:
-        flujo.ensamblar()
-    assert "truncar" in str(error.value)
+    texto = flujo.ensamblar()  # ya no se rechaza: se guarda en CONTRUCCION
+    assert len(texto.splitlines()) > stm_flujo.LIMITE_LINEAS_REFACTOR
+
+
+def test_el_exceso_se_guarda_en_contrUCCION_y_se_parte(tmp_path, monkeypatch):
+    from STM_RFPRMN_stmDL import stm_particion
+
+    contenido = "def a():\n    return 1\n\n\ndef b():\n    return 2\n"
+    flujo = _flujo(tmp_path, contenido)
+    salida = tmp_path / "CONSTRUCCION"
+    salida.mkdir()
+    monkeypatch.setattr(stm_particion, "DIR_CONSTRUCCION", salida)
+    monkeypatch.setattr(stm_flujo, "_cargar_configuracion_ia_local",
+                        lambda: ("http://x", "fake"))
+    monkeypatch.setattr(stm_flujo, "_asegurar_modelo_codigo", lambda **_k: "fake")
+    monkeypatch.setattr(stm_flujo, "_liberar_ollama", lambda **_k: None)
+
+    def _generar(_e, _m, _n, fragmento, *_a, **_k):
+        extra = "\n".join(f"def extra_{i}():\n    return {i}" for i in range(300))
+        return fragmento + "\n\n\n" + extra
+
+    monkeypatch.setattr(stm_flujo, "_generar_fragmento", _generar)
+    monkeypatch.setattr(stm_flujo, "pedir_confirmacion", lambda *_a: True)
+    monkeypatch.setattr(stm_particion, "pedir_confirmacion", lambda *_a: True)
+
+    assert flujo.ejecutar() is True
+    guardado = salida / flujo.ruta.name
+    assert guardado.is_file(), "el resultado que pasa el tope se guarda en CONTRUCCION"
+    assert len(guardado.read_text(encoding="utf-8").splitlines()) <= 450
+    assert list(salida.glob("*_p*.py")), "y se reparte en partes de 450"
 
 
 def test_ensamblar_elimina_el_solape_repetido(tmp_path):

@@ -175,12 +175,13 @@ def _refactorizar_con_modelo(contenido: str, analisis: AnalisisArchivo, modelo: 
     return texto
 
 
-def _validar_refactor(original: str, nuevo: str, ruta: Path) -> str:
-    """Previene refactors rotos: valida sintaxis, tope 400/450 y fidelidad mínima.
+def _validar_refactor(original: str, nuevo: str, ruta: Path,
+                      permitir_exceso: bool = False) -> str:
+    """Previene refactors rotos: valida sintaxis, tope y fidelidad mínima.
 
     - ``.py``: debe compilar con ``ast`` (evita paréntesis sin cerrar, cortes
       entre fragmentos como el de ``mainLCSTM.py:153``).
-    - No vacío y como máximo ``LIMITE_LINEAS_REFACTOR`` líneas.
+    - No vacío y, salvo ``permitir_exceso``, como máximo ``LIMITE_LINEAS_REFACTOR``.
     - Conserva al menos el 80% de las funciones/clases originales (detecta
       fragmentos perdidos o inventados).
     Lanza ``ErrorProyecto`` con el motivo si no es seguro sobrescribir.
@@ -189,7 +190,7 @@ def _validar_refactor(original: str, nuevo: str, ruta: Path) -> str:
     if not texto:
         raise ErrorProyecto("Refactor vacío: no se sobrescribe.")
     lineas = texto.splitlines()
-    if len(lineas) > LIMITE_LINEAS_REFACTOR:
+    if not permitir_exceso and len(lineas) > LIMITE_LINEAS_REFACTOR:
         raise ErrorProyecto(f"Refactor con {len(lineas)} líneas (tope {LIMITE_LINEAS_REFACTOR}).")
     if ruta.suffix.lower() == ".py":
         try:

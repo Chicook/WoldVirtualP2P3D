@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.13.1**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.13.2**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -235,23 +235,23 @@ python RFPRMN.py --comando "crear codigo"
 Es la solución al problema recurrente: si el resultado de un refactor pasa de
 450 líneas, el presupuesto lo rechaza. Ocurre en **dos fases**.
 
-**Durante el refactor** (al terminar `ds ialocal`): el exceso se escribe en un
-`.py` aparte **en `CONTRUCCION`**.
+**Durante el refactor** (al terminar `ds ialocal`): si el resultado pasa de 450
+líneas **no se rechaza**: se escribe tal cual en `CONTRUCCION/<nombre>.py` y se
+reparte en partes de 450, sin tocar el archivo original.
 
 ```
-⚠ __init__.py tiene 612 líneas (tope 450).
-? ¿Se reparte en módulos de 450 para cumplir el tope? (s/n): s
-
-┌─ LucIA · Partición del módulo ─────────────────────────────
-│ __init__.py: 612 líneas en 2 partes (p1: 14 unidades · p2: 6 unidades).
-│ El exceso se escribe en: …\CONTRRF\CONTRUCCION
-└────────────────────────────────────────────────────────────
-✔ __init__.py repartido en 2 partes; 1 archivo(s) nuevo(s) en CONTRUCCION.
+✔ Supera el tope: se guarda en …\CONTRRF\CONTRUCCION\__init__.py y se reparte.
+? ¿Se reparte el archivo? (s/n): s
+✔ __init__.py repartido en 2 partes; 1 archivo(s) nuevo(s) en …\CONTRUCCION.
 ```
 
-El archivo principal se queda con las primeras unidades y **re-exporta** las
-partes. Si están en otra carpeta, el bloque añade esa carpeta a `sys.path` con
-una ruta relativa calculada desde el propio archivo; si están al lado, basta
+Ojo: sigue habiendo un control de **fidelidad** (80 % de las definiciones
+originales). Si el modelo se pierde funciones por el camino, no se guarda nada:
+eso no es «código largo», es código incompleto.
+
+Luego el archivo principal se queda con las primeras unidades y **re-exporta**
+las partes. Si están en otra carpeta, el bloque añade esa carpeta a `sys.path`
+con una ruta relativa calculada desde el propio archivo; si están al lado, basta
 `from <nombre>_pN import *`.
 
 **Al cerrar la sesión** (`cerrar`): se recorre `CONTRUCCION` y se **reparten

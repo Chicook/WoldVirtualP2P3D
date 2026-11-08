@@ -232,11 +232,7 @@ class FlujoRefactorLucIA:
         return False
 
     def ensamblar(self) -> str:
-        """Une salidas OK + originales de irreparables y valida el conjunto.
-
-        Elimina el solape repetido y **rechaza** (sin truncar) los resultados
-        que excedan ``LIMITE_LINEAS_REFACTOR``.
-        """
+        """Une salidas OK + originales y valida el conjunto (sin truncar)."""
         partes: list[str] = []
         previo = ""
         for frag in self.fragmentos:
@@ -246,12 +242,7 @@ class FlujoRefactorLucIA:
             partes.append(texto)
             previo = partes[-1]
         texto = "\n".join(partes).strip()
-        lineas = len(texto.splitlines())
-        if lineas > LIMITE_LINEAS_REFACTOR:
-            raise ErrorProyecto(
-                f"El refactor ocupa {lineas} líneas (tope {LIMITE_LINEAS_REFACTOR}): "
-                "se rechaza para no truncar código y se conserva el original.")
-        return _validar_refactor(self.contenido, texto, self.ruta)
+        return _validar_refactor(self.contenido, texto, self.ruta, True)
 
     def registrar(self, modelo: str, descripcion: str) -> None:
         """Guarda en el .md la nota de LucIA más los bloques de errores/rotación."""
@@ -338,6 +329,14 @@ class FlujoRefactorLucIA:
             if nuevo.strip() == self.contenido.strip():
                 advertir("La IA devolvió el código sin cambios; no se modifica nada.")
                 return pedir_confirmacion("¿Se da el archivo por terminado igual?")
+            # Si supera el tope no se rechaza: se guarda en CONTRUCCION y se parte.
+            if len(nuevo.splitlines()) > LIMITE_LINEAS_REFACTOR:
+                from .stm_particion import DIR_CONSTRUCCION, partir_archivo
+                destino = DIR_CONSTRUCCION / self.ruta.name
+                escribir_texto_atomico(destino, nuevo)
+                exito(f"Supera el tope: se guarda en {destino} y se reparte.")
+                partir_archivo(destino)
+                return True
             # LucIA puntúa con su red (aprende del par expediente → calidad).
             if self.expediente is not None:
                 veredicto = evaluar_y_aprender(self.expediente, nuevo, self.contenido)

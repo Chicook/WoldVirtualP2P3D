@@ -20,7 +20,7 @@ from .stm_rutas import (  # noqa: F401  (re-exportados por compatibilidad)
     encontrar_raiz,
 )
 
-__version__ = "2.13.1"
+__version__ = "2.13.2"
 
 #: El `src` del proyecto se añade al path para los imports del sistema.
 if str(SRC_DIR) not in sys.path:
