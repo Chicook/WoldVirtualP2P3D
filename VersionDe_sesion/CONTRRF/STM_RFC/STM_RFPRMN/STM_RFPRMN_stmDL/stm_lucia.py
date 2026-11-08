@@ -282,6 +282,16 @@ def _puntuacion(red, vector: list[float]) -> tuple[float, int]:
         return 0.0, 0
 
 
+def _memorizar(original: str, candidato: str) -> None:
+    """Guarda el par en la memoria del seq2seq (best-effort, nunca rompe)."""
+    try:
+        from . import stm_seq2seq
+
+        stm_seq2seq.aprender(original, candidato)
+    except Exception:  # noqa: BLE001 - el aprendizaje es opcional
+        pass
+
+
 def _entrada(expediente: Expediente, candidato: str) -> list[float]:
     """Vector de entrada de la red: expediente + candidato."""
     base = list(expediente.vector)
@@ -307,6 +317,10 @@ def evaluar_y_aprender(expediente: Expediente, candidato: str,
     entrada = _entrada(expediente, candidato)
     nota = calidad(original, candidato)
     puntuacion, pasos_previos = _puntuacion(red, entrada)
+    if nota >= UMBRAL:
+        # Se memoriza lo que objetivamente es bueno, para que el seq2seq pueda
+        # recuperarlo si el modelo local no está disponible.
+        _memorizar(original, candidato)
     try:
         red.fit(np.asarray([entrada], dtype=np.float32),
                 np.asarray([[nota]], dtype=np.float32), epochs=1)

@@ -1,9 +1,8 @@
 """CLI del ciclo de vida del código de WoldVirtualP2P3D (fachada).
 
-La lógica vive en STM_RFPRMN_stmDL/ (6 módulos de <=450 líneas).
-Este archivo mantiene compatibilidad total: todos los símbolos públicos
-del RFPRMN.py original se re-exportan, y la clase RFPRMN expone cada
-comando como método. Funcionalidad intacta.
+La lógica vive en ``STM_RFPRMN_stmDL/`` (submódulos de <=450 líneas). Este
+archivo mantiene la compatibilidad: re-exporta los símbolos públicos y expone
+cada comando como método de ``RFPRMN``, además del menú y la CLI.
 """
 from __future__ import annotations
 
@@ -12,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.6.0"
+__version__ = "2.7.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -69,6 +68,7 @@ from STM_RFPRMN_stmDL.stm_rutas import (  # noqa: E402,F401
 )
 from STM_RFPRMN_stmDL.stm_lucia import describir as describir_lucia  # noqa: E402
 from STM_RFPRMN_stmDL.stm_corpus import sembrar_corpus  # noqa: E402
+from STM_RFPRMN_stmDL.stm_seq2seq import describir as describir_seq2seq  # noqa: E402
 
 __all__ = sorted(set(_Registro.nombres()) | {"RFPRMN", "cerrar", "mostrar_menu",
     "ejecutar_comandos", "__version__"})
@@ -248,15 +248,15 @@ _COMANDOS_AYUDA: dict[str, str] = {
     "actualizar": "Reemplaza PRY con la versión refactorizada de RFC.",
     "enviar": "Envía una carpeta con su contenido a CONTRRF/RFC.",
     "ia local": "Analiza un archivo con LucIA y crea un plan de refactorización.",
-    "ds ialocal": "Plan de LucIA + refactor con modelo local y registro .md "
-                  "(--consumir-modelos borra el modelo al terminar; "
-                  "--openrouter activa el respaldo, desactivado por defecto).",
+    "ds ialocal": "Plan de LucIA + refactor local con registro .md "
+                  "(--consumir-modelos borra el modelo; --openrouter lo activa).",
     "cerrar": "Cierra el sistema limpiando modelos descargados.",
     "estado": "Muestra el estado de los submódulos y su nº de líneas.",
     "presupuesto": "Verifica que ningún módulo supere el tope de 450 líneas.",
     "rutas": "Muestra las rutas activas de RFC/PRY y de qué fuente salen.",
     "configurar rutas": "Elige los directorios de RFC y PRY (se guardan en .config/rutas.json).",
     "lucia": "Estado de la red neuronal de LucIA (muestras aprendidas y pesos).",
+    "seq2seq": "Estado del subsistema seq2seq (pares memorizados).",
     "ayuda": "Muestra esta ayuda.",
 }
 
@@ -278,17 +278,14 @@ def version_info() -> dict:
     """Versión de la fachada y nº de símbolos públicos re-exportados."""
     return {"version": __version__, "simbolos": len(__all__),
             "modulos": ["stm_base", "stm_rutas", "stm_fs", "stm_fragmentos",
-                        "stm_gestion", "stm_analisis", "stm_lucia",
-                        "stm_embeddings", "stm_calidad", "stm_corpus",
-                        "stm_modelos", "stm_descarga", "stm_openrouter",
-                        "stm_refactor", "stm_flujo", "stm_registro",
-                        "stm_pesos", "stm_ipfs"]}
+                        "stm_gestion", "stm_analisis", "stm_lucia", "stm_embeddings",
+                        "stm_calidad", "stm_corpus", "stm_seq2seq", "stm_modelos",
+                        "stm_descarga", "stm_openrouter", "stm_refactor",
+                        "stm_flujo", "stm_registro", "stm_pesos", "stm_ipfs"]}
+
 
 def estado_sistema() -> dict:
-    """Estado de import + líneas de cada submódulo del paquete.
-
-    Delega en STM_RFPRMN_stmDL.modulos_estado() y lo muestra en caja.
-    """
+    """Estado de import + líneas de cada submódulo (delega en el paquete)."""
     from STM_RFPRMN_stmDL import modulos_estado
     estado = modulos_estado()
     filas = [(m, f"{v['import']} · {v['lineas']} líneas") for m, v in estado.items()]
@@ -408,6 +405,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args[0] in ("--lucia", "lucia"):
         _imprimir_seguro(describir_lucia())
+        _imprimir_seguro(describir_seq2seq())
+        return 0
+    if args[0] in ("--seq2seq", "seq2seq"):
+        _imprimir_seguro(describir_seq2seq())
         return 0
     if args[0] in ("--sembrar-lucia", "sembrar lucia"):
         limite = int(args[1]) if len(args) > 1 and args[1].isdigit() else 12

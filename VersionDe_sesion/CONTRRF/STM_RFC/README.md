@@ -1,39 +1,41 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.6.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.7.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
-`STM_RFPRMN_stmDL/`).
+`STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
 Cierra los issues **#80** y **#81**, corrige el fallo de descarga de modelos,
 resuelve las fases R1–R6 de la discusión #84, añade el **puente LucIA ↔ red
-neuronal** (con *embeddings* reales y semilla de entrenamiento con código real)
-y deja la deuda P1/P2/P4 resuelta.
+neuronal** (embeddings reales y semilla con código real), deja la deuda
+P1/P2/P4 resuelta y suma el **subsistema seq2seq**, que genera en vez de solo
+evaluar.
 
 ## 1. Lo implementado
 
 ### 1.1 Refactorización modular (tope 450 líneas por archivo)
 
-**18 submódulos, ninguno por encima de 450 líneas**. El registro de símbolos
+**19 submódulos, ninguno por encima de 450 líneas**. El registro de símbolos
 (§1.9) se genera por AST, así que las cifras no se quedan obsoletas:
 
 | Archivo | Líneas | Contenido |
 |---|---:|---|
-| `RFPRMN.py` | 448 | Fachada + CLI (`--ayuda/--version/--estado/--presupuesto/--rutas/--configurar-rutas/--lucia/--sembrar-lucia/--comando/--consumir-modelos/--openrouter`) |
-| `STM_RFPRMN_stmDL/__init__.py` | 309 | Registro por AST (**244 símbolos**) + presupuesto + salud |
+| `RFPRMN.py` | 450 | Fachada + CLI (`--ayuda/--version/--estado/--presupuesto/--rutas/--configurar-rutas/--lucia/--seq2seq/--sembrar-lucia/--comando/--consumir-modelos/--openrouter`) |
+| `STM_RFPRMN_stmDL/__init__.py` | 310 | Registro por AST (**253 símbolos**) + presupuesto + salud |
 | `stm_base.py` | 212 | Estilo/UI, constantes, errores, re-export de rutas, `atexit` |
 | `stm_rutas.py` | 345 | Única fuente de rutas, cadena de configuración, guardián RFC/PRY |
 | `stm_fs.py` | 428 | Copia verificada, swap transaccional, borrado reportado, JSON atómico |
 | `stm_fragmentos.py` | 132 | Troceado por AST, solape y constantes de refactor |
 | `stm_gestion.py` | 385 | `refactorizar/enviar/actualizar` transaccionales |
 | `stm_analisis.py` | 280 | `AnalisisArchivo` + plan + LucIA local |
-| `stm_lucia.py` | 353 | Expediente, red neuronal, veredicto y escritura |
+| `stm_lucia.py` | 367 | Expediente, red neuronal, veredicto y escritura |
 | `stm_calidad.py` | 119 | Vector del candidato y puntuación de calidad |
 | `stm_corpus.py` | 103 | Semilla de entrenamiento con archivos reales |
+| `stm_seq2seq.py` | 142 | Puente al subsistema `LC_STM/seq2seq` (memoria de refactors) |
 | `stm_embeddings.py` | 203 | Embeddings de Ollama, detección y contracción |
 | `stm_modelos.py` | 428 | Política de modelos (ligero primero) y ciclo de vida |
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
 | `stm_openrouter.py` | 193 | Respaldo OpenRouter (desactivado por defecto) |
-| `stm_refactor.py` | 312 | Fragmentos + validación + `comando_ds_ialocal` |
+| `stm_refactor.py` | 337 | Fragmentos + validación + `comando_ds_ialocal` |
 | `stm_flujo.py` | 444 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
 | `stm_registro.py` | 194 | Publicación del registro y limpieza |
 | `stm_pesos.py` | 137 | Vectorización, cuantización y verificación |
@@ -124,14 +126,48 @@ objetivas, y deja la red fuera del estado «aprendiendo» (`MIN_PASOS` = 8).
 **Alcance honesto:** la red no genera texto; evalúa. La generación la hace el
 modelo local y la decisión/escritura, LucIA.
 
-### 1.8 Registro e IPFS
+### 1.8 Seq2Seq: generar, no solo evaluar (`LC_STM/seq2seq`)
+
+La red de `red_neuronal` **evalúa**; el subsistema `seq2seq` **genera**. Está en
+`LC_STM/seq2seq/` y es modular, sólo numpy:
+
+| Módulo | Papel |
+|---|---|
+| `tokenizador.py` | tokens de código y lenguaje natural (regex, determinista) |
+| `vectorizador.py` | *feature hashing* de tokens + coseno |
+| `codificador.py` | encoder: petición → vector normalizado |
+| `decodificador.py` | decoder: vecino más cercano sobre la memoria |
+| `memoria.py` | pares petición→respuesta, con persistencia JSON y tope |
+| `generador.py` | fachada: `aprender`, `generar`, `guardar`, `estado` |
+| `puente_rn.py` | `NeuronaSeq2Seq`: mismo protocolo que `NeuronaMemoriaBase` |
+
+**Cómo genera, sin adornos:** no entrena un transformer (imposible con numpy y
+sin corpus masivo). Es un **seq2seq de memoria**: codifica la petición, busca el
+par más parecido por coseno y devuelve *su* respuesta si supera el umbral; si no,
+**se niega** en vez de inventar código que acabaría escrito en un archivo.
+
+Integración con el flujo:
+
+- al aceptar un refactor con calidad suficiente, el par
+  `(código original → refactorizado)` se memoriza;
+- si las IAs locales fallan y OpenRouter está apagado, se intenta recuperar de
+  la memoria antes de darse por vencido.
+
+```bash
+python RFPRMN.py --seq2seq     # pares memorizados, umbral y ruta
+```
+
+La memoria vive en `STM_RFPRMN/.modelos/seq2seq.json` y el umbral se ajusta con
+`RFPRMN_SEQ2SEQ_UMBRAL`.
+
+### 1.9 Registro e IPFS
 
 `envios.json` → `registro.md` → pesos (`stm_pesos`) → IPFS en cuatro niveles
 (`stm_ipfs`) → limpieza. **P1 resuelta**: un CID sintético del shim
 (`QmLocal…` con `ok=False`) ya **no** cuenta como subida; el flujo baja a la
 API, al binario y, si no hay nada, a un CID local honesto.
 
-### 1.9 Registro de símbolos por AST (D4) y consola
+### 1.10 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
@@ -143,7 +179,7 @@ Todas las salidas toleran consolas cp1252.
 
 ## 2. Pruebas y CI
 
-**148 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
+**160 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
 
 ```bash
 cd VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN
@@ -164,6 +200,7 @@ python -m pytest tests -q -p no:cacheprovider
 | `test_lucia.py` | Expediente, README, vector, calidad y veredicto |
 | `test_embeddings.py` | Detección, endpoints, caché, contracción |
 | `test_corpus.py` | Semilla con código real y muestra negativa |
+| `test_seq2seq.py` | Tokenizador, vectorizador, memoria, generador, neurona y puente |
 | `test_ipfs.py` | P1: el shim no cuenta como subida |
 
 **CI**: `.github/workflows/rfprmn-tests.yml` ejecuta lint crítico, presupuesto,

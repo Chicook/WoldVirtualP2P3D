@@ -260,6 +260,31 @@ def comando_ds_ialocal(consultor: Optional[ConsultorIA] = None,
                               consumir_modelos=consumir_modelos).ejecutar()
 
 
+def _generar_con_memoria(ruta: Path, contenido: str, modelo_local: str) -> bool:
+    """Último recurso: recuperar de la memoria del seq2seq un refactor previo.
+
+    Solo devuelve código que ya se aceptó para un código equivalente; si no hay
+    nada suficientemente parecido, se niega (no inventa).
+    """
+    from . import stm_seq2seq
+
+    nuevo = stm_seq2seq.generar(contenido)
+    if not nuevo:
+        informar("Seq2Seq: no hay ningún refactor memorizado para este código.")
+        return False
+    try:
+        nuevo = _validar_refactor(contenido, nuevo, ruta)
+    except ErrorProyecto as error:
+        reportar_error(f"Seq2Seq devolvió un refactor inválido: {error}")
+        return False
+    ruta.write_text(nuevo, encoding="utf-8")
+    exito(f"[SEQ2SEQ] Refactor recuperado de la memoria "
+          f"({len(nuevo.splitlines())} líneas).")
+    _registrar_refactor_md(ruta, f"seq2seq:{modelo_local}",
+                           "Refactor recuperado de la memoria del subsistema.")
+    return True
+
+
 def _fallback_openrouter(ruta: Path, contenido: str, analisis: AnalisisArchivo,
                          modelo_local: str, motivo: str,
                          borrar_modelo: bool = False) -> bool:
@@ -273,7 +298,7 @@ def _fallback_openrouter(ruta: Path, contenido: str, analisis: AnalisisArchivo,
     """
     if not openrouter_habilitado():
         informar(f"[OR] {describir_estado()}")
-        return False
+        return _generar_con_memoria(ruta, contenido, modelo_local)
     if borrar_modelo:
         _imprimir_seguro(f"[OR] La IA local {modelo_local} falló ({motivo}). Se borra.")
         try:
