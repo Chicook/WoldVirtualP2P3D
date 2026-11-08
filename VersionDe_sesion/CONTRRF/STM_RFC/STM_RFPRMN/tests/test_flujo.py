@@ -266,6 +266,42 @@ def test_un_fragmento_con_cambio_real_se_acepta(tmp_path):
 
 # --- Detección de «refactor» cosmético ---------------------------------------
 
+def test_el_presupuesto_crece_con_el_fragmento():
+    from STM_RFPRMN_stmDL.stm_refactor import presupuesto_salida
+
+    corto = presupuesto_salida("x = 1\n")
+    medio = presupuesto_salida("\n".join(f"x{i} = {i}" for i in range(40)))
+    largo = presupuesto_salida("\n".join(f"x{i} = {i}" for i in range(120)))
+    assert corto >= 600
+    assert medio > 800, "40 líneas necesitan más de los 800 que truncaban"
+    assert largo <= 2200
+
+
+def test_un_fragmento_irreparable_marca_fallo_filtro(tmp_path, monkeypatch):
+    flujo = _flujo(tmp_path)
+    flujo.modelo = "qwen"
+    monkeypatch.setattr(stm_flujo, "_generar_fragmento",
+                        lambda *_a, **_k: "def roto(:\n    pass")
+    frag = {"num": 1, "original": "def a():\n    return 1\n", "salida": "",
+            "irreparable": False, "intentos": 0}
+    assert flujo.refactorizar_fragmento(frag, 1) is False
+    assert frag["irreparable"] is True
+    assert flujo.fallo_filtro is True
+
+
+def test_un_modelo_que_devuelve_vacio_es_irreparable(tmp_path, monkeypatch):
+    flujo = _flujo(tmp_path)
+    flujo.modelo = "wvp-opencode"
+    monkeypatch.setattr(stm_flujo, "_generar_fragmento", lambda *_a, **_k: "")
+    frag = {"num": 1, "original": "def a():\n    return 1\n", "salida": "",
+            "irreparable": False, "intentos": 0}
+    assert flujo.refactorizar_fragmento(frag, 1) is False
+    assert flujo.fallo_filtro is True
+    assert any("vacía" in error for error in flujo.errores)
+
+
+# --- Detección de «refactor» cosmético (calidad) -----------------------------
+
 def test_documentar_python_se_detecta():
     from STM_RFPRMN_stmDL.stm_calidad import solo_documenta
 

@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.12.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.12.1**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -87,6 +87,15 @@ docstrings, se detecta comparando el código sin ruido (`ast` en Python,
 comentarios fuera y espacios normalizados en el resto) y se reintenta con
 «aplica una transformación real». En el último intento se acepta para no perder
 la documentación, y el fragmento queda marcado.
+
+**Presupuesto de salida por fragmento** (`presupuesto_salida`): 32 tokens por
+línea, entre 600 y 2200. Antes eran 800 fijos y un fragmento de 60+ líneas se
+truncaba a media cadena («unterminated string literal»); el reintento volvía a
+truncarse igual y el fragmento se perdía. Ahora el tope crece con el fragmento.
+
+**Si no queda ni un fragmento válido**, se rota de modelo (y se descarta si no
+pasó los filtros) en vez de preguntar «¿se da el archivo por terminado?»: una
+IA que devuelve vacío en los seis fragmentos no ha hecho nada.
 
 ### 1.4 Issue #81 — gestión de ficheros
 

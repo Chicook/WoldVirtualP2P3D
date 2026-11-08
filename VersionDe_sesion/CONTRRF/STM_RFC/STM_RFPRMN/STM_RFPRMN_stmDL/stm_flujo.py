@@ -2,15 +2,14 @@
 
 Un único ``ejecutar()`` orquesta las fases [1/5]…[5/5] con estas garantías:
 
-- **Cortes válidos**: los fragmentos de un ``.py`` se calculan sobre fronteras
-  de sentencias de nivel superior (AST), así que ninguno rompe un ``def``,
-  un ``class`` ni un bloque ``try/except``.
-- **Solape real**: cada fragmento recibe como contexto la cola del fragmento
-  *original* anterior y el ensamblado elimina la repetición.
-- **Sin truncamiento silencioso**: si el resultado excede el tope se rechaza
-  con ``ErrorProyecto`` y el original queda intacto.
-- **Rotación y validación**: los modelos fallidos se excluyen (sin borrarlos
-  salvo ``--consumir-modelos``) y LucIA valida el candidato con su red.
+- **Cortes válidos**: los fragmentos de un ``.py`` se cortan en fronteras de
+  sentencias (AST), así que ninguno rompe un ``def`` ni un ``try/except``.
+- **Solape real**: cada fragmento recibe la cola del anterior y el ensamblado
+  elimina la repetición.
+- **Sin truncamiento**: si el resultado excede el tope se rechaza y el original
+  queda intacto.
+- **Rotación**: el modelo que no pasa los filtros se borra y se descarta; el
+  resto solo se excluye. LucIA valida el candidato con su red.
 """
 from __future__ import annotations
 
@@ -100,7 +99,6 @@ class FlujoRefactorLucIA:
         self.confirmar_parcial = True
         self.fallo_filtro = False  # True si el modelo actual falló los filtros
 
-    # -- fase PLAN ---------------------------------------------------------
     def _presentar_plan(self, titulo: str, pregunta: str) -> bool:
         """Muestra diagnóstico y plan de LucIA y pide confirmación."""
         plan_lucia = self.generador(self.contenido, self.analisis)
@@ -126,7 +124,6 @@ class FlujoRefactorLucIA:
         return self._presentar_plan("LucIA · Nuevo diagnóstico",
                                     "¿Se aplica el plan con la nueva IA?")
 
-    # -- fase IA -----------------------------------------------------------
     def asegurar_ia(self) -> None:
         """Descarga/elige IA local no usada y libera la CPU para ella."""
         try:
@@ -258,7 +255,6 @@ class FlujoRefactorLucIA:
                 "se rechaza para no truncar código y se conserva el original.")
         return _validar_refactor(self.contenido, texto, self.ruta)
 
-    # -- registro ----------------------------------------------------------
     def registrar(self, modelo: str, descripcion: str) -> None:
         """Guarda en el .md la nota de LucIA más los bloques de errores/rotación."""
         extra = ""
@@ -318,7 +314,11 @@ class FlujoRefactorLucIA:
                     self.registrar(self.modelo, f"FALLO: {error}")
                     abortado = True
                     break
-            if abortado:
+            if abortado or all(f.get("irreparable") for f in self.fragmentos):
+                if not abortado:
+                    reportar_error("La IA no devolvió ningún fragmento válido.")
+                    self.rotar_ia("ningún fragmento válido")
+                    self.registrar(self.modelo, "FALLO: ningún fragmento válido")
                 if intento >= self.MAX_IAS:
                     return self._cierre_openrouter("3 IAs locales fallaron")
                 if not self.nuevo_diagnostico():

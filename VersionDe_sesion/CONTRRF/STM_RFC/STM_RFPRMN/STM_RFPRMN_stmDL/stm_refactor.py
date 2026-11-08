@@ -39,6 +39,16 @@ SISTEMA_REFACTOR = (
     "o docstrings, no has hecho el trabajo. Responde SOLO con código, sin cercas.")
 
 
+def presupuesto_salida(fragmento: str) -> int:
+    """Tokens de salida según el tamaño del fragmento (evita los truncados).
+
+    Con un tope fijo de 800, un fragmento de 60+ líneas se cortaba a media
+    cadena; el reintento volvía a truncarse igual y el fragmento se perdía.
+    """
+    lineas = (fragmento or "").count("\n") + 1
+    return min(2200, max(600, lineas * 32))
+
+
 def _generar_fragmento(endpoint: str, modelo: str, nombre_archivo: str,
                        fragmento: str, num: int, total: int,
                        timeout_primer_token: int, contexto: str = "",
@@ -50,12 +60,14 @@ def _generar_fragmento(endpoint: str, modelo: str, nombre_archivo: str,
     ejemplo, crear código nuevo en vez de refactorizar).
     """
     import threading as _th, time as _tm
+    presupuesto = presupuesto_salida(fragmento)
     carga = {"model": modelo, "messages": [
         {"role": "system", "content": sistema or SISTEMA_REFACTOR},
         {"role": "user", "content": (f"Archivo: {nombre_archivo} (parte {num}/{total})\n"
                                      f"{contexto}{fragmento}")}],
         "stream": True, "keep_alive": "10m",
-        "options": {"temperature": 0.2, "num_predict": 800, "num_ctx": 2048}}
+        "options": {"temperature": 0.2, "num_predict": presupuesto,
+                    "num_ctx": 4096}}
     pet = urllib.request.Request(
         f"{endpoint}/api/chat", data=json.dumps(carga).encode("utf-8"),
         headers={"Content-Type": "application/json"}, method="POST")
