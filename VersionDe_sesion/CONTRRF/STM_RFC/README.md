@@ -129,6 +129,20 @@ Ejemplo real en este equipo (tiene `qwen2.5-coder:7b` instalado):
 › Modelo reutilizado (misma familia): qwen2.5-coder:7b
 ```
 
+**Respaldo OpenRouter: desactivado por defecto.** Queda como opción pendiente
+de configuración: la IA local es el camino normal y `stm_openrouter` solo se
+usa si se activa de forma explícita.
+
+```bash
+python RFPRMN.py --openrouter --comando "ds ialocal"   # solo esta ejecución
+# o bien, en STM_RFPRMN/.config/opciones.json:
+#   { "openrouter": true }
+# o con la variable RFPRMN_OPENROUTER=1
+```
+
+Si no está configurado, el flujo informa y termina sin hacer ninguna llamada
+de red ni pedir la clave:
+
 ### 1.7 Publicación del registro al actualizar
 
 `stm_registro_json/STM_RFC/envios.json` → `registro.md` en lenguaje natural →
@@ -147,7 +161,7 @@ md y pesos. Utilidades: `vista_previa()`, `verificar_pesos()`,
 
 ## 2. Pruebas
 
-Suite propia del módulo (**98 pruebas**, sin red, sin Ollama y sin tocar
+Suite propia del módulo (**107 pruebas**, sin red, sin Ollama y sin tocar
 RFC/PRY):
 
 ```bash
@@ -161,6 +175,7 @@ python -m pytest tests -q -p no:cacheprovider
 |---|---|
 | `tests/test_rutas.py` | Nada se escribe bajo RFC/PRY, cadena de configuración, R5 (guardar/validar rutas) |
 | `tests/test_modelos.py` | Registro de usados, política R3, «el más ligero», R6 (`ollama create`) |
+| `tests/test_openrouter.py` | Respaldo desactivado por defecto y activación explícita (entorno/archivo) |
 | `tests/test_fragmentos.py` | Cortes válidos, cobertura sin huecos, `try/except`, solape |
 | `tests/test_flujo.py` | Un solo `ejecutar`, sin F821, ensamblado sin truncar, rotación y limpieza |
 | `tests/test_fs.py` | Verificación por huella, swap con rollback, borrado, JSON atómico, bloqueo |
@@ -190,7 +205,10 @@ python -m pytest tests -q -p no:cacheprovider
 ## 5. Tareas pendientes
 
 1. Sustituir los vectores por hash por embeddings reales (D3).
-2. Generar el registro de símbolos por AST y adelgazar `__init__.py` (D4).
-3. Dividir `stm_fs` y `stm_modelos` antes de añadir funciones (D1).
-4. Resolver P1/P2 y eliminar la rama heredada P4.
-5. Añadir la suite a un job de CI en la raíz (hoy no hay `.github/workflows/`).
+2. **Configurar el respaldo OpenRouter** si se quiere usar (hoy desactivado):
+   clave en el Vault de STM_SGR o `.env`, y `openrouter: true` en
+   `.config/opciones.json` o `RFPRMN_OPENROUTER=1`.
+3. Generar el registro de símbolos por AST y adelgazar `__init__.py` (D4).
+4. Dividir `stm_fs` y `stm_modelos` antes de añadir funciones (D1).
+5. Resolver P1/P2 y eliminar la rama heredada P4.
+6. Añadir la suite a un job de CI en la raíz (hoy no hay `.github/workflows/`).

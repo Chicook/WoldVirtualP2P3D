@@ -247,7 +247,8 @@ _COMANDOS_AYUDA: dict[str, str] = {
     "enviar": "Envía una carpeta con su contenido a CONTRRF/RFC.",
     "ia local": "Analiza un archivo con LucIA y crea un plan de refactorización.",
     "ds ialocal": "Plan de LucIA + refactor con modelo local y registro .md "
-                  "(--consumir-modelos borra el modelo al terminar).",
+                  "(--consumir-modelos borra el modelo al terminar; "
+                  "--openrouter activa el respaldo, desactivado por defecto).",
     "cerrar": "Cierra el sistema limpiando modelos descargados.",
     "estado": "Muestra el estado de los submódulos y su nº de líneas.",
     "presupuesto": "Verifica que ningún módulo supere el tope de 450 líneas.",
@@ -370,6 +371,11 @@ def main(argv: list[str] | None = None) -> int:
         # tener que enhebrar un parámetro por toda la cadena de comandos.
         os.environ["RFPRMN_CONSUMIR_MODELOS"] = "1"
         args = [argumento for argumento in args if argumento != "--consumir-modelos"]
+    if "--openrouter" in args:
+        # El respaldo OpenRouter está desactivado por defecto (pendiente de
+        # configuración); esta bandera lo habilita solo para esta ejecución.
+        os.environ["RFPRMN_OPENROUTER"] = "1"
+        args = [argumento for argumento in args if argumento != "--openrouter"]
     if not args:
         ejecutar_comandos()
         return 0

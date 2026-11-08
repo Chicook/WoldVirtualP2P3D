@@ -26,6 +26,7 @@ from .stm_modelos import (  # noqa: F401
     _borrar_peso_local, _descargar_modelo_ollama, _modelos_usados_registro,
     _asegurar_modelo_codigo, _borrar_modelo_ollama, _liberar_ollama,
 )
+from .stm_openrouter import describir_estado, habilitado as openrouter_habilitado
 
 
 def _generar_fragmento(endpoint: str, modelo: str, nombre_archivo: str,
@@ -252,7 +253,13 @@ def _fallback_openrouter(ruta: Path, contenido: str, analisis: AnalisisArchivo,
 
     ``borrar_modelo`` respeta la política R3: por defecto el modelo del usuario
     se conserva y solo se excluye de la sesión.
+
+    El respaldo está **desactivado por defecto**: si no se ha configurado, se
+    informa y se devuelve ``False`` sin hacer ninguna llamada de red.
     """
+    if not openrouter_habilitado():
+        informar(f"[OR] {describir_estado()}")
+        return False
     if borrar_modelo:
         _imprimir_seguro(f"[OR] La IA local {modelo_local} falló ({motivo}). Se borra.")
         try:

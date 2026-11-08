@@ -64,7 +64,8 @@ _MODELOS_SYMS = ["DIR_MODELOS_LOCAL", "HF_REPO_CODIGO", "HF_ARCHIVO_CODIGO",
     "_liberar_ollama", "_registrar_gguf_en_ollama"]
 for _s in _MODELOS_SYMS:
     _REGISTRO[_s] = "stm_modelos"
-_OR_SYMS = ["MODELOS_OR_CODIGO", "ENDPOINT_OPENROUTER", "_leer_openrouter_key",
+_OR_SYMS = ["MODELOS_OR_CODIGO", "ENDPOINT_OPENROUTER", "ARCHIVO_OPCIONES",
+    "habilitado", "describir_estado", "_leer_openrouter_key",
     "_chat_openrouter", "_refactorizar_con_openrouter"]
 for _s in _OR_SYMS:
     _REGISTRO[_s] = "stm_openrouter"

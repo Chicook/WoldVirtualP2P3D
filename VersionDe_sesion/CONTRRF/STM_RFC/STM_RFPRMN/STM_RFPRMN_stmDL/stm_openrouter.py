@@ -1,7 +1,11 @@
 """Respaldo de refactorización con modelos gratuitos de OpenRouter.
 
-Se usa cuando las IAs locales fallan o cuando se agotan las rotaciones. La
-clave se lee del Vault de STM_SGR, del ``.env`` real o del entorno; nunca se
+**Desactivado por defecto.** Queda como opción pendiente de configuración: la
+IA local es el camino normal y OpenRouter solo se usa si se activa de forma
+explícita (variable ``RFPRMN_OPENROUTER=1`` o ``"openrouter": true`` en
+``STM_RFPRMN/.config/opciones.json``).
+
+La clave se lee del Vault de STM_SGR, del ``.env`` real o del entorno; nunca se
 escribe en disco ni se imprime.
 """
 from __future__ import annotations
@@ -13,8 +17,16 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .stm_base import DESTINO, SRC_DIR, ErrorProyecto, advertir, _imprimir_seguro
+from .stm_base import DESTINO, SRC_DIR, ErrorProyecto, advertir, informar, _imprimir_seguro
 from .stm_fragmentos import LIMITE_LINEAS_REFACTOR, LINEAS_POR_FRAGMENTO
+from .stm_rutas import DIR_CONFIG
+
+#: Archivo de opciones de la herramienta (por ahora solo el interruptor OR).
+ARCHIVO_OPCIONES = DIR_CONFIG / "opciones.json"
+
+#: Valores que activan el respaldo.
+_AFIRMATIVOS = frozenset({"1", "si", "sí", "s", "y", "yes", "true", "on"})
+_NEGATIVOS = frozenset({"0", "no", "n", "false", "off"})
 
 #: Modelos de código gratuitos de OpenRouter (fallback cuando la IA local falla).
 MODELOS_OR_CODIGO = (
@@ -24,6 +36,37 @@ MODELOS_OR_CODIGO = (
     "openrouter/free",
 )
 ENDPOINT_OPENROUTER = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _leer_opciones() -> dict:
+    """Contenido de ``.config/opciones.json`` (``{}`` si no existe o está roto)."""
+    try:
+        datos = json.loads(ARCHIVO_OPCIONES.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return datos if isinstance(datos, dict) else {}
+
+
+def habilitado() -> bool:
+    """True si el respaldo OpenRouter está activado. Por defecto, **no**."""
+    entorno = os.environ.get("RFPRMN_OPENROUTER", "").strip().lower()
+    if entorno in _AFIRMATIVOS:
+        return True
+    if entorno in _NEGATIVOS:
+        return False
+    valor = _leer_opciones().get("openrouter")
+    if isinstance(valor, str):
+        return valor.strip().lower() in _AFIRMATIVOS
+    return bool(valor)
+
+
+def describir_estado() -> str:
+    """Línea de ayuda con el estado y cómo activarlo."""
+    if habilitado():
+        return "Respaldo OpenRouter: activado."
+    return ("Respaldo OpenRouter: desactivado (pendiente de configuración). "
+            "Actívalo con --openrouter, RFPRMN_OPENROUTER=1 o "
+            f'"openrouter": true en {ARCHIVO_OPCIONES}')
 
 
 def _leer_openrouter_key() -> str:
