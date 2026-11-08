@@ -10,11 +10,11 @@ import importlib
 from pathlib import Path
 from typing import Any
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 _MODULOS = ("stm_base", "stm_rutas", "stm_fs", "stm_fragmentos", "stm_gestion",
-            "stm_analisis", "stm_modelos", "stm_descarga", "stm_refactor",
-            "stm_flujo", "stm_registro")
+            "stm_analisis", "stm_modelos", "stm_descarga", "stm_openrouter",
+            "stm_refactor", "stm_flujo", "stm_registro", "stm_pesos", "stm_ipfs")
 
 # Mapa simbolo -> modulo que lo define (resolucion perezosa).
 _REGISTRO: dict[str, str] = {}
@@ -26,10 +26,11 @@ _BASE_SYMS = ["Estilo", "E", "ANCHO_TERMINAL", "_caja", "_panel", "RESPUESTAS_AF
     "CONFIG_IA_LOCAL", "RFC_DIR", "PRY_DIR", "carpetas_creadas"]
 for _s in _BASE_SYMS:
     _REGISTRO[_s] = "stm_base"
-_RUTAS_SYMS = ["DIR_DATOS", "DIR_CONFIG", "es_zona_sincronizada",
-    "comprobar_ruta_segura", "ultima_actualizacion_pry",
-    "candidatos_config_ia_local", "ruta_config_ia_local",
-    "describir_config_ia_local", "rutas_protegidas"]
+_RUTAS_SYMS = ["DIR_DATOS", "DIR_CONFIG", "ARCHIVO_RUTAS", "ORIGEN_RFC",
+    "ORIGEN_PRY", "es_zona_sincronizada", "comprobar_ruta_segura",
+    "ultima_actualizacion_pry", "candidatos_config_ia_local",
+    "ruta_config_ia_local", "describir_config_ia_local", "rutas_protegidas",
+    "estado_rutas", "guardar_rutas", "comando_rutas", "comando_configurar_rutas"]
 for _s in _RUTAS_SYMS:
     _REGISTRO[_s] = "stm_rutas"
 _FS_SYMS = ["ruta_larga", "es_subruta", "rutas_se_solapan", "sha256_archivo",
@@ -56,13 +57,17 @@ for _s in _ANALISIS_SYMS:
     _REGISTRO[_s] = "stm_analisis"
 _MODELOS_SYMS = ["DIR_MODELOS_LOCAL", "HF_REPO_CODIGO", "HF_ARCHIVO_CODIGO",
     "MODELOS_CODIGO_LIGEROS", "LIMITE_LINEAS_REFACTOR", "REGISTRO_REFACTOR_MD",
-    "MODELOS_OR_CODIGO", "ENDPOINT_OPENROUTER", "_leer_openrouter_key", "_chat_openrouter",
-    "_refactorizar_con_openrouter", "_descargar_peso_hf", "_modelos_ollama_instalados",
-    "_es_modelo_codigo", "_leer_candidatos_codigo", "_borrar_peso_local",
-    "_descargar_modelo_ollama", "_modelos_usados_registro", "_asegurar_modelo_codigo",
-    "_borrar_modelo_ollama", "_liberar_ollama"]
+    "NOMBRE_MODELO_GGUF", "tamano_modelo", "ordenar_por_tamano",
+    "_descargar_peso_hf", "_modelos_ollama_instalados", "_es_modelo_codigo",
+    "_leer_candidatos_codigo", "_borrar_peso_local", "_descargar_modelo_ollama",
+    "_modelos_usados_registro", "_asegurar_modelo_codigo", "_borrar_modelo_ollama",
+    "_liberar_ollama", "_registrar_gguf_en_ollama"]
 for _s in _MODELOS_SYMS:
     _REGISTRO[_s] = "stm_modelos"
+_OR_SYMS = ["MODELOS_OR_CODIGO", "ENDPOINT_OPENROUTER", "_leer_openrouter_key",
+    "_chat_openrouter", "_refactorizar_con_openrouter"]
+for _s in _OR_SYMS:
+    _REGISTRO[_s] = "stm_openrouter"
 _REGISTRO["descargar_gguf"] = "stm_descarga"
 _REGISTRO["peso_gguf_valido"] = "stm_descarga"
 _REGISTRO["TAMANO_MINIMO_GGUF"] = "stm_descarga"
@@ -74,13 +79,16 @@ for _s in _REFACTOR_SYMS:
 _FLUJO_SYMS = ["FlujoRefactorLucIA", "cerrar", "mostrar_menu", "ejecutar_comandos"]
 for _s in _FLUJO_SYMS:
     _REGISTRO[_s] = "stm_flujo"
+_PESOS_SYMS = ["DIM_VECTOR", "NOMBRE_PESOS", "texto_a_vector", "norma",
+    "seccionar_md", "cuantizar", "desnormalizar", "similitud_coseno"]
+for _s in _PESOS_SYMS:
+    _REGISTRO[_s] = "stm_pesos"
+_IPFS_SYMS = ["IPFS_API_URL", "IPFS_GATEWAY_URL", "url_pasarela", "subir_a_ipfs"]
+for _s in _IPFS_SYMS:
+    _REGISTRO[_s] = "stm_ipfs"
 _REGISTRO_SYMS = ["DIR_REGISTRO", "RUTA_JSON", "RUTA_MD", "RUTA_PESOS",
-    "DIM_VECTOR", "IPFS_API_URL", "IPFS_GATEWAY_URL", "NOMBRE_PESOS",
-    "leer_eventos", "construir_texto", "texto_a_vector",
-    "norma", "seccionar_md", "cuantizar", "desnormalizar",
-    "similitud_coseno", "md_a_pesos", "verificar_pesos", "vista_previa",
-    "url_pasarela", "subir_a_ipfs", "limpiar_registro", "limpiar_caches",
-    "publicar_registro_actualizar"]
+    "leer_eventos", "construir_texto", "md_a_pesos", "verificar_pesos",
+    "vista_previa", "limpiar_registro", "limpiar_caches", "publicar_registro_actualizar"]
 for _s in _REGISTRO_SYMS:
     _REGISTRO[_s] = "stm_registro"
 _REGISTRO["LINEAS_POR_FRAGMENTO"] = "stm_modelos"
@@ -350,6 +358,26 @@ try:
         DIR_CONFIG, DIR_DATOS, candidatos_config_ia_local, comprobar_ruta_segura,
         describir_config_ia_local, es_zona_sincronizada, ruta_config_ia_local,
         rutas_protegidas, ultima_actualizacion_pry,
+    )
+except Exception:
+    pass
+try:
+    from .stm_pesos import (  # noqa: F401,E402
+        DIM_VECTOR, NOMBRE_PESOS, cuantizar, desnormalizar, norma,
+        seccionar_md, similitud_coseno, texto_a_vector,
+    )
+except Exception:
+    pass
+try:
+    from .stm_ipfs import (  # noqa: F401,E402
+        IPFS_API_URL, IPFS_GATEWAY_URL, subir_a_ipfs, url_pasarela,
+    )
+except Exception:
+    pass
+try:
+    from .stm_openrouter import (  # noqa: F401,E402
+        ENDPOINT_OPENROUTER, MODELOS_OR_CODIGO, _chat_openrouter,
+        _leer_openrouter_key, _refactorizar_con_openrouter,
     )
 except Exception:
     pass

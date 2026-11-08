@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -63,6 +63,9 @@ from STM_RFPRMN_stmDL.stm_flujo import (  # noqa: E402,F401
 from STM_RFPRMN_stmDL.stm_registro import (  # noqa: E402,F401
     DIR_REGISTRO, RUTA_MD, RUTA_PESOS, publicar_registro_actualizar,
     limpiar_registro, verificar_pesos, vista_previa, similitud_coseno,
+)
+from STM_RFPRMN_stmDL.stm_rutas import (  # noqa: E402,F401
+    comando_configurar_rutas, comando_rutas, estado_rutas, guardar_rutas,
 )
 
 __all__ = sorted(set(_Registro.nombres()) | {"RFPRMN", "cerrar", "mostrar_menu",
@@ -248,6 +251,8 @@ _COMANDOS_AYUDA: dict[str, str] = {
     "cerrar": "Cierra el sistema limpiando modelos descargados.",
     "estado": "Muestra el estado de los submódulos y su nº de líneas.",
     "presupuesto": "Verifica que ningún módulo supere el tope de 450 líneas.",
+    "rutas": "Muestra las rutas activas de RFC/PRY y de qué fuente salen.",
+    "configurar rutas": "Elige los directorios de RFC y PRY (se guardan en .config/rutas.json).",
     "ayuda": "Muestra esta ayuda.",
 }
 
@@ -270,8 +275,8 @@ def version_info() -> dict:
     return {"version": __version__, "simbolos": len(__all__),
             "modulos": ["stm_base", "stm_rutas", "stm_fs", "stm_fragmentos",
                         "stm_gestion", "stm_analisis", "stm_modelos",
-                        "stm_descarga", "stm_refactor", "stm_flujo",
-                        "stm_registro"]}
+                        "stm_descarga", "stm_openrouter", "stm_refactor",
+                        "stm_flujo", "stm_registro", "stm_pesos", "stm_ipfs"]}
 
 def estado_sistema() -> dict:
     """Estado de import + líneas de cada submódulo del paquete.
@@ -300,7 +305,7 @@ def verificar_sistema(max_lineas: int = 450) -> dict:
     return resultado
 
 def _ejecutar_extra(entrada: str) -> bool:
-    """Ejecuta los comandos extra de la fachada (estado/presupuesto/ayuda).
+    """Ejecuta los comandos extra de la fachada (estado/presupuesto/rutas/ayuda).
 
     Devuelve True si ``entrada`` era un comando extra (ya ejecutado).
     """
@@ -309,6 +314,12 @@ def _ejecutar_extra(entrada: str) -> bool:
         return True
     if entrada == "presupuesto":
         verificar_sistema()
+        return True
+    if entrada == "rutas":
+        comando_rutas()
+        return True
+    if entrada == "configurar rutas":
+        comando_configurar_rutas()
         return True
     if entrada in ("ayuda", "help", "?"):
         imprimir_ayuda()
@@ -375,6 +386,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args[0] == "--presupuesto":
         return 0 if verificar_sistema()["ok"] else 1
+    if args[0] in ("--rutas", "rutas"):
+        comando_rutas()
+        return 0
+    if args[0] in ("--configurar-rutas", "configurar rutas"):
+        comando_configurar_rutas()
+        return 0
     if args[0] == "--comando" and len(args) > 1:
         nombre = " ".join(args[1:]).strip().lower()
         fachada = RFPRMN()
@@ -386,6 +403,8 @@ def main(argv: list[str] | None = None) -> int:
             "crear archivo": fachada.crear_archivo_cmd,
             "ia local": fachada.ia_local,
             "ds ialocal": fachada.ds_ialocal,
+            "rutas": comando_rutas,
+            "configurar rutas": comando_configurar_rutas,
         }
         accion = tabla.get(nombre)
         if accion is None:

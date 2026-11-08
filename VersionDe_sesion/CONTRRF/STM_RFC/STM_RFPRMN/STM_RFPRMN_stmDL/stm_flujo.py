@@ -44,6 +44,7 @@ from .stm_refactor import (
     comando_ds_ialocal, _generar_fragmento, _validar_refactor,
     _registrar_refactor_md, _pedir_extra_o_diagnostico, _fallback_openrouter,
 )
+from .stm_rutas import comando_configurar_rutas, comando_rutas
 
 # --- Flujo -------------------------------------------------------------------
 
@@ -380,6 +381,8 @@ def mostrar_menu() -> None:
         ("enviar", "Enviar una carpeta con su contenido a CONTRRF/RFC"),
         ("ia local", "Analizar un archivo con LucIA y crear un plan"),
         ("ds ialocal", "Plan de LucIA + refactor con modelo local y registro .md"),
+        ("rutas", "Ver las rutas activas de RFC/PRY y su origen"),
+        ("configurar rutas", "Elegir los directorios de RFC y PRY"),
         ("cerrar", "Cerrar el sistema"),
     ]
     _imprimir_seguro(_caja(f"WoldVirtualP2P3D · Gestor de Proyecto  v{__version__}",
@@ -397,6 +400,8 @@ def ejecutar_comandos() -> None:
         "enviar": comando_enviar,
         "ia local": comando_ia_local,
         "ds ialocal": comando_ds_ialocal,
+        "rutas": comando_rutas,
+        "configurar rutas": comando_configurar_rutas,
     }
 
     mostrar_menu()

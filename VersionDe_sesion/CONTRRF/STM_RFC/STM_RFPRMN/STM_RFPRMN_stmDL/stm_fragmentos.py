@@ -26,6 +26,13 @@ _CONTINUACION_PY = re.compile(r"^(?:else|elif|except|finally)\b")
 #: Máximo de líneas comparadas al deduplicar el solape.
 MAX_SOLAPE = 20
 
+#: Líneas por fragmento en la refactorización por trozos.
+#: Calibrado en CPU: 60 líneas -> primer token ~11 s, completo ~2 min con
+#: qwen2.5-coder:3b.
+LINEAS_POR_FRAGMENTO = 60
+#: Tope de líneas del archivo refactorizado (regla 400/450 del proyecto).
+LIMITE_LINEAS_REFACTOR = 450
+
 
 def _delta_profundidad(linea: str) -> int:
     """Paréntesis/corchetes/llaves netos de ``linea``, ignorando cadenas."""

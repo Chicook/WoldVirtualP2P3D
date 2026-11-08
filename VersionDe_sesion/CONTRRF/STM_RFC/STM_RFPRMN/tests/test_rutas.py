@@ -1,5 +1,7 @@
-"""Pruebas de la fuente única de rutas (R1/R2 de la discusión #84)."""
+"""Pruebas de la fuente única de rutas (R1/R2/R5 de la discusión #84)."""
 from __future__ import annotations
+
+import json
 
 import pytest
 
@@ -93,3 +95,62 @@ def test_las_rutas_protegidas_incluyen_las_raices():
     assert stm_rutas.PRY_DIR in protegidas
     assert stm_rutas.RFC_DIR in protegidas
     assert stm_rutas.MODULO_DIR in protegidas
+
+
+# --- R5: rutas elegidas por el usuario ---------------------------------------
+
+def _preparar_config(monkeypatch, tmp_path):
+    archivo = tmp_path / ".config" / "rutas.json"
+    monkeypatch.setattr(stm_rutas, "ARCHIVO_RUTAS", archivo)
+    monkeypatch.setattr(stm_rutas, "DIR_CONFIG", archivo.parent)
+    return archivo
+
+
+def test_guardar_rutas_escribe_el_archivo(monkeypatch, tmp_path):
+    rfc = tmp_path / "RFC"
+    pry = tmp_path / "PRY"
+    rfc.mkdir()
+    pry.mkdir()
+    archivo = _preparar_config(monkeypatch, tmp_path)
+    ruta = stm_rutas.guardar_rutas(rfc, pry)
+    assert ruta == archivo
+    datos = json.loads(archivo.read_text(encoding="utf-8"))
+    assert datos["rfc"] == str(rfc.resolve())
+    assert datos["pry"] == str(pry.resolve())
+
+
+def test_guardar_rutas_rechaza_rutas_solapadas(monkeypatch, tmp_path):
+    rfc = tmp_path / "RFC"
+    rfc.mkdir()
+    _preparar_config(monkeypatch, tmp_path)
+    with pytest.raises(ErrorProyecto):
+        stm_rutas.guardar_rutas(rfc, rfc / "PRY")
+
+
+def test_guardar_rutas_rechaza_directorio_inexistente(monkeypatch, tmp_path):
+    _preparar_config(monkeypatch, tmp_path)
+    with pytest.raises(ErrorProyecto):
+        stm_rutas.guardar_rutas(tmp_path / "no-existe", tmp_path)
+
+
+def test_estado_rutas_expone_el_origen():
+    estado = stm_rutas.estado_rutas()
+    assert set(estado) >= {"rfc", "pry", "origen_rfc", "origen_pry", "archivo"}
+
+
+def test_resolver_prioriza_el_entorno(monkeypatch, tmp_path):
+    monkeypatch.setenv("RFPRMN_RFC_DIR", str(tmp_path))
+    ruta, origen = stm_rutas._resolver_directorio(
+        "RFPRMN_RFC_DIR", "rfc", tmp_path / "oficial", tmp_path / "layout", {})
+    assert ruta == tmp_path
+    assert origen == "entorno"
+
+
+def test_resolver_usa_el_archivo_si_no_hay_entorno(monkeypatch, tmp_path):
+    monkeypatch.delenv("RFPRMN_RFC_DIR", raising=False)
+    elegido = tmp_path / "elegido"
+    ruta, origen = stm_rutas._resolver_directorio(
+        "RFPRMN_RFC_DIR", "rfc", tmp_path / "oficial", tmp_path / "layout",
+        {"rfc": str(elegido)})
+    assert ruta == elegido
+    assert origen == "archivo"

@@ -1,4 +1,4 @@
-"""Rutas oficiales de RFPRMN: **única fuente de verdad** (R1/R2 de la discusión #84).
+"""Rutas oficiales de RFPRMN: **única fuente de verdad** (R1/R2/R5).
 
 Reglas que impone este módulo:
 
@@ -12,11 +12,22 @@ Reglas que impone este módulo:
 - **Los pesos y el registro de refactor van bajo `STM_RFPRMN/`**, así viajan con
   la herramienta y sobreviven al vaciado de RFC.
 
+R5 · rutas elegidas por el usuario
+----------------------------------
+``RFC_DIR`` y ``PRY_DIR`` se resuelven, por este orden, desde:
+
+1. las variables ``RFPRMN_RFC_DIR`` / ``RFPRMN_PRY_DIR``,
+2. ``STM_RFPRMN/.config/rutas.json`` (lo escribe ``--configurar-rutas``),
+3. las rutas oficiales del escritorio (compatibilidad),
+4. el layout junto a la herramienta.
+
 Este módulo no importa nada del paquete (sólo stdlib) para que `stm_base` pueda
-usarlo sin crear ciclos.
+usarlo sin crear ciclos; los comandos interactivos importan el estilo de forma
+diferida dentro de cada función.
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Iterable, Optional
@@ -34,16 +45,57 @@ SRC_DIR = CONTRRF_DIR / "RFC" / "src"
 if (TLLDCD_DIR / "src").is_dir():
     SRC_DIR = TLLDCD_DIR / "src"
 
-#: Rutas oficiales fijas del sistema (deuda R5: deberían venir de configuración).
+# --- Datos propios de la herramienta -----------------------------------------
+
+#: Configuración de la herramienta (rutas elegidas, `IAlocal.json` de reserva).
+DIR_CONFIG = MODULO_DIR / ".config"
+#: Archivo donde se guardan las rutas elegidas por el usuario.
+ARCHIVO_RUTAS = DIR_CONFIG / "rutas.json"
+#: Raíz de datos propios (pesos, caché), FUERA de los árboles sincronizados.
+DIR_DATOS = MODULO_DIR / ".modelos"
+#: Carpeta donde se descargan los pesos GGUF.
+DIR_MODELOS_LOCAL = DIR_DATOS / "IAlocalDESCARGADA"
+#: Registro de qué archivo refactorizó cada modelo.
+REGISTRO_REFACTOR_MD = MODULO_DIR / "registro_refactor.md"
+
+
+# --- Rutas oficiales (compatibilidad, R5) ------------------------------------
+#: Valores históricos del equipo de desarrollo: ya no son obligatorios.
 RUTA_RFC_OFICIAL = Path(
     r"C:\Users\User\Desktop\WoldVirtualP2P3D_v0.0.01LCV1\VersionDe_sesion\CONTRRF\RFC")
 RUTA_PRY_OFICIAL = Path(
     r"C:\Users\User\Desktop\WoldVirtualP2P3D_v0.0.01LCV1\VersionDe_sesion\Sistema_Principal\PRY")
 
-#: Árboles sincronizados (sólo lectura para la herramienta).
-RFC_DIR = RUTA_RFC_OFICIAL if RUTA_RFC_OFICIAL.is_dir() else CONTRRF_DIR / "RFC"
-PRY_DIR = (RUTA_PRY_OFICIAL if RUTA_PRY_OFICIAL.is_dir()
-           else CONTRRF_DIR.parent / "Sistema_Principal" / "PRY")
+
+def _leer_config_rutas() -> dict:
+    """Contenido de ``.config/rutas.json`` (``{}`` si no existe o está roto)."""
+    try:
+        datos = json.loads(ARCHIVO_RUTAS.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return datos if isinstance(datos, dict) else {}
+
+
+def _resolver_directorio(clave_entorno: str, clave_config: str, oficial: Path,
+                         derivada: Path, config: dict) -> tuple[Path, str]:
+    """Resuelve un directorio y devuelve ``(ruta, origen)``."""
+    desde_entorno = os.environ.get(clave_entorno, "").strip()
+    if desde_entorno:
+        return Path(os.path.expandvars(desde_entorno)).expanduser(), "entorno"
+    desde_config = str(config.get(clave_config) or "").strip()
+    if desde_config:
+        return Path(os.path.expandvars(desde_config)).expanduser(), "archivo"
+    if oficial.is_dir():
+        return oficial, "oficial"
+    return derivada, "layout"
+
+
+_CONFIG_AL_IMPORTAR = _leer_config_rutas()
+RFC_DIR, ORIGEN_RFC = _resolver_directorio(
+    "RFPRMN_RFC_DIR", "rfc", RUTA_RFC_OFICIAL, CONTRRF_DIR / "RFC", _CONFIG_AL_IMPORTAR)
+PRY_DIR, ORIGEN_PRY = _resolver_directorio(
+    "RFPRMN_PRY_DIR", "pry", RUTA_PRY_OFICIAL,
+    CONTRRF_DIR.parent / "Sistema_Principal" / "PRY", _CONFIG_AL_IMPORTAR)
 
 
 # --- Localización de la raíz -------------------------------------------------
@@ -97,18 +149,6 @@ else:
     DESTINO = RAIZ / "Construccion" / "CONTRRF" / "RFC"
 
 
-# --- Rutas de escritura de la herramienta ------------------------------------
-
-#: Raíz de datos propios (pesos, caché), FUERA de los árboles sincronizados.
-DIR_DATOS = MODULO_DIR / ".modelos"
-#: Carpeta donde se descargan los pesos GGUF.
-DIR_MODELOS_LOCAL = DIR_DATOS / "IAlocalDESCARGADA"
-#: Registro de qué archivo refactorizó cada modelo.
-REGISTRO_REFACTOR_MD = MODULO_DIR / "registro_refactor.md"
-#: Configuración propia de la herramienta (último recurso de la cadena).
-DIR_CONFIG = MODULO_DIR / ".config"
-
-
 # --- Predicados de ruta ------------------------------------------------------
 
 def _normalizada(ruta: str | Path) -> str:
@@ -138,11 +178,7 @@ def es_zona_sincronizada(ruta: str | Path) -> bool:
 
 
 def comprobar_ruta_segura(ruta: str | Path, motivo: str = "") -> Path:
-    """Valida que ``ruta`` sea escribible por la herramienta y devuelve su ``Path``.
-
-    Lanza ``ErrorProyecto`` si cae bajo RFC/PRY: escribir ahí ensucia el árbol
-    sincronizado y el contenido desaparece al vaciarlo (R1/R2).
-    """
+    """Valida que ``ruta`` sea escribible por la herramienta y devuelve su ``Path``."""
     objetivo = Path(ruta)
     if es_zona_sincronizada(objetivo):
         from .stm_base import ErrorProyecto  # diferido: stm_base importa este módulo
@@ -217,3 +253,82 @@ def rutas_protegidas() -> Iterable[Path]:
     """Raíces que nunca deben borrarse como un todo."""
     return (RAIZ, PRY_DIR, RFC_DIR, CONTRRF_DIR, TLLDCD_DIR, MODULO_DIR,
             MODULO_DIR.parent)
+
+
+# --- R5: rutas elegidas por el usuario ---------------------------------------
+
+def estado_rutas() -> dict:
+    """Estado actual de RFC/PRY y de dónde salió cada ruta."""
+    return {
+        "rfc": str(RFC_DIR),
+        "pry": str(PRY_DIR),
+        "origen_rfc": ORIGEN_RFC,
+        "origen_pry": ORIGEN_PRY,
+        "archivo": str(ARCHIVO_RUTAS),
+        "archivo_existe": ARCHIVO_RUTAS.is_file(),
+        "entorno_rfc": os.environ.get("RFPRMN_RFC_DIR", ""),
+        "entorno_pry": os.environ.get("RFPRMN_PRY_DIR", ""),
+    }
+
+
+def guardar_rutas(rfc: str | Path, pry: str | Path) -> Path:
+    """Guarda en ``.config/rutas.json`` los directorios elegidos por el usuario.
+
+    Valida que ambos existan, que no se solapen y que no sean la misma carpeta.
+    Devuelve la ruta del archivo escrito. Se aplica en la siguiente ejecución.
+    """
+    from .stm_base import ErrorProyecto  # diferido: stm_base importa este módulo
+
+    destino_rfc = Path(os.path.expandvars(str(rfc))).expanduser().resolve()
+    destino_pry = Path(os.path.expandvars(str(pry))).expanduser().resolve()
+    if es_subruta(destino_rfc, destino_pry) or es_subruta(destino_pry, destino_rfc):
+        raise ErrorProyecto(
+            "RFC y PRY no pueden estar uno dentro del otro: "
+            f"{destino_rfc} / {destino_pry}")
+    for ruta, nombre in ((destino_rfc, "RFC"), (destino_pry, "PRY")):
+        if not ruta.is_dir():
+            raise ErrorProyecto(
+                f"{nombre} no es un directorio existente: {ruta}. "
+                "Créalo antes de configurarlo.")
+    DIR_CONFIG.mkdir(parents=True, exist_ok=True)
+    datos = _leer_config_rutas()
+    datos.update({"rfc": str(destino_rfc), "pry": str(destino_pry)})
+    temporal = ARCHIVO_RUTAS.with_name(ARCHIVO_RUTAS.name + ".tmp")
+    temporal.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
+    os.replace(temporal, ARCHIVO_RUTAS)
+    return ARCHIVO_RUTAS
+
+
+def comando_rutas() -> None:
+    """Muestra por pantalla las rutas activas y su origen."""
+    from .stm_base import _caja, _imprimir_seguro  # diferido (evita el ciclo)
+
+    estado = estado_rutas()
+    filas = [
+        ("RFC", f"{estado['rfc']}  [{estado['origen_rfc']}]"),
+        ("PRY", f"{estado['pry']}  [{estado['origen_pry']}]"),
+        ("Config", estado["archivo"] + ("" if estado["archivo_existe"] else " (sin crear)")),
+        ("Modelos", str(DIR_MODELOS_LOCAL)),
+        ("Registro", str(REGISTRO_REFACTOR_MD)),
+    ]
+    _imprimir_seguro(_caja("Rutas del proyecto", filas, color="azul"))
+    print()
+
+
+def comando_configurar_rutas() -> None:
+    """Pide al usuario los directorios de RFC y PRY y los guarda (R5)."""
+    from .stm_base import (  # diferido (evita el ciclo)
+        ErrorProyecto, exito, informar, reportar_error,
+    )
+
+    estado = estado_rutas()
+    informar("Deja vacío para mantener el valor actual.")
+    rfc = input(f"Directorio de RFC [{estado['rfc']}]: ").strip().strip("\"'")
+    pry = input(f"Directorio de PRY [{estado['pry']}]: ").strip().strip("\"'")
+    try:
+        archivo = guardar_rutas(rfc or estado["rfc"], pry or estado["pry"])
+    except (ErrorProyecto, OSError) as error:
+        reportar_error(f"No se guardaron las rutas: {error}")
+        return
+    exito(f"Rutas guardadas en {archivo}")
+    informar("Se aplican en la próxima ejecución (o exporta RFPRMN_RFC_DIR/RFPRMN_PRY_DIR).")

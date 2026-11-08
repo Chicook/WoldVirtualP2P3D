@@ -1,66 +1,74 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.2.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.3.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`).
 
 Esta versión cierra los issues **#80** (fiabilidad del flujo de refactor) y
 **#81** (seguridad de las operaciones de ficheros), corrige el fallo de
-descarga de modelos locales y resuelve las fases **R1/R2** (rutas fuera de los
-árboles sincronizados) y **R3** (los modelos del usuario ya no se borran por
-defecto) de la discusión #84.
+descarga de modelos locales y resuelve las seis fases de la discusión #84:
+**R1/R2** (rutas fuera de los árboles sincronizados), **R3** (conservar los
+modelos del usuario), **R4** (dividir los módulos que estaban al tope),
+**R5** (rutas configurables) y **R6** (registrar el GGUF en Ollama).
 
 ## 1. Lo implementado
 
 ### 1.1 Refactorización modular (tope 450 líneas por archivo)
 
 El `RFPRMN.py` original (1813 líneas, ~75 funciones) se dividió sin cambiar
-firmas ni comportamiento. Estado actual, **11 submódulos, ninguno por encima
+firmas ni comportamiento. Estado actual, **14 submódulos, ninguno por encima
 de 450 líneas**:
 
 | Archivo | Líneas | Contenido |
 |---|---:|---|
-| `RFPRMN.py` | 400 | `class RFPRMN` + menú/CLI (`--ayuda/--version/--estado/--presupuesto/--comando/--consumir-modelos`) |
-| `STM_RFPRMN_stmDL/__init__.py` | 413 | Registro perezoso PEP 562 (**142 símbolos**) + presupuesto + salud |
+| `RFPRMN.py` | 419 | `class RFPRMN` + menú/CLI (`--ayuda/--version/--estado/--presupuesto/--rutas/--configurar-rutas/--comando/--consumir-modelos`) |
+| `STM_RFPRMN_stmDL/__init__.py` | 441 | Registro perezoso PEP 562 (**153 símbolos**) + presupuesto + salud |
 | `stm_base.py` | 212 | Estilo/UI, constantes, errores, re-export de rutas, `atexit` de cachés |
-| `stm_rutas.py` | 219 | **Nuevo**: única fuente de rutas, cadena de configuración y guardián RFC/PRY |
+| `stm_rutas.py` | 334 | Única fuente de rutas, cadena de configuración, guardián RFC/PRY y comandos `rutas` |
 | `stm_fs.py` | 428 | Copia verificada, swap transaccional, borrado reportado, JSON atómico |
-| `stm_fragmentos.py` | 125 | Troceado por AST/heurística y solape de contexto |
+| `stm_fragmentos.py` | 132 | Troceado por AST/heurística, solape y constantes de refactor |
 | `stm_gestion.py` | 412 | fs + `refactorizar/enviar/actualizar` **transaccionales** |
 | `stm_analisis.py` | 280 | `AnalisisArchivo` + plan + LucIA local |
-| `stm_modelos.py` | 448 | Catálogo y selección de modelos (Ollama/OpenRouter) |
+| `stm_modelos.py` | 428 | Política de modelos (ligero primero) y ciclo de vida |
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
+| `stm_openrouter.py` | 149 | Respaldo con modelos gratuitos de OpenRouter |
 | `stm_refactor.py` | 291 | Fragmentos + validación + `comando_ds_ialocal` |
-| `stm_flujo.py` | 420 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
-| `stm_registro.py` | 449 | Publicación del registro (md → pesos → IPFS) |
+| `stm_flujo.py` | 425 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
+| `stm_registro.py` | 194 | Publicación del registro y limpieza |
+| `stm_pesos.py` | 137 | Vectorización, cuantización y verificación de pesos |
+| `stm_ipfs.py` | 156 | Subida a IPFS en cuatro niveles |
 
 `from RFPRMN import X` y `RFPRMN().metodo()` siguen funcionando igual.
 
-### 1.2 Rutas: una sola fuente de verdad (R1/R2)
+### 1.2 Rutas: una sola fuente de verdad (R1/R2/R5)
 
-`stm_rutas.py` centraliza todas las rutas y aplica dos invariantes:
+`stm_rutas.py` centraliza todas las rutas:
 
 - **La herramienta no escribe bajo `CONTRRF/RFC` ni bajo `Sistema_Principal/PRY`.**
   `comprobar_ruta_segura()` lo impide y `es_zona_sincronizada()` lo consulta.
-  Esos árboles se sincronizan y `actualizar` los vacía al final de cada ciclo.
-- **Cada dato tiene un sitio estable:**
+- **Cada dato tiene un sitio estable:** pesos en
+  `STM_RFPRMN/.modelos/IAlocalDESCARGADA/`, registro en
+  `STM_RFPRMN/registro_refactor.md`, configuración propia en
+  `STM_RFPRMN/.config/`.
 
-| Dato | Ruta |
-|---|---|
-| Pesos GGUF descargados | `STM_RFPRMN/.modelos/IAlocalDESCARGADA/` |
-| Registro de refactor | `STM_RFPRMN/registro_refactor.md` |
-| Configuración propia | `STM_RFPRMN/.config/IAlocal.json` |
+**R5 · rutas elegidas por el usuario.** `RFC_DIR` y `PRY_DIR` se resuelven por
+este orden:
 
-La configuración de IA local se busca en esta cadena, en orden:
+1. variables `RFPRMN_RFC_DIR` / `RFPRMN_PRY_DIR`,
+2. `STM_RFPRMN/.config/rutas.json` (lo escribe `--configurar-rutas`),
+3. las rutas oficiales del escritorio (compatibilidad),
+4. el layout junto a la herramienta.
 
-1. `RFPRMN_IALOCAL_JSON` (variable de entorno),
-2. `PRY/actualizacion_*/src/STM_JSON/IAlocal.json` (donde vive de verdad),
-3. `RFC/src/STM_JSON/IAlocal.json` (layout heredado),
-4. `STM_RFPRMN/.config/IAlocal.json`.
+```bash
+python RFPRMN.py --rutas              # ver rutas activas y su origen
+python RFPRMN.py --configurar-rutas   # elegir carpetas (quedan guardadas)
+```
 
-Así `ds ialocal` funciona aunque `RFC` esté vacío tras un `actualizar` (antes
-degradaba siempre al diagnóstico local). El registro heredado de `RFC/src` se
-sigue leyendo para no perder el historial de modelos usados.
+Desde la shell interactiva son los comandos `rutas` y `configurar rutas`.
+
+La configuración de IA local se busca en: `RFPRMN_IALOCAL_JSON` →
+`PRY/actualizacion_*/src/STM_JSON` → `RFC/src` heredado → `.config`. Así
+`ds ialocal` funciona aunque `RFC` esté vacío tras un `actualizar`.
 
 ### 1.3 Issue #80 — flujo de refactor (`stm_flujo.py`)
 
@@ -74,9 +82,8 @@ sigue leyendo para no perder el historial de modelos usados.
 | 6. Rotación y limpieza | Los modelos fallidos se excluyen siempre; `_borrar_modelo_ollama()` devuelve `bool`; el `finally` limpia el peso local |
 | 7. Validación y recuperación | Se conserva el original de los fragmentos irrecuperables, el error se reinyecta en el reintento y se pide confirmación antes de aplicar un resultado parcial |
 
-Además, la lectura de modelos usados ya no se hace con una regex sobre todo el
-texto (capturaba marcas de tiempo como `12:50`): ahora solo cuentan las
-cabeceras `## archivo — modelo` que escribe el propio registro.
+La lectura de modelos usados ya no usa una regex sobre todo el texto (capturaba
+marcas de tiempo como `12:50`): solo cuentan las cabeceras `## archivo — modelo`.
 
 ### 1.4 Issue #81 — gestión de ficheros (`stm_gestion.py` + `stm_fs.py`)
 
@@ -84,60 +91,63 @@ cabeceras `## archivo — modelo` que escribe el propio registro.
 |---|---|
 | 1. Pérdida de datos | Ya no se borra el destino antes de copiar: copia a `.tmp`, verifica e intercambia |
 | 2. Operaciones transaccionales | `reemplazar_directorio()` con rollback: si el intercambio falla se restaura el destino |
-| 3. Verificación de copia | `verificar_copia()` compara **ruta relativa + tamaño + SHA-256**, no solo el número de ficheros |
-| 4. Rutas y symlinks | `es_subruta()`/`rutas_se_solapan()` impiden copiar un directorio dentro de sí mismo; `symlinks=True` y recorridos sin seguir enlaces |
-| 5. Borrado fiable | `eliminar_ruta()` enumera los restos y lanza `OSError` con la causa; se acabó el `ignore_errors` silencioso |
-| 6. Log de envíos | `_registrar_envio()` escribe JSON **atómico** bajo bloqueo entre procesos y conserva el registro corrupto como `.corrupto` |
-| 7. Versiones | Se verifica la nueva versión **antes** de purgar las anteriores; un fallo de limpieza se reporta |
+| 3. Verificación de copia | `verificar_copia()` compara **ruta relativa + tamaño + SHA-256** |
+| 4. Rutas y symlinks | `es_subruta()`/`rutas_se_solapan()` impiden copiar un directorio dentro de sí mismo; `symlinks=True` |
+| 5. Borrado fiable | `eliminar_ruta()` enumera los restos y lanza `OSError` con la causa |
+| 6. Log de envíos | JSON **atómico** bajo bloqueo; el registro corrupto se conserva como `.corrupto` |
+| 7. Versiones | Se verifica la nueva versión **antes** de purgar las anteriores |
 | 8. Mantenibilidad | Imports muertos eliminados, errores específicos y rutas críticas protegidas |
 
 ### 1.5 Descarga de modelos (`stm_descarga.py`)
 
 - Escritura en `<archivo>.part` y `os.replace` **solo** al terminar.
-- Reanudación con `Range` si hay un `.part` previo (reinicia si el servidor no
-  admite rangos).
+- Reanudación con `Range` si hay un `.part` previo.
 - Reintentos con espera creciente y `timeout` por bloque.
-- Validación de cabecera mágica `GGUF` y tamaño mínimo: **un archivo truncado
-  ya no se acepta como completo**.
-- Sin dependencia de `huggingface_hub` (se construye la URL canónica).
-- Antes de descargar se **reutiliza lo que ya está instalado en Ollama**.
+- Validación de cabecera `GGUF` y tamaño mínimo: **un truncado ya no pasa**.
+- Sin dependencia de `huggingface_hub`.
 
-### 1.6 Política de modelos (R3)
+### 1.6 Modelos: el más ligero, y sin borrar lo tuyo (R3/R6)
 
-**Por defecto los modelos del usuario se conservan.** El flujo:
+**Siempre el modelo de código más ligero.** Los candidatos (configuración de
+`IAlocal.json` más las familias de respaldo) se ordenan por número de
+parámetros y:
 
-- elige un modelo no usado, priorizando los instalados;
-- si falla, lo **excluye** de la sesión y sigue con otro (sin `ollama rm`);
-- al terminar con éxito, **no borra nada** y lo indica por pantalla.
+1. se reutiliza el **más ligero ya instalado** (sin descargar nada);
+2. si no hay ninguno, se descarga el más ligero que quepa en la RAM
+   (con menos de 6 GB no se baja un 7B);
+3. si `ollama pull` falla, se descarga el GGUF verificado y se **registra en
+   Ollama con `ollama create`** (antes se bajaba ~1 GB que nunca se usaba).
 
-Para recuperar el comportamiento antiguo hay que pedirlo explícitamente:
+**R3 · tus modelos no se borran.** Por defecto no se ejecuta `ollama rm` ni al
+terminar ni al rotar por fallo: el modelo se excluye de la sesión y se anota.
+El comportamiento antiguo se recupera con `--consumir-modelos` o
+`RFPRMN_CONSUMIR_MODELOS=1`.
 
-```bash
-python RFPRMN.py --consumir-modelos --comando "ds ialocal"
-# o
-set RFPRMN_CONSUMIR_MODELOS=1     # PowerShell: $env:RFPRMN_CONSUMIR_MODELOS="1"
+Ejemplo real en este equipo (tiene `qwen2.5-coder:7b` instalado):
+
+```
+› Modelo reutilizado (misma familia): qwen2.5-coder:7b
 ```
 
 ### 1.7 Publicación del registro al actualizar
 
 `stm_registro_json/STM_RFC/envios.json` → `registro.md` en lenguaje natural →
-borrado del json → pesos neuronales v2 (vector global 64 + vector por sección +
-cuantizado int8) → subida IPFS en 4 niveles (IPFSManager → API
-`127.0.0.1:5001` → `ipfs.exe` del sistema → CID `QmLocal` local) → borrado de
+borrado del json → pesos neuronales v2 (`stm_pesos`: vector global 64 + vector
+por sección + cuantizado int8) → subida IPFS en 4 niveles (`stm_ipfs`:
+IPFSManager → API `127.0.0.1:5001` → `ipfs.exe` → CID `QmLocal`) → borrado de
 md y pesos. Utilidades: `vista_previa()`, `verificar_pesos()`,
 `similitud_coseno()`, `url_pasarela()`.
 
 ### 1.8 Bytecode y consola
 
-- `sys.pycache_prefix` apunta a `STM_RFPRMN/.pycache_rfprmn`; el gancho
-  `atexit` limpia `__pycache__` y esa carpeta al salir.
-- Las impresiones de cajas/paneles usan `_imprimir_seguro()` para consolas
-  cp1252; los mensajes de la cadena de configuración usan separadores ASCII por
-  el mismo motivo.
+- `sys.pycache_prefix` apunta a `STM_RFPRMN/.pycache_rfprmn`; el `atexit`
+  limpia `__pycache__` y esa carpeta al salir.
+- Las cajas/paneles usan `_imprimir_seguro()` para consolas cp1252, y los
+  mensajes de la cadena de configuración usan separadores ASCII.
 
 ## 2. Pruebas
 
-Suite propia del módulo (**82 pruebas**, sin red, sin Ollama y sin tocar
+Suite propia del módulo (**98 pruebas**, sin red, sin Ollama y sin tocar
 RFC/PRY):
 
 ```bash
@@ -149,8 +159,8 @@ python -m pytest tests -q -p no:cacheprovider
 
 | Archivo | Cobertura |
 |---|---|
-| `tests/test_rutas.py` | Nada se escribe bajo RFC/PRY, cadena de configuración, predicados |
-| `tests/test_modelos.py` | Registro de usados, borrado de pesos seguro, política R3 |
+| `tests/test_rutas.py` | Nada se escribe bajo RFC/PRY, cadena de configuración, R5 (guardar/validar rutas) |
+| `tests/test_modelos.py` | Registro de usados, política R3, «el más ligero», R6 (`ollama create`) |
 | `tests/test_fragmentos.py` | Cortes válidos, cobertura sin huecos, `try/except`, solape |
 | `tests/test_flujo.py` | Un solo `ejecutar`, sin F821, ensamblado sin truncar, rotación y limpieza |
 | `tests/test_fs.py` | Verificación por huella, swap con rollback, borrado, JSON atómico, bloqueo |
@@ -159,15 +169,17 @@ python -m pytest tests -q -p no:cacheprovider
 
 ## 3. Deuda técnica
 
-- **D1**. `stm_registro` (449) y `stm_modelos` (448) están pegados al tope: el
-  próximo cambio en ellos exige extraer `stm_pesos`/`stm_ipfs`.
-- **D2**. `RUTA_*_OFICIAL` cableadas a una ruta de escritorio (R5): no portable.
+- **D1 (mitigada)**. `stm_fs` y `stm_modelos` quedan en 428 líneas: el próximo
+  cambio grande exige dividirlos.
+- **D2 (cerrada por R5)**. Las rutas oficiales ya no son obligatorias: manda lo
+  que elija el usuario (`.config/rutas.json` o entorno).
 - **D3**. Vectores por hash SHA-256, no embeddings semánticos reales.
-- **D4**. El registro de símbolos de `__init__.py` se mantiene a mano.
+- **D4**. El registro de símbolos de `__init__.py` se mantiene a mano (441
+  líneas); conviene generarlo por AST.
 - **D5**. Las rutas de limpieza de `stm_fs`/`stm_descarga` usan `except OSError`
   amplio a propósito: no deben romper el flujo por un temporal bloqueado.
-- **D6 (cerrada)**. Antes la configuración y los pesos vivían en `RFC/src`, que
-  `actualizar` vacía. Ahora los resuelve `stm_rutas` (§1.2).
+- **D6 (cerrada por R1/R2)**. La configuración y los pesos ya no viven en
+  `RFC/src`.
 
 ## 4. Deuda preexistente detectada (no introducida aquí)
 
@@ -177,12 +189,8 @@ python -m pytest tests -q -p no:cacheprovider
 
 ## 5. Tareas pendientes
 
-1. **R4**: dividir `stm_registro` y `stm_modelos` antes de añadir funciones (D1).
-2. **R5**: mover `RUTA_*_OFICIAL` a configuración (D2).
-3. **R6**: cerrar el camino GGUF — hoy se descarga verificado pero no se
-   registra con `ollama create`, así que solo vale como aviso; decidir entre
-   implementarlo o retirarlo.
-4. Sustituir los vectores por hash por embeddings reales (D3).
-5. Resolver P1/P2 y eliminar la rama heredada P4.
-6. Añadir la suite a un job de CI en la raíz del repositorio (hoy no existe
-   `.github/workflows/`).
+1. Sustituir los vectores por hash por embeddings reales (D3).
+2. Generar el registro de símbolos por AST y adelgazar `__init__.py` (D4).
+3. Dividir `stm_fs` y `stm_modelos` antes de añadir funciones (D1).
+4. Resolver P1/P2 y eliminar la rama heredada P4.
+5. Añadir la suite a un job de CI en la raíz (hoy no hay `.github/workflows/`).
