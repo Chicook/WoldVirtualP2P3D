@@ -25,6 +25,7 @@ from .stm_base import (
     reportar_error,
 )
 from .stm_descarga import descargar_gguf
+from .stm_descartes import leer_descartados, olvidar_descartados
 from .stm_fragmentos import LIMITE_LINEAS_REFACTOR, LINEAS_POR_FRAGMENTO  # noqa: F401
 from .stm_openrouter import (  # noqa: F401  (re-exportados)
     ENDPOINT_OPENROUTER, MODELOS_OR_CODIGO, _chat_openrouter,
@@ -131,18 +132,28 @@ def _leer_candidatos_codigo() -> list[str]:
 
 
 def _candidatos_disponibles() -> list[str]:
-    """Configuración + modelos de código ya instalados, el más ligero primero."""
-    candidatos = _leer_candidatos_codigo()
+    """Configuración + modelos instalados, sin los descartados por los filtros."""
+    descartados = {nombre.lower() for nombre in leer_descartados()}
+    candidatos = [c for c in _leer_candidatos_codigo()
+                  if c.lower() not in descartados]
     bases = {candidato.lower().split(":")[0] for candidato in candidatos}
     for instalado in _modelos_ollama_instalados():
         if not _es_modelo_codigo(instalado):
+            continue
+        if instalado.lower() in descartados:
             continue
         if instalado.lower().split(":")[0] in bases:
             continue
         candidatos.append(instalado)
         bases.add(instalado.lower().split(":")[0])
+    if not candidatos:  # todo descartado: se empieza de cero en vez de rendirse
+        advertir("Todos los modelos estaban descartados; se reinicia la lista.")
+        olvidar_descartados()
+        return _leer_candidatos_codigo()
     return ordenar_por_tamano(candidatos)
 
+
+# --- Modelos descartados: viven en stm_descartes (evita crecer aquí) ---------
 
 def _elegir_para_descargar(candidatos: list[str]) -> str:
     """El más ligero que quepa en la RAM disponible."""

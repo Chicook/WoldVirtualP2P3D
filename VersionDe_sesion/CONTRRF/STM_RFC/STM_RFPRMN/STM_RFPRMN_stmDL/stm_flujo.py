@@ -47,6 +47,7 @@ from .stm_refactor import (
 from .stm_creacion import comando_crear_codigo
 from .stm_logica import comando_crear_logica
 from .stm_comentarios import comando_comentar_archivo
+from .stm_descartes import retirar_modelo
 from .test import comando_test
 from .stm_rutas import comando_configurar_rutas, comando_rutas
 from .stm_calidad import solo_documenta, validar_fragmento
@@ -97,6 +98,7 @@ class FlujoRefactorLucIA:
         self.expediente = None
         #: Si quedan fragmentos irreparables, pedir confirmación antes de escribir.
         self.confirmar_parcial = True
+        self.fallo_filtro = False  # True si el modelo actual falló los filtros
 
     # -- fase PLAN ---------------------------------------------------------
     def _presentar_plan(self, titulo: str, pregunta: str) -> bool:
@@ -136,31 +138,30 @@ class FlujoRefactorLucIA:
         self.modelo = _asegurar_modelo_codigo(excluir=self.fallidas)
         if not self.modelo:
             raise ErrorProyecto("No hay ningún modelo de código disponible.")
+        self.fallo_filtro = False
         _liberar_ollama(excepto=self.modelo)
         _imprimir_seguro(f"[1/5] OK, modelo listo: {self.modelo}")
 
     def rotar_ia(self, motivo: str) -> None:
-        """Excluye la IA actual de los siguientes intentos; la borra solo si se pidió.
+        """Aparta la IA actual; la **borra** si falló los filtros o se pidió.
 
-        Con la política por defecto (R3) el modelo del usuario **no se borra**:
-        se excluye de la sesión y se deja constancia en el registro.
+        Un modelo que devuelve código inválido, vacío o solo documentación no
+        sirve: se elimina con ``ollama rm`` y queda apuntado para que el
+        siguiente flujo descargue otro distinto. Un timeout solo la excluye.
         """
         self.fallidas.add(self.modelo)
-        if not self.consumir_modelos:
+        if not (self.fallo_filtro or self.consumir_modelos):
             advertir(f"{self.modelo} queda excluido de esta sesión y no se borra "
-                     "(usa --consumir-modelos para eliminarlo).")
-            self.rotaciones.append(
-                f"- {self.modelo} excluida sin borrar (motivo: {motivo})")
+                     "(solo se elimina si no pasa los filtros o con --consumir-modelos).")
+            self.rotaciones.append(f"- {self.modelo} excluida sin borrar (motivo: {motivo})")
             return
-        _imprimir_seguro(f"[VIGILANTE] Borrando {self.modelo} ({motivo}).")
-        borrado = _borrar_modelo_ollama(self.endpoint, self.modelo)
+        razon = "no pasó los filtros" if self.fallo_filtro else "consumo pedido"
+        _imprimir_seguro(f"[VIGILANTE] Borrando {self.modelo} ({razon}).")
+        borrado = retirar_modelo(self.endpoint, self.modelo, motivo, self.fallo_filtro)
+        self.rotaciones.append(f"- {self.modelo} " + (
+            f"borrada ({razon})" if borrado else f"NO se pudo borrar ({razon})."))
         if not borrado:
             advertir(f"No se pudo borrar {self.modelo}; queda excluido igualmente.")
-            self.rotaciones.append(
-                f"- {self.modelo} NO se pudo borrar (motivo: {motivo}); excluida.")
-            return
-        self.rotaciones.append(
-            f"- {self.modelo} borrada con `ollama rm` (motivo: {motivo})")
 
     # -- fase FRAGMENTOS ---------------------------------------------------
     def generar_fragmentos(self) -> None:
@@ -230,6 +231,7 @@ class FlujoRefactorLucIA:
                          "reintento con el error adjunto.")
                 contexto += f"\n[CORRIJE: tu salida anterior falló con: {error}]"
         frag["irreparable"] = True
+        self.fallo_filtro = True  # el modelo no pasó los filtros: se borrará
         self.errores.append(f"- [frag {numero}/{total}] IRREPARABLE tras "
                             f"{self.MAX_REINTENTOS_FRAG} intentos; se conserva el original.")
         return False
@@ -326,6 +328,7 @@ class FlujoRefactorLucIA:
                 nuevo = self.ensamblar()
             except ErrorProyecto as error:
                 reportar_error(str(error))
+                self.fallo_filtro = True  # no pasó los filtros: se borrará
                 self.rotar_ia(f"validación global: {error}")
                 self.registrar(self.modelo, f"FALLO validación: {error}")
                 if intento >= self.MAX_IAS:

@@ -1,14 +1,15 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.11.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.12.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
 Cierra los issues **#80** y **#81**, corrige el fallo de descarga de modelos,
 resuelve las fases R1–R6 de la discusión #84, añade el **puente LucIA ↔ red
 neuronal** (embeddings reales y semilla con código real), deja la deuda
-P1/P2/P4 resuelta, suma el **subsistema seq2seq** y los comandos
-**`crear codigo`**, **`crear logica`**, **`comentar archivo`** y **`test`**.
+P1/P2/P4 resuelta, suma el **subsistema seq2seq**, los comandos
+**`crear codigo`**, **`crear logica`**, **`comentar archivo`** y **`test`**, y
+la **retirada automática** del modelo que no pasa los filtros.
 
 ## 1. Lo implementado
 
@@ -32,7 +33,8 @@ P1/P2/P4 resuelta, suma el **subsistema seq2seq** y los comandos
 | `stm_corpus.py` | 103 | Semilla de entrenamiento con archivos reales |
 | `stm_seq2seq.py` | 142 | Puente al subsistema `LC_STM/seq2seq` (memoria de refactors) |
 | `stm_embeddings.py` | 203 | Embeddings de Ollama, detección y contracción |
-| `stm_modelos.py` | 428 | Política de modelos (ligero primero) y ciclo de vida |
+| `stm_modelos.py` | 450 | Política de modelos (ligero primero) y ciclo de vida |
+| `stm_descartes.py` | 68 | **Nuevo**: modelos retirados por no pasar los filtros |
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
 | `stm_openrouter.py` | 193 | Respaldo OpenRouter (desactivado por defecto) |
 | `stm_refactor.py` | 350 | Fragmentos + validación + `comando_ds_ialocal` |
@@ -40,7 +42,7 @@ P1/P2/P4 resuelta, suma el **subsistema seq2seq** y los comandos
 | `stm_logica.py` | 245 | Comando `crear logica` (petición → función) |
 | `stm_comentarios.py` | 266 | **Nuevo**: comando `comentar archivo` (solo comentarios) |
 | `test.py` | 206 | **Nuevo**: pruebas estáticas y diagnóstico de deuda |
-| `stm_flujo.py` | 444 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
+| `stm_flujo.py` | 450 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
 | `stm_registro.py` | 194 | Publicación del registro y limpieza |
 | `stm_pesos.py` | 137 | Vectorización, cuantización y verificación |
 | `stm_ipfs.py` | 167 | Subida a IPFS en cuatro niveles |
@@ -102,8 +104,22 @@ Un archivo truncado ya no se acepta como completo.
 Orden de decisión: reutiliza el más ligero instalado → si no hay, descarga el
 más ligero que quepa en RAM → si `pull` falla, GGUF verificado + `ollama create`.
 Los modelos **no se borran** salvo `--consumir-modelos` (o
-`RFPRMN_CONSUMIR_MODELOS=1`). El respaldo OpenRouter está **desactivado** por
-defecto (`--openrouter` para activarlo).
+`RFPRMN_CONSUMIR_MODELOS=1`) y una excepción: **un modelo que no pasa los
+filtros se retira automáticamente**.
+
+### Retirada por filtros (`stm_descartes`)
+
+Si un modelo devuelve código inválido, una salida vacía o solo documentación
+(los mismos filtros del refactor), `ds ialocal` lo borra con `ollama rm` y lo
+apunta en `.config/modelos_descartados.json` con el motivo. Así el siguiente
+flujo **descarga otro modelo de código distinto** en vez de repetir el mismo.
+Un timeout o un fallo de conexión **no** lo borra: solo lo excluye de la sesión.
+
+Si todos los candidatos estuvieran descartados, la lista se reinicia sola. Para
+volver a probarlos a mano, basta con borrar ese JSON.
+
+El respaldo OpenRouter está **desactivado** por defecto (`--openrouter` para
+activarlo).
 
 ### 1.7 LucIA: expediente, embeddings, aprendizaje y semilla
 
@@ -292,7 +308,7 @@ Todas las salidas toleran consolas cp1252.
 
 ## 2. Pruebas y CI
 
-**245 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
+**256 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
 
 ```bash
 cd VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN
@@ -308,6 +324,7 @@ python -m pytest tests -q -p no:cacheprovider
 | `test_fragmentos.py` | Cortes válidos, cobertura, `try/except`, solape |
 | `test_flujo.py` | Un solo `ejecutar`, sin F821, sin truncar, rotación, limpieza |
 | `test_modelos.py` | Registro de usados, R3, «el más ligero», R6 |
+| `test_descartes.py` | Retirada por filtros, persistencia y elección del siguiente |
 | `test_descarga.py` | `Range`, truncados, no repetir descargas |
 | `test_openrouter.py` | Desactivado por defecto y activación explícita |
 | `test_lucia.py` | Expediente, README, vector, calidad y veredicto |

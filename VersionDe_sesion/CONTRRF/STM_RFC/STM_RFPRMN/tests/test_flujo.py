@@ -126,6 +126,31 @@ def test_ensamblar_elimina_el_solape_repetido(tmp_path):
 
 # --- rotación y limpieza -----------------------------------------------------
 
+def test_rotar_ia_borra_si_no_paso_los_filtros(tmp_path, monkeypatch):
+    flujo = _flujo(tmp_path)
+    flujo.modelo = "qwen2.5-coder:7b"
+    flujo.endpoint = "http://localhost:11434"
+    flujo.fallo_filtro = True
+    retirados: list[tuple[str, bool]] = []
+    monkeypatch.setattr(stm_flujo, "retirar_modelo",
+                        lambda _e, modelo, _m, descartar: retirados.append(
+                            (modelo, descartar)) or True)
+    flujo.rotar_ia("código inválido")
+    assert retirados == [("qwen2.5-coder:7b", True)], "se borra y queda descartado"
+    assert "qwen2.5-coder:7b" in flujo.fallidas
+    assert any("borrada" in linea for linea in flujo.rotaciones)
+
+
+def test_rotar_ia_sin_filtro_fallido_no_descarta(tmp_path, monkeypatch):
+    flujo = _flujo(tmp_path)
+    flujo.modelo = "qwen2.5-coder:7b"
+    retirados: list[bool] = []
+    monkeypatch.setattr(stm_flujo, "retirar_modelo",
+                        lambda *_a: retirados.append(True) or True)
+    flujo.rotar_ia("timeout")
+    assert retirados == [], "un timeout no borra el modelo"
+
+
 def test_rotar_ia_excluye_el_modelo_aunque_no_se_pueda_borrar(tmp_path, monkeypatch):
     flujo = _flujo(tmp_path)
     flujo.modelo = "qwen2.5-coder:7b"
@@ -141,9 +166,9 @@ def test_rotar_ia_registra_el_borrado_correcto(tmp_path, monkeypatch):
     flujo = _flujo(tmp_path)
     flujo.modelo = "starcoder2:7b"
     flujo.consumir_modelos = True
-    monkeypatch.setattr(stm_flujo, "_borrar_modelo_ollama", lambda *_a: True)
+    monkeypatch.setattr(stm_flujo, "retirar_modelo", lambda *_a: True)
     flujo.rotar_ia("validación")
-    assert any("ollama rm" in linea for linea in flujo.rotaciones)
+    assert any("borrada" in linea for linea in flujo.rotaciones)
 
 
 def test_rotar_ia_conserva_el_modelo_por_defecto(tmp_path, monkeypatch):
