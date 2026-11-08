@@ -6,13 +6,12 @@ Un único ``ejecutar()`` orquesta las fases [1/5]…[5/5] con estas garantías:
   de sentencias de nivel superior (AST), así que ninguno rompe un ``def``,
   un ``class`` ni un bloque ``try/except``.
 - **Solape real**: cada fragmento recibe como contexto la cola del fragmento
-  *original* anterior y el ensamblado elimina la repetición (``SOLAPE_LINEAS``).
+  *original* anterior y el ensamblado elimina la repetición.
 - **Sin truncamiento silencioso**: si el resultado excede el tope se rechaza
   con ``ErrorProyecto`` y el archivo original queda intacto.
-- **Rotación segura**: los modelos fallidos se excluyen y el borrado se
-  reporta; la limpieza de pesos está garantizada en éxito, error o cancelación.
-- **Validación antes de escribir**: sintaxis, tope y fidelidad de definiciones
-  se comprueban antes de reemplazar el archivo, con escritura atómica.
+- **Rotación y validación**: los modelos fallidos se excluyen (sin borrarlos
+  salvo ``--consumir-modelos``), la limpieza de pesos está garantizada y LucIA
+  valida el candidato con su red neuronal antes de escribir.
 """
 from __future__ import annotations
 
@@ -27,6 +26,9 @@ from .stm_base import (
 )
 from .stm_fs import escribir_texto_atomico
 from .stm_fragmentos import calcular_rangos, quitar_solape
+from .stm_lucia import (
+    evaluar_y_aprender, guardar_expediente, preparar as preparar_expediente,
+)
 from .stm_gestion import (
     comando_crear_carpeta, comando_crear_archivo, comando_refactorizar,
     actualizar, comando_enviar,
@@ -78,8 +80,7 @@ class FlujoRefactorLucIA:
         except OSError as error:
             raise ErrorProyecto(f"No se pudo analizar {self.ruta}: {error}")
         self.generador: ConsultorIA = consultor or consultar_ia_local
-        #: Por defecto los modelos del usuario se CONSERVAN (R3): borrarlos solo
-        #: si se pide explícitamente con ``--consumir-modelos`` o su variable.
+        #: Por defecto los modelos se CONSERVAN (R3); se borran con --consumir-modelos.
         self.consumir_modelos = (
             consumir_modelos_por_entorno() if consumir_modelos is None
             else bool(consumir_modelos))
@@ -90,6 +91,10 @@ class FlujoRefactorLucIA:
         self.rotaciones: list[str] = []   # líneas "### Rotación" para el .md
         self.fragmentos: list[dict] = []
         self.nota_lucia = ""
+        #: Última descripción funcional que LucIA hizo del archivo.
+        self.descripcion_lucia = ""
+        #: Expediente (código + descripción + README + deuda) del archivo.
+        self.expediente = None
         #: Si quedan fragmentos irreparables, pedir confirmación antes de escribir.
         self.confirmar_parcial = True
 
@@ -97,6 +102,7 @@ class FlujoRefactorLucIA:
     def _presentar_plan(self, titulo: str, pregunta: str) -> bool:
         """Muestra diagnóstico y plan de LucIA y pide confirmación."""
         plan_lucia = self.generador(self.contenido, self.analisis)
+        self.descripcion_lucia = str(plan_lucia).strip()
         _imprimir_seguro(_panel(titulo, str(plan_lucia).strip()))
         plan = crear_plan_refactorizacion(self.analisis)
         print(f"\n{E.negrita}Plan de refactorización{E.reset}")
@@ -208,7 +214,9 @@ class FlujoRefactorLucIA:
                 salida = _generar_fragmento(self.endpoint, self.modelo,
                                             self.ruta.name,
                                             frag["original"] + contexto,
-                                            numero, total, 60)
+                                            numero, total, 60,
+                                            contexto=self.expediente.contexto
+                                            if self.expediente else "")
                 if not salida.strip():
                     raise ErrorProyecto("devolvió una salida vacía")
                 self._validar_salida_frag(salida)
@@ -260,11 +268,7 @@ class FlujoRefactorLucIA:
 
     # -- orquestación ------------------------------------------------------
     def ejecutar(self) -> bool:
-        """Ejecuta el flujo completo y GARANTIZA borrar el peso local al terminar.
-
-        Única definición (issue #80): el ``finally`` limpia el GGUF en éxito,
-        error, cancelación o fallback.
-        """
+        """Ejecuta el flujo y GARANTIZA limpiar el peso local (única definición)."""
         try:
             return self._ejecutar_fases()
         finally:
@@ -287,6 +291,9 @@ class FlujoRefactorLucIA:
         """Fases [1/5]…[5/5] con rotación de IAs y anotación de errores."""
         if not self.plan_y_confirmacion():
             return False
+        # Expediente: código + descripción de LucIA + README con la deuda del archivo.
+        self.expediente = preparar_expediente(self.ruta, self.contenido,
+                                              self.analisis, self.descripcion_lucia)
         for intento in range(1, self.MAX_IAS + 1):
             _imprimir_seguro(f"[1/5] Preparando IA local "
                              f"(intento {intento}/{self.MAX_IAS})...")
@@ -337,9 +344,21 @@ class FlujoRefactorLucIA:
                 if not self.nuevo_diagnostico():
                     return False
                 continue
+            # LucIA puntúa con su red (aprende del par expediente → calidad).
+            if self.expediente is not None:
+                veredicto = evaluar_y_aprender(self.expediente, nuevo, self.contenido)
+                _imprimir_seguro(f"[LUCIA] {veredicto['motivo']}")
+                if veredicto["disponible"] and not veredicto["aceptado"]:
+                    advertir("LucIA no valida el resultado con su red neuronal.")
+                    if self.confirmar_parcial and not pedir_confirmacion(
+                            "¿Se aplica igualmente?"):
+                        return False
             # Éxito: escritura atómica, nota de LucIA, registro y limpieza final.
             if not self._aplicar(nuevo):
                 return False
+            if self.expediente is not None:
+                informar("README del expediente: "
+                         f"{guardar_expediente(self.expediente)}")
             _imprimir_seguro("[3/5] Pidiendo a LucIA su nota interna...")
             self.nota_lucia = self.generador(nuevo, analizar_archivo_local(self.ruta))
             _imprimir_seguro("[4/5] Registrando en el .md...")

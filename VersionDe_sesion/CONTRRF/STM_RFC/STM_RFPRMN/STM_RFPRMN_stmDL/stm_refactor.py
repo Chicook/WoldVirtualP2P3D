@@ -31,15 +31,21 @@ from .stm_openrouter import describir_estado, habilitado as openrouter_habilitad
 
 def _generar_fragmento(endpoint: str, modelo: str, nombre_archivo: str,
                        fragmento: str, num: int, total: int,
-                       timeout_primer_token: int) -> str:
-    """Refactoriza UN fragmento (~60 líneas) con el modelo local en stream."""
+                       timeout_primer_token: int, contexto: str = "") -> str:
+    """Refactoriza UN fragmento (~60 líneas) con el modelo local en stream.
+
+    ``contexto`` lleva el expediente de LucIA (descripción funcional y deuda
+    técnica del archivo) para que el modelo sepa qué está tocando.
+    """
     import threading as _th, time as _tm
     carga = {"model": modelo, "messages": [
         {"role": "system", "content": (
-            "Eres LucIA. Refactoriza el fragmento de código sin cambiar su "
-            "comportamiento: nombres claros, sin duplicados, documenta lo esencial. "
+            "Eres LucIA. Refactoriza el fragmento SIN cambiar su comportamiento "
+            "ni los nombres de funciones, clases o métodos públicos: documenta, "
+            "elimina duplicados y aclara dentro del cuerpo. "
             "Responde SOLO con código, sin explicaciones ni cercas.")},
-        {"role": "user", "content": f"Archivo: {nombre_archivo} (parte {num}/{total})\n{fragmento}"}],
+        {"role": "user", "content": (f"Archivo: {nombre_archivo} (parte {num}/{total})\n"
+                                     f"{contexto}{fragmento}")}],
         "stream": True, "keep_alive": "10m",
         "options": {"temperature": 0.2, "num_predict": 800, "num_ctx": 2048}}
     pet = urllib.request.Request(
@@ -188,13 +194,21 @@ def _validar_refactor(original: str, nuevo: str, ruta: Path) -> str:
 
 
 def _registrar_refactor_md(ruta: Path, modelo: str, descripcion: str) -> None:
-    """Añade al .md de registro qué hizo el modelo y su nombre (evita re-descargas)."""
-    REGISTRO_REFACTOR_MD.parent.mkdir(parents=True, exist_ok=True)
+    """Añade al .md de registro qué hizo el modelo y su nombre (evita re-descargas).
+
+    Es best-effort: si el registro no se puede escribir (árbol de solo lectura,
+    permisos), se avisa y el flujo continúa; antes reventaba con ``OSError``.
+    """
     entrada = (f"\n## {ruta.name} — {modelo}\n"
                f"Fecha: {__import__('datetime').datetime.now().isoformat(timespec='seconds')}\n"
                f"Archivo: {ruta}\nDescripción del modelo: {descripcion.strip()}\n")
-    with open(REGISTRO_REFACTOR_MD, "a", encoding="utf-8") as f:
-        f.write(entrada)
+    try:
+        REGISTRO_REFACTOR_MD.parent.mkdir(parents=True, exist_ok=True)
+        with open(REGISTRO_REFACTOR_MD, "a", encoding="utf-8") as f:
+            f.write(entrada)
+    except OSError as error:
+        advertir(f"No se pudo escribir el registro de refactor ({error}).")
+        return
     exito(f"Registro guardado en: {REGISTRO_REFACTOR_MD}")
 
 

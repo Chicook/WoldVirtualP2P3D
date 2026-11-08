@@ -1,15 +1,14 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.3.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.4.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`).
 
 Esta versión cierra los issues **#80** (fiabilidad del flujo de refactor) y
 **#81** (seguridad de las operaciones de ficheros), corrige el fallo de
-descarga de modelos locales y resuelve las seis fases de la discusión #84:
-**R1/R2** (rutas fuera de los árboles sincronizados), **R3** (conservar los
-modelos del usuario), **R4** (dividir los módulos que estaban al tope),
-**R5** (rutas configurables) y **R6** (registrar el GGUF en Ollama).
+descarga de modelos locales, resuelve las seis fases de la discusión #84 y
+añade el **puente LucIA ↔ red neuronal**: expediente del archivo, README con su
+deuda técnica y aprendizaje en `LC_STM/red_neuronal`.
 
 ## 1. Lo implementado
 
@@ -29,6 +28,7 @@ de 450 líneas**:
 | `stm_fragmentos.py` | 132 | Troceado por AST/heurística, solape y constantes de refactor |
 | `stm_gestion.py` | 412 | fs + `refactorizar/enviar/actualizar` **transaccionales** |
 | `stm_analisis.py` | 280 | `AnalisisArchivo` + plan + LucIA local |
+| `stm_lucia.py` | 385 | **Nuevo**: expediente, README con deuda, vectores y aprendizaje en la red de LC_STM |
 | `stm_modelos.py` | 428 | Política de modelos (ligero primero) y ciclo de vida |
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
 | `stm_openrouter.py` | 149 | Respaldo con modelos gratuitos de OpenRouter |
@@ -143,7 +143,37 @@ python RFPRMN.py --openrouter --comando "ds ialocal"   # solo esta ejecución
 Si no está configurado, el flujo informa y termina sin hacer ninguna llamada
 de red ni pedir la clave:
 
-### 1.7 Publicación del registro al actualizar
+### 1.7 LucIA: expediente, README y aprendizaje (`stm_lucia.py`)
+
+Es el puente entre el módulo y `LC_STM/red_neuronal`. El comando `ds ialocal`
+sigue este ciclo:
+
+1. **Expediente.** Se reúne el código, la descripción funcional que LucIA hace
+   en lenguaje natural y un **README detallado con la deuda técnica de ese
+   archivo** (`deuda_tecnica()`: docstrings ausentes, except genéricos,
+   argumentos mutables, líneas largas, TODO, tamaño, complejidad).
+2. **Envío.** El contexto compacto del expediente viaja con cada fragmento al
+   modelo local, que devuelve código candidato.
+3. **Vectores de aprendizaje.** El expediente se codifica en un vector de 12
+   dimensiones (métricas normalizadas + huella de la descripción) y el
+   candidato en un vector de 3 (fidelidad, limpieza, seguridad).
+4. **Aprendizaje.** La red `NeuralNetworkOptimizer` de
+   `LC_STM/red_neuronal/RF_SL/RFSL1/RF_SL1_4.py` entrena con el par
+   (expediente → calidad) y guarda sus pesos en
+   `STM_RFPRMN/.modelos/lucia_rn.pkl`.
+5. **Escritura.** LucIA puntúa con la red **antes** de entrenar con la muestra
+   (para que el veredicto no sea circular); si el resultado no convence,
+   pregunta antes de escribir. La escritura la hace LucIA, de forma atómica.
+
+El README del expediente se archiva en `STM_RFPRMN/.modelos/expedientes/`.
+
+**Alcance honesto:** la red no genera texto. Aprende a **evaluar** la calidad
+del refactor; la generación la hace el modelo local y la decisión/escritura,
+LucIA. Mientras no acumule `MIN_PASOS` (8) muestras, informa de que está
+aprendiendo y no bloquea nada. Si `numpy` o `LC_STM` no están disponibles, el
+refactor sigue funcionando sin aprendizaje.
+
+### 1.8 Publicación del registro al actualizar
 
 `stm_registro_json/STM_RFC/envios.json` → `registro.md` en lenguaje natural →
 borrado del json → pesos neuronales v2 (`stm_pesos`: vector global 64 + vector
@@ -152,7 +182,7 @@ IPFSManager → API `127.0.0.1:5001` → `ipfs.exe` → CID `QmLocal`) → borra
 md y pesos. Utilidades: `vista_previa()`, `verificar_pesos()`,
 `similitud_coseno()`, `url_pasarela()`.
 
-### 1.8 Bytecode y consola
+### 1.9 Bytecode y consola
 
 - `sys.pycache_prefix` apunta a `STM_RFPRMN/.pycache_rfprmn`; el `atexit`
   limpia `__pycache__` y esa carpeta al salir.
@@ -161,7 +191,7 @@ md y pesos. Utilidades: `vista_previa()`, `verificar_pesos()`,
 
 ## 2. Pruebas
 
-Suite propia del módulo (**107 pruebas**, sin red, sin Ollama y sin tocar
+Suite propia del módulo (**120 pruebas**, sin red, sin Ollama y sin tocar
 RFC/PRY):
 
 ```bash
@@ -176,6 +206,7 @@ python -m pytest tests -q -p no:cacheprovider
 | `tests/test_rutas.py` | Nada se escribe bajo RFC/PRY, cadena de configuración, R5 (guardar/validar rutas) |
 | `tests/test_modelos.py` | Registro de usados, política R3, «el más ligero», R6 (`ollama create`) |
 | `tests/test_openrouter.py` | Respaldo desactivado por defecto y activación explícita (entorno/archivo) |
+| `tests/test_lucia.py` | Expediente y deuda, README, vector de 12, calidad de 3 y aprendizaje/veredicto |
 | `tests/test_fragmentos.py` | Cortes válidos, cobertura sin huecos, `try/except`, solape |
 | `tests/test_flujo.py` | Un solo `ejecutar`, sin F821, ensamblado sin truncar, rotación y limpieza |
 | `tests/test_fs.py` | Verificación por huella, swap con rollback, borrado, JSON atómico, bloqueo |

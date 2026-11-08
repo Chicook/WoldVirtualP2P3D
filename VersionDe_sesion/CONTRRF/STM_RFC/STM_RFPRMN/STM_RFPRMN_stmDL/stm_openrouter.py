@@ -153,7 +153,8 @@ def _refactorizar_con_openrouter(contenido: str, analisis, clave: str) -> tuple[
             try:
                 texto = _chat_openrouter(modelo_id, clave, [
                     {"role": "system", "content": (
-                        "Refactoriza el fragmento sin cambiar su comportamiento. "
+                        "Refactoriza el fragmento sin cambiar su comportamiento ni "
+                        "los nombres de funciones, clases o métodos públicos. "
                         "Responde SOLO con código, sin explicaciones ni cercas.")},
                     {"role": "user", "content": f"Archivo: {nombre} (parte {num})\n{frag}"}],
                     max_tokens=1500)

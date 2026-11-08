@@ -10,11 +10,12 @@ import importlib
 from pathlib import Path
 from typing import Any
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"
 
 _MODULOS = ("stm_base", "stm_rutas", "stm_fs", "stm_fragmentos", "stm_gestion",
-            "stm_analisis", "stm_modelos", "stm_descarga", "stm_openrouter",
-            "stm_refactor", "stm_flujo", "stm_registro", "stm_pesos", "stm_ipfs")
+            "stm_analisis", "stm_lucia", "stm_modelos", "stm_descarga",
+            "stm_openrouter", "stm_refactor", "stm_flujo", "stm_registro",
+            "stm_pesos", "stm_ipfs")
 
 # Mapa simbolo -> modulo que lo define (resolucion perezosa).
 _REGISTRO: dict[str, str] = {}
@@ -55,6 +56,12 @@ _ANALISIS_SYMS = ["AnalisisArchivo", "analizar_archivo_local", "crear_plan_refac
     "ConsultorIA", "comando_ia_local"]
 for _s in _ANALISIS_SYMS:
     _REGISTRO[_s] = "stm_analisis"
+_LUCIA_SYMS = ["Expediente", "ALTO", "SALIDA", "MIN_PASOS", "UMBRAL", "RUTA_RED",
+    "disponible", "motivo_no_disponible", "pasos_aprendidos", "deuda_tecnica",
+    "readme_detallado", "codificar", "preparar", "objetivo",
+    "evaluar_y_aprender", "estado", "describir"]
+for _s in _LUCIA_SYMS:
+    _REGISTRO[_s] = "stm_lucia"
 _MODELOS_SYMS = ["DIR_MODELOS_LOCAL", "HF_REPO_CODIGO", "HF_ARCHIVO_CODIGO",
     "MODELOS_CODIGO_LIGEROS", "LIMITE_LINEAS_REFACTOR", "REGISTRO_REFACTOR_MD",
     "NOMBRE_MODELO_GGUF", "tamano_modelo", "ordenar_por_tamano",
@@ -359,19 +366,6 @@ try:
         DIR_CONFIG, DIR_DATOS, candidatos_config_ia_local, comprobar_ruta_segura,
         describir_config_ia_local, es_zona_sincronizada, ruta_config_ia_local,
         rutas_protegidas, ultima_actualizacion_pry,
-    )
-except Exception:
-    pass
-try:
-    from .stm_pesos import (  # noqa: F401,E402
-        DIM_VECTOR, NOMBRE_PESOS, cuantizar, desnormalizar, norma,
-        seccionar_md, similitud_coseno, texto_a_vector,
-    )
-except Exception:
-    pass
-try:
-    from .stm_ipfs import (  # noqa: F401,E402
-        IPFS_API_URL, IPFS_GATEWAY_URL, subir_a_ipfs, url_pasarela,
     )
 except Exception:
     pass

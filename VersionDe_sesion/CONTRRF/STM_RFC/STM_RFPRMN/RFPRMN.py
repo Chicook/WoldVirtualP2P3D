@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -67,6 +67,7 @@ from STM_RFPRMN_stmDL.stm_registro import (  # noqa: E402,F401
 from STM_RFPRMN_stmDL.stm_rutas import (  # noqa: E402,F401
     comando_configurar_rutas, comando_rutas, estado_rutas, guardar_rutas,
 )
+from STM_RFPRMN_stmDL.stm_lucia import describir as describir_lucia  # noqa: E402
 
 __all__ = sorted(set(_Registro.nombres()) | {"RFPRMN", "cerrar", "mostrar_menu",
     "ejecutar_comandos", "__version__"})
@@ -254,6 +255,7 @@ _COMANDOS_AYUDA: dict[str, str] = {
     "presupuesto": "Verifica que ningún módulo supere el tope de 450 líneas.",
     "rutas": "Muestra las rutas activas de RFC/PRY y de qué fuente salen.",
     "configurar rutas": "Elige los directorios de RFC y PRY (se guardan en .config/rutas.json).",
+    "lucia": "Estado de la red neuronal de LucIA (muestras aprendidas y pesos).",
     "ayuda": "Muestra esta ayuda.",
 }
 
@@ -275,9 +277,10 @@ def version_info() -> dict:
     """Versión de la fachada y nº de símbolos públicos re-exportados."""
     return {"version": __version__, "simbolos": len(__all__),
             "modulos": ["stm_base", "stm_rutas", "stm_fs", "stm_fragmentos",
-                        "stm_gestion", "stm_analisis", "stm_modelos",
-                        "stm_descarga", "stm_openrouter", "stm_refactor",
-                        "stm_flujo", "stm_registro", "stm_pesos", "stm_ipfs"]}
+                        "stm_gestion", "stm_analisis", "stm_lucia",
+                        "stm_modelos", "stm_descarga", "stm_openrouter",
+                        "stm_refactor", "stm_flujo", "stm_registro",
+                        "stm_pesos", "stm_ipfs"]}
 
 def estado_sistema() -> dict:
     """Estado de import + líneas de cada submódulo del paquete.
@@ -321,6 +324,9 @@ def _ejecutar_extra(entrada: str) -> bool:
         return True
     if entrada == "configurar rutas":
         comando_configurar_rutas()
+        return True
+    if entrada == "lucia":
+        _imprimir_seguro(describir_lucia())
         return True
     if entrada in ("ayuda", "help", "?"):
         imprimir_ayuda()
@@ -398,6 +404,9 @@ def main(argv: list[str] | None = None) -> int:
     if args[0] in ("--configurar-rutas", "configurar rutas"):
         comando_configurar_rutas()
         return 0
+    if args[0] in ("--lucia", "lucia"):
+        _imprimir_seguro(describir_lucia())
+        return 0
     if args[0] == "--comando" and len(args) > 1:
         nombre = " ".join(args[1:]).strip().lower()
         fachada = RFPRMN()
@@ -416,7 +425,11 @@ def main(argv: list[str] | None = None) -> int:
         if accion is None:
             reportar_error(f"Comando no reconocido: '{nombre}' (prueba --ayuda)")
             return 2
-        accion()
+        try:
+            accion()
+        except (KeyboardInterrupt, EOFError):
+            informar("Entrada interrumpida (sin más datos); no se modificó nada.")
+            return 1
         return 0
     reportar_error(f"Argumento no reconocido: {args[0]} (prueba --ayuda)")
     return 2

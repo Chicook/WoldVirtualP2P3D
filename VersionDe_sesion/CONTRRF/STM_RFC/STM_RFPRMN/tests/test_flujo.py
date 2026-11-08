@@ -203,3 +203,12 @@ def test_aplicar_no_toca_el_archivo_si_se_cancela(tmp_path, monkeypatch):
     monkeypatch.setattr(stm_flujo, "pedir_confirmacion", lambda *_a: False)
     assert flujo._aplicar("def otro():\n    pass\n") is False
     assert flujo.ruta.read_text(encoding="utf-8") == ORIGEN_VALIDO
+
+
+def test_el_registro_no_rompe_el_flujo_si_es_ilegible(tmp_path, monkeypatch):
+    """Si el registro no se puede escribir, se avisa y se sigue (no OSError)."""
+    from STM_RFPRMN_stmDL import stm_refactor
+    bloqueado = tmp_path / "registro_bloqueado.md"
+    bloqueado.mkdir()  # abrir un directorio en modo texto lanza OSError
+    monkeypatch.setattr(stm_refactor, "REGISTRO_REFACTOR_MD", bloqueado)
+    stm_refactor._registrar_refactor_md(tmp_path / "a.py", "modelo", "nota")  # no lanza
