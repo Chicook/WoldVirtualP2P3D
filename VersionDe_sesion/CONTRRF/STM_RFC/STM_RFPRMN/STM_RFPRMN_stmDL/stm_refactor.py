@@ -176,7 +176,21 @@ def _refactorizar_con_modelo(contenido: str, analisis: AnalisisArchivo, modelo: 
 
 
 def _validar_refactor(original: str, nuevo: str, ruta: Path,
-                      permitir_exceso: bool = False) -> str:
+                      permitir_exceso: bool = False,
+                      guardar_candidato: bool = False) -> str:
+    """Valida el refactor y, si falla, puede dejar el candidato para revisión."""
+    try:
+        return _validar_refactor_impl(original, nuevo, ruta, permitir_exceso)
+    except ErrorProyecto:
+        if guardar_candidato:
+            from .stm_particion import guardar_candidato as guardar
+
+            guardar(nuevo, ruta)
+        raise
+
+
+def _validar_refactor_impl(original: str, nuevo: str, ruta: Path,
+                           permitir_exceso: bool = False) -> str:
     """Previene refactors rotos: valida sintaxis, tope y fidelidad mínima.
 
     - ``.py``: debe compilar con ``ast`` (evita paréntesis sin cerrar, cortes

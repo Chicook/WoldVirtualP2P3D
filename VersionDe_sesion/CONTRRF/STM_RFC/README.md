@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.13.2**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.13.3**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -246,8 +246,10 @@ reparte en partes de 450, sin tocar el archivo original.
 ```
 
 Ojo: sigue habiendo un control de **fidelidad** (80 % de las definiciones
-originales). Si el modelo se pierde funciones por el camino, no se guarda nada:
-eso no es «código largo», es código incompleto.
+originales). Si el modelo se pierde funciones por el camino, no se aplica nada,
+pero el candidato **no se tira**: se guarda en
+`CONTRUCCION/<nombre>_candidato.py` para revisarlo sin riesgo (el original y el
+código del proyecto quedan intactos).
 
 Luego el archivo principal se queda con las primeras unidades y **re-exporta**
 las partes. Si están en otra carpeta, el bloque añade esa carpeta a `sys.path`

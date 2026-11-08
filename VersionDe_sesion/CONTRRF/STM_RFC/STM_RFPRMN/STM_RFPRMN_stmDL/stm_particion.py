@@ -180,6 +180,25 @@ def _informe(ruta: Path, destino: Path, partes: list[list[dict]],
             + aviso + "\n")
 
 
+def guardar_candidato(texto: str, ruta: str | Path) -> Path | None:
+    """Guarda un candidato rechazado en CONTRUCCION para revisarlo sin riesgo.
+
+    No se aplica: el archivo original queda intacto. Sirve para ver qué
+    proponía la IA cuando la validación lo descartó (p. ej. por perder
+    definiciones) sin que llegue al código del proyecto.
+    """
+    if not (texto or "").strip():
+        return None
+    destino = DIR_CONSTRUCCION / f"{Path(ruta).stem}_candidato.py"
+    try:
+        escribir_texto_atomico(destino, texto if texto.endswith("\n") else texto + "\n")
+    except OSError as error:
+        advertir(f"No se pudo guardar el candidato ({error}).")
+        return None
+    advertir(f"Candidato rechazado guardado para revisión: {destino}")
+    return destino
+
+
 def partir_archivo(ruta: str | Path, destino_subsistema: str | Path | None = None,
                    limite: int = LIMITE_LINEAS_REFACTOR) -> dict:
     """Parte ``ruta`` si supera ``limite``; el exceso va a otro ``.py``."""

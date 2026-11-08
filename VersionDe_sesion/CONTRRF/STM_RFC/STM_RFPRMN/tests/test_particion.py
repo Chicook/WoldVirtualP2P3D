@@ -215,3 +215,40 @@ def test_repartir_carpeta_inexistente(tmp_path):
 
 def test_repartir_carpeta_vacia(tmp_path):
     assert stm_particion.repartir_carpeta(tmp_path)["motivo"] == "nada que repartir"
+
+
+# --- Candidato rechazado -----------------------------------------------------
+
+def test_guardar_candidato_lo_deja_para_revision(tmp_path, monkeypatch):
+    monkeypatch.setattr(stm_particion, "DIR_CONSTRUCCION", tmp_path)
+    destino = stm_particion.guardar_candidato("def f():\n    return 1\n",
+                                              tmp_path / "x.py")
+    assert destino == tmp_path / "x_candidato.py"
+    assert destino.read_text(encoding="utf-8") == "def f():\n    return 1\n"
+
+
+def test_no_guarda_candidato_vacio(tmp_path, monkeypatch):
+    monkeypatch.setattr(stm_particion, "DIR_CONSTRUCCION", tmp_path)
+    assert stm_particion.guardar_candidato("   ", tmp_path / "x.py") is None
+
+
+def test_el_validador_deja_el_candidato_si_se_pide(tmp_path, monkeypatch):
+    from STM_RFPRMN_stmDL import stm_refactor
+
+    monkeypatch.setattr(stm_particion, "DIR_CONSTRUCCION", tmp_path)
+    with pytest.raises(ErrorProyecto):
+        stm_refactor._validar_refactor(
+            "def a():\n    return 1\n", "def b():\n    return 2\n",
+            tmp_path / "mod.py", False, True)
+    assert (tmp_path / "mod_candidato.py").is_file()
+
+
+def test_el_validador_no_escribe_si_no_se_pide(tmp_path, monkeypatch):
+    from STM_RFPRMN_stmDL import stm_refactor
+
+    monkeypatch.setattr(stm_particion, "DIR_CONSTRUCCION", tmp_path)
+    with pytest.raises(ErrorProyecto):
+        stm_refactor._validar_refactor(
+            "def a():\n    return 1\n", "def b():\n    return 2\n",
+            tmp_path / "mod.py")
+    assert not list(tmp_path.glob("*_candidato.py"))

@@ -242,7 +242,7 @@ class FlujoRefactorLucIA:
             partes.append(texto)
             previo = partes[-1]
         texto = "\n".join(partes).strip()
-        return _validar_refactor(self.contenido, texto, self.ruta, True)
+        return _validar_refactor(self.contenido, texto, self.ruta, True, True)
 
     def registrar(self, modelo: str, descripcion: str) -> None:
         """Guarda en el .md la nota de LucIA más los bloques de errores/rotación."""
