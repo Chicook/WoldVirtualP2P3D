@@ -10,11 +10,11 @@ import importlib
 from pathlib import Path
 from typing import Any
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
-_MODULOS = ("stm_base", "stm_fs", "stm_fragmentos", "stm_gestion", "stm_analisis",
-            "stm_modelos", "stm_descarga", "stm_refactor", "stm_flujo",
-            "stm_registro")
+_MODULOS = ("stm_base", "stm_rutas", "stm_fs", "stm_fragmentos", "stm_gestion",
+            "stm_analisis", "stm_modelos", "stm_descarga", "stm_refactor",
+            "stm_flujo", "stm_registro")
 
 # Mapa simbolo -> modulo que lo define (resolucion perezosa).
 _REGISTRO: dict[str, str] = {}
@@ -26,6 +26,12 @@ _BASE_SYMS = ["Estilo", "E", "ANCHO_TERMINAL", "_caja", "_panel", "RESPUESTAS_AF
     "CONFIG_IA_LOCAL", "RFC_DIR", "PRY_DIR", "carpetas_creadas"]
 for _s in _BASE_SYMS:
     _REGISTRO[_s] = "stm_base"
+_RUTAS_SYMS = ["DIR_DATOS", "DIR_CONFIG", "es_zona_sincronizada",
+    "comprobar_ruta_segura", "ultima_actualizacion_pry",
+    "candidatos_config_ia_local", "ruta_config_ia_local",
+    "describir_config_ia_local", "rutas_protegidas"]
+for _s in _RUTAS_SYMS:
+    _REGISTRO[_s] = "stm_rutas"
 _FS_SYMS = ["ruta_larga", "es_subruta", "rutas_se_solapan", "sha256_archivo",
     "huella_directorio", "verificar_copia", "reemplazar_directorio",
     "escribir_texto_atomico", "escribir_json_atomico", "bloqueo",
@@ -336,6 +342,14 @@ try:
         advertir, reportar_error, pedir_confirmacion, MODULO_DIR, TLLDCD_DIR,
         CONTRRF_DIR, SRC_DIR, encontrar_raiz, RAIZ, ORIGEN, DESTINO,
         CONFIG_IA_LOCAL, RFC_DIR, PRY_DIR, carpetas_creadas,
+    )
+except Exception:
+    pass
+try:
+    from .stm_rutas import (  # noqa: F401,E402
+        DIR_CONFIG, DIR_DATOS, candidatos_config_ia_local, comprobar_ruta_segura,
+        describir_config_ia_local, es_zona_sincronizada, ruta_config_ia_local,
+        rutas_protegidas, ultima_actualizacion_pry,
     )
 except Exception:
     pass

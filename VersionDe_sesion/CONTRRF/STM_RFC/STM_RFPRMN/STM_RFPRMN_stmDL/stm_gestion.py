@@ -19,7 +19,6 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Optional
 
 from .stm_base import (
     advertir, exito, informar, reportar_error, pedir_confirmacion, ErrorProyecto,
@@ -35,6 +34,7 @@ from .stm_fs import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
 from .stm_registro import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
     DIR_REGISTRO as DIR_REGISTRO_JSON, RUTA_JSON as REGISTRO_ENVIOS,
 )
+from .stm_rutas import rutas_protegidas, ultima_actualizacion_pry as _ultima_actualizacion_pry
 
 # --- Utilidades --------------------------------------------------------------
 
@@ -49,8 +49,7 @@ def _misma_ruta(a: str | Path, b: str | Path) -> bool:
 
 def _zonas_protegidas() -> tuple[Path, ...]:
     """Raíces del proyecto que nunca deben borrarse como un todo."""
-    return (RAIZ, PRY_DIR, RFC_DIR, CONTRRF_DIR, TLLDCD_DIR,
-            MODULO_DIR, MODULO_DIR.parent)
+    return tuple(rutas_protegidas())
 
 
 def _comprobar_borrado(ruta: str | Path) -> None:
@@ -61,18 +60,6 @@ def _comprobar_borrado(ruta: str | Path) -> None:
     if es_subruta(objetivo, MODULO_DIR):
         raise ErrorProyecto(
             f"Borrado bloqueado: {objetivo} pertenece a la herramienta.")
-
-
-def _ultima_actualizacion_pry() -> Optional[Path]:
-    """Devuelve la ``actualizacion_*`` más reciente de PRY (None si no hay)."""
-    try:
-        candidatas = [hijo for hijo in PRY_DIR.iterdir()
-                      if hijo.is_dir() and hijo.name.startswith("actualizacion_")]
-    except OSError:
-        return None
-    if not candidatas:
-        return None
-    return max(candidatas, key=lambda p: p.stat().st_mtime)
 
 
 def _es_layout_actual() -> bool:

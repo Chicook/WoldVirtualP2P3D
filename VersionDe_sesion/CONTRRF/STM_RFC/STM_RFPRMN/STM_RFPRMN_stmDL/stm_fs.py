@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Iterator, Optional
 
 from .stm_base import ErrorProyecto, advertir
+from .stm_rutas import es_subruta as _es_subruta, rutas_se_solapan  # noqa: F401
 
 #: Tamaño de bloque usado al hashear y copiar.
 BLOQUE = 1024 * 1024
@@ -49,25 +50,9 @@ def ruta_larga(ruta: str | Path) -> str:
     return texto
 
 
-def _normalizada(ruta: str | Path) -> str:
-    """Ruta absoluta normalizada para comparar (sin distinguir mayúsculas en Windows)."""
-    return os.path.normcase(os.path.abspath(str(Path(ruta).resolve(strict=False))))
-
-
 def es_subruta(hijo: str | Path, padre: str | Path) -> bool:
-    """True si ``hijo`` es ``padre`` o está dentro de él."""
-    ruta_hija, ruta_padre = _normalizada(hijo), _normalizada(padre)
-    if ruta_hija == ruta_padre:
-        return True
-    try:
-        return os.path.commonpath([ruta_hija, ruta_padre]) == ruta_padre
-    except ValueError:  # unidades distintas
-        return False
-
-
-def rutas_se_solapan(a: str | Path, b: str | Path) -> bool:
-    """True si una ruta contiene a la otra (copia recursiva imposible)."""
-    return es_subruta(a, b) or es_subruta(b, a)
+    """True si ``hijo`` es ``padre`` o está dentro de él (delegado en stm_rutas)."""
+    return _es_subruta(hijo, padre)
 
 
 def _existe(ruta: Path) -> bool:

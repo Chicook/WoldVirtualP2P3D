@@ -17,6 +17,7 @@ Un único ``ejecutar()`` orquesta las fases [1/5]…[5/5] con estas garantías:
 from __future__ import annotations
 
 import ast
+import os
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -46,6 +47,15 @@ from .stm_refactor import (
 
 # --- Flujo -------------------------------------------------------------------
 
+#: Valores de ``RFPRMN_CONSUMIR_MODELOS`` que activan el borrado de modelos.
+_AFIRMATIVOS = frozenset({"1", "si", "sí", "s", "yes", "y", "true"})
+
+
+def consumir_modelos_por_entorno() -> bool:
+    """True si ``RFPRMN_CONSUMIR_MODELOS`` pide borrar los modelos usados."""
+    return os.environ.get("RFPRMN_CONSUMIR_MODELOS", "").strip().lower() in _AFIRMATIVOS
+
+
 class FlujoRefactorLucIA:
     """Pipeline "ds ialocal": plan, IA local por fragmentos, validación y registro.
 
@@ -58,7 +68,8 @@ class FlujoRefactorLucIA:
     SOLAPE_LINEAS = 10
 
     def __init__(self, ruta: Path, contenido: str,
-                 consultor: Optional[ConsultorIA] = None) -> None:
+                 consultor: Optional[ConsultorIA] = None,
+                 consumir_modelos: Optional[bool] = None) -> None:
         self.ruta = Path(ruta)
         self.contenido = contenido
         try:
@@ -66,6 +77,11 @@ class FlujoRefactorLucIA:
         except OSError as error:
             raise ErrorProyecto(f"No se pudo analizar {self.ruta}: {error}")
         self.generador: ConsultorIA = consultor or consultar_ia_local
+        #: Por defecto los modelos del usuario se CONSERVAN (R3): borrarlos solo
+        #: si se pide explícitamente con ``--consumir-modelos`` o su variable.
+        self.consumir_modelos = (
+            consumir_modelos_por_entorno() if consumir_modelos is None
+            else bool(consumir_modelos))
         self.modelo = ""
         self.endpoint = ""
         self.fallidas: set[str] = set()
@@ -117,10 +133,20 @@ class FlujoRefactorLucIA:
         _imprimir_seguro(f"[1/5] OK, modelo listo: {self.modelo}")
 
     def rotar_ia(self, motivo: str) -> None:
-        """Borra la IA actual, la anota y la excluye de los siguientes intentos."""
+        """Excluye la IA actual de los siguientes intentos; la borra solo si se pidió.
+
+        Con la política por defecto (R3) el modelo del usuario **no se borra**:
+        se excluye de la sesión y se deja constancia en el registro.
+        """
+        self.fallidas.add(self.modelo)
+        if not self.consumir_modelos:
+            advertir(f"{self.modelo} queda excluido de esta sesión y no se borra "
+                     "(usa --consumir-modelos para eliminarlo).")
+            self.rotaciones.append(
+                f"- {self.modelo} excluida sin borrar (motivo: {motivo})")
+            return
         _imprimir_seguro(f"[VIGILANTE] Borrando {self.modelo} ({motivo}).")
         borrado = _borrar_modelo_ollama(self.endpoint, self.modelo)
-        self.fallidas.add(self.modelo)
         if not borrado:
             advertir(f"No se pudo borrar {self.modelo}; queda excluido igualmente.")
             self.rotaciones.append(
@@ -317,18 +343,23 @@ class FlujoRefactorLucIA:
             self.nota_lucia = self.generador(nuevo, analizar_archivo_local(self.ruta))
             _imprimir_seguro("[4/5] Registrando en el .md...")
             self.registrar(self.modelo, self.nota_lucia)
-            _imprimir_seguro("[5/5] Borrando modelo local...")
-            if not _borrar_modelo_ollama(self.endpoint, self.modelo):
-                advertir(f"El modelo {self.modelo} no se pudo borrar; "
-                         "revisa `ollama ps` antes de cerrar.")
+            if self.consumir_modelos:
+                _imprimir_seguro("[5/5] Borrando modelo local...")
+                if not _borrar_modelo_ollama(self.endpoint, self.modelo):
+                    advertir(f"El modelo {self.modelo} no se pudo borrar; "
+                             "revisa `ollama ps` antes de cerrar.")
+            else:
+                informar(f"[5/5] Modelo conservado: {self.modelo} "
+                         "(usa --consumir-modelos para borrarlo).")
             exito("Flujo ds ialocal completado.")
             return True
         return False
 
     def _cierre_openrouter(self, motivo: str) -> bool:
-        """Agotadas las IAs locales: borra restos y usa free de OpenRouter."""
+        """Agotadas las IAs locales: usa free de OpenRouter (borra solo si se pidió)."""
         return _fallback_openrouter(self.ruta, self.contenido, self.analisis,
-                                    self.modelo or "local", motivo)
+                                    self.modelo or "local", motivo,
+                                    borrar_modelo=self.consumir_modelos)
 
 
 # --- Menú interactivo --------------------------------------------------------

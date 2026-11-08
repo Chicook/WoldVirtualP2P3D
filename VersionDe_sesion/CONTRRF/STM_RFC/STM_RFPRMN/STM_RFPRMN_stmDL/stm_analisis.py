@@ -9,10 +9,12 @@ import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Optional
-try:
-    from .stm_base import (E, informar, exito, advertir, reportar_error, pedir_confirmacion, CONFIG_IA_LOCAL, LIMITE_TAMANO_ANALISIS, PATRON_MARCADOR_PENDIENTE, _panel, _imprimir_seguro)
-except ImportError:
-    pass
+from .stm_base import (  # noqa: F401
+    E, informar, exito, advertir, reportar_error, pedir_confirmacion,
+    CONFIG_IA_LOCAL, LIMITE_TAMANO_ANALISIS, PATRON_MARCADOR_PENDIENTE,
+    _panel, _imprimir_seguro,
+)
+from .stm_rutas import describir_config_ia_local, ruta_config_ia_local
 
 # --- Análisis estático de código --------------------------------------------
 
@@ -154,9 +156,20 @@ def _crear_diagnostico_respaldo(analisis: AnalisisArchivo) -> str:
 
 
 def _cargar_configuracion_ia_local() -> tuple[str, str]:
-    """Lee ``IAlocal.json`` y valida que el endpoint apunte a este mismo equipo."""
-    with open(CONFIG_IA_LOCAL, "r", encoding="utf-8") as archivo_config:
-        configuracion = json.load(archivo_config)
+    """Lee ``IAlocal.json`` y valida que el endpoint apunte a este mismo equipo.
+
+    La ruta se resuelve en :mod:`stm_rutas` (env → última actualización de PRY
+    → ``RFC/src`` heredado → ``STM_RFPRMN/.config``), no contra ``RFC/src`` a
+    secas: ese árbol está vacío tras un ``actualizar`` (R1).
+    """
+    ruta_config = ruta_config_ia_local()
+    try:
+        with open(ruta_config, "r", encoding="utf-8") as archivo_config:
+            configuracion = json.load(archivo_config)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"{ruta_config} no existe. Rutas probadas: {describir_config_ia_local()}"
+        ) from error
 
     endpoint = str(configuracion.get("endpoint", "http://localhost:11434")).rstrip("/")
     uri_local = urllib.parse.urlparse(endpoint)

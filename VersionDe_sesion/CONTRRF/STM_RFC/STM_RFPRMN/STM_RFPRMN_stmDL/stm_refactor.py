@@ -220,7 +220,8 @@ def _pedir_extra_o_diagnostico(contenido: str, analisis: AnalisisArchivo) -> Non
         informar("Opción no válida; no se hizo nada más.")
 
 
-def comando_ds_ialocal(consultor: Optional[ConsultorIA] = None) -> bool:
+def comando_ds_ialocal(consultor: Optional[ConsultorIA] = None,
+                      consumir_modelos: Optional[bool] = None) -> bool:
     """Comando 'ds ialocal': delega todo el pipeline en FlujoRefactorLucIA."""
     entrada = input("Archivo al cual hay que refactorizar: ").strip().strip("\"'")
     if not entrada:
@@ -240,18 +241,28 @@ def comando_ds_ialocal(consultor: Optional[ConsultorIA] = None) -> bool:
     except ImportError as error:
         reportar_error(f"No se pudo cargar el flujo de refactor: {error}")
         return False
-    return FlujoRefactorLucIA(ruta, contenido, consultor).ejecutar()
+    return FlujoRefactorLucIA(ruta, contenido, consultor,
+                              consumir_modelos=consumir_modelos).ejecutar()
 
 
 def _fallback_openrouter(ruta: Path, contenido: str, analisis: AnalisisArchivo,
-                         modelo_local: str, motivo: str) -> bool:
-    """La IA local falló: se borra y se usa una free de OpenRouter (1 análisis + 2 refactor)."""
-    _imprimir_seguro(f"[OR] La IA local {modelo_local} falló ({motivo}). Se borra.")
-    try:
-        endpoint, _ = _cargar_configuracion_ia_local()
-        _borrar_modelo_ollama(endpoint, modelo_local)
-    except Exception:
-        pass
+                         modelo_local: str, motivo: str,
+                         borrar_modelo: bool = False) -> bool:
+    """La IA local falló: se usa una free de OpenRouter (1 análisis + 2 refactor).
+
+    ``borrar_modelo`` respeta la política R3: por defecto el modelo del usuario
+    se conserva y solo se excluye de la sesión.
+    """
+    if borrar_modelo:
+        _imprimir_seguro(f"[OR] La IA local {modelo_local} falló ({motivo}). Se borra.")
+        try:
+            endpoint, _ = _cargar_configuracion_ia_local()
+            _borrar_modelo_ollama(endpoint, modelo_local)
+        except Exception:
+            pass
+    else:
+        _imprimir_seguro(f"[OR] La IA local {modelo_local} falló ({motivo}); "
+                         "se conserva y se continúa con OpenRouter.")
     clave = _leer_openrouter_key()
     if not clave:
         reportar_error("[OR] Sin OPENROUTER_API_KEY en Vault STM_SGR ni .env; no hay fallback.")

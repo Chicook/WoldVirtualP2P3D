@@ -10,10 +10,14 @@ import urllib.request
 from pathlib import Path
 from .stm_base import (
     E, informar, exito, advertir, reportar_error, ErrorProyecto, SRC_DIR,
-    DESTINO, CONFIG_IA_LOCAL, _imprimir_seguro,
+    DESTINO, _imprimir_seguro,
 )
 from .stm_analisis import AnalisisArchivo, _cargar_configuracion_ia_local
 from .stm_descarga import descargar_gguf
+from .stm_rutas import (
+    DIR_MODELOS_LOCAL, REGISTRO_REFACTOR_MD, comprobar_ruta_segura,
+    ruta_config_ia_local,
+)
 
 # --- Refactorización con modelo local de código ("ds ialocal") ------------------
 # Este bloque implementa el comando "ds ialocal": al dar Intro tras pedir el archivo
@@ -23,8 +27,6 @@ from .stm_descarga import descargar_gguf
 # modelo. Así cada archivo usa un modelo distinto sin repetir IAlocal.
 
 #: Candidatos de código ligeros (HuggingFace/Ollama) aptos para 8 VRAM / 8 RAM.
-#: Carpeta donde se descargan los pesos GGUF desde HuggingFace.
-DIR_MODELOS_LOCAL = SRC_DIR / "STM_IA" / "modelosIAlocal" / "IAlocalDESCARGADA"
 #: Repo/archivo GGUF pequeño de código (Qwen2.5-Coder 1.5B Q4, ~1 GB, apto 8 RAM).
 HF_REPO_CODIGO = "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF"
 HF_ARCHIVO_CODIGO = "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf"
@@ -39,8 +41,6 @@ MODELOS_CODIGO_LIGEROS = (
 
 #: Límite de líneas por archivo refactorizado (regla 400/450).
 LIMITE_LINEAS_REFACTOR = 450
-
-REGISTRO_REFACTOR_MD = SRC_DIR / "STM_IA" / "modelosIAlocal" / "registro_refactor.md"
 
 #: Modelos de código gratuitos de OpenRouter (fallback cuando la IA local falla).
 MODELOS_OR_CODIGO = (
@@ -216,7 +216,7 @@ def _leer_candidatos_codigo() -> list[str]:
     """Candidatos EXCLUSIVAMENTE de código: filtra IAlocal.json y añade respaldos."""
     candidatos: list[str] = []
     try:
-        with open(CONFIG_IA_LOCAL, "r", encoding="utf-8") as f:
+        with open(ruta_config_ia_local(), "r", encoding="utf-8") as f:
             cfg = json.load(f)
         for m in cfg.get("models_available", []):
             nombre = str(m).strip()
@@ -249,6 +249,11 @@ def _borrar_peso_local() -> None:
     Se invoca en el ``finally`` de ``FlujoRefactorLucIA.ejecutar`` para que
     nunca queden restos de ~1 GB, ni en éxito ni en error ni al cancelar.
     """
+    try:
+        comprobar_ruta_segura(DIR_MODELOS_LOCAL, "pesos locales")
+    except ErrorProyecto as error:
+        advertir(f"No se limpian los pesos: {error}")
+        return
     try:
         if not DIR_MODELOS_LOCAL.exists():
             return
@@ -309,6 +314,19 @@ def _descargar_modelo_ollama(endpoint: str, modelo: str) -> bool:
         return False
 
 
+def _ruta_registro_refactor() -> Path:
+    """Registro de refactor vigente; si no existe, el heredado de ``RFC/src``.
+
+    El registro se movió a ``STM_RFPRMN/registro_refactor.md`` (R2): dentro de
+    ``RFC/src`` desaparecía al vaciar RFC y viajaba a PRY en cada actualización.
+    Se mantiene la lectura del heredado para no perder el historial.
+    """
+    if REGISTRO_REFACTOR_MD.exists():
+        return REGISTRO_REFACTOR_MD
+    heredado = SRC_DIR / "STM_IA" / "modelosIAlocal" / "registro_refactor.md"
+    return heredado if heredado.exists() else REGISTRO_REFACTOR_MD
+
+
 def _modelos_usados_registro() -> set[str]:
     """Modelos ya usados, leídos de las cabeceras ``## archivo — modelo`` del .md.
 
@@ -317,10 +335,11 @@ def _modelos_usados_registro() -> set[str]:
     ``_registrar_refactor_md`` (issue #80, punto 6).
     """
     usados: set[str] = set()
+    ruta_md = _ruta_registro_refactor()
     try:
-        if not REGISTRO_REFACTOR_MD.exists():
+        if not ruta_md.exists():
             return usados
-        for linea in REGISTRO_REFACTOR_MD.read_text(encoding="utf-8").splitlines():
+        for linea in ruta_md.read_text(encoding="utf-8").splitlines():
             if not linea.startswith("## "):
                 continue
             partes = linea[3:].split("—")

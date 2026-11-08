@@ -7,11 +7,12 @@ comando como método. Funcionalidad intacta.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -242,7 +243,8 @@ _COMANDOS_AYUDA: dict[str, str] = {
     "actualizar": "Reemplaza PRY con la versión refactorizada de RFC.",
     "enviar": "Envía una carpeta con su contenido a CONTRRF/RFC.",
     "ia local": "Analiza un archivo con LucIA y crea un plan de refactorización.",
-    "ds ialocal": "Plan de LucIA + refactor con modelo local y registro .md.",
+    "ds ialocal": "Plan de LucIA + refactor con modelo local y registro .md "
+                  "(--consumir-modelos borra el modelo al terminar).",
     "cerrar": "Cierra el sistema limpiando modelos descargados.",
     "estado": "Muestra el estado de los submódulos y su nº de líneas.",
     "presupuesto": "Verifica que ningún módulo supere el tope de 450 líneas.",
@@ -266,9 +268,10 @@ def imprimir_ayuda() -> None:
 def version_info() -> dict:
     """Versión de la fachada y nº de símbolos públicos re-exportados."""
     return {"version": __version__, "simbolos": len(__all__),
-            "modulos": ["stm_base", "stm_fs", "stm_fragmentos", "stm_gestion",
-                        "stm_analisis", "stm_modelos", "stm_descarga",
-                        "stm_refactor", "stm_flujo", "stm_registro"]}
+            "modulos": ["stm_base", "stm_rutas", "stm_fs", "stm_fragmentos",
+                        "stm_gestion", "stm_analisis", "stm_modelos",
+                        "stm_descarga", "stm_refactor", "stm_flujo",
+                        "stm_registro"]}
 
 def estado_sistema() -> dict:
     """Estado de import + líneas de cada submódulo del paquete.
@@ -345,10 +348,17 @@ def main(argv: list[str] | None = None) -> int:
     """Punto de entrada CLI no interactivo.
 
     Sin argumentos abre la shell interactiva clásica (compatibilidad).
-    Acepta: --ayuda, --version, --estado, --presupuesto, --comando NOMBRE.
+    Acepta: --ayuda, --version, --estado, --presupuesto, --comando NOMBRE
+    y --consumir-modelos (borra el modelo tras usarlo; por defecto se conserva).
+
     Devuelve código de salida (0 = OK).
     """
     args = list(sys.argv[1:] if argv is None else argv)
+    if "--consumir-modelos" in args:
+        # La política viaja por entorno: la leen el flujo y el fallback sin
+        # tener que enhebrar un parámetro por toda la cadena de comandos.
+        os.environ["RFPRMN_CONSUMIR_MODELOS"] = "1"
+        args = [argumento for argumento in args if argumento != "--consumir-modelos"]
     if not args:
         ejecutar_comandos()
         return 0

@@ -130,6 +130,7 @@ def test_rotar_ia_excluye_el_modelo_aunque_no_se_pueda_borrar(tmp_path, monkeypa
     flujo = _flujo(tmp_path)
     flujo.modelo = "qwen2.5-coder:7b"
     flujo.endpoint = "http://localhost:11434"
+    flujo.consumir_modelos = True  # se pidió borrar y el borrado falla
     monkeypatch.setattr(stm_flujo, "_borrar_modelo_ollama", lambda *_a: False)
     flujo.rotar_ia("timeout")
     assert "qwen2.5-coder:7b" in flujo.fallidas
@@ -139,9 +140,23 @@ def test_rotar_ia_excluye_el_modelo_aunque_no_se_pueda_borrar(tmp_path, monkeypa
 def test_rotar_ia_registra_el_borrado_correcto(tmp_path, monkeypatch):
     flujo = _flujo(tmp_path)
     flujo.modelo = "starcoder2:7b"
+    flujo.consumir_modelos = True
     monkeypatch.setattr(stm_flujo, "_borrar_modelo_ollama", lambda *_a: True)
     flujo.rotar_ia("validación")
     assert any("ollama rm" in linea for linea in flujo.rotaciones)
+
+
+def test_rotar_ia_conserva_el_modelo_por_defecto(tmp_path, monkeypatch):
+    flujo = _flujo(tmp_path)
+    flujo.modelo = "starcoder2:7b"
+    llamadas: list[int] = []
+    monkeypatch.setattr(stm_flujo, "_borrar_modelo_ollama",
+                        lambda *_a: llamadas.append(1))
+    assert flujo.consumir_modelos is False
+    flujo.rotar_ia("validación")
+    assert llamadas == [], "R3: por defecto no se borra el modelo del usuario"
+    assert "starcoder2:7b" in flujo.fallidas
+    assert any("sin borrar" in linea for linea in flujo.rotaciones)
 
 
 def test_la_limpieza_del_peso_se_ejecuta_aunque_falle_el_flujo(tmp_path, monkeypatch):
