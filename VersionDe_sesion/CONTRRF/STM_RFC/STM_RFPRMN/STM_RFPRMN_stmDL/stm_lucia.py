@@ -24,31 +24,35 @@ módulo se declara no disponible y el flujo sigue sin aprendizaje.
 """
 from __future__ import annotations
 
-import hashlib
-import math
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from .stm_base import advertir, informar
-from .stm_embeddings import (
-    DIMENSIONES, contraer, estado as estado_embeddings, describir as describir_embeddings,
+from .stm_base import advertir
+from .stm_calidad import (  # noqa: F401  (re-exportados: compatibilidad)
+    _norm, _semantico, calidad, codificar_candidato, objetivo,
 )
-from .stm_embeddings import codificar as embeber
+from .stm_embeddings import (
+    DIMENSIONES, estado as estado_embeddings, describir as describir_embeddings,
+)
 from .stm_fragmentos import LIMITE_LINEAS_REFACTOR
 from .stm_rutas import DIR_DATOS, ultima_actualizacion_pry
 
-#: Dimensión del vector de entrada: 11 métricas + la parte semántica.
+#: Dimensión del vector del expediente: 11 métricas + la parte semántica.
 ALTO = 11 + DIMENSIONES
-#: Dimensión de salida: fidelidad, limpieza y seguridad del candidato.
-SALIDA = 3
+#: Dimensión del vector del candidato: 4 estructurales + la parte semántica.
+ALTO_CANDIDATO = 4 + DIMENSIONES
+#: Entrada de la red: expediente + candidato (así distingue dos versiones).
+ENTRADA = ALTO + ALTO_CANDIDATO
+#: Salida: una única puntuación de calidad.
+SALIDA = 1
 #: Muestras mínimas antes de que la red emita un veredicto con criterio.
 MIN_PASOS = 8
 #: Puntuación mínima para aceptar sin preguntar una vez entrenada.
 UMBRAL = 0.55
 #: Pesos persistentes de la red de LucIA (uno por arquitectura del vector).
-RUTA_RED = DIR_DATOS / f"lucia_rn_{ALTO}.pkl"
+RUTA_RED = DIR_DATOS / f"lucia_rn_{ENTRADA}x{SALIDA}.pkl"
 #: Carpeta donde se archiva el README de cada expediente procesado.
 DIR_EXPEDIENTES = DIR_DATOS / "expedientes"
 
@@ -105,7 +109,7 @@ def _obtener_red():
     _CACHE["error"] = error
     if creador is None:
         return None
-    red = creador(ALTO, SALIDA)
+    red = creador(ENTRADA, SALIDA)
     if RUTA_RED.is_file():
         try:
             red.load(str(RUTA_RED))
@@ -154,28 +158,6 @@ class Expediente:
         descripcion = " ".join(self.descripcion.split())[:400]
         return (f"[CONTEXTO DEL ARCHIVO — según LucIA] {descripcion}\n"
                 f"[DEUDA TÉCNICA A RESOLVER] {deuda}\n")
-
-
-def _norm(valor: float, maximo: float) -> float:
-    """Normaliza a [0, 1] con escala logarítmica (los conteos son muy dispares)."""
-    if maximo <= 0:
-        return 0.0
-    return min(1.0, math.log1p(max(valor, 0.0)) / math.log1p(maximo))
-
-
-def _vector_hash(texto: str, dims: int = DIMENSIONES) -> list[float]:
-    """Respaldo determinista cuando no hay embeddings (``dims`` valores en [0,1])."""
-    digest = hashlib.sha256(texto.encode("utf-8", "replace")).digest()
-    return [int.from_bytes(digest[k * 4:(k + 1) * 4], "big") / 0xFFFFFFFF
-            for k in range(min(dims, 8))]
-
-
-def _semantico(texto: str) -> list[float]:
-    """Parte semántica del vector: embedding real o huella de hash como respaldo."""
-    vector = embeber(texto)
-    if vector:
-        return contraer(vector)
-    return _vector_hash(texto)
 
 
 def deuda_tecnica(analisis) -> list[str]:
@@ -289,48 +271,6 @@ def guardar_expediente(expediente: Expediente) -> Path:
 
 # --- Vectores de aprendizaje -------------------------------------------------
 
-def _definiciones(texto: str) -> set[str]:
-    """Nombres de funciones y clases del texto (vacío si no es Python válido)."""
-    import ast
-
-    try:
-        arbol = ast.parse(texto)
-    except (SyntaxError, ValueError):
-        return set()
-    return {nodo.name for nodo in ast.walk(arbol)
-            if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
-
-
-def _metricas_texto(texto: str) -> dict[str, float]:
-    """Métricas básicas del código candidato (sin tocar disco)."""
-    lineas = texto.splitlines()
-    return {
-        "lineas": float(len(lineas)),
-        "largas": float(sum(len(linea) > 100 for linea in lineas)),
-        "vacias": float(sum(not linea.strip() for linea in lineas)),
-        "definiciones": float(len(_definiciones(texto))),
-    }
-
-
-def objetivo(original: str, candidato: str) -> list[float]:
-    """Vector de calidad del candidato: fidelidad, limpieza y seguridad."""
-    defs_original = _definiciones(original)
-    defs_candidato = _definiciones(candidato)
-    if defs_original:
-        conservadas = len(defs_original & defs_candidato)
-        fidelidad = conservadas / len(defs_original)
-    else:
-        fidelidad = 1.0 if candidato.strip() else 0.0
-    metricas = _metricas_texto(candidato)
-    limpieza = 1.0 - min(1.0, (metricas["largas"] / max(metricas["lineas"], 1)) * 3)
-    seguro = 1.0
-    if not candidato.strip() or metricas["lineas"] > LIMITE_LINEAS_REFACTOR:
-        seguro = 0.0
-    elif original.strip() and not defs_candidato and _definiciones(original):
-        seguro = 0.0
-    return [min(1.0, fidelidad), max(0.0, min(1.0, limpieza)), seguro]
-
-
 def _puntuacion(red, vector: list[float]) -> tuple[float, int]:
     """Media de la salida de la red ANTES de entrenar con esta muestra."""
     import numpy as np
@@ -342,13 +282,21 @@ def _puntuacion(red, vector: list[float]) -> tuple[float, int]:
         return 0.0, 0
 
 
+def _entrada(expediente: Expediente, candidato: str) -> list[float]:
+    """Vector de entrada de la red: expediente + candidato."""
+    base = list(expediente.vector)
+    if len(base) < ALTO:
+        base += [0.0] * (ALTO - len(base))
+    return base[:ALTO] + codificar_candidato(candidato)
+
+
 def evaluar_y_aprender(expediente: Expediente, candidato: str,
                        original: str) -> dict:
     """Puntúa el candidato con la red y entrena con el resultado.
 
     Devuelve ``{"disponible", "aceptado", "puntuacion", "pasos", "motivo"}``.
     La puntuación se calcula **antes** de entrenar, para que el veredicto no sea
-    circular; después la red aprende del par (expediente → calidad).
+    circular; después la red aprende del par (expediente+candidato → calidad).
     """
     red = _obtener_red()
     if red is None:
@@ -356,12 +304,12 @@ def evaluar_y_aprender(expediente: Expediente, candidato: str,
                 "pasos": 0, "motivo": _CACHE.get("error") or "red no disponible"}
     import numpy as np
 
-    vector = expediente.vector or [0.0] * ALTO
-    calidad = objetivo(original, candidato)
-    puntuacion, pasos_previos = _puntuacion(red, vector)
+    entrada = _entrada(expediente, candidato)
+    nota = calidad(original, candidato)
+    puntuacion, pasos_previos = _puntuacion(red, entrada)
     try:
-        red.fit(np.asarray([vector], dtype=np.float32),
-                np.asarray([calidad], dtype=np.float32), epochs=1)
+        red.fit(np.asarray([entrada], dtype=np.float32),
+                np.asarray([[nota]], dtype=np.float32), epochs=1)
         _guardar_red(red)
     except Exception as error:  # noqa: BLE001 - el refactor sigue adelante
         advertir(f"LucIA no pudo entrenar con esta muestra ({error}).")
@@ -374,8 +322,11 @@ def evaluar_y_aprender(expediente: Expediente, candidato: str,
     aceptado = puntuacion >= UMBRAL
     return {"disponible": True, "aceptado": aceptado, "puntuacion": puntuacion,
             "pasos": pasos_previos,
-            "motivo": f"puntuación {puntuacion:.2f} (umbral {UMBRAL:.2f})"}
+            "motivo": f"puntuación {puntuacion:.2f} (umbral {UMBRAL:.2f}); "
+                      f"calidad objetiva {nota:.2f}"}
 
+
+# --- Estado ------------------------------------------------------------------
 
 def estado() -> dict:
     """Resumen del estado de aprendizaje (para diagnóstico)."""
@@ -386,7 +337,7 @@ def estado() -> dict:
                 "embeddings": estado_embeddings()}
     return {"disponible": True, "motivo": "", "pesos": str(RUTA_RED),
             "pasos": pasos_aprendidos(),
-            "arquitectura": f"{ALTO}x{SALIDA}", "umbral": UMBRAL,
+            "arquitectura": f"{ENTRADA}x{SALIDA}", "umbral": UMBRAL,
             "min_muestras": MIN_PASOS, "embeddings": estado_embeddings()}
 
 

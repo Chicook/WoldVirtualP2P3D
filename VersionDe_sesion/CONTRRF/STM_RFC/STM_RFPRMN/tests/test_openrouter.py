@@ -4,8 +4,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from STM_RFPRMN_stmDL import stm_openrouter, stm_refactor
 
 

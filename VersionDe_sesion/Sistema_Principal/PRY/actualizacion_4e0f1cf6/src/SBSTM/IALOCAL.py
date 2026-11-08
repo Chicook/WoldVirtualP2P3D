@@ -236,9 +236,16 @@ def cerrar_sesion_ialocal() -> bool:
         from STM_BKCH.compat_local import get_ipfs_manager
         pesos = list((CELEBRO_DIR / "PSNRL").glob("*.json")) or list(CELEBRO_DIR.rglob("pesos*.json"))
         mgr = get_ipfs_manager()
-        r = mgr.subir_pesos_neuronales(pesos[0] if pesos else CELEBRO_DIR) if hasattr(mgr, "subir_pesos_neuronales") else mgr.add(CELEBRO_DIR)
-        cid = str(r.get("cid", r) if isinstance(r, dict) else r)
-        print(f"  \033[32mPesos neuronales guardados en IPFS: {cid}\033[0m")
+        # P2: ``subir_pesos_neuronales``/``add`` no existen en IPFSManager; la
+        # API real es ``almacenar_pesos`` (devuelve ok=False si no hay daemon).
+        r = mgr.almacenar_pesos(origen=pesos[0] if pesos else CELEBRO_DIR,
+                                nombre_modelo="lucia-psnrl", eliminar_local=False)
+        cid = str(r.get("cid", "local") if isinstance(r, dict) else "local")
+        if isinstance(r, dict) and r.get("ok"):
+            print(f"  \033[32mPesos neuronales guardados en IPFS: {cid}\033[0m")
+        else:
+            motivo = r.get("error", "sin daemon") if isinstance(r, dict) else "sin daemon"
+            print(f"  \033[33mIPFS no disponible ({motivo}); pesos marcados como {cid}\033[0m")
     except Exception as e:
         print(f"  \033[33mIPFS: {e} (pesos marcados como {cid})\033[0m")
     if MODELOS_DIR.exists():

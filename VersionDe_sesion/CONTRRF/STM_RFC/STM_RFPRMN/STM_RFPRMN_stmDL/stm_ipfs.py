@@ -44,12 +44,23 @@ def _cid_sintetico(pesos: dict) -> str:
 
 
 def _subir_via_manager(datos: bytes, nombre: str) -> dict:
-    """Nivel 1: IPFSManager.almacenar_pesos() de STM_BKCH (patrón BKSVCB)."""
+    """Nivel 1: IPFSManager.almacenar_pesos() de STM_BKCH (patrón BKSVCB).
+
+    El shim de ``STM_BKCH`` devuelve CIDs ``QmLocal…`` con ``ok=False`` cuando
+    no hay daemon. Eso **no** cuenta como subida: se rechaza para que el flujo
+    siga bajando de nivel (API → CLI → CID local honesto). Antes un CID
+    sintético se daba por bueno y nunca se intentaba el daemon real (P1).
+    """
     from STM_BKCH.compat_local import get_ipfs_manager  # type: ignore[import]
     recibo = get_ipfs_manager().almacenar_pesos(
         datos=datos, nombre_modelo=nombre, eliminar_local=False)
     if not isinstance(recibo, dict) or not recibo.get("cid"):
         raise ValueError("IPFSManager no devolvió CID.")
+    if recibo.get("simulado") or recibo.get("ok") is False:
+        raise ValueError(
+            f"IPFSManager sin daemon real ({recibo.get('error', 'sin persistencia')}).")
+    if str(recibo["cid"]).startswith("QmLocal"):
+        raise ValueError("IPFSManager devolvió un CID sintético (sin daemon).")
     recibo = dict(recibo)
     recibo.setdefault("via", "ipfs-manager")
     return recibo

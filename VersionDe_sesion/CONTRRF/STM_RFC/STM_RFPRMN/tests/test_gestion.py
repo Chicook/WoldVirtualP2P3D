@@ -79,3 +79,26 @@ def test_registrar_envio_tolera_registro_no_lista(tmp_path, monkeypatch):
     stm_gestion._registrar_envio(tmp_path, tmp_path / "destino", 1, "OK")
     datos = json.loads(registro.read_text(encoding="utf-8"))
     assert isinstance(datos, list) and len(datos) == 1
+
+
+# --- P4: sin rama heredada ---------------------------------------------------
+
+def test_refactorizar_sin_layout_no_toca_nada(monkeypatch):
+    """P4: si el layout no se reconoce, se informa y no se copia nada."""
+    errores: list[str] = []
+    monkeypatch.setattr(stm_gestion, "_es_layout_actual", lambda: False)
+    monkeypatch.setattr(stm_gestion, "reportar_error", errores.append)
+    monkeypatch.setattr(stm_gestion, "_refactorizar_layout_actual",
+                        lambda: (_ for _ in ()).throw(AssertionError("no debe copiar")))
+    stm_gestion.comando_refactorizar()
+    assert errores and "layout" in errores[0]
+
+
+def test_actualizar_sin_layout_no_toca_nada(monkeypatch):
+    errores: list[str] = []
+    monkeypatch.setattr(stm_gestion, "_es_layout_actual", lambda: False)
+    monkeypatch.setattr(stm_gestion, "reportar_error", errores.append)
+    monkeypatch.setattr(stm_gestion, "_actualizar_layout_actual",
+                        lambda: (_ for _ in ()).throw(AssertionError("no debe copiar")))
+    stm_gestion.actualizar()
+    assert errores and "layout" in errores[0]

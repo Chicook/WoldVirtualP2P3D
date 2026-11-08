@@ -17,7 +17,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .stm_base import DESTINO, SRC_DIR, ErrorProyecto, advertir, informar, _imprimir_seguro
+from .stm_base import DESTINO, SRC_DIR, ErrorProyecto, advertir, _imprimir_seguro
 from .stm_fragmentos import LIMITE_LINEAS_REFACTOR, LINEAS_POR_FRAGMENTO
 from .stm_rutas import DIR_CONFIG
 

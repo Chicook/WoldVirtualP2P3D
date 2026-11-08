@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.5.0"
+__version__ = "2.6.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -68,6 +68,7 @@ from STM_RFPRMN_stmDL.stm_rutas import (  # noqa: E402,F401
     comando_configurar_rutas, comando_rutas, estado_rutas, guardar_rutas,
 )
 from STM_RFPRMN_stmDL.stm_lucia import describir as describir_lucia  # noqa: E402
+from STM_RFPRMN_stmDL.stm_corpus import sembrar_corpus  # noqa: E402
 
 __all__ = sorted(set(_Registro.nombres()) | {"RFPRMN", "cerrar", "mostrar_menu",
     "ejecutar_comandos", "__version__"})
@@ -277,10 +278,11 @@ def version_info() -> dict:
     """Versión de la fachada y nº de símbolos públicos re-exportados."""
     return {"version": __version__, "simbolos": len(__all__),
             "modulos": ["stm_base", "stm_rutas", "stm_fs", "stm_fragmentos",
-                        "stm_gestion", "stm_analisis", "stm_embeddings",
-                        "stm_lucia", "stm_modelos", "stm_descarga",
-                        "stm_openrouter", "stm_refactor", "stm_flujo",
-                        "stm_registro", "stm_pesos", "stm_ipfs"]}
+                        "stm_gestion", "stm_analisis", "stm_lucia",
+                        "stm_embeddings", "stm_calidad", "stm_corpus",
+                        "stm_modelos", "stm_descarga", "stm_openrouter",
+                        "stm_refactor", "stm_flujo", "stm_registro",
+                        "stm_pesos", "stm_ipfs"]}
 
 def estado_sistema() -> dict:
     """Estado de import + líneas de cada submódulo del paquete.
@@ -406,6 +408,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args[0] in ("--lucia", "lucia"):
         _imprimir_seguro(describir_lucia())
+        return 0
+    if args[0] in ("--sembrar-lucia", "sembrar lucia"):
+        limite = int(args[1]) if len(args) > 1 and args[1].isdigit() else 12
+        resultado = sembrar_corpus(MODULO_DIR / "STM_RFPRMN_stmDL", limite)
+        if not resultado["disponible"] or resultado["muestras"] == 0:
+            reportar_error(f"No se pudo sembrar: {resultado['motivo']}")
+            return 1
+        exito(f"Semilla: {resultado['muestras']} muestras de {resultado['archivos']} "
+              f"archivos ({resultado['pasos']} pasadas).")
         return 0
     if args[0] == "--comando" and len(args) > 1:
         nombre = " ".join(args[1:]).strip().lower()

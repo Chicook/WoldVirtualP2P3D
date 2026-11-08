@@ -1,11 +1,9 @@
 """Pruebas del puente LucIA ↔ red neuronal (expediente y aprendizaje)."""
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
-from STM_RFPRMN_stmDL import stm_lucia
+from STM_RFPRMN_stmDL import stm_calidad, stm_lucia
 from STM_RFPRMN_stmDL.stm_analisis import analizar_archivo_local
 
 CODIGO = '''"""Módulo de ejemplo."""
@@ -29,6 +27,8 @@ def _red_aislada(monkeypatch, tmp_path):
     # La parte semántica se fija para no depender de Ollama en las pruebas.
     monkeypatch.setattr(stm_lucia, "_semantico",
                         lambda texto: [0.5] * stm_lucia.DIMENSIONES)
+    monkeypatch.setattr(stm_calidad, "_semantico",
+                        lambda texto: [0.5] * stm_calidad.DIMENSIONES)
     monkeypatch.setattr(stm_lucia, "estado_embeddings",
                         lambda: {"ok": False, "modelo": "", "dim": 0,
                                  "motivo": "prueba"})
@@ -156,5 +156,5 @@ def test_aprender_persiste_los_pesos(tmp_path):
 def test_el_estado_refleja_la_arquitectura(tmp_path):
     estado = stm_lucia.estado()
     assert estado["disponible"] is True
-    assert estado["arquitectura"] == f"{stm_lucia.ALTO}x{stm_lucia.SALIDA}"
+    assert estado["arquitectura"] == f"{stm_lucia.ENTRADA}x{stm_lucia.SALIDA}"
     assert "red neuronal" in stm_lucia.describir()

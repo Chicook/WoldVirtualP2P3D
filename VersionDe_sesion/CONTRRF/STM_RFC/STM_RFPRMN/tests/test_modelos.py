@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from STM_RFPRMN_stmDL import stm_modelos
 
 

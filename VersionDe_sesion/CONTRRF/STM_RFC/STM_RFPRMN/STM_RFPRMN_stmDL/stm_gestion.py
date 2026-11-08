@@ -22,7 +22,7 @@ from pathlib import Path
 
 from .stm_base import (
     advertir, exito, informar, reportar_error, pedir_confirmacion, ErrorProyecto,
-    RAIZ, ORIGEN, DESTINO, RFC_DIR, PRY_DIR, MODULO_DIR, TLLDCD_DIR,
+    RAIZ, RFC_DIR, PRY_DIR, MODULO_DIR, TLLDCD_DIR,
     CONTRRF_DIR, EXTENSIONES_POR_LENGUAJE, carpetas_creadas,
 )
 from .stm_fs import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
@@ -35,6 +35,12 @@ from .stm_registro import (  # noqa: F401  (re-exportados: compatibilidad de RFP
     DIR_REGISTRO as DIR_REGISTRO_JSON, RUTA_JSON as REGISTRO_ENVIOS,
 )
 from .stm_rutas import rutas_protegidas, ultima_actualizacion_pry as _ultima_actualizacion_pry
+
+#: Mensaje único cuando el layout no es el esperado (P4: sin rama heredada).
+_MENSAJE_LAYOUT = (
+    "No se reconoce el layout del proyecto (faltan las carpetas de RFC/PRY). "
+    "Configúralas con 'configurar rutas' o con RFPRMN_RFC_DIR / RFPRMN_PRY_DIR.")
+
 
 # --- Utilidades --------------------------------------------------------------
 
@@ -76,23 +82,10 @@ def _es_layout_actual() -> bool:
 
 def comando_refactorizar() -> None:
     """Copia el contenido actual de PRY hacia RFC, previa confirmación."""
-    if _es_layout_actual():
-        _refactorizar_layout_actual()
+    if not _es_layout_actual():
+        reportar_error(_MENSAJE_LAYOUT)
         return
-    if not ORIGEN.is_dir():
-        reportar_error(f"Origen no encontrado: {ORIGEN}")
-        return
-    advertir("esta acción reemplazará todo el contenido de RFC.")
-    if not pedir_confirmacion("¿Desea continuar?"):
-        informar("Operación cancelada.")
-        return
-    try:
-        origen = Path(encontrar_contenido_actual(str(ORIGEN)))
-        info = reemplazar_directorio(origen, DESTINO)
-        exito(f"Contenido copiado de {origen} a {DESTINO} "
-              f"({info['ficheros']} ficheros verificados)")
-    except (ErrorProyecto, OSError) as error:
-        reportar_error(f"Error al copiar el contenido: {error}")
+    _refactorizar_layout_actual()
 
 
 def _refactorizar_layout_actual() -> None:
@@ -300,30 +293,10 @@ def _limpiar_tlldcd(origen: Path) -> None:
 
 def actualizar() -> None:
     """Promueve el contenido de RFC a PRY como una nueva versión histórica."""
-    if _es_layout_actual():
-        _actualizar_layout_actual()
+    if not _es_layout_actual():
+        reportar_error(_MENSAJE_LAYOUT)
         return
-    if not ORIGEN.is_dir():
-        reportar_error(f"Origen no encontrado: {ORIGEN}")
-        return
-    if not DESTINO.is_dir() or not os.listdir(DESTINO):
-        reportar_error("No hay contenido refactorizado para actualizar.")
-        return
-    advertir("PRY será reemplazado por una nueva versión de RFC.")
-    if not pedir_confirmacion("¿Seguro que deseas continuar?"):
-        informar("Operación cancelada.")
-        return
-    try:
-        origen = Path(encontrar_contenido_actual(str(DESTINO)))
-        numero = uuid.uuid4().hex[:8]
-        destino = Path(ORIGEN) / f"actualizacion_{numero}"
-        info = reemplazar_directorio(origen, destino)
-        exito(f"Actualización completada en: {destino} "
-              f"({info['ficheros']} ficheros verificados)")
-        borrar_contenido(str(DESTINO))
-        informar(f"Contenido eliminado de: {DESTINO}")
-    except (ErrorProyecto, OSError) as error:
-        reportar_error(f"Error al actualizar: {error}")
+    _actualizar_layout_actual()
 
 
 def _actualizar_layout_actual() -> None:
