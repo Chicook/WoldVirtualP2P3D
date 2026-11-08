@@ -1,8 +1,6 @@
 """CLI del ciclo de vida del código de WoldVirtualP2P3D (fachada).
 
-La lógica vive en ``STM_RFPRMN_stmDL/`` (submódulos de <=450 líneas). Este
-archivo mantiene la compatibilidad: re-exporta los símbolos públicos y expone
-cada comando como método de ``RFPRMN``, además del menú y la CLI.
+La lógica vive en ``STM_RFPRMN_stmDL/``; aquí se re-exporta y se expone la CLI.
 """
 from __future__ import annotations
 
@@ -11,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.13.3"
+__version__ = "2.14.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -249,14 +247,17 @@ _COMANDOS_AYUDA: dict[str, str] = {
     "actualizar": "Reemplaza PRY con la versión refactorizada de RFC.",
     "enviar": "Envía una carpeta con su contenido a CONTRRF/RFC.",
     "ia local": "Analiza un archivo con LucIA y crea un plan de refactorización.",
-    "ds ialocal": "Plan de LucIA + refactor local con registro .md "
-                  "(--consumir-modelos borra el modelo; --openrouter lo activa).",
+    "ds ialocal": "Plan de LucIA + refactor local (registro .md; --openrouter lo activa).",
     "crear codigo": "Crea un archivo nuevo a partir de un diagnóstico de LucIA.",
+    "crear logica": "Escribe una función a partir de lo que le pidas en lenguaje natural.",
+    "comentar archivo": "Documenta con LucIA las funciones de un archivo existente.",
+    "informacion codigo": "Informe .md con la deuda técnica y la hoja de ruta.",
+    "test": "Prueba un archivo y diagnostica su deuda técnica.",
     "cerrar": "Cierra el sistema limpiando modelos descargados.",
     "estado": "Muestra el estado de los submódulos y su nº de líneas.",
     "presupuesto": "Verifica que ningún módulo supere el tope de 450 líneas.",
     "rutas": "Muestra las rutas activas de RFC/PRY y de qué fuente salen.",
-    "configurar rutas": "Elige los directorios de RFC y PRY (se guardan en .config/rutas.json).",
+    "configurar rutas": "Elige los directorios de RFC y PRY (se guardan en .config).",
     "lucia": "Estado de la red neuronal de LucIA (muestras aprendidas y pesos).",
     "seq2seq": "Estado del subsistema seq2seq (pares memorizados).",
     "ayuda": "Muestra esta ayuda.",
@@ -279,8 +280,7 @@ def imprimir_ayuda() -> None:
 def version_info() -> dict:
     """Versión de la fachada y nº de símbolos públicos re-exportados."""
     from STM_RFPRMN_stmDL import modulos_estado
-    return {"version": __version__, "simbolos": len(__all__),
-            "modulos": list(modulos_estado())}
+    return {"version": __version__, "simbolos": len(__all__), "modulos": list(modulos_estado())}
 
 
 def estado_sistema() -> dict:

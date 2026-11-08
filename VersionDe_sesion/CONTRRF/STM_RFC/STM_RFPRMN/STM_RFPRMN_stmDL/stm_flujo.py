@@ -5,9 +5,7 @@ Un único ``ejecutar()`` orquesta las fases [1/5]…[5/5] con estas garantías:
 - **Cortes válidos**: los fragmentos de un ``.py`` se cortan en fronteras de
   sentencias (AST), así que ninguno rompe un ``def`` ni un ``try/except``.
 - **Solape real**: cada fragmento recibe la cola del anterior y el ensamblado
-  elimina la repetición.
-- **Sin truncamiento**: si el resultado excede el tope se rechaza y el original
-  queda intacto.
+  elimina la repetición. Si el resultado pasa del tope, se guarda en CONTRUCCION.
 """
 from __future__ import annotations
 
@@ -44,6 +42,7 @@ from .stm_refactor import (
 from .stm_creacion import comando_crear_codigo
 from .stm_logica import comando_crear_logica
 from .stm_comentarios import comando_comentar_archivo
+from .stm_informe import comando_informacion_codigo
 from .stm_descartes import retirar_modelo
 from .test import comando_test
 from .stm_rutas import comando_configurar_rutas, comando_rutas
@@ -396,6 +395,7 @@ def mostrar_menu() -> None:
         ("crear codigo", "Crear un archivo nuevo a partir de un diagnóstico de LucIA"),
         ("crear logica", "Escribir una función a partir de lo que le pidas"),
         ("comentar archivo", "Documentar las funciones de un archivo con LucIA"),
+        ("informacion codigo", "Informe .md con deuda tecnica y hoja de ruta"),
         ("test", "Probar un archivo y diagnosticar su deuda técnica"),
         ("rutas", "Ver las rutas activas de RFC/PRY y su origen"),
         ("configurar rutas", "Elegir los directorios de RFC y PRY"),
@@ -419,6 +419,7 @@ def ejecutar_comandos() -> None:
         "crear codigo": comando_crear_codigo,
         "crear logica": comando_crear_logica,
         "comentar archivo": comando_comentar_archivo,
+        "informacion codigo": comando_informacion_codigo,
         "test": comando_test,
         "rutas": comando_rutas,
         "configurar rutas": comando_configurar_rutas,

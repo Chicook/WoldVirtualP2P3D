@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.13.3**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.14.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -38,7 +38,8 @@ la **retirada automática** del modelo que no pasa los filtros.
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
 | `stm_openrouter.py` | 193 | Respaldo OpenRouter (desactivado por defecto) |
 | `stm_refactor.py` | 374 | Fragmentos + validación + `comando_ds_ialocal` |
-| `stm_particion.py` | 249 | **Nuevo**: reparte un `.py` de +450 líneas en módulos y subsistemas |
+| `stm_particion.py` | 350 | Partición en módulos ≤450 y reparto en CONTRUCCION |
+| `stm_informe.py` | 191 | **Nuevo**: comando `informacion codigo` (informe .md + hoja de ruta) |
 | `stm_creacion.py` | 216 | Comando `crear codigo` (diagnóstico → archivo nuevo) |
 | `stm_logica.py` | 245 | Comando `crear logica` (petición → función) |
 | `stm_comentarios.py` | 266 | **Nuevo**: comando `comentar archivo` (solo comentarios) |
@@ -334,14 +335,52 @@ python RFPRMN.py            # y dentro:  comentar archivo
    la inserción toca código, **no se escribe nada**.
 6. Diagnóstico de deuda con el módulo `test`.
 
-### 1.14 Registro e IPFS
+### 1.14 Informe de código (`informacion codigo`)
+
+Genera un `.md` en `TLLDCD/src/STM_DOC` con la ficha del archivo, su deuda y la
+hoja de ruta de la refactorización.
+
+```bash
+python RFPRMN.py            # y dentro:  informacion codigo
+# Archivo del que sacar el informe: …\ENRN\__init__.py
+# ¿Incluir también el diagnóstico de LucIA (modelo local)? (s/n): n
+✔ Informe escrito: …\TLLDCD\src\STM_DOC\informe___init__.md
+```
+
+Contenido real generado para `ENRN/__init__.py`:
+
+```markdown
+- **Tamaño**: 390 líneas · 47 funciones · 3 clases
+- **Puntuación de deuda**: 42/100 (crítico)
+
+## Deuda técnica
+- 35 funciones sin docstring (-20)
+- 12 líneas de más de 100 caracteres (-4)
+- complejidad alta (39 decisiones) (-10)
+- 71 avisos de ruff (-24)
+
+## Hoja de ruta
+1. **Documentar 35 funciones** con `comentar archivo` (solo añade comentarios).
+2. **Dividir la lógica más compleja** (39 puntos de decisión)…
+3. **Reformatear 12 líneas largas** (más de 100 caracteres).
+4. **Pasar lint**: 71 avisos de ruff.
+5. **Línea base**: ejecutar pruebas y `test` antes de tocar nada…
+6. **Cambios pequeños y reversibles**, uno por responsabilidad.
+```
+
+La hoja de ruta **no es genérica**: se construye a partir de la deuda real
+(partición si pasa de 450, docstrings, `except` genéricos, argumentos mutables,
+complejidad, líneas largas, TODO y lint), ordenada por gravedad, y cada paso
+indica el comando que lo resuelve.
+
+### 1.15 Registro e IPFS
 
 `envios.json` → `registro.md` → pesos (`stm_pesos`) → IPFS en cuatro niveles
 (`stm_ipfs`) → limpieza. **P1 resuelta**: un CID sintético del shim
 (`QmLocal…` con `ok=False`) ya **no** cuenta como subida; el flujo baja a la
 API, al binario y, si no hay nada, a un CID local honesto.
 
-### 1.15 Registro de símbolos por AST (D4) y consola
+### 1.16 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
@@ -353,7 +392,7 @@ Todas las salidas toleran consolas cp1252.
 
 ## 2. Pruebas y CI
 
-**276 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
+**303 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
 
 ```bash
 cd VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN
@@ -371,6 +410,7 @@ python -m pytest tests -q -p no:cacheprovider
 | `test_modelos.py` | Registro de usados, R3, «el más ligero», R6 |
 | `test_descartes.py` | Retirada por filtros, persistencia y elección del siguiente |
 | `test_particion.py` | Cortes por unidad, tope respetado, re-export, informe y cancelación |
+| `test_informe.py` | Ficha, estructura, deuda, hoja de ruta y escritura en STM_DOC |
 | `test_descarga.py` | `Range`, truncados, no repetir descargas |
 | `test_openrouter.py` | Desactivado por defecto y activación explícita |
 | `test_lucia.py` | Expediente, README, vector, calidad y veredicto |
