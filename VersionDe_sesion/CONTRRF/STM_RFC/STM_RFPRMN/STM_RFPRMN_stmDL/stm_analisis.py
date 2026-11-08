@@ -1,6 +1,11 @@
 """Submodulo de RFPRMN (refactor: tope 400/450 lineas)."""
 from __future__ import annotations
-import ast, json, os, re, shutil, stat, subprocess, sys, textwrap, urllib.error, urllib.parse, urllib.request, uuid
+import ast
+import json
+import os
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Optional
