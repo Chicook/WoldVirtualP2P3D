@@ -31,10 +31,12 @@ from .stm_openrouter import describir_estado, habilitado as openrouter_habilitad
 
 #: Prompt por defecto al refactorizar un fragmento.
 SISTEMA_REFACTOR = (
-    "Eres LucIA. Refactoriza el fragmento SIN cambiar su comportamiento "
-    "ni los nombres de funciones, clases o métodos públicos: documenta, "
-    "elimina duplicados y aclara dentro del cuerpo. "
-    "Responde SOLO con código, sin explicaciones ni cercas.")
+    "Eres LucIA. Refactoriza el fragmento de verdad, no te limites a comentarlo: "
+    "extrae constantes y funciones auxiliares, simplifica condiciones, elimina "
+    "duplicación, valida entradas y aclara el cuerpo. Conserva el comportamiento "
+    "y los nombres públicos (funciones, clases y métodos); los nombres locales sí "
+    "puedes mejorarlos. Documentar no es refactorizar: si solo añades comentarios "
+    "o docstrings, no has hecho el trabajo. Responde SOLO con código, sin cercas.")
 
 
 def _generar_fragmento(endpoint: str, modelo: str, nombre_archivo: str,

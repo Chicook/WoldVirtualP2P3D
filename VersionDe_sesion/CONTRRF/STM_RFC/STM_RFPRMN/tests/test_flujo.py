@@ -213,11 +213,69 @@ def test_un_fragmento_identico_se_rechaza(tmp_path):
     assert "no has cambiado nada" in str(error.value)
 
 
-def test_un_fragmento_cambiado_se_acepta(tmp_path):
+def test_un_fragmento_que_solo_documenta_se_rechaza(tmp_path):
     flujo = _flujo(tmp_path)
     original = "def sumar(a, b):\n    return a + b\n"
-    flujo._validar_salida_frag('def sumar(a, b):\n    """Suma."""\n    return a + b\n',
-                               original)  # no debe lanzar
+    solo_docs = 'def sumar(a, b):\n    """Suma dos números."""\n    return a + b\n'
+    with pytest.raises(ErrorProyecto) as error:
+        flujo._validar_salida_frag(solo_docs, original)
+    assert "solo has añadido comentarios" in str(error.value)
+
+
+def test_documentar_se_admite_en_el_ultimo_intento(tmp_path):
+    flujo = _flujo(tmp_path)
+    original = "def sumar(a, b):\n    return a + b\n"
+    solo_docs = 'def sumar(a, b):\n    """Suma dos números."""\n    return a + b\n'
+    flujo._validar_salida_frag(solo_docs, original, False)  # no debe lanzar
+
+
+def test_un_fragmento_con_cambio_real_se_acepta(tmp_path):
+    flujo = _flujo(tmp_path)
+    original = "def sumar(a, b):\n    return a + b\n"
+    mejorado = ('def sumar(a, b):\n    """Suma dos enteros."""\n'
+                "    if not isinstance(a, int) or not isinstance(b, int):\n"
+                "        raise TypeError('Se esperaban enteros')\n"
+                "    return a + b\n")
+    flujo._validar_salida_frag(mejorado, original)  # no debe lanzar
+
+
+# --- Detección de «refactor» cosmético ---------------------------------------
+
+def test_documentar_python_se_detecta():
+    from STM_RFPRMN_stmDL.stm_calidad import solo_documenta
+
+    original = "def sumar(a, b):\n    return a + b\n"
+    con_doc = 'def sumar(a, b):\n    """Suma."""\n    return a + b\n'
+    con_comentario = "def sumar(a, b):\n    # devuelve la suma\n    return a + b\n"
+    assert solo_documenta(original, con_doc) is True
+    assert solo_documenta(original, con_comentario) is True
+
+
+def test_extraer_una_constante_no_es_cosmetico():
+    from STM_RFPRMN_stmDL.stm_calidad import solo_documenta
+
+    original = "def f(a):\n    return a * 0.21\n"
+    con_constante = "IVA = 0.21\n\n\ndef f(a):\n    return a * IVA\n"
+    assert solo_documenta(original, con_constante) is False
+
+
+def test_documentar_csharp_se_detecta():
+    from STM_RFPRMN_stmDL.stm_calidad import solo_documenta
+
+    original = "class A { void M() { } }\n"
+    con_docs = "class A {\n    // metodo principal\n    void M() { }\n}\n"
+    con_bloque = "class A {\n    /* principal */\n    void M() { }\n}\n"
+    assert solo_documenta(original, con_docs, es_python=False) is True
+    assert solo_documenta(original, con_bloque, es_python=False) is True
+
+
+def test_cambiar_csharp_de_verdad_no_es_cosmetico():
+    from STM_RFPRMN_stmDL.stm_calidad import solo_documenta
+
+    original = 'class A { void M() { Console.WriteLine("Hola"); } }\n'
+    con_constante = ('class A { const string Msg = "Hola"; '
+                     "void M() { Console.WriteLine(Msg); } }\n")
+    assert solo_documenta(original, con_constante, es_python=False) is False
 
 
 def test_el_registro_no_rompe_el_flujo_si_es_ilegible(tmp_path, monkeypatch):

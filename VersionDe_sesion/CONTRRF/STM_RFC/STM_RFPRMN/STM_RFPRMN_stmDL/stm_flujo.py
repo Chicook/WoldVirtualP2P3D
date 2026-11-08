@@ -14,7 +14,6 @@ Un único ``ejecutar()`` orquesta las fases [1/5]…[5/5] con estas garantías:
 """
 from __future__ import annotations
 
-import ast
 import os
 from pathlib import Path
 from typing import Callable, Optional
@@ -49,9 +48,7 @@ from .stm_creacion import comando_crear_codigo
 from .stm_logica import comando_crear_logica
 from .test import comando_test
 from .stm_rutas import comando_configurar_rutas, comando_rutas
-
-# --- Flujo -------------------------------------------------------------------
-
+from .stm_calidad import solo_documenta, validar_fragmento
 #: Valores de ``RFPRMN_CONSUMIR_MODELOS`` que activan el borrado de modelos.
 _AFIRMATIVOS = frozenset({"1", "si", "sí", "s", "yes", "y", "true"})
 
@@ -182,17 +179,10 @@ class FlujoRefactorLucIA:
         _imprimir_seguro(f"[REFACTOR] {len(lineas)} líneas en "
                          f"{len(self.fragmentos)} fragmentos con {self.modelo}.")
 
-    def _validar_salida_frag(self, texto: str, original: str = "") -> None:
-        """Valida sintaxis y que el fragmento no sea idéntico (mejora obligatoria)."""
-        if original and texto.strip() == original.strip():
-            raise ErrorProyecto("no has cambiado nada; aplica al menos una mejora "
-                                "(documenta, valida entradas o extrae constantes)")
-        if self.ruta.suffix.lower() == ".py":
-            try:
-                ast.parse(texto, filename=str(self.ruta))
-            except SyntaxError as error:
-                raise ErrorProyecto(
-                    f"frag inválido (línea {error.lineno}: {error.msg})")
+    def _validar_salida_frag(self, texto: str, original: str = "",
+                             estricto: bool = True) -> None:
+        """Valida sintaxis y que haya transformación real (no solo comentarios)."""
+        validar_fragmento(texto, original, self.ruta, estricto)
 
     def _contexto_solape(self, numero: int) -> str:
         """Cola del fragmento ORIGINAL anterior (contexto estable y no duplicado)."""
@@ -224,7 +214,11 @@ class FlujoRefactorLucIA:
                                             if self.expediente else "")
                 if not salida.strip():
                     raise ErrorProyecto("devolvió una salida vacía")
-                self._validar_salida_frag(salida, frag["original"])
+                ultimo = intento >= self.MAX_REINTENTOS_FRAG
+                self._validar_salida_frag(salida, frag["original"], not ultimo)
+                if ultimo and solo_documenta(frag["original"], salida,
+                                             self.ruta.suffix.lower() == ".py"):
+                    frag["solo_documentacion"] = True
                 frag["salida"] = salida
                 _imprimir_seguro(f"[REFACTOR {numero}/{total}] OK (intento {intento})")
                 return True

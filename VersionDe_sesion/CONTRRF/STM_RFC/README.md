@@ -79,6 +79,12 @@ mejora» y, si sigue igual, se pregunta si se da el archivo por terminado. Antes
 se rotaba de modelo y se agotaban las tres IAs en un archivo que no necesitaba
 cambios.
 
+**Y documentar no es refactorizar**: si el cambio es solo de comentarios o
+docstrings, se detecta comparando el código sin ruido (`ast` en Python,
+comentarios fuera y espacios normalizados en el resto) y se reintenta con
+«aplica una transformación real». En el último intento se acepta para no perder
+la documentación, y el fragmento queda marcado.
+
 ### 1.4 Issue #81 — gestión de ficheros
 
 Copia a `.tmp` + verificación por SHA-256 + intercambio con rollback, borrado
