@@ -290,6 +290,10 @@ def comando_ds_ialocal(consultor: Optional[ConsultorIA] = None,
         from .test import comando_test_ruta
 
         comando_test_ruta(ruta)
+        # Si el resultado supera el tope, se reparte en módulos y subsistemas.
+        from .stm_particion import partir_si_excede
+
+        partir_si_excede(ruta)
     return exito_flujo
 
 

@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.12.1"
+__version__ = "2.13.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"

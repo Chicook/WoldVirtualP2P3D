@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.12.1**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.13.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -37,7 +37,8 @@ la **retirada automática** del modelo que no pasa los filtros.
 | `stm_descartes.py` | 68 | **Nuevo**: modelos retirados por no pasar los filtros |
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
 | `stm_openrouter.py` | 193 | Respaldo OpenRouter (desactivado por defecto) |
-| `stm_refactor.py` | 350 | Fragmentos + validación + `comando_ds_ialocal` |
+| `stm_refactor.py` | 374 | Fragmentos + validación + `comando_ds_ialocal` |
+| `stm_particion.py` | 249 | **Nuevo**: reparte un `.py` de +450 líneas en módulos y subsistemas |
 | `stm_creacion.py` | 216 | Comando `crear codigo` (diagnóstico → archivo nuevo) |
 | `stm_logica.py` | 245 | Comando `crear logica` (petición → función) |
 | `stm_comentarios.py` | 266 | **Nuevo**: comando `comentar archivo` (solo comentarios) |
@@ -229,7 +230,37 @@ También sin interacción:
 python RFPRMN.py --comando "crear codigo"
 ```
 
-### 1.10 Test: probar y diagnosticar la deuda (`test.py`)
+### 1.10 Partición de módulos que superan 450 líneas
+
+Es la solución al problema recurrente: si el resultado de un refactor (o un
+archivo que ya estaba así) pasa de 450 líneas, el presupuesto lo rechaza. Al
+terminar `ds ialocal`, si el archivo supera el tope, se ofrece partirlo:
+
+```
+⚠ __init__.py tiene 612 líneas (tope 450).
+? ¿Se reparte en módulos de 450 para cumplir el tope? (s/n): s
+
+┌─ LucIA · Partición del módulo ─────────────────────────────
+│ __init__.py: 612 líneas en 2 partes (p1: 9 unidades · p2: 5 unidades).
+│ Subsistemas en: …\CONTRRF\CONTRUCCION\STM_SBSISTEMA
+└────────────────────────────────────────────────────────────
+```
+
+Reparto:
+
+1. **Cortes por unidades de nivel superior** (clases, funciones y bloques),
+   nunca a mitad de una definición. La cabecera (docstring + imports) se repite
+   en cada parte.
+2. **Parte 1**: el archivo original, con las primeras unidades hasta el tope
+   (reservando líneas para el bloque de subsistemas).
+3. **Partes 2..N**: se escriben como subsistemas en
+   `ENRN/STM_SBSISTEMA/<nombre>_pN.py`.
+4. La parte 1 **re-exporta** los subsistemas: añade su carpeta a `sys.path` y
+   hace `from <nombre>_pN import *`, así los nombres siguen disponibles.
+5. Se escribe `particion_<nombre>.md` con el reparto y, si una sola unidad no
+   cabe en 450 líneas, se avisa: eso hay que dividirlo a mano.
+
+### 1.11 Test: probar y diagnosticar la deuda (`test.py`)
 
 Cierra el ciclo: después de refactorizar o crear un archivo, se comprueba y se
 mide su deuda técnica.
@@ -257,7 +288,7 @@ mensaje_comparacion(60, "ruta/al/archivo.py")
 # "Deuda técnica: 60 -> 97/100 (mejora 37)."
 ```
 
-### 1.11 Crear lógica desde una petición (`crear logica`)
+### 1.12 Crear lógica desde una petición (`crear logica`)
 
 Primo de `crear codigo`, pero centrado en **la lógica**: lo único obligatorio es
 decir qué quieres, en lenguaje natural.
@@ -278,7 +309,7 @@ Lenguaje (vacío = deducir):
    final y se valida el conjunto; si no, se crea `logica_<petición>.py`.
 6. Diagnóstico de deuda con el módulo `test`.
 
-### 1.12 Comentar archivo (`comentar archivo`)
+### 1.13 Comentar archivo (`comentar archivo`)
 
 Documenta las funciones de un archivo **sin tocar el código**. Mismo reparto de
 papeles que en el resto: **la IA local redacta, LucIA valida y escribe**.
@@ -298,14 +329,14 @@ python RFPRMN.py            # y dentro:  comentar archivo
    la inserción toca código, **no se escribe nada**.
 6. Diagnóstico de deuda con el módulo `test`.
 
-### 1.13 Registro e IPFS
+### 1.14 Registro e IPFS
 
 `envios.json` → `registro.md` → pesos (`stm_pesos`) → IPFS en cuatro niveles
 (`stm_ipfs`) → limpieza. **P1 resuelta**: un CID sintético del shim
 (`QmLocal…` con `ok=False`) ya **no** cuenta como subida; el flujo baja a la
 API, al binario y, si no hay nada, a un CID local honesto.
 
-### 1.14 Registro de símbolos por AST (D4) y consola
+### 1.15 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
@@ -317,7 +348,7 @@ Todas las salidas toleran consolas cp1252.
 
 ## 2. Pruebas y CI
 
-**256 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
+**276 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
 
 ```bash
 cd VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN
@@ -334,6 +365,7 @@ python -m pytest tests -q -p no:cacheprovider
 | `test_flujo.py` | Un solo `ejecutar`, sin F821, sin truncar, rotación, limpieza |
 | `test_modelos.py` | Registro de usados, R3, «el más ligero», R6 |
 | `test_descartes.py` | Retirada por filtros, persistencia y elección del siguiente |
+| `test_particion.py` | Cortes por unidad, tope respetado, re-export, informe y cancelación |
 | `test_descarga.py` | `Range`, truncados, no repetir descargas |
 | `test_openrouter.py` | Desactivado por defecto y activación explícita |
 | `test_lucia.py` | Expediente, README, vector, calidad y veredicto |
