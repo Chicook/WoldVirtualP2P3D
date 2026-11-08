@@ -1,14 +1,14 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.9.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.10.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
 Cierra los issues **#80** y **#81**, corrige el fallo de descarga de modelos,
 resuelve las fases R1–R6 de la discusión #84, añade el **puente LucIA ↔ red
 neuronal** (embeddings reales y semilla con código real), deja la deuda
-P1/P2/P4 resuelta, suma el **subsistema seq2seq**, el comando **`crear codigo`**
-y el módulo **`test`**, que prueba un archivo y diagnostica su deuda técnica.
+P1/P2/P4 resuelta, suma el **subsistema seq2seq** y los comandos
+**`crear codigo`**, **`crear logica`** y **`test`**.
 
 ## 1. Lo implementado
 
@@ -36,7 +36,8 @@ y el módulo **`test`**, que prueba un archivo y diagnostica su deuda técnica.
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
 | `stm_openrouter.py` | 193 | Respaldo OpenRouter (desactivado por defecto) |
 | `stm_refactor.py` | 350 | Fragmentos + validación + `comando_ds_ialocal` |
-| `stm_creacion.py` | 216 | **Nuevo**: comando `crear codigo` (diagnóstico → archivo nuevo) |
+| `stm_creacion.py` | 216 | Comando `crear codigo` (diagnóstico → archivo nuevo) |
+| `stm_logica.py` | 245 | **Nuevo**: comando `crear logica` (petición → función) |
 | `test.py` | 206 | **Nuevo**: pruebas estáticas y diagnóstico de deuda |
 | `stm_flujo.py` | 444 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
 | `stm_registro.py` | 194 | Publicación del registro y limpieza |
@@ -224,14 +225,35 @@ mensaje_comparacion(60, "ruta/al/archivo.py")
 # "Deuda técnica: 60 -> 97/100 (mejora 37)."
 ```
 
-### 1.11 Registro e IPFS
+### 1.11 Crear lógica desde una petición (`crear logica`)
+
+Primo de `crear codigo`, pero centrado en **la lógica**: lo único obligatorio es
+decir qué quieres, en lenguaje natural.
+
+```bash
+python RFPRMN.py            # y dentro:  crear logica
+¿Qué lógica quieres? Una función que calcule el IVA y lo redondee a 2 decimales
+Archivo donde añadirla (vacío = archivo nuevo):
+Lenguaje (vacío = deducir):
+```
+
+1. **Diseño de LucIA**: firma, parámetros y tipos, qué devuelve, casos límite y
+   errores, algoritmo paso a paso. Con respaldo determinista si no hay modelo.
+2. Confirmación del diseño.
+3. **Generación** de la función (sin ejemplo de uso, para poder integrarla).
+4. **Validación** antes de escribir (AST en Python, tope de líneas).
+5. **Integración**: si indicas un archivo existente, la lógica se **añade** al
+   final y se valida el conjunto; si no, se crea `logica_<petición>.py`.
+6. Diagnóstico de deuda con el módulo `test`.
+
+### 1.12 Registro e IPFS
 
 `envios.json` → `registro.md` → pesos (`stm_pesos`) → IPFS en cuatro niveles
 (`stm_ipfs`) → limpieza. **P1 resuelta**: un CID sintético del shim
 (`QmLocal…` con `ok=False`) ya **no** cuenta como subida; el flujo baja a la
 API, al binario y, si no hay nada, a un CID local honesto.
 
-### 1.12 Registro de símbolos por AST (D4) y consola
+### 1.13 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
@@ -243,7 +265,7 @@ Todas las salidas toleran consolas cp1252.
 
 ## 2. Pruebas y CI
 
-**202 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
+**221 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
 
 ```bash
 cd VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN
@@ -267,6 +289,7 @@ python -m pytest tests -q -p no:cacheprovider
 | `test_seq2seq.py` | Tokenizador, vectorizador, memoria, generador, neurona y puente |
 | `test_creacion.py` | `crear codigo`: extensión, plan, validación y escritura |
 | `test_modulo_test.py` | Puntuación, niveles, sintaxis sin AST, comparación y comandos |
+| `test_logica.py` | Nombre derivado, diseño, validación, añadir sin pisar y comando |
 | `test_ipfs.py` | P1: el shim no cuenta como subida |
 
 **CI**: `.github/workflows/rfprmn-tests.yml` ejecuta lint crítico, presupuesto,

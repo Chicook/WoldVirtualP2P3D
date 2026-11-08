@@ -18,6 +18,7 @@ cualquier archivo que se quiera revisar.
 """
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -46,8 +47,11 @@ def _lint(ruta: Path) -> dict:
         return {"disponible": False, "problemas": 0, "detalle": []}
     if "No module named ruff" in (proceso.stderr or ""):
         return {"disponible": False, "problemas": 0, "detalle": []}
+    # Formato conciso de ruff: "ruta:linea:col: CODIGO mensaje". Se filtra así
+    # para no contar "All checks passed!" ni "Found N errors" como hallazgos.
+    patron = re.compile(r".+:\d+:\d+: [A-Z]+\d+")
     lineas = [linea for linea in (proceso.stdout or "").splitlines()
-              if linea.strip() and not linea.startswith(("Found ", "No errors"))]
+              if patron.match(linea.strip())]
     return {"disponible": True, "problemas": len(lineas), "detalle": lineas[:3]}
 
 

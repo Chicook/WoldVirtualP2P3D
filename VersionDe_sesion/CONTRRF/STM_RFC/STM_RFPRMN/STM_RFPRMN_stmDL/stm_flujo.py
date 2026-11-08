@@ -46,6 +46,7 @@ from .stm_refactor import (
     _registrar_refactor_md, _pedir_extra_o_diagnostico, _fallback_openrouter,
 )
 from .stm_creacion import comando_crear_codigo
+from .stm_logica import comando_crear_logica
 from .test import comando_test
 from .stm_rutas import comando_configurar_rutas, comando_rutas
 
@@ -379,8 +380,6 @@ class FlujoRefactorLucIA:
                                     borrar_modelo=self.consumir_modelos)
 
 
-# --- Menú interactivo --------------------------------------------------------
-
 def cerrar() -> None:
     """Finaliza la sesión interactiva y limpia restos de modelos descargados."""
     _borrar_peso_local()
@@ -398,6 +397,7 @@ def mostrar_menu() -> None:
         ("ia local", "Analizar un archivo con LucIA y crear un plan"),
         ("ds ialocal", "Plan de LucIA + refactor con modelo local y registro .md"),
         ("crear codigo", "Crear un archivo nuevo a partir de un diagnóstico de LucIA"),
+        ("crear logica", "Escribir una función a partir de lo que le pidas"),
         ("test", "Probar un archivo y diagnosticar su deuda técnica"),
         ("rutas", "Ver las rutas activas de RFC/PRY y su origen"),
         ("configurar rutas", "Elegir los directorios de RFC y PRY"),
@@ -419,6 +419,7 @@ def ejecutar_comandos() -> None:
         "ia local": comando_ia_local,
         "ds ialocal": comando_ds_ialocal,
         "crear codigo": comando_crear_codigo,
+        "crear logica": comando_crear_logica,
         "test": comando_test,
         "rutas": comando_rutas,
         "configurar rutas": comando_configurar_rutas,
