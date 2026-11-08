@@ -10,12 +10,12 @@ import importlib
 from pathlib import Path
 from typing import Any
 
-__version__ = "2.4.0"
+__version__ = "2.5.0"
 
 _MODULOS = ("stm_base", "stm_rutas", "stm_fs", "stm_fragmentos", "stm_gestion",
-            "stm_analisis", "stm_lucia", "stm_modelos", "stm_descarga",
-            "stm_openrouter", "stm_refactor", "stm_flujo", "stm_registro",
-            "stm_pesos", "stm_ipfs")
+            "stm_analisis", "stm_embeddings", "stm_lucia", "stm_modelos",
+            "stm_descarga", "stm_openrouter", "stm_refactor", "stm_flujo",
+            "stm_registro", "stm_pesos", "stm_ipfs")
 
 # Mapa simbolo -> modulo que lo define (resolucion perezosa).
 _REGISTRO: dict[str, str] = {}
@@ -62,6 +62,10 @@ _LUCIA_SYMS = ["Expediente", "ALTO", "SALIDA", "MIN_PASOS", "UMBRAL", "RUTA_RED"
     "evaluar_y_aprender", "estado", "describir"]
 for _s in _LUCIA_SYMS:
     _REGISTRO[_s] = "stm_lucia"
+_EMBEDDINGS_SYMS = ["DIMENSIONES", "MODELOS_EMBEDDING", "MAX_CARACTERES",
+    "modelo_configurado", "modelos_instalados", "detectar_modelo", "contraer"]
+for _s in _EMBEDDINGS_SYMS:
+    _REGISTRO[_s] = "stm_embeddings"
 _MODELOS_SYMS = ["DIR_MODELOS_LOCAL", "HF_REPO_CODIGO", "HF_ARCHIVO_CODIGO",
     "MODELOS_CODIGO_LIGEROS", "LIMITE_LINEAS_REFACTOR", "REGISTRO_REFACTOR_MD",
     "NOMBRE_MODELO_GGUF", "tamano_modelo", "ordenar_por_tamano",

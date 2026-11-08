@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.4.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.5.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`).
 
@@ -8,32 +8,34 @@ Esta versión cierra los issues **#80** (fiabilidad del flujo de refactor) y
 **#81** (seguridad de las operaciones de ficheros), corrige el fallo de
 descarga de modelos locales, resuelve las seis fases de la discusión #84 y
 añade el **puente LucIA ↔ red neuronal**: expediente del archivo, README con su
-deuda técnica y aprendizaje en `LC_STM/red_neuronal`.
+deuda técnica, **embeddings reales de Ollama** y aprendizaje en
+`LC_STM/red_neuronal`.
 
 ## 1. Lo implementado
 
 ### 1.1 Refactorización modular (tope 450 líneas por archivo)
 
 El `RFPRMN.py` original (1813 líneas, ~75 funciones) se dividió sin cambiar
-firmas ni comportamiento. Estado actual, **14 submódulos, ninguno por encima
+firmas ni comportamiento. Estado actual, **16 submódulos, ninguno por encima
 de 450 líneas**:
 
 | Archivo | Líneas | Contenido |
 |---|---:|---|
-| `RFPRMN.py` | 419 | `class RFPRMN` + menú/CLI (`--ayuda/--version/--estado/--presupuesto/--rutas/--configurar-rutas/--comando/--consumir-modelos`) |
-| `STM_RFPRMN_stmDL/__init__.py` | 441 | Registro perezoso PEP 562 (**153 símbolos**) + presupuesto + salud |
+| `RFPRMN.py` | 438 | `class RFPRMN` + menú/CLI (`--ayuda/--version/--estado/--presupuesto/--rutas/--configurar-rutas/--lucia/--comando/--consumir-modelos/--openrouter`) |
+| `STM_RFPRMN_stmDL/__init__.py` | 440 | Registro perezoso PEP 562 (**180 símbolos**) + presupuesto + salud |
 | `stm_base.py` | 212 | Estilo/UI, constantes, errores, re-export de rutas, `atexit` de cachés |
-| `stm_rutas.py` | 334 | Única fuente de rutas, cadena de configuración, guardián RFC/PRY y comandos `rutas` |
+| `stm_rutas.py` | 345 | Única fuente de rutas, cadena de configuración, guardián RFC/PRY y comandos `rutas` |
 | `stm_fs.py` | 428 | Copia verificada, swap transaccional, borrado reportado, JSON atómico |
 | `stm_fragmentos.py` | 132 | Troceado por AST/heurística, solape y constantes de refactor |
 | `stm_gestion.py` | 412 | fs + `refactorizar/enviar/actualizar` **transaccionales** |
 | `stm_analisis.py` | 280 | `AnalisisArchivo` + plan + LucIA local |
-| `stm_lucia.py` | 385 | **Nuevo**: expediente, README con deuda, vectores y aprendizaje en la red de LC_STM |
+| `stm_embeddings.py` | 203 | **Nuevo**: embeddings locales de Ollama, detección y contracción a 8 dimensiones |
+| `stm_lucia.py` | 402 | Expediente, README con deuda, vectores y aprendizaje en la red de LC_STM |
 | `stm_modelos.py` | 428 | Política de modelos (ligero primero) y ciclo de vida |
 | `stm_descarga.py` | 165 | Descarga GGUF atómica, reanudable y verificada |
-| `stm_openrouter.py` | 149 | Respaldo con modelos gratuitos de OpenRouter |
-| `stm_refactor.py` | 291 | Fragmentos + validación + `comando_ds_ialocal` |
-| `stm_flujo.py` | 425 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
+| `stm_openrouter.py` | 193 | Respaldo con modelos gratuitos de OpenRouter (desactivado) |
+| `stm_refactor.py` | 312 | Fragmentos + validación + `comando_ds_ialocal` |
+| `stm_flujo.py` | 444 | `FlujoRefactorLucIA` (una sola definición de `ejecutar`) |
 | `stm_registro.py` | 194 | Publicación del registro y limpieza |
 | `stm_pesos.py` | 137 | Vectorización, cuantización y verificación de pesos |
 | `stm_ipfs.py` | 156 | Subida a IPFS en cuatro niveles |
@@ -154,18 +156,33 @@ sigue este ciclo:
    argumentos mutables, líneas largas, TODO, tamaño, complejidad).
 2. **Envío.** El contexto compacto del expediente viaja con cada fragmento al
    modelo local, que devuelve código candidato.
-3. **Vectores de aprendizaje.** El expediente se codifica en un vector de 12
-   dimensiones (métricas normalizadas + huella de la descripción) y el
-   candidato en un vector de 3 (fidelidad, limpieza, seguridad).
+3. **Vectores de aprendizaje.** El expediente se codifica en un vector de **19**
+   dimensiones: 11 métricas normalizadas + la parte **semántica real** (el
+   *embedding* de Ollama del código y la descripción, contraído a 8 valores).
+   El candidato se codifica en un vector de 3 (fidelidad, limpieza, seguridad).
 4. **Aprendizaje.** La red `NeuralNetworkOptimizer` de
    `LC_STM/red_neuronal/RF_SL/RFSL1/RF_SL1_4.py` entrena con el par
    (expediente → calidad) y guarda sus pesos en
-   `STM_RFPRMN/.modelos/lucia_rn.pkl`.
+   `STM_RFPRMN/.modelos/lucia_rn_19.pkl`.
 5. **Escritura.** LucIA puntúa con la red **antes** de entrenar con la muestra
    (para que el veredicto no sea circular); si el resultado no convence,
    pregunta antes de escribir. La escritura la hace LucIA, de forma atómica.
 
 El README del expediente se archiva en `STM_RFPRMN/.modelos/expedientes/`.
+
+**Embeddings (`stm_embeddings.py`).** El modelo se elige así:
+`RFPRMN_EMBEDDING_MODEL` → `"embedding_model"` en `.config/opciones.json` → el
+más ligero de los instalados (`all-minilm` 46 MB, `nomic-embed-text`,
+`snowflake-arctic-embed`, `mxbai-embed-large`, `bge-m3`).
+
+```bash
+ollama pull all-minilm        # 46 MB, el más ligero
+python RFPRMN.py --lucia      # muestra modelo, dimensiones y muestras
+```
+
+Se proban los dos endpoints (`/api/embed` y el heredado `/api/embeddings`) y se
+cachean los vectores. Si no hay modelo o Ollama no responde, **se degrada a la
+huella de hash** y se avisa: el refactor nunca se rompe por esto.
 
 **Alcance honesto:** la red no genera texto. Aprende a **evaluar** la calidad
 del refactor; la generación la hace el modelo local y la decisión/escritura,
@@ -191,7 +208,7 @@ md y pesos. Utilidades: `vista_previa()`, `verificar_pesos()`,
 
 ## 2. Pruebas
 
-Suite propia del módulo (**120 pruebas**, sin red, sin Ollama y sin tocar
+Suite propia del módulo (**135 pruebas**, sin red, sin Ollama y sin tocar
 RFC/PRY):
 
 ```bash
@@ -206,7 +223,8 @@ python -m pytest tests -q -p no:cacheprovider
 | `tests/test_rutas.py` | Nada se escribe bajo RFC/PRY, cadena de configuración, R5 (guardar/validar rutas) |
 | `tests/test_modelos.py` | Registro de usados, política R3, «el más ligero», R6 (`ollama create`) |
 | `tests/test_openrouter.py` | Respaldo desactivado por defecto y activación explícita (entorno/archivo) |
-| `tests/test_lucia.py` | Expediente y deuda, README, vector de 12, calidad de 3 y aprendizaje/veredicto |
+| `tests/test_lucia.py` | Expediente y deuda, README, vector de 19, calidad de 3 y aprendizaje/veredicto |
+| `tests/test_embeddings.py` | Detección del modelo, `/api/embed` y respaldo, caché y contracción |
 | `tests/test_fragmentos.py` | Cortes válidos, cobertura sin huecos, `try/except`, solape |
 | `tests/test_flujo.py` | Un solo `ejecutar`, sin F821, ensamblado sin truncar, rotación y limpieza |
 | `tests/test_fs.py` | Verificación por huella, swap con rollback, borrado, JSON atómico, bloqueo |
@@ -219,8 +237,10 @@ python -m pytest tests -q -p no:cacheprovider
   cambio grande exige dividirlos.
 - **D2 (cerrada por R5)**. Las rutas oficiales ya no son obligatorias: manda lo
   que elija el usuario (`.config/rutas.json` o entorno).
-- **D3**. Vectores por hash SHA-256, no embeddings semánticos reales.
-- **D4**. El registro de símbolos de `__init__.py` se mantiene a mano (441
+- **D3 (mitigada)**. La parte semántica ya usa *embeddings* reales de Ollama
+  (384 dims contraídas a 8). Sigue pendiente un codificador propio del proyecto
+  y entrenar la red con corpus real.
+- **D4**. El registro de símbolos de `__init__.py` se mantiene a mano (440
   líneas); conviene generarlo por AST.
 - **D5**. Las rutas de limpieza de `stm_fs`/`stm_descarga` usan `except OSError`
   amplio a propósito: no deben romper el flujo por un temporal bloqueado.

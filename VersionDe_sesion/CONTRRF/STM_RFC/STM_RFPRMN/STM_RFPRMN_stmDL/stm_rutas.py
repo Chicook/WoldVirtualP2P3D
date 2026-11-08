@@ -51,6 +51,8 @@ if (TLLDCD_DIR / "src").is_dir():
 DIR_CONFIG = MODULO_DIR / ".config"
 #: Archivo donde se guardan las rutas elegidas por el usuario.
 ARCHIVO_RUTAS = DIR_CONFIG / "rutas.json"
+#: Opciones de la herramienta (respaldo OpenRouter, modelo de embeddings...).
+ARCHIVO_OPCIONES = DIR_CONFIG / "opciones.json"
 #: Raíz de datos propios (pesos, caché), FUERA de los árboles sincronizados.
 DIR_DATOS = MODULO_DIR / ".modelos"
 #: Carpeta donde se descargan los pesos GGUF.
@@ -71,6 +73,15 @@ def _leer_config_rutas() -> dict:
     """Contenido de ``.config/rutas.json`` (``{}`` si no existe o está roto)."""
     try:
         datos = json.loads(ARCHIVO_RUTAS.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return datos if isinstance(datos, dict) else {}
+
+
+def leer_opciones() -> dict:
+    """Contenido de ``.config/opciones.json`` (``{}`` si no existe o está roto)."""
+    try:
+        datos = json.loads(ARCHIVO_OPCIONES.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
     return datos if isinstance(datos, dict) else {}

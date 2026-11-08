@@ -23,9 +23,17 @@ def restar(a, b):
 
 @pytest.fixture(autouse=True)
 def _red_aislada(monkeypatch, tmp_path):
-    """Cada prueba usa pesos propios y una caché limpia."""
+    """Cada prueba usa pesos propios, caché limpia y sin red."""
     monkeypatch.setattr(stm_lucia, "RUTA_RED", tmp_path / "lucia_rn.pkl")
     stm_lucia._CACHE.update({"red": None, "error": "", "cargada": False})
+    # La parte semántica se fija para no depender de Ollama en las pruebas.
+    monkeypatch.setattr(stm_lucia, "_semantico",
+                        lambda texto: [0.5] * stm_lucia.DIMENSIONES)
+    monkeypatch.setattr(stm_lucia, "estado_embeddings",
+                        lambda: {"ok": False, "modelo": "", "dim": 0,
+                                 "motivo": "prueba"})
+    monkeypatch.setattr(stm_lucia, "describir_embeddings",
+                        lambda: "Embeddings: no disponibles (prueba).")
     yield
 
 
@@ -84,6 +92,14 @@ def test_el_vector_es_estable(tmp_path):
     primero = _expediente(tmp_path).vector
     segundo = _expediente(tmp_path).vector
     assert primero == segundo
+
+
+def test_el_vector_incluye_la_parte_semantica(tmp_path, monkeypatch):
+    monkeypatch.setattr(stm_lucia, "_semantico",
+                        lambda texto: [0.25] * stm_lucia.DIMENSIONES)
+    expediente = _expediente(tmp_path)
+    assert len(expediente.vector) == 11 + stm_lucia.DIMENSIONES
+    assert expediente.vector[-stm_lucia.DIMENSIONES:] == [0.25] * stm_lucia.DIMENSIONES
 
 
 # --- Vector de calidad -------------------------------------------------------

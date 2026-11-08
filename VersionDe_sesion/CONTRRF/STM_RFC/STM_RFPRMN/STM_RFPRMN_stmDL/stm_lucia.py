@@ -32,19 +32,23 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .stm_base import advertir, informar
+from .stm_embeddings import (
+    DIMENSIONES, contraer, estado as estado_embeddings, describir as describir_embeddings,
+)
+from .stm_embeddings import codificar as embeber
 from .stm_fragmentos import LIMITE_LINEAS_REFACTOR
 from .stm_rutas import DIR_DATOS, ultima_actualizacion_pry
 
-#: Dimensión del vector de entrada (ficha del archivo + descripción).
-ALTO = 12
+#: Dimensión del vector de entrada: 11 métricas + la parte semántica.
+ALTO = 11 + DIMENSIONES
 #: Dimensión de salida: fidelidad, limpieza y seguridad del candidato.
 SALIDA = 3
 #: Muestras mínimas antes de que la red emita un veredicto con criterio.
 MIN_PASOS = 8
 #: Puntuación mínima para aceptar sin preguntar una vez entrenada.
 UMBRAL = 0.55
-#: Pesos persistentes de la red de LucIA (fuera de los árboles sincronizados).
-RUTA_RED = DIR_DATOS / "lucia_rn.pkl"
+#: Pesos persistentes de la red de LucIA (uno por arquitectura del vector).
+RUTA_RED = DIR_DATOS / f"lucia_rn_{ALTO}.pkl"
 #: Carpeta donde se archiva el README de cada expediente procesado.
 DIR_EXPEDIENTES = DIR_DATOS / "expedientes"
 
@@ -159,12 +163,19 @@ def _norm(valor: float, maximo: float) -> float:
     return min(1.0, math.log1p(max(valor, 0.0)) / math.log1p(maximo))
 
 
-def _hash_semantico(texto: str) -> float:
-    """Byte de hash normalizado: aproxima el 'tono' del texto de forma estable."""
-    if not texto:
-        return 0.0
+def _vector_hash(texto: str, dims: int = DIMENSIONES) -> list[float]:
+    """Respaldo determinista cuando no hay embeddings (``dims`` valores en [0,1])."""
     digest = hashlib.sha256(texto.encode("utf-8", "replace")).digest()
-    return digest[0] / 255.0
+    return [int.from_bytes(digest[k * 4:(k + 1) * 4], "big") / 0xFFFFFFFF
+            for k in range(min(dims, 8))]
+
+
+def _semantico(texto: str) -> list[float]:
+    """Parte semántica del vector: embedding real o huella de hash como respaldo."""
+    vector = embeber(texto)
+    if vector:
+        return contraer(vector)
+    return _vector_hash(texto)
 
 
 def deuda_tecnica(analisis) -> list[str]:
@@ -227,7 +238,12 @@ def readme_detallado(ruta: Path, contenido: str, analisis,
 
 def codificar(ruta: Path, contenido: str, analisis,
               descripcion: str) -> list[float]:
-    """Convierte la ficha del archivo en el vector que entiende la red."""
+    """Convierte la ficha del archivo en el vector que entiende la red.
+
+    Once métricas normalizadas (estructura y deuda) más la parte semántica:
+    el embedding real del código y la descripción de LucIA, contraído a
+    ``DIMENSIONES`` valores.
+    """
     return [
         _norm(analisis.lineas, 2000),
         _norm(analisis.funciones, 120),
@@ -240,8 +256,7 @@ def codificar(ruta: Path, contenido: str, analisis,
         _norm(analisis.funciones_sin_docstring, 120),
         _norm(analisis.argumentos_mutables, 40),
         _norm(len(contenido), 200_000),
-        _hash_semantico(descripcion or str(ruta.name)),
-    ]
+    ] + _semantico(f"{descripcion}\n\n{contenido[:4000]}")
 
 
 def preparar(ruta: Path, contenido: str, analisis, descripcion: str) -> Expediente:
@@ -367,19 +382,21 @@ def estado() -> dict:
     red = _obtener_red()
     if red is None:
         return {"disponible": False, "motivo": _CACHE.get("error", ""),
-                "pesos": str(RUTA_RED), "pasos": 0}
+                "pesos": str(RUTA_RED), "pasos": 0,
+                "embeddings": estado_embeddings()}
     return {"disponible": True, "motivo": "", "pesos": str(RUTA_RED),
             "pasos": pasos_aprendidos(),
             "arquitectura": f"{ALTO}x{SALIDA}", "umbral": UMBRAL,
-            "min_muestras": MIN_PASOS}
+            "min_muestras": MIN_PASOS, "embeddings": estado_embeddings()}
 
 
 def describir() -> str:
     """Línea de estado legible para la consola."""
     datos = estado()
+    semantica = describir_embeddings()
     if not datos["disponible"]:
         return (f"LucIA · red neuronal no disponible ({datos['motivo']}). "
                 "El refactor sigue funcionando sin aprendizaje.")
     return (f"LucIA · red neuronal {datos['arquitectura']} · "
             f"{datos['pasos']} muestras · umbral {datos['umbral']} · "
-            f"pesos en {datos['pesos']}")
+            f"pesos en {datos['pesos']}\n{semantica}")
