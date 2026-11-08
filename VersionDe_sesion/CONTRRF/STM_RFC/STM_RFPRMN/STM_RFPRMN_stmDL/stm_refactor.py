@@ -266,11 +266,17 @@ def comando_ds_ialocal(consultor: Optional[ConsultorIA] = None,
         reportar_error(f"No se pudo cargar el flujo de refactor: {error}")
         return False
     try:
-        return FlujoRefactorLucIA(ruta, contenido, consultor,
-                                  consumir_modelos=consumir_modelos).ejecutar()
+        exito_flujo = FlujoRefactorLucIA(ruta, contenido, consultor,
+                                         consumir_modelos=consumir_modelos).ejecutar()
     except ErrorProyecto as error:
         reportar_error(str(error))
         return False
+    if exito_flujo:
+        # Cierra el ciclo: se prueba lo recién escrito y se diagnostica su deuda.
+        from .test import comando_test_ruta
+
+        comando_test_ruta(ruta)
+    return exito_flujo
 
 
 def _generar_con_memoria(ruta: Path, contenido: str, modelo_local: str) -> bool:

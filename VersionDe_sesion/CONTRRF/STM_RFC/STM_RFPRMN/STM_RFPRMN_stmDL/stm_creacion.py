@@ -199,6 +199,9 @@ def crear_codigo(ruta: str, descripcion: str, lenguaje: str = "python",
         return False
     exito(f"Código creado ({len(codigo.splitlines())} líneas): {destino}")
     _aprender(descripcion, codigo)
+    from .test import comando_test_ruta
+
+    comando_test_ruta(destino)
     return True
 
 
