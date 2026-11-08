@@ -46,6 +46,7 @@ from .stm_refactor import (
 )
 from .stm_creacion import comando_crear_codigo
 from .stm_logica import comando_crear_logica
+from .stm_comentarios import comando_comentar_archivo
 from .test import comando_test
 from .stm_rutas import comando_configurar_rutas, comando_rutas
 from .stm_calidad import solo_documenta, validar_fragmento
@@ -392,6 +393,7 @@ def mostrar_menu() -> None:
         ("ds ialocal", "Plan de LucIA + refactor con modelo local y registro .md"),
         ("crear codigo", "Crear un archivo nuevo a partir de un diagnóstico de LucIA"),
         ("crear logica", "Escribir una función a partir de lo que le pidas"),
+        ("comentar archivo", "Documentar las funciones de un archivo con LucIA"),
         ("test", "Probar un archivo y diagnosticar su deuda técnica"),
         ("rutas", "Ver las rutas activas de RFC/PRY y su origen"),
         ("configurar rutas", "Elegir los directorios de RFC y PRY"),
@@ -414,6 +416,7 @@ def ejecutar_comandos() -> None:
         "ds ialocal": comando_ds_ialocal,
         "crear codigo": comando_crear_codigo,
         "crear logica": comando_crear_logica,
+        "comentar archivo": comando_comentar_archivo,
         "test": comando_test,
         "rutas": comando_rutas,
         "configurar rutas": comando_configurar_rutas,

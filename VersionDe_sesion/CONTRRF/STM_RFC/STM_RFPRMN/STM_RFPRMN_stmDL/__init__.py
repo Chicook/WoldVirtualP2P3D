@@ -21,13 +21,14 @@ import importlib
 from pathlib import Path
 from typing import Any
 
-__version__ = "2.10.1"
+__version__ = "2.11.0"
 
 _MODULOS = ("stm_base", "stm_rutas", "stm_fs", "stm_fragmentos", "stm_gestion",
             "stm_analisis", "stm_lucia", "stm_embeddings", "stm_calidad",
             "stm_corpus", "stm_seq2seq", "stm_modelos", "stm_descarga",
             "stm_openrouter", "stm_refactor", "stm_creacion", "stm_logica",
-            "stm_flujo", "stm_registro", "stm_pesos", "stm_ipfs", "test")
+            "stm_comentarios", "stm_flujo", "stm_registro", "stm_pesos",
+            "stm_ipfs", "test")
 
 
 def _simbolos_del_modulo(modulo: str) -> list[str]:
