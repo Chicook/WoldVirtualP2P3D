@@ -1,15 +1,31 @@
 """Submodulo de RFPRMN (refactor: tope 400/450 lineas)."""
 from __future__ import annotations
-import ast, json, os, re, shutil, stat, subprocess, sys, textwrap, urllib.error, urllib.parse, urllib.request, uuid
-from dataclasses import asdict, dataclass
+import ast
+import json
+import os
+import re
+import urllib.request
 from pathlib import Path
-from typing import Callable, Optional
-try:
-    from .stm_base import (E, informar, exito, advertir, reportar_error, pedir_confirmacion, ErrorProyecto, CONFIG_IA_LOCAL, SRC_DIR, _panel, _imprimir_seguro)
-    from .stm_analisis import AnalisisArchivo, analizar_archivo_local, crear_plan_refactorizacion, consultar_ia_local, ConsultorIA
-    from .stm_modelos import (DIR_MODELOS_LOCAL, HF_REPO_CODIGO, HF_ARCHIVO_CODIGO, MODELOS_CODIGO_LIGEROS, LIMITE_LINEAS_REFACTOR, LINEAS_POR_FRAGMENTO, REGISTRO_REFACTOR_MD, MODELOS_OR_CODIGO, ENDPOINT_OPENROUTER, _leer_openrouter_key, _chat_openrouter, _descargar_peso_hf, _modelos_ollama_instalados, _es_modelo_codigo, _leer_candidatos_codigo, _borrar_peso_local, _descargar_modelo_ollama, _modelos_usados_registro, _asegurar_modelo_codigo, _borrar_modelo_ollama, _liberar_ollama)
-except ImportError:
-    pass
+from typing import Optional
+# Imports explícitos: un nombre que falte debe romper el arranque con un
+# mensaje claro, no dejar el módulo a medias (issue #80, punto 5).
+from .stm_base import (  # noqa: F401
+    E, informar, exito, advertir, reportar_error, pedir_confirmacion,
+    ErrorProyecto, CONFIG_IA_LOCAL, SRC_DIR, _panel, _imprimir_seguro,
+)
+from .stm_analisis import (  # noqa: F401
+    AnalisisArchivo, analizar_archivo_local, crear_plan_refactorizacion,
+    consultar_ia_local, ConsultorIA, _cargar_configuracion_ia_local,
+)
+from .stm_modelos import (  # noqa: F401
+    DIR_MODELOS_LOCAL, HF_REPO_CODIGO, HF_ARCHIVO_CODIGO, MODELOS_CODIGO_LIGEROS,
+    LIMITE_LINEAS_REFACTOR, LINEAS_POR_FRAGMENTO, REGISTRO_REFACTOR_MD,
+    MODELOS_OR_CODIGO, ENDPOINT_OPENROUTER, _leer_openrouter_key,
+    _chat_openrouter, _refactorizar_con_openrouter, _descargar_peso_hf,
+    _modelos_ollama_instalados, _es_modelo_codigo, _leer_candidatos_codigo,
+    _borrar_peso_local, _descargar_modelo_ollama, _modelos_usados_registro,
+    _asegurar_modelo_codigo, _borrar_modelo_ollama, _liberar_ollama,
+)
 
 
 def _generar_fragmento(endpoint: str, modelo: str, nombre_archivo: str,
@@ -124,8 +140,10 @@ def _refactorizar_con_modelo(contenido: str, analisis: AnalisisArchivo, modelo: 
     texto = "\n".join(salidas).strip()
     lineas_out = texto.splitlines()
     if len(lineas_out) > LIMITE_LINEAS_REFACTOR:
-        advertir(f"El resultado tiene {len(lineas_out)} líneas; se recorta a {LIMITE_LINEAS_REFACTOR}.")
-        texto = "\n".join(lineas_out[:LIMITE_LINEAS_REFACTOR])
+        raise ErrorProyecto(
+            f"El refactor ocupa {len(lineas_out)} líneas "
+            f"(tope {LIMITE_LINEAS_REFACTOR}): se rechaza para no truncar código "
+            "y se conserva el original.")
     _imprimir_seguro("[REFACTOR] Generación terminada.")
     return texto
 
@@ -217,6 +235,11 @@ def comando_ds_ialocal(consultor: Optional[ConsultorIA] = None) -> bool:
     except OSError as error:
         reportar_error(f"No se pudo leer: {error}")
         return False
+    try:
+        from .stm_flujo import FlujoRefactorLucIA  # diferido: evita el ciclo de import
+    except ImportError as error:
+        reportar_error(f"No se pudo cargar el flujo de refactor: {error}")
+        return False
     return FlujoRefactorLucIA(ruta, contenido, consultor).ejecutar()
 
 
@@ -235,13 +258,13 @@ def _fallback_openrouter(ruta: Path, contenido: str, analisis: AnalisisArchivo,
         return False
     _borrar_peso_local()
     _imprimir_seguro("[OR 1/2] Análisis con IA gratuita de OpenRouter...")
+    modelo_or = "openrouter"
     try:
         nuevo, modelo_or, nota = _refactorizar_con_openrouter(contenido, analisis, clave)
         nuevo = _validar_refactor(contenido, nuevo, ruta)
     except ErrorProyecto as error:
         reportar_error(f"[OR] Falló también OpenRouter: {error}")
-        _registrar_refactor_md(ruta, modelo_or if 'modelo_or' in dir() else "openrouter",
-                               f"FALLO OpenRouter: {error}")
+        _registrar_refactor_md(ruta, modelo_or, f"FALLO OpenRouter: {error}")
         return False
     ruta.write_text(nuevo, encoding="utf-8")
     exito(f"[OR 2/2] Refactorizado con {modelo_or} ({len(nuevo.splitlines())} líneas).")

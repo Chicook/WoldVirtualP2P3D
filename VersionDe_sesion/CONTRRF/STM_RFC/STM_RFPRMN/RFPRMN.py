@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -266,9 +266,9 @@ def imprimir_ayuda() -> None:
 def version_info() -> dict:
     """Versión de la fachada y nº de símbolos públicos re-exportados."""
     return {"version": __version__, "simbolos": len(__all__),
-            "modulos": ["stm_base", "stm_gestion", "stm_analisis",
-                        "stm_modelos", "stm_refactor", "stm_flujo",
-                        "stm_registro"]}
+            "modulos": ["stm_base", "stm_fs", "stm_fragmentos", "stm_gestion",
+                        "stm_analisis", "stm_modelos", "stm_descarga",
+                        "stm_refactor", "stm_flujo", "stm_registro"]}
 
 def estado_sistema() -> dict:
     """Estado de import + líneas de cada submódulo del paquete.

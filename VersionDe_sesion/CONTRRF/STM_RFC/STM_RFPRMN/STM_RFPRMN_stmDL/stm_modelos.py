@@ -1,13 +1,19 @@
 """Submodulo de RFPRMN (refactor: tope 400/450 lineas)."""
 from __future__ import annotations
-import ast, json, os, re, shutil, stat, subprocess, sys, textwrap, urllib.error, urllib.parse, urllib.request, uuid
-from dataclasses import asdict, dataclass
+import json
+import os
+import re
+import shutil
+import subprocess
+import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Callable, Optional
-try:
-    from .stm_base import (E, informar, exito, advertir, reportar_error, ErrorProyecto, SRC_DIR, DESTINO, CONFIG_IA_LOCAL, _imprimir_seguro)
-except ImportError:
-    pass
+from .stm_base import (
+    E, informar, exito, advertir, reportar_error, ErrorProyecto, SRC_DIR,
+    DESTINO, CONFIG_IA_LOCAL, _imprimir_seguro,
+)
+from .stm_analisis import AnalisisArchivo, _cargar_configuracion_ia_local
+from .stm_descarga import descargar_gguf
 
 # --- Refactorización con modelo local de código ("ds ialocal") ------------------
 # Este bloque implementa el comando "ds ialocal": al dar Intro tras pedir el archivo
@@ -160,67 +166,22 @@ def _refactorizar_con_openrouter(contenido: str, analisis: AnalisisArchivo,
             continue
     texto = "\n".join(salidas).strip()
     if len(texto.splitlines()) > LIMITE_LINEAS_REFACTOR:
-        texto = "\n".join(texto.splitlines()[:LIMITE_LINEAS_REFACTOR])
+        raise ErrorProyecto(
+            f"El refactor ocupa {len(texto.splitlines())} líneas "
+            f"(tope {LIMITE_LINEAS_REFACTOR}): se rechaza para no truncar código.")
     return texto, (usado or MODELOS_OR_CODIGO[0]), (diagnostico or
         f"Yo, LucIA, refactoricé {nombre} con IA gratuita de OpenRouter.")
 
 
 def _descargar_peso_hf(destino: Path | None = None) -> Path:
-    """Descarga el GGUF de código desde HuggingFace DIRECTO en modelosIAlocal/IAlocalDESCARGADA.
+    """Descarga el GGUF de código verificado en modelosIAlocal/IAlocalDESCARGADA.
 
-    Stream con progreso visible (MB / %): el archivo crece en la carpeta durante
-    la descarga para que se vea el modelo y su proceso en el explorador/terminal.
+    Delegado en :func:`stm_descarga.descargar_gguf`: escritura en ``.part``,
+    reanudación por ``Range``, reintentos y validación de la cabecera GGUF,
+    de modo que un archivo truncado nunca se da por bueno.
     """
-    from huggingface_hub import hf_hub_url
-    dest = Path(destino) if destino else DIR_MODELOS_LOCAL
-    dest.mkdir(parents=True, exist_ok=True)
-    final = dest / HF_ARCHIVO_CODIGO
-    parcial = dest / (HF_ARCHIVO_CODIGO + ".part")
-    if final.exists() and final.stat().st_size > 0:
-        informar(f"Peso ya presente (sin descarga): {final} ({final.stat().st_size} bytes)")
-        return final
-    # Si quedó un .part completo de una descarga anterior, adoptarlo.
-    if parcial.exists() and parcial.stat().st_size > 1000 * 1024 * 1024:
-        try:
-            parcial.replace(final)
-            exito(f"Modelo HF recuperado: {final} ({final.stat().st_size} bytes)")
-            return final
-        except OSError:
-            informar(f"Peso visible en: {parcial} ({parcial.stat().st_size} bytes)")
-            return parcial
-    url = hf_hub_url(repo_id=HF_REPO_CODIGO, filename=HF_ARCHIVO_CODIGO)
-    _imprimir_seguro(f"[DESCARGA] {HF_REPO_CODIGO}/{HF_ARCHIVO_CODIGO}")
-    _imprimir_seguro(f"[DESCARGA] URL: {url}")
-    _imprimir_seguro(f"[DESCARGA] Destino visible: {final}")
-    req = urllib.request.Request(url, headers={"User-Agent": "WoldVirtualP2P3D"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        total = int(resp.headers.get("Content-Length", "0") or 0)
-        _imprimir_seguro(f"[DESCARGA] Tamano total: {total / 1048576:.1f} MB")
-        bajados = 0
-        ultimo_pct = -1
-        with open(final, "wb") as f:
-            while True:
-                bloque = resp.read(4 * 1024 * 1024)
-                if not bloque:
-                    break
-                f.write(bloque)
-                bajados += len(bloque)
-                if total > 0:
-                    pct = int(bajados * 100 / total)
-                    if pct != ultimo_pct and (pct % 5 == 0 or pct == 100):
-                        ultimo_pct = pct
-                        _imprimir_seguro(
-                            f"[DESCARGA] {bajados / 1048576:.1f}/{total / 1048576:.1f} MB ({pct}%)")
-                elif bajados % (100 * 1048576) < 4 * 1024 * 1024:
-                    _imprimir_seguro(f"[DESCARGA] {bajados / 1048576:.1f} MB...")
-    # Limpia resto .part antiguo si ya no está bloqueado.
-    try:
-        if parcial.exists() and final.exists() and parcial.stat().st_size == final.stat().st_size:
-            parcial.unlink()
-    except OSError:
-        pass
-    exito(f"Modelo HF descargado: {final} ({final.stat().st_size} bytes)")
-    return final
+    return descargar_gguf(HF_REPO_CODIGO, HF_ARCHIVO_CODIGO,
+                          Path(destino) if destino else DIR_MODELOS_LOCAL)
 
 
 def _modelos_ollama_instalados() -> set[str]:
@@ -349,23 +310,37 @@ def _descargar_modelo_ollama(endpoint: str, modelo: str) -> bool:
 
 
 def _modelos_usados_registro() -> set[str]:
-    """Lee el .md de registro y devuelve los modelos ya usados (para no repetir)."""
+    """Modelos ya usados, leídos de las cabeceras ``## archivo — modelo`` del .md.
+
+    Antes se aplicaba una regex sobre todo el texto y capturaba marcas de
+    tiempo (``12:50``); ahora solo cuenta la cabecera que escribe
+    ``_registrar_refactor_md`` (issue #80, punto 6).
+    """
+    usados: set[str] = set()
     try:
-        if REGISTRO_REFACTOR_MD.exists():
-            return set(re.findall(r"[A-Za-z0-9._:-]+:[A-Za-z0-9._-]+",
-                                  REGISTRO_REFACTOR_MD.read_text(encoding="utf-8")))
+        if not REGISTRO_REFACTOR_MD.exists():
+            return usados
+        for linea in REGISTRO_REFACTOR_MD.read_text(encoding="utf-8").splitlines():
+            if not linea.startswith("## "):
+                continue
+            partes = linea[3:].split("—")
+            if len(partes) < 2:
+                continue
+            modelo = partes[-1].strip().lower()
+            if modelo:
+                usados.add(modelo)
     except OSError:
         pass
-    return set()
+    return usados
 
 
 def _asegurar_modelo_codigo(excluir: set[str] | None = None) -> str:
-    """Descarga de inmediato un modelo de código NO usado antes (sin repetir IAlocal)."""
-    # 1) Peso HF en modelosIAlocal/IAlocalDESCARGADA (corrige "no se descarga el modelo").
-    try:
-        _descargar_peso_hf()
-    except Exception as error:
-        raise ErrorProyecto(f"No se pudo descargar el peso HF ({error}).")
+    """Elige un modelo de código NO usado, prefiriendo lo que ya está instalado.
+
+    Solo descarga si no hay ningún candidato disponible en Ollama: antes se
+    bajaban ~1 GB de HuggingFace en cada ejecución aunque el modelo estuviera
+    ya instalado (issue #80, gestión del ciclo de vida de los modelos).
+    """
     usados = {u.lower() for u in _modelos_usados_registro()}
     usados |= {e.lower() for e in (excluir or set())}
     candidatos = [c for c in _leer_candidatos_codigo() if c.lower() not in usados]
@@ -374,37 +349,58 @@ def _asegurar_modelo_codigo(excluir: set[str] | None = None) -> str:
                       if c.lower() not in {e.lower() for e in (excluir or set())}]
     if not candidatos:
         raise ErrorProyecto("No quedan IAs locales por probar (todas fallaron o se usaron).")
-    endpoint, _ = _cargar_configuracion_ia_local()
+    try:
+        endpoint, _ = _cargar_configuracion_ia_local()
+    except (OSError, ValueError) as error:
+        raise ErrorProyecto(f"Configuración de IA local no disponible ({error}).")
     instalados = _modelos_ollama_instalados()
     for candidato in candidatos:  # reutiliza sin descargar si ya está en Ollama
         base = candidato.lower().split(":")[0]
         if candidato.lower() in instalados or base in instalados:
             informar(f"Modelo reutilizado (ya en Ollama, sin descarga): {candidato}")
             return candidato
-    # Solo se descarga UN modelo: el primer candidato no usado.
+    # No hay nada instalado: se descarga UN modelo, el primer candidato no usado.
     elegido = candidatos[0]
     informar(f"Descargando modelo de IA para código (uno solo): {elegido}...")
     if _descargar_modelo_ollama(endpoint, elegido):
         exito(f"Modelo descargado: {elegido}")
         return elegido
-    raise ErrorProyecto(f"No se pudo descargar {elegido}; revisa Ollama y conexión.")
+    # Último recurso: peso GGUF suelto de HuggingFace (verificado y reanudable).
+    try:
+        _descargar_peso_hf()
+    except Exception as error:
+        advertir(f"El respaldo GGUF tampoco está disponible ({error}).")
+        raise ErrorProyecto(
+            f"No se pudo descargar {elegido}; revisa Ollama y la conexión.")
+    raise ErrorProyecto(
+        f"{elegido} no quedó disponible: el GGUF se descargó pero Ollama no lo "
+        "registró. Revisa `ollama list` y vuelve a intentarlo.")
 
 
-def _borrar_modelo_ollama(endpoint: str, modelo: str) -> None:
-    """Borra el modelo local tras registrar, para no acumular IAlocal repetidas."""
+def _borrar_modelo_ollama(endpoint: str, modelo: str) -> bool:
+    """Borra el modelo local tras registrar; True si Ollama lo dio por borrado.
+
+    Nunca miente: antes informaba siempre de éxito aunque `ollama rm` fallara
+    (issue #80, punto 6).
+    """
+    borrado = False
     try:
         carga = json.dumps({"model": modelo}).encode("utf-8")
         pet = urllib.request.Request(
             f"{endpoint}/api/delete", data=carga,
             headers={"Content-Type": "application/json"}, method="DELETE")
         with urllib.request.urlopen(pet, timeout=120):
-            pass
+            borrado = True
     except Exception:
         try:
-            subprocess.run(["ollama", "rm", modelo], timeout=300)
+            proc = subprocess.run(["ollama", "rm", modelo], timeout=300,
+                                  capture_output=True, text=True)
+            borrado = proc.returncode == 0
         except Exception as error:
             advertir(f"No se pudo borrar {modelo} ({error}).")
-    informar(f"Modelo local borrado tras el registro: {modelo}")
+    if borrado:
+        informar(f"Modelo local borrado tras el registro: {modelo}")
+    return borrado
 
 
 def _liberar_ollama(excepto: str = "") -> None:

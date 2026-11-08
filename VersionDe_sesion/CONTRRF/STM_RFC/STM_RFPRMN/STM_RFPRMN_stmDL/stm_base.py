@@ -5,24 +5,14 @@ raíz del proyecto. Sin dependencias internas: es la base del paquete.
 """
 from __future__ import annotations
 
-import ast
-import json
 import os
 import re
 import shutil
-import stat
-import subprocess
 import sys
 import textwrap
-import urllib.error
-import urllib.parse
-import urllib.request
-import uuid
-from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 # --- Estilo de terminal ------------------------------------------------------
 

@@ -7,13 +7,14 @@ resolver los ~75 simbolos publicos sin cargar todos los backends
 from __future__ import annotations
 
 import importlib
-import sys
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
-_MODULOS = ("stm_base", "stm_gestion", "stm_analisis", "stm_modelos", "stm_refactor", "stm_flujo", "stm_registro")
+_MODULOS = ("stm_base", "stm_fs", "stm_fragmentos", "stm_gestion", "stm_analisis",
+            "stm_modelos", "stm_descarga", "stm_refactor", "stm_flujo",
+            "stm_registro")
 
 # Mapa simbolo -> modulo que lo define (resolucion perezosa).
 _REGISTRO: dict[str, str] = {}
@@ -25,12 +26,19 @@ _BASE_SYMS = ["Estilo", "E", "ANCHO_TERMINAL", "_caja", "_panel", "RESPUESTAS_AF
     "CONFIG_IA_LOCAL", "RFC_DIR", "PRY_DIR", "carpetas_creadas"]
 for _s in _BASE_SYMS:
     _REGISTRO[_s] = "stm_base"
+_FS_SYMS = ["ruta_larga", "es_subruta", "rutas_se_solapan", "sha256_archivo",
+    "huella_directorio", "verificar_copia", "reemplazar_directorio",
+    "escribir_texto_atomico", "escribir_json_atomico", "bloqueo",
+    "eliminar_ruta_seguro"]
+for _s in _FS_SYMS:
+    _REGISTRO[_s] = "stm_fs"
+_REGISTRO["calcular_rangos"] = "stm_fragmentos"
+_REGISTRO["quitar_solape"] = "stm_fragmentos"
 _GESTION_SYMS = ["hacer_escribible", "_forzar_borrado", "eliminar_ruta", "borrar_contenido",
     "copiar_contenido", "encontrar_contenido_actual", "_ultima_actualizacion_pry",
     "_es_layout_actual", "comando_refactorizar", "_refactorizar_layout_actual",
     "crear_carpeta", "comando_crear_carpeta", "comando_crear_archivo", "DIR_REGISTRO_JSON",
-    "REGISTRO_ENVIOS",
-    "DIR_REGISTRO_JSON",
+    "REGISTRO_ENVIOS", "CARPETA_HERRAMIENTA",
     "_contar_ficheros", "_registrar_envio", "comando_enviar", "actualizar",
     "_actualizar_layout_actual"]
 for _s in _GESTION_SYMS:
@@ -49,6 +57,9 @@ _MODELOS_SYMS = ["DIR_MODELOS_LOCAL", "HF_REPO_CODIGO", "HF_ARCHIVO_CODIGO",
     "_borrar_modelo_ollama", "_liberar_ollama"]
 for _s in _MODELOS_SYMS:
     _REGISTRO[_s] = "stm_modelos"
+_REGISTRO["descargar_gguf"] = "stm_descarga"
+_REGISTRO["peso_gguf_valido"] = "stm_descarga"
+_REGISTRO["TAMANO_MINIMO_GGUF"] = "stm_descarga"
 _REFACTOR_SYMS = ["_generar_fragmento", "_refactorizar_con_modelo",
     "_validar_refactor", "_registrar_refactor_md", "_pedir_extra_o_diagnostico",
     "comando_ds_ialocal", "_fallback_openrouter"]
@@ -325,6 +336,19 @@ try:
         advertir, reportar_error, pedir_confirmacion, MODULO_DIR, TLLDCD_DIR,
         CONTRRF_DIR, SRC_DIR, encontrar_raiz, RAIZ, ORIGEN, DESTINO,
         CONFIG_IA_LOCAL, RFC_DIR, PRY_DIR, carpetas_creadas,
+    )
+except Exception:
+    pass
+try:
+    from .stm_fs import (  # noqa: F401,E402
+        huella_directorio, verificar_copia, reemplazar_directorio,
+        escribir_texto_atomico, escribir_json_atomico, bloqueo, es_subruta,
+    )
+except Exception:
+    pass
+try:
+    from .stm_descarga import (  # noqa: F401,E402
+        descargar_gguf, peso_gguf_valido, TAMANO_MINIMO_GGUF,
     )
 except Exception:
     pass
