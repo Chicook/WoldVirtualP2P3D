@@ -8,8 +8,6 @@ Un único ``ejecutar()`` orquesta las fases [1/5]…[5/5] con estas garantías:
   elimina la repetición.
 - **Sin truncamiento**: si el resultado excede el tope se rechaza y el original
   queda intacto.
-- **Rotación**: el modelo que no pasa los filtros se borra y se descarta; el
-  resto solo se excluye. LucIA valida el candidato con su red.
 """
 from __future__ import annotations
 
@@ -379,7 +377,9 @@ class FlujoRefactorLucIA:
 
 
 def cerrar() -> None:
-    """Finaliza la sesión interactiva y limpia restos de modelos descargados."""
+    """Finaliza la sesión, reparte lo que sobra y limpia restos de modelos."""
+    from .stm_particion import repartir_carpeta
+    repartir_carpeta()
     _borrar_peso_local()
     informar("Cerrando el sistema...")
 

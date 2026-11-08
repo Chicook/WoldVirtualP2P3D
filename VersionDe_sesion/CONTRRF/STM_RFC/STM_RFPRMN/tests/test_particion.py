@@ -103,9 +103,8 @@ def test_el_principal_reexporta_los_subsistemas(tmp_path):
     origen.write_text(_modulo(20, 25), encoding="utf-8")
     stm_particion.partir_archivo(origen, destino_subsistema=tmp_path / "subs")
     principal = origen.read_text(encoding="utf-8")
-    assert "STM_SBSISTEMA" in principal
+    assert "_partes" in principal and "import sys as _sys" in principal
     assert "from grande_p2 import *" in principal
-    assert "import sys as _sys" in principal
 
 
 def test_no_duplica_definiciones(tmp_path):
@@ -153,10 +152,14 @@ def test_partir_si_excede_no_hace_nada_si_cabe(tmp_path):
     assert stm_particion.partir_si_excede(origen) is False
 
 
-def test_partir_si_excede_pregunta_y_parte(tmp_path):
+def test_partir_si_excede_pregunta_y_parte(tmp_path, monkeypatch):
     origen = tmp_path / "grande.py"
     origen.write_text(_modulo(20, 25), encoding="utf-8")
+    salida = tmp_path / "CONTRUCCION"
+    salida.mkdir()
+    monkeypatch.setattr(stm_particion, "DIR_CONSTRUCCION", salida)
     assert stm_particion.partir_si_excede(origen) is True
+    assert list(salida.glob("grande_p*.py")), "el exceso va a CONTRUCCION"
 
 
 def test_el_comando_pide_el_archivo(tmp_path, monkeypatch):
@@ -167,3 +170,48 @@ def test_el_comando_pide_el_archivo(tmp_path, monkeypatch):
     monkeypatch.setattr(builtins, "input", lambda *_a: str(origen))
     monkeypatch.setattr(stm_particion, "partir_archivo", lambda *_a, **_k: {"partido": True})
     stm_particion.comando_partir_archivo()  # no debe lanzar
+
+
+# --- Reparto entre los archivos que ya existen (al cerrar la sesión) ---------
+
+def test_reparte_entre_los_archivos_que_ya_existen(tmp_path):
+    (tmp_path / "grande.py").write_text(_modulo(20, 25), encoding="utf-8")
+    (tmp_path / "pequeno.py").write_text(
+        '"""Pequeño."""\n\n\ndef f():\n    return 1\n', encoding="utf-8")
+    resultado = stm_particion.repartir_carpeta(tmp_path)
+    assert resultado["movidas"] > 0
+    assert len((tmp_path / "grande.py").read_text(encoding="utf-8").splitlines()) <= 450
+    assert "funcion_" in (tmp_path / "pequeno.py").read_text(encoding="utf-8")
+
+
+def test_los_imports_viajan_con_la_unidad(tmp_path):
+    (tmp_path / "grande.py").write_text(_modulo(20, 25), encoding="utf-8")
+    (tmp_path / "otro.py").write_text(
+        '"""Otro."""\n\n\ndef g():\n    return 1\n', encoding="utf-8")
+    stm_particion.repartir_carpeta(tmp_path)
+    texto = (tmp_path / "otro.py").read_text(encoding="utf-8")
+    assert "import math" in texto or "from pathlib import Path" in texto
+
+
+def test_repartir_no_toca_los_que_ya_caben(tmp_path):
+    antes = '"""x."""\n\n\ndef f():\n    return 1\n'
+    (tmp_path / "a.py").write_text(antes, encoding="utf-8")
+    resultado = stm_particion.repartir_carpeta(tmp_path)
+    assert resultado["movidas"] == 0
+    assert (tmp_path / "a.py").read_text(encoding="utf-8") == antes
+
+
+def test_crea_parte_si_no_hay_hueco_en_ninguno(tmp_path):
+    (tmp_path / "solo.py").write_text(_modulo(20, 25), encoding="utf-8")
+    resultado = stm_particion.repartir_carpeta(tmp_path)
+    assert resultado["creados"] >= 1
+    assert len((tmp_path / "solo.py").read_text(encoding="utf-8").splitlines()) <= 450
+    assert list(tmp_path.glob("solo_p*.py"))
+
+
+def test_repartir_carpeta_inexistente(tmp_path):
+    assert stm_particion.repartir_carpeta(tmp_path / "no")["motivo"] == "no existe"
+
+
+def test_repartir_carpeta_vacia(tmp_path):
+    assert stm_particion.repartir_carpeta(tmp_path)["motivo"] == "nada que repartir"

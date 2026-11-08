@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-08 · **v2.13.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-08 · **v2.13.1**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -232,33 +232,36 @@ python RFPRMN.py --comando "crear codigo"
 
 ### 1.10 Partición de módulos que superan 450 líneas
 
-Es la solución al problema recurrente: si el resultado de un refactor (o un
-archivo que ya estaba así) pasa de 450 líneas, el presupuesto lo rechaza. Al
-terminar `ds ialocal`, si el archivo supera el tope, se ofrece partirlo:
+Es la solución al problema recurrente: si el resultado de un refactor pasa de
+450 líneas, el presupuesto lo rechaza. Ocurre en **dos fases**.
+
+**Durante el refactor** (al terminar `ds ialocal`): el exceso se escribe en un
+`.py` aparte **en `CONTRUCCION`**.
 
 ```
 ⚠ __init__.py tiene 612 líneas (tope 450).
 ? ¿Se reparte en módulos de 450 para cumplir el tope? (s/n): s
 
 ┌─ LucIA · Partición del módulo ─────────────────────────────
-│ __init__.py: 612 líneas en 2 partes (p1: 9 unidades · p2: 5 unidades).
-│ Subsistemas en: …\CONTRRF\CONTRUCCION\STM_SBSISTEMA
+│ __init__.py: 612 líneas en 2 partes (p1: 14 unidades · p2: 6 unidades).
+│ El exceso se escribe en: …\CONTRRF\CONTRUCCION
 └────────────────────────────────────────────────────────────
+✔ __init__.py repartido en 2 partes; 1 archivo(s) nuevo(s) en CONTRUCCION.
 ```
 
-Reparto:
+El archivo principal se queda con las primeras unidades y **re-exporta** las
+partes. Si están en otra carpeta, el bloque añade esa carpeta a `sys.path` con
+una ruta relativa calculada desde el propio archivo; si están al lado, basta
+`from <nombre>_pN import *`.
 
-1. **Cortes por unidades de nivel superior** (clases, funciones y bloques),
-   nunca a mitad de una definición. La cabecera (docstring + imports) se repite
-   en cada parte.
-2. **Parte 1**: el archivo original, con las primeras unidades hasta el tope
-   (reservando líneas para el bloque de subsistemas).
-3. **Partes 2..N**: se escriben como subsistemas en
-   `ENRN/STM_SBSISTEMA/<nombre>_pN.py`.
-4. La parte 1 **re-exporta** los subsistemas: añade su carpeta a `sys.path` y
-   hace `from <nombre>_pN import *`, así los nombres siguen disponibles.
-5. Se escribe `particion_<nombre>.md` con el reparto y, si una sola unidad no
-   cabe en 450 líneas, se avisa: eso hay que dividirlo a mano.
+**Al cerrar la sesión** (`cerrar`): se recorre `CONTRUCCION` y se **reparten
+clases y `def` completas** entre los `.py` que ya existen, aprovechando su hueco
+hasta 450. Lo que no cabe en ninguno se escribe como parte nueva; los archivos
+que ya caben **no se tocan**.
+
+En ambos casos el corte es por unidades de nivel superior (AST): nunca a mitad
+de una clase o función. Si una sola unidad supera el tope, se avisa y se deja
+para dividirla a mano, porque eso ya no es partición mecánica.
 
 ### 1.11 Test: probar y diagnosticar la deuda (`test.py`)
 

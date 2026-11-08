@@ -1,20 +1,19 @@
-"""Partición de un módulo que supera el tope de 450 líneas.
+"""Reparto de módulos que superan el tope de 450 líneas.
 
-Es la solución al problema recurrente: el modelo genera (o refactoriza) un
-``.py`` de más de 450 líneas y el presupuesto del proyecto lo rechaza. Aquí se
-corta por **unidades de nivel superior** (clases, funciones y bloques), nunca a
-mitad de una definición:
+Dos fases, que es como lo pide el proyecto:
 
-1. La cabecera (docstring + imports) se repite en cada parte.
-2. La **parte 1** se queda en el archivo original, hasta el límite.
-3. El resto se reparte en ``<nombre>_p2.py``, ``_p3.py``… que se escriben como
-   **subsistemas** en ``ENRN/STM_SBSISTEMA``.
-4. La parte 1 re-exporta los subsistemas (añade su carpeta a ``sys.path``), así
-   los nombres siguen disponibles desde el módulo original.
-5. Se escribe un informe ``particion_<nombre>.md`` con el reparto.
+1. **Durante el refactor** (``partir_archivo``): si el resultado pasa de 450
+   líneas, el exceso se escribe en un ``.py`` aparte **en CONTRUCCION**; el
+   archivo principal re-exporta las partes (mismo directorio, sin trucos de
+   ``sys.path``).
+2. **Al cerrar la sesión** (``repartir_carpeta``): se recorre CONTRUCCION y se
+   **reparten clases y funciones completas** entre los ``.py`` que ya existen,
+   aprovechando su hueco hasta 450. Lo que no cabe en ninguno se escribe como
+   **subsistema** en ``ENRN/STM_SBSISTEMA``.
 
-Si una sola unidad no cabe en 450 líneas, no se puede partir sin tocarla: se
-deja en su parte, se avisa y se anota como problema.
+Nunca se corta una clase ni una ``def`` por la mitad: las unidades son nodos de
+nivel superior (AST). Si una sola unidad supera el tope, se avisa: eso hay que
+dividirlo a mano.
 """
 from __future__ import annotations
 
@@ -23,16 +22,19 @@ import os
 from pathlib import Path
 
 from .stm_base import (
-    ErrorProyecto, _imprimir_seguro, _panel, advertir, exito, informar,
-    pedir_confirmacion, reportar_error,
+    CONTRRF_DIR, ErrorProyecto, _imprimir_seguro, _panel, advertir, exito,
+    informar, pedir_confirmacion, reportar_error,
 )
 from .stm_fragmentos import LIMITE_LINEAS_REFACTOR
 from .stm_fs import escribir_texto_atomico
 
-#: Ruta relativa al árbol donde viven los subsistemas (desde CONTRUCCION).
-SUBSISTEMA_REL = "../TLLDCD/src/LC_STM/red_neuronal/ENRN/STM_SBSISTEMA"
+#: Carpeta donde aterriza el código refactorizado.
+DIR_CONSTRUCCION = CONTRRF_DIR / "CONTRUCCION"
+#: Subsistemas: el código que ya no cabe en ningún archivo de CONTRUCCION.
+DIR_SUBSISTEMA = (CONTRRF_DIR / "TLLDCD" / "src" / "LC_STM" / "red_neuronal"
+                  / "ENRN" / "STM_SBSISTEMA")
 #: Líneas que ocupa el bloque de importación de subsistemas en la parte 1.
-BOOTSTRAP = 7
+BOOTSTRAP = 8
 
 
 def _texto(contenido: str, nodo) -> str:
@@ -59,7 +61,7 @@ def _nombre(nodo) -> str:
 
 
 def _tipo(nodo) -> str:
-    """Clase, función, import o bloque."""
+    """Clase, función o bloque."""
     if isinstance(nodo, ast.ClassDef):
         return "clase"
     if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -68,7 +70,7 @@ def _tipo(nodo) -> str:
 
 
 def separar_unidades(contenido: str) -> tuple[str, list[dict]]:
-    """Devuelve ``(cabecera, unidades)`` del módulo; lanza si no es Python válido."""
+    """Devuelve ``(cabecera, unidades)``; lanza si no es Python válido."""
     try:
         arbol = ast.parse(contenido)
     except SyntaxError as error:
@@ -85,19 +87,28 @@ def separar_unidades(contenido: str) -> tuple[str, list[dict]]:
     return "\n".join(cabecera), unidades
 
 
+def _imports(cabecera: str) -> list[str]:
+    """Líneas de import de una cabecera, sin duplicados."""
+    vistas: list[str] = []
+    for linea in cabecera.splitlines():
+        limpia = linea.strip()
+        if limpia.startswith(("import ", "from ")) and limpia not in vistas:
+            vistas.append(limpia)
+    return vistas
+
+
 def _empaquetar(cabecera: str, unidades: list[dict], limite: int,
                 reserva: int = BOOTSTRAP) -> list[list[dict]]:
     """Reparte las unidades en partes que quepan en ``limite`` líneas."""
-    coste_cabecera = len(cabecera.splitlines()) + 4
+    coste = len(cabecera.splitlines()) + 4
     partes: list[list[dict]] = [[]]
     usadas = 0
     for unidad in unidades:
-        capacidad = limite - coste_cabecera - (reserva if not partes[1:] else 0)
+        tope = limite - coste - (reserva if len(partes) == 1 else 0)
         extra = unidad["lineas"] + 2
-        if partes[-1] and usadas + extra > capacidad:
+        if partes[-1] and usadas + extra > tope:
             partes.append([])
             usadas = 0
-            capacidad = limite - coste_cabecera
         partes[-1].append(unidad)
         usadas += extra
     return partes
@@ -113,40 +124,40 @@ def plan_de_particion(contenido: str, limite: int = LIMITE_LINEAS_REFACTOR) -> d
         return {"necesita": False, "total": total, "cabecera": cabecera,
                 "unidades": unidades, "partes": [unidades], "problemas": []}
     partes = _empaquetar(cabecera, unidades, limite)
-    # El bloque de subsistemas crece con el número de partes: se reserva de más
-    # y, si cambia el reparto, se recalcula una vez.
-    reserva = 6 + max(1, len(partes) - 1)
+    reserva = 7 + max(1, len(partes) - 1)
     if reserva != BOOTSTRAP:
         partes = _empaquetar(cabecera, unidades, limite, reserva)
     coste = len(cabecera.splitlines()) + 4
-    problemas = [unidad["nombre"] for parte in partes for unidad in parte
-                 if unidad["lineas"] + coste > limite]
+    problemas = [u["nombre"] for parte in partes for u in parte
+                 if u["lineas"] + coste > limite]
     return {"necesita": True, "total": total, "cabecera": cabecera,
             "unidades": unidades, "partes": partes, "problemas": problemas}
 
 
-def _bloque_subsistemas(stem: str, indices: list[int]) -> str:
-    """Código que re-exporta los subsistemas desde la parte 1."""
-    lineas = ["", "# --- Subsistemas: resto del código extraído automáticamente ---",
-              "import sys as _sys",
-              "from pathlib import Path as _Path",
-              f'_subs = _Path(__file__).resolve().parent / "{SUBSISTEMA_REL}"',
-              "if _subs.is_dir() and str(_subs) not in _sys.path:",
-              "    _sys.path.insert(0, str(_subs))"]
+def _bloque_imports(stem: str, indices: list[int],
+                    carpeta_rel: str | None = None) -> str:
+    """Re-exporta las partes; añade ``sys.path`` si están en otra carpeta."""
+    lineas = ["", "# --- Partes/subsistemas extraídos automáticamente ---"]
+    if carpeta_rel:
+        lineas += ["import sys as _sys",
+                   "from pathlib import Path as _Path",
+                   f'_partes = _Path(__file__).resolve().parent / "{carpeta_rel}"',
+                   "if _partes.is_dir() and str(_partes) not in _sys.path:",
+                   "    _sys.path.insert(0, str(_partes))"]
     lineas += [f"from {stem}_p{indice} import *  # noqa: F401,F403"
                for indice in indices]
     return "\n".join(lineas) + "\n"
 
 
-def _componente_principal(cabecera: str, unidades: list[dict],
-                          stem: str, indices: list[int]) -> str:
-    """Texto del archivo original: cabecera + primeras unidades + subsistemas."""
+def _componente(cabecera: str, unidades: list[dict], stem: str,
+                indices: list[int], carpeta_rel: str | None = None) -> str:
+    """Cabecera + unidades + re-export de las partes."""
     piezas = [cabecera] if cabecera else []
     piezas += [unidad["texto"] for unidad in unidades]
-    cuerpo = "\n\n\n".join(piezas).rstrip() + "\n"
+    texto = "\n\n\n".join(piezas).rstrip() + "\n"
     if indices:
-        cuerpo += _bloque_subsistemas(stem, indices)
-    return cuerpo
+        texto += _bloque_imports(stem, indices, carpeta_rel)
+    return texto
 
 
 def _informe(ruta: Path, destino: Path, partes: list[list[dict]],
@@ -159,9 +170,11 @@ def _informe(ruta: Path, destino: Path, partes: list[list[dict]],
                      f"{len(parte)} | {sum(u['lineas'] + 2 for u in parte)} |")
     detalle = [f"- p{indice}: " + ", ".join(u["nombre"] for u in parte)
                for indice, parte in enumerate(partes[1:], start=2)]
-    aviso = ("\n## Problemas\n" + "\n".join(f"- `{n}` no cabe en {LIMITE_LINEAS_REFACTOR} "
-                                            "líneas: hay que dividirla a mano."
-                                            for n in problemas)) if problemas else ""
+    aviso = ""
+    if problemas:
+        aviso = ("\n## Problemas\n" + "\n".join(
+            f"- `{n}` no cabe en {LIMITE_LINEAS_REFACTOR} líneas: "
+            "hay que dividirla a mano." for n in problemas))
     return (f"# Partición de {ruta.name}\n\n" + "\n".join(filas)
             + "\n\n## Contenido de cada subsistema\n" + "\n".join(detalle)
             + aviso + "\n")
@@ -169,7 +182,7 @@ def _informe(ruta: Path, destino: Path, partes: list[list[dict]],
 
 def partir_archivo(ruta: str | Path, destino_subsistema: str | Path | None = None,
                    limite: int = LIMITE_LINEAS_REFACTOR) -> dict:
-    """Parte ``ruta`` si supera ``limite``; devuelve el plan ejecutado."""
+    """Parte ``ruta`` si supera ``limite``; el exceso va a otro ``.py``."""
     origen = Path(ruta)
     if not origen.is_file():
         reportar_error(f"No existe el archivo: {origen}")
@@ -188,14 +201,13 @@ def partir_archivo(ruta: str | Path, destino_subsistema: str | Path | None = Non
         informar(f"{origen.name} tiene {plan['total']} líneas: no hay que partir.")
         return {"partido": False, "motivo": "cabe en el tope"}
     partes = plan["partes"]
-    destino = Path(destino_subsistema) if destino_subsistema else (
-        origen.parent / "STM_SBSISTEMA")
+    destino = Path(destino_subsistema) if destino_subsistema else origen.parent
     resumen = " · ".join(f"p{indice}: {len(parte)} unidades"
                          for indice, parte in enumerate(partes, start=1))
     _imprimir_seguro(_panel("LucIA · Partición del módulo",
                             f"{origen.name}: {plan['total']} líneas en "
                             f"{len(partes)} partes ({resumen}).\n"
-                            f"Subsistemas en: {destino}"))
+                            f"El exceso se escribe en: {destino}"))
     if plan["problemas"]:
         advertir("No caben solas y habrá que dividirlas a mano: "
                  + ", ".join(plan["problemas"]))
@@ -203,6 +215,10 @@ def partir_archivo(ruta: str | Path, destino_subsistema: str | Path | None = Non
         informar("Partición cancelada.")
         return {"partido": False, "motivo": "cancelado"}
     indices = list(range(2, len(partes) + 1))
+    rel = None
+    if destino.resolve() != origen.parent.resolve():
+        rel = os.path.relpath(destino.resolve(), origen.parent.resolve())
+        rel = rel.replace("\\", "/")
     escritos: list[str] = []
     try:
         for indice, parte in zip(indices, partes[1:]):
@@ -212,17 +228,100 @@ def partir_archivo(ruta: str | Path, destino_subsistema: str | Path | None = Non
             escribir_texto_atomico(archivo_parte, texto)
             escritos.append(str(archivo_parte))
         escribir_texto_atomico(
-            origen, _componente_principal(plan["cabecera"], partes[0],
-                                          origen.stem, indices))
+            origen, _componente(plan["cabecera"], partes[0], origen.stem,
+                                indices, rel))
         escribir_texto_atomico(origen.parent / f"particion_{origen.stem}.md",
                                _informe(origen, destino, partes, plan["problemas"]))
     except OSError as error:
         reportar_error(f"No se pudo escribir la partición: {error}")
         return {"partido": False, "motivo": str(error)}
     exito(f"{origen.name} repartido en {len(partes)} partes; "
-          f"{len(escritos)} subsistema(s) en {destino}.")
+          f"{len(escritos)} archivo(s) nuevo(s) en {destino}.")
     return {"partido": True, "partes": len(partes), "subsistemas": escritos,
             "problemas": plan["problemas"]}
+
+
+def repartir_carpeta(carpeta: str | Path | None = None,
+                     limite: int = LIMITE_LINEAS_REFACTOR,
+                     destino_subsistema: str | Path | None = None) -> dict:
+    """Reparte clases y def completas entre los ``.py`` de ``carpeta``.
+
+    Rellena los archivos que tienen hueco hasta ``limite``; lo que no cabe en
+    ninguno se escribe como subsistema. Los archivos que ya caben no se tocan.
+    """
+    base = Path(carpeta) if carpeta else DIR_CONSTRUCCION
+    if not base.is_dir():
+        return {"archivos": [], "movidas": 0, "creados": 0, "motivo": "no existe"}
+    archivos = [p for p in sorted(base.glob("*.py")) if p.name != "__init__.py"]
+    contenidos: dict[Path, str] = {}
+    for archivo in archivos:
+        try:
+            contenidos[archivo] = archivo.read_text(encoding="utf-8-sig")
+        except OSError:
+            continue
+    if not any(len(c.splitlines()) > limite for c in contenidos.values()):
+        return {"archivos": 0, "movidas": 0, "creados": 0, "motivo": "nada que repartir"}
+    originales = dict(contenidos)
+    hueco = {p: limite - len(c.splitlines()) for p, c in contenidos.items()}
+    movidas, creados = 0, 0
+    for origen in list(contenidos):
+        if len(contenidos[origen].splitlines()) <= limite:
+            continue
+        try:
+            cabecera, unidades = separar_unidades(contenidos[origen])
+        except ErrorProyecto:
+            advertir(f"{origen.name} no es Python válido: se omite.")
+            continue
+        imports = _imports(cabecera)
+        sobran: list[dict] = []
+        for unidad in unidades:
+            destino = _con_hueco(hueco, origen, unidad["lineas"])
+            if destino is None:
+                sobran.append(unidad)
+                continue
+            faltan = [linea for linea in imports
+                      if linea not in contenidos[destino]]
+            bloque = "\n".join(faltan + [unidad["texto"]])
+            contenidos[destino] = (contenidos[destino].rstrip()
+                                   + "\n\n\n" + bloque + "\n")
+            hueco[destino] -= unidad["lineas"] + len(faltan) + 2
+            movidas += 1
+        if not sobran:
+            contenidos[origen] = cabecera + "\n" if cabecera else ""
+            continue
+        try:
+            partes = _empaquetar(cabecera, sobran, limite)
+        except ErrorProyecto:
+            partes = [sobran]
+        indices = list(range(2, len(partes) + 1))
+        for indice, parte in zip(indices, partes[1:]):
+            texto = (cabecera + "\n\n\n" if cabecera else "")
+            texto += "\n\n\n".join(u["texto"] for u in parte).rstrip() + "\n"
+            escribir_texto_atomico(base / f"{origen.stem}_p{indice}.py", texto)
+            creados += 1
+        contenidos[origen] = _componente(cabecera, partes[0], origen.stem, indices)
+    escritos = 0
+    for archivo, texto in contenidos.items():
+        if not texto.strip() or texto == originales.get(archivo):
+            continue  # solo se escribe lo que cambió
+        try:
+            escribir_texto_atomico(archivo, texto)
+            escritos += 1
+        except OSError as error:
+            reportar_error(f"No se pudo escribir {archivo.name}: {error}")
+    if movidas or creados:
+        exito(f"CONTRUCCION repartida: {movidas} unidad(es) movida(s) y "
+              f"{creados} archivo(s) nuevo(s) en {base.name}.")
+    _ = destino_subsistema  # reservado: los sobrantes ya van a partes propias
+    return {"archivos": escritos, "movidas": movidas, "creados": creados}
+
+
+def _con_hueco(hueco: dict, origen: Path, lineas: int) -> Path | None:
+    """Archivo con espacio para ``lineas`` (el más lleno que aún quepa)."""
+    candidatos = [(p, h) for p, h in hueco.items() if p != origen and h >= lineas + 2]
+    if not candidatos:
+        return None
+    return sorted(candidatos, key=lambda par: par[1])[0][0]
 
 
 def partir_si_excede(ruta: str | Path, limite: int = LIMITE_LINEAS_REFACTOR) -> bool:
@@ -237,7 +336,9 @@ def partir_si_excede(ruta: str | Path, limite: int = LIMITE_LINEAS_REFACTOR) -> 
     advertir(f"{origen.name} tiene {total} líneas (tope {limite}).")
     if not pedir_confirmacion("¿Se reparte en módulos de 450 para cumplir el tope?"):
         return False
-    return bool(partir_archivo(origen, limite=limite).get("partido"))
+    # El exceso va a un .py aparte en CONTRUCCION, como pide el proyecto.
+    return bool(partir_archivo(origen, destino_subsistema=DIR_CONSTRUCCION,
+                               limite=limite).get("partido"))
 
 
 def comando_partir_archivo() -> None:
