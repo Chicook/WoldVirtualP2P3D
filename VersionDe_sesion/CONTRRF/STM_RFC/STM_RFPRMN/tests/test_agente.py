@@ -45,7 +45,29 @@ def test_el_exito_previo_empieza_en_medio_y_se_actualiza():
     agente._anotar("informe", True, 0.7)
     assert agente.exito_previo("informe") == 1.0
     agente._anotar("informe", False, 0.7)
-    assert agente.exito_previo("informe") == pytest.approx(2 / 3)
+    assert agente.exito_previo("informe") == pytest.approx(2 / 3, abs=1e-3)
+
+
+def test_el_exito_previo_pesa_la_calidad_no_solo_el_acierto():
+    agente = AgenteRFPRMN()
+    agente._anotar("refactorizar", True, 0.8, calidad=0.9)
+    assert agente.exito_previo("refactorizar") == pytest.approx(0.9)
+    agente._anotar("refactorizar", True, 0.8, calidad=0.3)
+    assert agente.exito_previo("refactorizar") == pytest.approx(0.6)
+
+
+def test_una_accion_que_sale_a_medias_pesa_menos_que_una_buena():
+    importante = AgenteRFPRMN()
+    importante._anotar("comentar", True, 0.6, calidad=1.0)
+    floja = AgenteRFPRMN()
+    floja._anotar("comentar", True, 0.6, calidad=0.4)
+    assert importante.exito_previo("comentar") > floja.exito_previo("comentar")
+
+
+def test_el_registro_guarda_la_calidad():
+    agente = AgenteRFPRMN()
+    agente._anotar("informe", True, 0.7, calidad=0.85)
+    assert agente.registro[-1]["calidad"] == pytest.approx(0.85)
 
 
 def test_una_accion_cara_necesita_mas_motivo_que_una_barata():

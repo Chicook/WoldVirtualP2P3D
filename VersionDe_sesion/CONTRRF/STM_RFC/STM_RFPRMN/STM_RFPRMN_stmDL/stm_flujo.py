@@ -94,6 +94,7 @@ class FlujoRefactorLucIA:
         #: Si quedan fragmentos irreparables, pedir confirmación antes de escribir.
         self.confirmar_parcial = True
         self.fallo_filtro = False  # True si el modelo actual falló los filtros
+        self.nota_final = 0.0      # nota real de LucIA al candidato aplicado
 
     def _presentar_plan(self, titulo: str, pregunta: str) -> bool:
         """Muestra diagnóstico y plan de LucIA y pide confirmación."""
@@ -156,7 +157,6 @@ class FlujoRefactorLucIA:
         if not borrado:
             advertir(f"No se pudo borrar {self.modelo}; queda excluido igualmente.")
 
-    # -- fase FRAGMENTOS ---------------------------------------------------
     def generar_fragmentos(self) -> None:
         """Corta en fronteras seguras, sin romper estructuras del lenguaje."""
         lineas = self.contenido.splitlines()
@@ -339,6 +339,7 @@ class FlujoRefactorLucIA:
             if self.expediente is not None:
                 veredicto = evaluar_y_aprender(self.expediente, nuevo, self.contenido)
                 nota = nota_de_aprobacion(veredicto, self.contenido, nuevo)
+                self.nota_final = nota
                 _imprimir_seguro(f"[LUCIA] {veredicto['motivo']} | nota {nota:.2f}")
                 if nota < UMBRAL_APLICAR and self.confirmar_parcial:
                     advertir("LucIA no valida el resultado con su red neuronal.")

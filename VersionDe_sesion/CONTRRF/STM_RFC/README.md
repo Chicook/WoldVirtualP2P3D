@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.18.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.19.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -425,7 +425,7 @@ utilidad = 0.35·déficit + 0.25·urgencia + 0.10·éxito_previo + 0.10·(1−co
 |---|---|
 | déficit | `(100 - puntuación_deuda) / 100` del archivo |
 | urgencia | 1.0 si pasa de 450 líneas · 0.5 si pasa de 300 · 0 si no |
-| éxito previo | aciertos/intentos de esa acción en la sesión (0.5 al empezar) |
+| éxito previo | **calidad media** de esa acción en la sesión: cada intento aporta la nota que dio la red, no un 1/0 (0.5 al empezar) |
 | coste | partir 0.35 · comentar 0.5 · informe 0.6 · refactorizar 1.0 |
 | **red** | predicción de LucIA: 0.9 si el `seq2seq` ya tiene un refactor de un código equivalente, 0.6 si hay memoria pero no coincide, 0.5 si no; **encogida** hacia 0.5 según los pasos aprendidos (`0.5 + (p−0.5)·min(1, pasos/8)`) |
 
@@ -481,6 +481,17 @@ La **calidad objetiva es condición necesaria**: un refactor que pierde
 definiciones no se aplica aunque la red esté confiada. Debajo de `0.55` se pide
 confirmación; por encima, se aplica y se registra la nota en el `[LUCIA]` del
 flujo.
+
+**Y esa nota vuelve al agente**: cuando `ds ialocal` aplica un refactor, el
+agente anota su `nota_final` como calidad del intento, así que `éxito_previo` es
+una media ponderada y no un contador de aciertos. Dos refactors con notas 0.9 y
+0.3 dejan `refactorizar` en **0.6**, no en 1.0. La clase lo expone:
+
+```python
+plan.exito("refactorizar")     # 0.6
+plan.aprendizaje()             # {'informe': {'calidad_media': 1.0, 'intentos': 1},
+                               #  'refactorizar': {'calidad_media': 0.6, 'intentos': 2}}
+```
 
 ### 1.17 Registro e IPFS
 

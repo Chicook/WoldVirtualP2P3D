@@ -56,7 +56,8 @@ class AgenteRFPRMN:
         self.limite = int(limite)
         self.presupuesto_tiempo = float(presupuesto_segundos)
         self._inicio = 0.0
-        self.historial: dict[str, list[int]] = {}
+        self.historial: dict[str, list[float]] = {}
+        self.ultima_calidad: float | None = None
         self.registro: list[dict] = []
         self.pendientes: list[str] = []
         self._en_flujo = False
@@ -141,9 +142,16 @@ class AgenteRFPRMN:
         return {"ok": not problemas, "problemas": problemas}
 
     def exito_previo(self, accion: str) -> float:
-        """Proporción de aciertos de esa acción (0.5 si aún no hay datos)."""
-        aciertos, intentos = self.historial.get(accion, [0, 0])
-        return 0.5 if not intentos else aciertos / intentos
+        """**Calidad media** conseguida por esa acción (0.5 si aún no hay datos).
+
+        No es un contador de aciertos: cada intento aporta su nota (la que dio
+        la red de LucIA al aplicarlo), así que una acción que funciona a medias
+        pesa menos que una que sale bien.
+        """
+        suma, intentos = self.historial.get(accion, [0.0, 0])
+        if not intentos:
+            return 0.5
+        return round(min(1.0, max(0.0, suma / intentos)), 4)
 
     def urgencia(self, analisis: dict) -> float:
         """Cuánto corre prisa tocar ese archivo."""
@@ -244,12 +252,14 @@ class AgenteRFPRMN:
         finally:
             stm_base.pedir_confirmacion = original
 
-    def _anotar(self, accion: str, ok: bool, utilidad: float, motivo: str = "") -> None:
-        """Actualiza el historial y el registro de la sesión."""
-        aciertos, intentos = self.historial.get(accion, [0, 0])
-        self.historial[accion] = [aciertos + (1 if ok else 0), intentos + 1]
-        self.registro.append({"accion": accion, "ok": ok,
-                              "utilidad": utilidad, "motivo": motivo})
+    def _anotar(self, accion: str, ok: bool, utilidad: float, motivo: str = "",
+                calidad: float | None = None) -> None:
+        """Anota el intento con su **calidad** (no solo si salió bien)."""
+        peso = float(calidad) if calidad is not None else (1.0 if ok else 0.0)
+        suma, intentos = self.historial.get(accion, [0.0, 0])
+        self.historial[accion] = [suma + peso, intentos + 1]
+        self.registro.append({"accion": accion, "ok": ok, "utilidad": utilidad,
+                              "motivo": motivo, "calidad": peso})
 
     def ejecutar(self, accion: str, ruta: str | Path | None = None) -> bool:
         """Lanza una acción si la decisión matemática lo permite."""
@@ -261,6 +271,7 @@ class AgenteRFPRMN:
             self._anotar(accion, False, valor, motivo)
             return False
         self._en_flujo = True
+        self.ultima_calidad = None
         try:
             resultado = self._lanzar(accion, ruta, valor)
         except Exception as error:  # noqa: BLE001 - LucIA no debe caerse
@@ -268,7 +279,7 @@ class AgenteRFPRMN:
             resultado = False
         finally:
             self._en_flujo = False
-        self._anotar(accion, bool(resultado), valor, "ejecutada")
+        self._anotar(accion, bool(resultado), valor, "ejecutada", self.ultima_calidad)
         return bool(resultado)
 
     def _lanzar(self, accion: str, ruta, valor: float) -> bool:
@@ -298,14 +309,17 @@ class AgenteRFPRMN:
         return False
 
     def _refactorizar(self, ruta) -> bool:
-        """Lanza el flujo de refactor sobre un archivo."""
+        """Lanza el flujo de refactor y devuelve también la nota de LucIA."""
         from .stm_flujo import FlujoRefactorLucIA
 
         origen = Path(str(ruta))
         contenido = origen.read_text(encoding="utf-8-sig")
         flujo = FlujoRefactorLucIA(origen, contenido,
                                    lambda texto, _analisis: f"Refactor de {origen.name}")
-        return flujo.ejecutar()
+        resultado = flujo.ejecutar()
+        if resultado:
+            self.ultima_calidad = getattr(flujo, "nota_final", None)
+        return resultado
 
     def _cerrar(self) -> bool:
         """Cierra la máquina de comandos (y reparte lo que sobre en CONTRUCCION)."""

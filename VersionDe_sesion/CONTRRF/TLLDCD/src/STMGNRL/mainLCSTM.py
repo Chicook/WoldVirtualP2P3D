@@ -544,6 +544,27 @@ class LucIAPlanificador:
         """Segundos que quedan del presupuesto de la sesion."""
         return float(self._agente.restante()) if self._agente else 0.0
 
+    def exito(self, comando: str) -> float:
+        """Calidad media conseguida por ese comando (0.5 si aun no hay datos).
+
+        No cuenta aciertos: cada intento aporta la nota que dio la red de LucIA
+        al aplicarlo, asi que una accion que sale a medias pesa menos.
+        """
+        return float(self._agente.exito_previo(comando)) if self._agente else 0.5
+
+    def aprendizaje(self) -> Dict[str, Dict[str, float]]:
+        """Lo aprendido por comando: calidad media e intentos de la sesion."""
+        if not self._agente:
+            return {}
+        historial = getattr(self._agente, "historial", {})
+        return {
+            accion: {
+                "calidad_media": round(self._agente.exito_previo(accion), 3),
+                "intentos": int(historial.get(accion, [0.0, 0])[1]),
+            }
+            for accion in sorted(historial)
+        }
+
     def plan(self, rutas: List[str],
              acciones: Tuple[str, ...] = ("partir", "refactorizar",
                                           "comentar", "informe")) -> List[Dict[str, Any]]:
