@@ -13,6 +13,10 @@ const Identidad = preload("res://gdscrip/Identidad.gd")
 
 const RUTA_CUENTA := "user://cuenta.json"
 const RUTA_REGISTRO := "user://registro.cfg"
+## El nick va de 10 a 15 caracteres: suficiente para «chicookfarrior» y sin
+## nombres kilométricos que rompan la lista de jugadores.
+const NICK_MIN := 10
+const NICK_MAX := 15
 ## Firma de ubicación física (SMTPLC) que el visor C# deja en user://. Godot no
 ## puede calcularla (ARP del gateway + Wi-Fi ambiental son del visor): solo la lee.
 const RUTA_UBICACION := "user://ubicacion_smtplc.json"
@@ -134,9 +138,10 @@ func _montar_formulario() -> void:
 
 	if _modo == "nuevo":
 		_nick = LineEdit.new()
-		_nick.placeholder_text = "Escribe tu nick (mínimo 3 letras)"
-		_nick.add_theme_font_size_override("font_size", 18)
-		_nick.custom_minimum_size = Vector2(0, 46)
+		_nick.placeholder_text = "Tu nick (entre 10 y 15 letras)"
+		_nick.max_length = NICK_MAX
+		_nick.add_theme_font_size_override("font_size", 16)
+		_nick.custom_minimum_size = Vector2(0, 42)
 		caja.add_child(_nick)
 
 		_estado = _etiqueta("", 15, Color(1.0, 0.8, 0.4, 1.0), 3)
@@ -342,8 +347,11 @@ func _on_entrar_mundo() -> void:
 
 func _crear_cuenta() -> void:
 	var nick := _nick.text.strip_edges() if _nick else ""
-	if nick.length() < 3:
-		_estado.text = "El nick debe tener al menos 3 letras."
+	if nick.length() < NICK_MIN:
+		_estado.text = "El nick necesita al menos %d letras (tienes %d)." % [NICK_MIN, nick.length()]
+		return
+	if nick.length() > NICK_MAX:
+		_estado.text = "El nick no puede pasar de %d letras." % NICK_MAX
 		return
 	_mintar_cuenta(nick)
 

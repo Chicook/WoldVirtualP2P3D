@@ -238,8 +238,8 @@ class CelebroBlockchain:
         desde el que el jugador se conecte.
         """
         nick = str(nick or "").strip()
-        if len(nick) < 3:
-            return {"codigo": 422, "error": "El nick debe tener al menos 3 letras."}
+        if not 10 <= len(nick) <= 15:
+            return {"codigo": 422, "error": "El nick debe tener entre 10 y 15 letras."}
         huella_norm = self.validar_huella(huella)
         if not huella_norm:
             return {"codigo": 422, "error": "Huella de maquina invalida: debe ser el UUID de identidad (32 hexadecimales)."}
@@ -286,8 +286,12 @@ class CelebroBlockchain:
         puede revertir a esas credenciales).
         """
         nick = str(nick or "").strip()
+        # Las cuentas antiguas pueden tener nicks cortos: se permiten al migrar,
+        # pero nunca más de 15 (misma regla que el alta para los nuevos).
         if len(nick) < 3:
             return {"codigo": 422, "error": "El nick debe tener al menos 3 letras."}
+        if len(nick) > 15:
+            return {"codigo": 422, "error": "El nick no puede pasar de 15 letras."}
         huella_norm = self.validar_huella(huella)
         if not huella_norm:
             return {"codigo": 422, "error": "Huella de maquina invalida: debe ser el UUID de identidad (32 hexadecimales)."}

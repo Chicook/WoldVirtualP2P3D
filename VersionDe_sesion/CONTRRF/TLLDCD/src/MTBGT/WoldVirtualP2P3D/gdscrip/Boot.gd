@@ -56,6 +56,13 @@ func _ready() -> void:
 				OS.get_user_data_dir().path_join("registro.cfg"))
 		DirAccess.remove_absolute(reset_flag_path)
 
+	# «Actualización de cuenta» desde el visor: este arranque ya entra en la
+	# recepción de LucIA, así que solo se consume la marca y se deja constancia.
+	var marca_cuenta := OS.get_user_data_dir().path_join("abrir_recepcion.flag")
+	if FileAccess.file_exists(marca_cuenta):
+		DirAccess.remove_absolute(marca_cuenta)
+		print("[Boot] Actualización de cuenta solicitada desde el visor")
+
 	# La sonda existe en todos los peers: el anfitrion responde consultas de
 	# plazas y el invitado pregunta antes del carrusel.
 	_sonda = Sonda.new()

@@ -613,16 +613,21 @@ namespace Visor3D
 
         private void OnMigrarCuentaClicked(object sender, RoutedEventArgs e)
         {
-            // Migración de cuenta antigua (F9): llave + hash de PC + semilla
-            // -> un único hash de cuenta generado por la blockchain local.
-            var migracion = new MigracionCuentaWindow();
-            migracion.Closed += (s, e) =>
+            // Actualizacion de cuenta: vuelve a la recepcion de LucIA, donde
+            // esta el formulario nuevo (.zip + llave + frase semilla) que
+            // sustituye las credenciales antiguas por el hash unico.
+            try
             {
-                var st = Visor3D.Seguridad.EstadoGlobal.Actualizar();
-                _equipoVacio = st.FaltaTodo;
-                MostrarPantallaBienvenida();
-            };
-            migracion.Show();
+                if (!string.IsNullOrEmpty(_rutaDatosGodot) && Directory.Exists(_rutaDatosGodot))
+                {
+                    File.WriteAllText(Path.Combine(_rutaDatosGodot, "abrir_recepcion.flag"), "1");
+                }
+            }
+            catch (Exception error)
+            {
+                Console.WriteLine($"[cuenta] no se pudo marcar la recepcion: {error.Message}");
+            }
+            ReiniciarMotor3D();
         }
 
         private void OnVolverBienvenidaClicked(object sender, RoutedEventArgs e)
