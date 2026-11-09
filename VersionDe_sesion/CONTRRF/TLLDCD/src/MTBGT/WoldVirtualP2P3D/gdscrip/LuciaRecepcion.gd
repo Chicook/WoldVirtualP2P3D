@@ -83,43 +83,37 @@ func _montar_formulario() -> void:
 	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_capa.add_child(raiz)
 
-	_titulo = _etiqueta("LucIA te recibe en Wold Virtual 3D", 30, Color(0.72, 0.94, 1.0, 1.0), 7)
+	_titulo = _etiqueta("LucIA te recibe en Wold Virtual 3D", 26, Color(0.72, 0.94, 1.0, 1.0), 6)
 	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_titulo.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_titulo.offset_left = 40.0
 	_titulo.offset_right = 640.0
-	_titulo.offset_top = 22.0
-	_titulo.offset_bottom = 62.0
+	_titulo.offset_top = 18.0
+	_titulo.offset_bottom = 56.0
 	raiz.add_child(_titulo)
 
-	_sub = _etiqueta(_texto_subtitulo(), 18, Color(0.62, 0.82, 1.0, 1.0), 4)
+	_sub = _etiqueta(_texto_subtitulo(), 15, Color(0.62, 0.82, 1.0, 1.0), 4)
 	_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_sub.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_sub.offset_left = 40.0
 	_sub.offset_right = 620.0
-	_sub.offset_top = 68.0
-	_sub.offset_bottom = 140.0
+	_sub.offset_top = 58.0
+	_sub.offset_bottom = 112.0
 	raiz.add_child(_sub)
 
-	# Fila a todo el ancho: un hueco flexible a la izquierda y el panel fijo a la
-	# derecha. Así el formulario nunca se sale de pantalla ni tapa a LucIA.
-	var fila := HBoxContainer.new()
-	fila.set_anchors_preset(Control.PRESET_FULL_RECT)
-	fila.offset_left = 24.0
-	fila.offset_right = -24.0
-	fila.offset_top = 118.0
-	fila.offset_bottom = -24.0
-	raiz.add_child(fila)
-
-	var hueco := Control.new()
-	hueco.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	fila.add_child(hueco)
-
+	# El formulario ocupa la zona del monitor (izquierda), así LucIA queda
+	# entera a la vista. Se ancla en proporción para aguantar cambios de tamaño.
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(560, 0)
-	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	fila.add_child(panel)
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	panel.anchor_right = 0.31
+	panel.anchor_bottom = 0.0
+	panel.offset_left = 14.0
+	panel.offset_top = 108.0
+	panel.offset_right = -6.0
+	panel.offset_bottom = 108.0
+	raiz.add_child(panel)
+	_ajustar_alto(panel)
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = Color(0.03, 0.05, 0.10, 0.92)
 	estilo.border_color = Color(0.35, 0.8, 1.0, 0.9)
@@ -132,11 +126,10 @@ func _montar_formulario() -> void:
 	panel.add_theme_stylebox_override("panel", estilo)
 	raiz.add_child(panel)
 
-	# Sin ScrollContainer: el panel mide lo que mida su contenido y el
-	# CenterContainer lo centra. Con scroll, el VBox se quedaba a 0 de alto.
 	var caja := VBoxContainer.new()
-	caja.custom_minimum_size = Vector2(500, 0)
-	caja.add_theme_constant_override("separation", 10)
+	caja.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	caja.add_theme_constant_override("separation", 8)
+	caja.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.add_child(caja)
 
 	if _modo == "nuevo":
@@ -178,17 +171,17 @@ func _montar_formulario() -> void:
 			caja.add_child(_etiqueta_zip)
 
 			_llave = LineEdit.new()
-			_llave.placeholder_text = "2. Llave de acceso (se guarda cifrada, no se envía)"
+			_llave.placeholder_text = "2. Llave de acceso (cifrada)"
 			_llave.secret = true
-			_llave.add_theme_font_size_override("font_size", 16)
-			_llave.custom_minimum_size = Vector2(0, 42)
+			_llave.add_theme_font_size_override("font_size", 14)
+			_llave.custom_minimum_size = Vector2(0, 38)
 			caja.add_child(_llave)
 
 			_semilla = LineEdit.new()
 			_semilla.placeholder_text = "3. Frase semilla (12 o 24 palabras)"
 			_semilla.secret = true
-			_semilla.add_theme_font_size_override("font_size", 16)
-			_semilla.custom_minimum_size = Vector2(0, 42)
+			_semilla.add_theme_font_size_override("font_size", 14)
+			_semilla.custom_minimum_size = Vector2(0, 38)
 			caja.add_child(_semilla)
 
 			_estado = _etiqueta("", 15, Color(1.0, 0.8, 0.4, 1.0), 3)
@@ -227,6 +220,16 @@ func _montar_formulario() -> void:
 	# Si existe cuenta nueva, mostrar el link de validación
 	if _modo == "existente" and not _cuenta.is_empty():
 		_generar_link_validacion()
+
+
+## Ajusta el alto del panel a su contenido, sin pasarse de la pantalla.
+func _ajustar_alto(panel: PanelContainer) -> void:
+	await get_tree().process_frame
+	if not is_instance_valid(panel):
+		return
+	var alto := panel.get_combined_minimum_size().y
+	var disponible := get_viewport().get_visible_rect().size.y - panel.offset_top - 12.0
+	panel.offset_bottom = panel.offset_top + clampf(alto, 140.0, maxf(disponible, 140.0))
 
 
 func _texto_subtitulo() -> String:
