@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.23.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.24.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`), en el subsistema `LC_STM/seq2seq`, en el nodo IPFS
 `STMIPFS/nodo/` (Kubo 0.43.1 en `STMIPFS/ipfs.exe`) y en el servidor 3D
@@ -635,7 +635,33 @@ nucleo del turno: {'neuronas': 50, 'tono': 'positivo', 'deriva': 0.004781}
 parar: {'ok': True, 'detenido': True}
 ```
 
-### 1.21 Registro de símbolos por AST (D4) y consola
+### 1.21 Puente de comandos en el chat 3D (`LucIAPuenteComandos`)
+
+El chat 3D solo hablaba con Ollama, así que LucIA contestaba
+«no puedo refactorizarme… se hace a través de actualizaciones de mi equipo»:
+estaba **desenchufada** de su propia máquina de comandos. Ahora el servidor
+carga `LucIAPuenteComandos`:
+
+| Pieza | Qué hace |
+|---|---|
+| `capacidades()` | texto de autoconocimiento para el prompt: qué comandos tiene, 6 señales, umbral 0.55, que **sí** puede refactorizarse |
+| `detectar(texto)` | convierte la frase en `(acción, ruta)`; resuelve rutas por nombre de archivo |
+| `atender(texto)` | decide con `AgenteRFPRMN.decidir()` y ejecuta con `.ejecutar()`; si piden «refactorízate», corre `autoanalisis` |
+
+El servidor inyecta ese resultado como contexto y prohíbe en el prompt decir
+que no puede. Antes / después, misma pregunta («¿puedes refactorizarte?»):
+
+```
+antes:  "No puedo refactorizarme de forma autónoma en este momento. Mi
+         capacidad se realiza a través de actualizaciones programadas por mi equipo."
+ahora:  "Sí, puedo refactorizarme de forma autónoma. Si tienes un archivo en
+         particular, solo necesito la ruta para poder hacerlo."
+```
+
+Y si el agente **decide no hacerlo** (utilidad 0.29 < 0.55 porque el archivo ya
+está documentado), lo explica como decisión, no como incapacidad.
+
+### 1.22 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y

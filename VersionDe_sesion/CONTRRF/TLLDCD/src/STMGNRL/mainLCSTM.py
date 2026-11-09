@@ -856,6 +856,144 @@ class LucIAServidor3D:
         return datos
 
 
+class LucIAPuenteComandos:
+    """Puente entre la conversación y la máquina de comandos RFPRMN.
+
+    El chat 3D solo hablaba con Ollama, así que LucIA contestaba «no puedo
+    refactorizarme» aunque el agente sí sabe hacerlo. Esta clase:
+
+    - ``capacidades()``: texto con lo que **de verdad** puede hacer, para el
+      prompt del sistema.
+    - ``detectar(texto)``: convierte una petición en (acción, ruta).
+    - ``atender(texto)``: detecta y ejecuta; devuelve el resultado para que el
+      modelo responda con datos reales.
+
+    Todo es opcional: si RFPRMN no está, ``disponible`` es False y el servidor
+    sigue funcionando como antes.
+    """
+
+    #: Palabras que activan cada acción del agente.
+    CLAVES: Final[Tuple[Tuple[str, Tuple[str, ...]], ...]] = (
+        ("refactorizar", ("refactoriza", "refactorizar", "refactor",
+                          "reescribe", "mejora el codigo")),
+        ("comentar", ("comenta", "comentar", "documenta", "documentar")),
+        ("probar", ("haz test", "pasa test", "prueba el archivo", "probar",
+                    "diagnostica")),
+        ("informe", ("informe", "informacion", "deuda", "analiza")),
+        ("partir", ("parte ", "partir", "divide", "dividir")),
+        ("presupuesto", ("presupuesto", "450")),
+        ("estado", ("estado", "como estas", "que tal")),
+    )
+
+    def __init__(self) -> None:
+        self._agente = None
+        self._error = ""
+        try:
+            from ._imports import importar_agente
+
+            clase = importar_agente()
+            # importar_agente() devuelve la CLASE, no una instancia.
+            self._agente = clase() if clase is not None else None
+            if self._agente is None:
+                self._error = "RFPRMN no disponible"
+        except Exception as error:  # noqa: BLE001 - RFPRMN es opcional
+            self._error = str(error)
+
+    @property
+    def disponible(self) -> bool:
+        """True si el agente RFPRMN se pudo cargar."""
+        return self._agente is not None
+
+    def capacidades(self) -> str:
+        """Lo que LucIA puede hacer, en primera persona, para el prompt."""
+        if not self.disponible:
+            return ("No tienes la máquina de refactor cargada ahora mismo; "
+                    "puedes conversar, pero no ejecutar cambios.")
+        return (
+            "Tienes una máquina de trabajo real (RFPRMN) y puedes usarla:\n"
+            "- refactorizar código con calidad medida y veto si empeora;\n"
+            "- comentar y documentar funciones;\n"
+            "- probar y diagnosticar un archivo;\n"
+            "- generar informes de deuda técnica;\n"
+            "- partir archivos de más de 450 líneas en un subsistema.\n"
+            "Decides con seis señales (déficit, urgencia, éxito previo, coste, "
+            "red y candidato real) y solo aplicas por encima de 0.55 de nota. "
+            "También puedes analizarte a ti misma y refactorizarte con "
+            "`autoanalisis`. Nunca digas que no puedes refactorizar: puedes, "
+            "y si falta el archivo, pide la ruta."
+        )
+
+    def detectar(self, texto: str) -> Optional[Dict[str, Any]]:
+        """Acción y ruta a partir de una frase; None si no hay petición."""
+        minuscula = texto.lower()
+        accion = ""
+        for nombre, claves in self.CLAVES:
+            if any(clave in minuscula for clave in claves):
+                accion = nombre
+                break
+        if not accion:
+            return None
+        return {"accion": accion, "ruta": self._ruta_en(texto)}
+
+    def _ruta_en(self, texto: str) -> Optional[Path]:
+        """Busca una ruta de archivo dentro del texto."""
+        import re
+
+        for trozo in re.findall(r"[A-Za-z]:\\[^\s\"']+|/[\w./-]+\.\w+", texto):
+            candidato = Path(trozo.strip("\"'.,;:"))
+            if candidato.is_file():
+                return candidato
+        for trozo in re.findall(r"[\w.-]+\.(?:py|gd|tscn|tres|md|json|cs)", texto):
+            for base in (CONTRRF_DIR, SRC_DIR,
+                         CONTRRF_DIR / "STM_RFC" / "STM_RFPRMN",
+                         CONTRRF_DIR / "STM_RFC" / "STM_RFPRMN" / "STM_RFPRMN_stmDL",
+                         SRC_DIR / "STMGNRL",
+                         SRC_DIR / "MTBGT" / "WoldVirtualP2P3D"):
+                candidato = base / trozo
+                if candidato.is_file():
+                    return candidato
+        return None
+
+    def atender(self, texto: str) -> Optional[Dict[str, Any]]:
+        """Ejecuta lo que pide la frase y devuelve un resumen para el modelo."""
+        deteccion = self.detectar(texto)
+        if not deteccion:
+            return None
+        accion = str(deteccion["accion"])
+        ruta = deteccion.get("ruta")
+        if accion == "estado" and ruta is None:
+            return None
+        if accion in ("refactorizar", "comentar", "probar", "informe", "partir"):
+            if ruta is None:
+                if accion == "refactorizar":
+                    # «refactorízate» sin archivo: que se analice a sí misma en
+                    # vez de responder que no puede.
+                    return self._autoanalisis()
+                return {"ok": False, "accion": accion,
+                        "motivo": "necesito la ruta del archivo"}
+        try:
+            aplicado, utilidad, motivo = self._agente.decidir(accion, ruta)
+        except Exception as error:  # noqa: BLE001 - el agente no debe tumbar el chat
+            return {"ok": False, "accion": accion, "motivo": str(error)}
+        if not aplicado:
+            return {"ok": False, "accion": accion, "utilidad": round(utilidad, 2),
+                    "motivo": motivo}
+        try:
+            hecho = bool(self._agente.ejecutar(accion, ruta))
+        except Exception as error:  # noqa: BLE001
+            return {"ok": False, "accion": accion, "motivo": str(error)}
+        return {"ok": hecho, "accion": accion, "ruta": str(ruta or ""),
+                "utilidad": round(utilidad, 2), "motivo": motivo}
+
+    def _autoanalisis(self) -> Dict[str, Any]:
+        """Su propio estado interno, para cuando le piden refactorizarse."""
+        try:
+            datos = self._agente.autoanalisis()
+        except Exception as error:  # noqa: BLE001
+            return {"ok": False, "accion": "autoanalisis", "motivo": str(error)}
+        return {"ok": True, "accion": "autoanalisis", "datos": datos}
+
+
 def obtener_diagnostico_orquestador() -> Dict[str, Any]:
     """Genera un reporte estructural para validar la salud de todo el stack."""
     cf = get_cliente_iafree() if get_cliente_iafree else None
