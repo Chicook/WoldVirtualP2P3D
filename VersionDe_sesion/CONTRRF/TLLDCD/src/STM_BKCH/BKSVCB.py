@@ -273,12 +273,17 @@ class CelebroBlockchain:
             "indice_bloque": bloque.indice, "bloque": bloque.to_dict(),
         }
 
-    def migrar_cuenta(self, nick: str, huella: str, ubicacion_hash: str = "") -> Dict[str, Any]:
+    def migrar_cuenta(self, nick: str, huella: str, ubicacion_hash: str = "",
+                      prueba: str = "") -> Dict[str, Any]:
         """Migra una cuenta antigua (llave + hash PC + semilla) al nuevo sistema de hash único.
 
         Busca si existe una cuenta antigua con la huella dada y, si no existe una cuenta
         nueva con esa huella, crea un bloque MIGRACION_CUENTA que genera el hash único.
         Esto permite sustituir el sistema antiguo por el nuevo sin perder la identidad.
+
+        ``prueba`` es el SHA-256 que calcula el cliente con la llave de acceso y la
+        frase semilla; se guarda en el bloque como evidencia de la migración (no se
+        puede revertir a esas credenciales).
         """
         nick = str(nick or "").strip()
         if len(nick) < 3:
@@ -289,6 +294,12 @@ class CelebroBlockchain:
         ubicacion_norm = self.validar_ubicacion_hash(ubicacion_hash)
         if ubicacion_norm is None:
             return {"codigo": 422, "error": "ubicacion_hash invalido: debe ser un SHA-256 de 64 hexadecimales."}
+        prueba_norm = ""
+        if str(prueba or "").strip():
+            prueba_norm = str(prueba).strip().lower()
+            if not re.fullmatch(r"[0-9a-f]{64}", prueba_norm):
+                return {"codigo": 422,
+                        "error": "prueba invalida: debe ser un SHA-256 de 64 hexadecimales."}
         compromiso = hashlib.sha256(hashlib.sha256(huella_norm.encode("utf-8")).digest()).hexdigest()
         with self.lock:
             # Verificar si ya existe una cuenta nueva con esta huella
@@ -308,6 +319,8 @@ class CelebroBlockchain:
             "migracion_ts": time.time(),
             "tipo_migracion": "LLAVE_SEMILLA_A_HASH_UNICO",
         }
+        if prueba_norm:
+            datos_tx["prueba_llave_semilla"] = prueba_norm
         self.agregar_transaccion(
             tipo="MIGRACION_CUENTA", emisor="BKSVCB", receptor=nick, datos=datos_tx,
         )

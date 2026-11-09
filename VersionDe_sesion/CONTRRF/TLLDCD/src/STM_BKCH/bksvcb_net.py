@@ -89,6 +89,7 @@ class BlockchainHTTPHandler(BaseHTTPRequestHandler):
             res = bks.migrar_cuenta(
                 nick=params.get("nick", ""), huella=params.get("huella", ""),
                 ubicacion_hash=params.get("ubicacion_hash", ""),
+                prueba=params.get("prueba", ""),
             )
             codigo = int(res.pop("codigo", 200))
             self._enviar_json(codigo, res)

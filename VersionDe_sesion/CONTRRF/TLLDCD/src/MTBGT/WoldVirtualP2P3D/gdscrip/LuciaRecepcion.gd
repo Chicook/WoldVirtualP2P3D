@@ -34,6 +34,10 @@ var _nick: LineEdit
 var _boton: Button
 var _boton_sec: Button
 var _link_validacion: Label  # Nuevo campo para mostrar el link de validación
+var _ruta_zip := ""          # .zip de registro de PC para migrar
+var _etiqueta_zip: Label
+var _llave: LineEdit
+var _semilla: LineEdit
 
 
 func _ready() -> void:
@@ -102,8 +106,8 @@ func _montar_formulario() -> void:
 	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	panel.offset_left = -340.0
 	panel.offset_right = 340.0
-	panel.offset_top = -220.0  # Aumentado para acomodar el link de validación
-	panel.offset_bottom = -28.0
+	panel.offset_top = -340.0  # Formulario de migración (3 campos) + validación
+	panel.offset_bottom = -24.0
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = Color(0.03, 0.05, 0.10, 0.92)
 	estilo.border_color = Color(0.35, 0.8, 1.0, 0.9)
@@ -159,9 +163,39 @@ func _montar_formulario() -> void:
 		caja.add_child(_boton)
 
 		if not FileAccess.file_exists(RUTA_CUENTA):
-			# Cuenta antigua: además del inicio de sesión se ofrece la migración.
+			# Cuenta antigua: LucIA pide el .zip de registro de PC, la llave de
+			# acceso y la frase semilla, y los sustituye por el hash único.
+			var aviso := _etiqueta("Cuenta antigua: sustituye llave + semilla por tu hash único", 15, Color(0.72, 0.94, 1.0, 1.0), 3)
+			aviso.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			caja.add_child(aviso)
+
 			_boton_sec = Button.new()
-			_boton_sec.text = "Migrar mi cuenta antigua al hash único"
+			_boton_sec.text = "1. Elegir .zip de registro de este PC"
+			_boton_sec.add_theme_font_size_override("font_size", 15)
+			_boton_sec.custom_minimum_size = Vector2(0, 40)
+			_boton_sec.pressed.connect(_elegir_zip)
+			caja.add_child(_boton_sec)
+
+			_etiqueta_zip = _etiqueta("Ningún archivo elegido", 13, Color(0.7, 0.78, 0.9, 1.0), 2)
+			_etiqueta_zip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			caja.add_child(_etiqueta_zip)
+
+			_llave = LineEdit.new()
+			_llave.placeholder_text = "2. Llave de acceso (se guarda cifrada, no se envía)"
+			_llave.secret = true
+			_llave.add_theme_font_size_override("font_size", 16)
+			_llave.custom_minimum_size = Vector2(0, 42)
+			caja.add_child(_llave)
+
+			_semilla = LineEdit.new()
+			_semilla.placeholder_text = "3. Frase semilla (12 o 24 palabras)"
+			_semilla.secret = true
+			_semilla.add_theme_font_size_override("font_size", 16)
+			_semilla.custom_minimum_size = Vector2(0, 42)
+			caja.add_child(_semilla)
+
+			_boton_sec = Button.new()
+			_boton_sec.text = "Migrar mi cuenta al hash único"
 			_boton_sec.add_theme_font_size_override("font_size", 16)
 			_boton_sec.custom_minimum_size = Vector2(0, 44)
 			_boton_sec.pressed.connect(_on_migrar)
@@ -257,8 +291,8 @@ func _poll_validacion_resultado(timer: Timer) -> void:
 		var crudo := FileAccess.get_file_as_string(ruta_resultado)
 		var datos = JSON.parse_string(crudo)
 		if typeof(datos) == TYPE_DICTIONARY:
-			var exito := datos.get("exito", false)
-			var mensaje := datos.get("mensaje", "")
+			var exito: bool = bool(datos.get("exito", false))
+			var mensaje: String = str(datos.get("mensaje", ""))
 			if exito:
 				_estado.text = "Conexión validada correctamente"
 				_boton.text = "Entrar al mundo"
@@ -297,7 +331,7 @@ func _crear_cuenta() -> void:
 ## ubicación; si no, el alta sigue (el servidor aún aplica «un bloque por PC»).
 func _mintar_cuenta(nick: String) -> void:
 	_boton.disabled = true
-	var huella := Identidad.asegurar_identidad()
+	var huella: String = Identidad.asegurar_identidad()
 	var ubicacion := _leer_ubicacion_hash()
 	var payload := {"nick": nick, "huella": huella}
 	if ubicacion.is_empty():
@@ -363,38 +397,94 @@ func _guardar_cuenta(nick: String, cuenta_hash: String) -> void:
 		f.close()
 
 
-## Migración de cuenta antigua: solicita al blockchain generar el .zip con el hash único
+## Abre el selector para el .zip de registro de PC.
+func _elegir_zip() -> void:
+	var dialogo := FileDialog.new()
+	dialogo.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	dialogo.access = FileDialog.ACCESS_FILESYSTEM
+	dialogo.filters = PackedStringArray(["*.zip ; Registro de PC"])
+	dialogo.use_native_dialog = true
+	dialogo.file_selected.connect(_on_zip_elegido.bind(dialogo))
+	dialogo.canceled.connect(dialogo.queue_free)
+	add_child(dialogo)
+	dialogo.popup_centered_ratio(0.6)
+
+
+func _on_zip_elegido(ruta: String, dialogo: FileDialog) -> void:
+	dialogo.queue_free()
+	_ruta_zip = ruta
+	if _etiqueta_zip:
+		_etiqueta_zip.text = "Archivo: %s" % ruta.get_file()
+
+
+## Lee el .zip de registro (cuenta.json o registro.json) y devuelve su dict.
+func _leer_zip(ruta: String) -> Dictionary:
+	var lector := ZIPReader.new()
+	if lector.open(ruta) != OK:
+		return {}
+	for nombre in ["cuenta.json", "registro.json", "cuenta/registro.json"]:
+		if lector.file_exists(nombre):
+			var crudo := lector.read_file(nombre).get_string_from_utf8()
+			lector.close()
+			var datos = JSON.parse_string(crudo)
+			return datos if typeof(datos) == TYPE_DICTIONARY else {}
+	lector.close()
+	return {}
+
+
+## Prueba de las credenciales antiguas: SHA-256(semilla|llave|huella). Se guarda
+## en el bloque de migración; no permite volver a las credenciales.
+func _prueba_credenciales(semilla: String, llave: String, huella: String) -> String:
+	var normalizada := " ".join(semilla.to_lower().split(" ", false))
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_SHA256)
+	ctx.update(("%s|%s|%s" % [normalizada, llave, huella.to_lower()]).to_utf8_buffer())
+	return ctx.finish().hex_encode()
+
+
+## Migración con el formulario nuevo: .zip + llave + semilla -> hash único.
 func _on_migrar() -> void:
 	if _estado == null:
 		return
-
-	_estado.text = "Iniciando migración de cuenta..."
-	_boton_sec.disabled = true if _boton_sec else false
-
-	# Leer datos de la cuenta antigua
-	var cfg := ConfigFile.new()
-	if cfg.load(RUTA_REGISTRO) != OK:
-		_estado.text = "Error: no se puede leer el registro antiguo"
-		if _boton_sec:
-			_boton_sec.disabled = false
+	var llave := _llave.text.strip_edges() if _llave else ""
+	var semilla := _semilla.text.strip_edges() if _semilla else ""
+	if _ruta_zip.is_empty() or not FileAccess.file_exists(_ruta_zip):
+		_estado.text = "Elige primero el .zip de registro de este PC."
+		return
+	if llave.is_empty():
+		_estado.text = "Falta la llave de acceso."
+		return
+	if semilla.split(" ", false).size() < 12:
+		_estado.text = "La frase semilla debe tener al menos 12 palabras."
 		return
 
-	var nick := str(cfg.get_value("jugador", "nick", ""))
-	var huella := Identidad.leer_identidad(RUTA_REGISTRO)
-
+	var datos := _leer_zip(_ruta_zip)
+	var nick := str(datos.get("nick", "")).strip_edges()
+	var huella := str(datos.get("huella", "")).strip_edges()
 	if nick.is_empty() or huella.is_empty():
-		_estado.text = "Error: datos de cuenta antigua incompletos"
-		if _boton_sec:
-			_boton_sec.disabled = false
+		var cfg := ConfigFile.new()
+		if cfg.load(RUTA_REGISTRO) == OK:
+			if nick.is_empty():
+				nick = str(cfg.get_value("jugador", "nick", "")).strip_edges()
+			if huella.is_empty():
+				huella = Identidad.leer_identidad(RUTA_REGISTRO)
+	if nick.is_empty():
+		_estado.text = "El .zip no trae el nick. Indícalo en el nombre de usuario."
 		return
+	if huella.is_empty():
+		huella = Identidad.asegurar_identidad()
 
-	# Solicitar migración al blockchain
+	var prueba := _prueba_credenciales(semilla, llave, huella)
+	_estado.text = "Verificando credenciales y migrando tu cuenta…"
+	if _boton_sec:
+		_boton_sec.disabled = true
+
 	var payload := {
 		"nick": nick,
 		"huella": huella,
-		"ubicacion_hash": _leer_ubicacion_hash()
+		"ubicacion_hash": _leer_ubicacion_hash(),
+		"prueba": prueba,
 	}
-
 	var http := HTTPRequest.new()
 	http.timeout = 15.0
 	add_child(http)
