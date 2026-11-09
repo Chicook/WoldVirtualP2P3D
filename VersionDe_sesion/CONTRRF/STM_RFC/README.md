@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.14.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.15.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -39,7 +39,8 @@ la **retirada automática** del modelo que no pasa los filtros.
 | `stm_openrouter.py` | 193 | Respaldo OpenRouter (desactivado por defecto) |
 | `stm_refactor.py` | 374 | Fragmentos + validación + `comando_ds_ialocal` |
 | `stm_particion.py` | 350 | Partición en módulos ≤450 y reparto en CONTRUCCION |
-| `stm_informe.py` | 191 | **Nuevo**: comando `informacion codigo` (informe .md + hoja de ruta) |
+| `stm_informe.py` | 369 | Comando `informacion codigo` (informe .md + hoja de ruta) |
+| `stm_entrenamiento.py` | 133 | **Nuevo**: del informe `.md` a matriz y pesos neuronales |
 | `stm_creacion.py` | 216 | Comando `crear codigo` (diagnóstico → archivo nuevo) |
 | `stm_logica.py` | 245 | Comando `crear logica` (petición → función) |
 | `stm_comentarios.py` | 266 | **Nuevo**: comando `comentar archivo` (solo comentarios) |
@@ -339,7 +340,7 @@ python RFPRMN.py            # y dentro:  comentar archivo
 
 El archivo va a una **IA de código** y **LucIA escribe el `.md`** con sus
 propias palabras, sin dejar detalles por el camino. El documento se guarda en
-`TLLDCD/src/STM_DOC/informe_<nombre>.md`.
+`TLLDCD/src/STM_CH/PSNRL/DatosDeEntrenamiento/informe_<nombre>.md`.
 
 ```bash
 python RFPRMN.py            # y dentro:  informacion codigo
@@ -376,14 +377,43 @@ Este archivo es una biblioteca de funciones de utilidades… La función
 …## Estructura  ## Deuda técnica  ## Hoja de ruta
 ```
 
-### 1.15 Registro e IPFS
+### 1.15 Del informe a pesos neuronales (`stm_entrenamiento`)
+
+Al terminar de escribir el `.md`, se convierte en números que la red puede
+consumir. El mismo informe produce dos artefactos a su lado:
+
+- `informe_<nombre>_entrenamiento.npz`: `X` (secciones × `dims`), `y`
+  (etiquetas), `W` (pesos) y `b` (sesgo).
+- `informe_<nombre>_entrenamiento.json`: metadatos (dims, filas, clases,
+  secciones y qué es cada matriz).
+
+Cómo se construye:
+
+1. Se parte el informe en **secciones** (encabezados `##`; si no hay, párrafos).
+2. Cada sección se vectoriza con *feature hashing* de sus tokens y se normaliza.
+3. `X` son esas filas; `y` es la sección de cada fila.
+4. Los **pesos** salen del clasificador de prototipos: `W` = centroides por
+   clase traspuestos (`dims × clases`) y `b` = sesgo negativo del cuadrado de la
+   norma. Es un conjunto de pesos real, inicializable y entrenable con
+   `NeuralNetworkOptimizer`.
+
+Ejemplo real con el informe de `utilidades2.py`:
+
+```
+Entrenamiento: 5 filas × 64 dims · 5 clases · pesos (64, 5).
+Matriz y pesos guardados: informe_utilidades2_entrenamiento.npz
+secciones: ['resumen', 'Datos objetivos', 'Estructura', 'Deuda técnica',
+            'Hoja de ruta']
+```
+
+### 1.16 Registro e IPFS
 
 `envios.json` → `registro.md` → pesos (`stm_pesos`) → IPFS en cuatro niveles
 (`stm_ipfs`) → limpieza. **P1 resuelta**: un CID sintético del shim
 (`QmLocal…` con `ok=False`) ya **no** cuenta como subida; el flujo baja a la
 API, al binario y, si no hay nada, a un CID local honesto.
 
-### 1.16 Registro de símbolos por AST (D4) y consola
+### 1.17 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
@@ -395,7 +425,7 @@ Todas las salidas toleran consolas cp1252.
 
 ## 2. Pruebas y CI
 
-**303 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
+**324 pruebas** propias (sin red, sin Ollama y sin tocar RFC/PRY):
 
 ```bash
 cd VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN
@@ -413,7 +443,8 @@ python -m pytest tests -q -p no:cacheprovider
 | `test_modelos.py` | Registro de usados, R3, «el más ligero», R6 |
 | `test_descartes.py` | Retirada por filtros, persistencia y elección del siguiente |
 | `test_particion.py` | Cortes por unidad, tope respetado, re-export, informe y cancelación |
-| `test_informe.py` | Ficha, estructura, deuda, hoja de ruta y escritura en STM_DOC |
+| `test_informe.py` | Ficha, estructura, deuda, hoja de ruta, troceado y reescritura |
+| `test_entrenamiento.py` | Secciones, vectorización, matriz `X/y` y pesos `W/b` |
 | `test_descarga.py` | `Range`, truncados, no repetir descargas |
 | `test_openrouter.py` | Desactivado por defecto y activación explícita |
 | `test_lucia.py` | Expediente, README, vector, calidad y veredicto |

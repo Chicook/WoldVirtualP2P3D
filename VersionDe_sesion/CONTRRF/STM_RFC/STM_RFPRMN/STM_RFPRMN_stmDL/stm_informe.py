@@ -33,8 +33,9 @@ from .stm_fs import escribir_texto_atomico
 from .stm_particion import separar_unidades
 from .test import diagnostico_deuda
 
-#: Carpeta de documentación del proyecto.
-DIR_DOCS = CONTRRF_DIR / "TLLDCD" / "src" / "STM_DOC"
+#: Carpeta de entrenamiento: aquí se recibe el informe y de aquí salen los pesos.
+DIR_DOCS = (CONTRRF_DIR / "TLLDCD" / "src" / "STM_CH" / "PSNRL"
+            / "DatosDeEntrenamiento")
 #: Caracteres máximos por envío (para no truncar en el contexto del modelo).
 MAX_CARACTERES_ENVIO = 6000
 
@@ -333,6 +334,10 @@ def generar_informe(ruta: str | Path, consultor: ConsultorIA | None = None,
         reportar_error(f"No se pudo escribir {archivo}: {error}")
         return None
     exito(f"Informe escrito: {archivo}")
+    # El .md se convierte en matriz de entrenamiento y pesos neuronales.
+    from .stm_entrenamiento import convertir_si_existe
+
+    convertir_si_existe(archivo)
     return archivo
 
 
