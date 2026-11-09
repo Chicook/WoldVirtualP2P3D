@@ -692,6 +692,170 @@ class LucIAIPFS:
                 "daemon": parada}
 
 
+class LucIAServidor3D:
+    """Levanta y conecta el puente TCP de LucIA 3D: Godot <-> nucleo <-> Ollama.
+
+    El servidor real vive en el proyecto Godot, en
+    ``lucia3D/GLTF_lucIA/celebro_3D/puente_3D/servidor_lucia.py``. Esta clase lo
+    arranca **como proceso** (no bloquea el orquestador), comprueba el puerto y
+    habla su protocolo NDJSON: ``consulta`` entra, ``token``/``voz``/``fin``
+    salen.
+
+    Con ``ipfs`` y ``comandos`` conecta la arquitectura entera en un sitio:
+    servidor + pesos + maquina de comandos.
+    """
+
+    #: Ruta del servidor, relativa a la raiz del proyecto Godot.
+    RUTA_RELATIVA: Final[Path] = (Path("lucia3D") / "GLTF_lucIA" / "celebro_3D"
+                                  / "puente_3D" / "servidor_lucia.py")
+    HOST: Final[str] = "127.0.0.1"
+
+    def __init__(self, raiz_godot: Optional[Path] = None, puerto: int = 8765,
+                 modelo: str = "", voz: bool = True, ipfs: Any = None,
+                 comandos: Any = None) -> None:
+        self.raiz_godot = (Path(raiz_godot) if raiz_godot
+                           else SRC_DIR / "MTBGT" / "WoldVirtualP2P3D")
+        self.ruta_servidor = self.raiz_godot / self.RUTA_RELATIVA
+        self.puerto = int(puerto)
+        self.modelo = modelo
+        self.voz = voz
+        self.ipfs = ipfs
+        self.comandos = comandos
+        self._proceso: Any = None
+        self._log = self.ruta_servidor.parent / "servidor.log"
+
+    @property
+    def disponible(self) -> bool:
+        """True si el archivo del servidor existe."""
+        return self.ruta_servidor.is_file()
+
+    def activo(self, timeout: float = 0.6) -> bool:
+        """True si el puerto del servidor acepta conexiones."""
+        import socket
+
+        try:
+            with socket.create_connection((self.HOST, self.puerto), timeout=timeout):
+                return True
+        except OSError:
+            return False
+
+    def arrancar(self, esperar: float = 25.0) -> Dict[str, Any]:
+        """Lanza el servidor y espera a que abra el puerto."""
+        import subprocess
+
+        if not self.disponible:
+            return {"ok": False, "motivo": f"no existe {self.ruta_servidor}"}
+        if self.activo():
+            return {"ok": True, "arrancado": False, "motivo": "ya estaba escuchando"}
+        argumentos = [sys.executable, str(self.ruta_servidor),
+                      "--puerto", str(self.puerto)]
+        if self.modelo:
+            argumentos += ["--modelo", self.modelo]
+        if not self.voz:
+            argumentos += ["--sin-voz"]
+        try:
+            with open(self._log, "ab") as salida:
+                self._proceso = subprocess.Popen(
+                    argumentos, cwd=str(self.ruta_servidor.parent.parent),
+                    stdout=salida, stderr=subprocess.STDOUT,
+                    stdin=subprocess.DEVNULL)
+        except OSError as error:
+            return {"ok": False, "motivo": f"no se pudo lanzar: {error}"}
+        limite = time.monotonic() + max(1.0, esperar)
+        while time.monotonic() < limite:
+            if self.activo():
+                return {"ok": True, "arrancado": True, "pid": self._proceso.pid,
+                        "log": str(self._log)}
+            if self._proceso.poll() is not None:
+                return {"ok": False, "motivo": "el servidor terminó al arrancar",
+                        "log": str(self._log)}
+            time.sleep(0.4)
+        return {"ok": False, "motivo": f"el puerto {self.puerto} no abrió en "
+                                       f"{esperar:.0f}s", "log": str(self._log)}
+
+    def consultar(self, texto: str, timeout: float = 180.0) -> Dict[str, Any]:
+        """Un turno completo: envía la consulta y devuelve el evento ``fin``."""
+        import socket
+
+        if not self.activo():
+            return {"ok": False, "motivo": "el servidor no está escuchando"}
+        peticion = json.dumps({"tipo": "consulta", "texto": texto},
+                              ensure_ascii=False) + "\n"
+        try:
+            with socket.create_connection((self.HOST, self.puerto),
+                                          timeout=timeout) as conexion:
+                conexion.sendall(peticion.encode("utf-8"))
+                lector = conexion.makefile("r", encoding="utf-8", errors="replace")
+                for linea in lector:
+                    limpia = linea.strip()
+                    if not limpia:
+                        continue
+                    try:
+                        evento = json.loads(limpia)
+                    except ValueError:
+                        continue
+                    if evento.get("tipo") == "error":
+                        return {"ok": False, "motivo": evento.get("mensaje", "")}
+                    if evento.get("tipo") == "fin":
+                        return {"ok": True, **evento}
+        except (OSError, ValueError) as error:
+            return {"ok": False, "motivo": str(error)}
+        return {"ok": False, "motivo": "el servidor cerró sin enviar 'fin'"}
+
+    def parar(self) -> Dict[str, Any]:
+        """Termina el proceso del servidor (si lo lanzamos nosotros)."""
+        import subprocess
+
+        proceso = self._proceso
+        if proceso is None:
+            return {"ok": not self.activo(), "detenido": False}
+        try:
+            proceso.terminate()
+            proceso.wait(timeout=8)
+        except (OSError, subprocess.TimeoutExpired):
+            try:
+                proceso.kill()
+            except OSError:
+                pass
+        self._proceso = None
+        return {"ok": not self.activo(), "detenido": True}
+
+    def nucleo(self) -> Dict[str, Any]:
+        """Estado del núcleo neuronal de LucIA 3D (50 sinapsis, deriva, sesión)."""
+        if not self.disponible:
+            return {"ok": False, "motivo": "sin servidor"}
+        try:
+            import importlib
+
+            base = self.ruta_servidor.parent.parent  # celebro_3D
+            if str(base) not in sys.path:
+                sys.path.insert(0, str(base))
+            modulo = importlib.import_module("nucleo.orquestador_lucia")
+            return {"ok": True, **modulo.NucleoLucia().estado()}
+        except Exception as error:  # noqa: BLE001 - el nucleo es opcional
+            return {"ok": False, "motivo": str(error)}
+
+    def estado(self) -> Dict[str, Any]:
+        """Servidor + IPFS + comandos: la arquitectura entera en un dict."""
+        datos: Dict[str, Any] = {
+            "disponible": self.disponible, "activo": self.activo(),
+            "puerto": self.puerto, "ruta": str(self.ruta_servidor),
+            "modelo": self.modelo or "(automático)", "log": str(self._log),
+        }
+        if self.ipfs is not None:
+            datos["ipfs"] = self.ipfs.estado()
+        if self.comandos is not None:
+            datos["comandos"] = self.comandos.aprendizaje()
+        return datos
+
+    def cerrar(self) -> Dict[str, Any]:
+        """Para el servidor y, si hay nodo IPFS, publica los pesos."""
+        datos: Dict[str, Any] = {"servidor": self.parar()}
+        if self.ipfs is not None:
+            datos["ipfs"] = self.ipfs.cerrar()
+        return datos
+
+
 def obtener_diagnostico_orquestador() -> Dict[str, Any]:
     """Genera un reporte estructural para validar la salud de todo el stack."""
     cf = get_cliente_iafree() if get_cliente_iafree else None

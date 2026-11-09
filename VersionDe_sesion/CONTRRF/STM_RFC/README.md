@@ -1,9 +1,10 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.22.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.23.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
-`STM_RFPRMN_stmDL/`), en el subsistema `LC_STM/seq2seq` y en el nodo IPFS
-`STMIPFS/nodo/` (instalado en `STMIPFS/ipfs.exe`, Kubo 0.43.1).
+`STM_RFPRMN_stmDL/`), en el subsistema `LC_STM/seq2seq`, en el nodo IPFS
+`STMIPFS/nodo/` (Kubo 0.43.1 en `STMIPFS/ipfs.exe`) y en el servidor 3D
+`lucia3D/GLTF_lucIA/celebro_3D/puente_3D/servidor_lucia.py`.
 
 Cierra los issues **#80** y **#81**, corrige el fallo de descarga de modelos,
 resuelve las fases R1–R6 de la discusión #84, añade el **puente LucIA ↔ red
@@ -592,7 +593,49 @@ launcher antiguo (`SBSTMPYIPFS/ipfs_utils.localizar_repo`) y el puente
 devuelve `{"ok": false, "paso": "binario"}`; si falta el daemon, `publicar` deja
 el paquete en disco y **no inventa CID**.
 
-### 1.20 Registro de símbolos por AST (D4) y consola
+### 1.20 Servidor 3D de LucIA, conectado (`LucIAServidor3D`)
+
+El puente que habla con el mundo 3D vive en el proyecto Godot:
+`lucia3D/GLTF_lucIA/celebro_3D/puente_3D/servidor_lucia.py`. Es un servidor
+TCP que recibe líneas JSON de Godot y responde NDJSON:
+
+```
+-> {"tipo": "consulta", "texto": "..."}
+<- {"tipo": "estado", "estado": "pensando"}
+<- {"tipo": "token", "texto": "..."}
+<- {"tipo": "voz", "pcm": "...", "rate": 24000}      (si la voz está activa)
+<- {"tipo": "fin", "texto": "...", "modelo": "...", "ms": 992,
+    "nucleo": {"neuronas": 50, "deriva": 0.0048, "tono": "positivo"}}
+```
+
+`mainLCSTM.py` lo importa en la clase **`LucIAServidor3D`**, que lo arranca
+como **proceso** (no bloquea el orquestador), espera al puerto y le habla:
+
+```python
+from STMGNRL.mainLCSTM import LucIAServidor3D
+
+servidor = LucIAServidor3D(modelo="qwen2.5:7b", voz=False)
+servidor.nucleo()                 # 50 sinapsis, deriva, sesión
+servidor.arrancar()               # proceso + puerto 8765
+servidor.consultar("¿quién eres?")  # un turno completo
+servidor.cerrar()                 # para el servidor y publica pesos en IPFS
+```
+
+Con `ipfs=` y `comandos=` conecta **toda** la arquitectura en un dict
+(`estado()`: servidor + nodo IPFS + aprendizaje de comandos).
+
+E2E real de esta máquina:
+
+```
+nucleo:  {'ok': True, 'neuronas': 50, 'deriva': 0.0, 'sesion': 'LUCIA_20261109_024516'}
+arrancar: {'ok': True, 'arrancado': True, 'pid': 18864}
+consulta: ok, modelo qwen2.5:7b, 992 ms
+texto:   "Desde mi perspectiva sinaptica (50 sinapsis procesadas)… Hola, soy LucIA…"
+nucleo del turno: {'neuronas': 50, 'tono': 'positivo', 'deriva': 0.004781}
+parar: {'ok': True, 'detenido': True}
+```
+
+### 1.21 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
