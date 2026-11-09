@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.15.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.16.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -40,7 +40,8 @@ la **retirada automática** del modelo que no pasa los filtros.
 | `stm_refactor.py` | 374 | Fragmentos + validación + `comando_ds_ialocal` |
 | `stm_particion.py` | 350 | Partición en módulos ≤450 y reparto en CONTRUCCION |
 | `stm_informe.py` | 369 | Comando `informacion codigo` (informe .md + hoja de ruta) |
-| `stm_entrenamiento.py` | 133 | **Nuevo**: del informe `.md` a matriz y pesos neuronales |
+| `stm_entrenamiento.py` | 133 | Del informe `.md` a matriz y pesos neuronales |
+| `stm_agente.py` | 375 | **Nuevo**: LucIA ejecuta los comandos por utilidad (sin humano) |
 | `stm_creacion.py` | 216 | Comando `crear codigo` (diagnóstico → archivo nuevo) |
 | `stm_logica.py` | 245 | Comando `crear logica` (petición → función) |
 | `stm_comentarios.py` | 266 | **Nuevo**: comando `comentar archivo` (solo comentarios) |
@@ -406,14 +407,52 @@ secciones: ['resumen', 'Datos objetivos', 'Estructura', 'Deuda técnica',
             'Hoja de ruta']
 ```
 
-### 1.16 Registro e IPFS
+### 1.16 LucIA usa los comandos (`stm_agente`)
+
+`STMGNRL/mainLCSTM.py` importa RFPRMN (la ruta estaba mal: apuntaba a
+`TLLDCD/STM_RFC` en vez de a `CONTRRF/STM_RFC/STM_RFPRMN`) y expone una clase
+`LucIAComandos` para que LucIA use **todos** los comandos, incluido `cerrar`,
+sin esperar a un humano.
+
+La decisión no es un `if` arbitrario: es una utilidad entre 0 y 1.
+
+```
+utilidad = 0.45·déficit + 0.30·urgencia + 0.15·éxito_previo + 0.10·(1 - coste)
+```
+
+| Señal | Cómo se calcula |
+|---|---|
+| déficit | `(100 - puntuación_deuda) / 100` del archivo |
+| urgencia | 1.0 si pasa de 450 líneas · 0.5 si pasa de 300 · 0 si no |
+| éxito previo | aciertos/intentos de esa acción en la sesión (0.5 al empezar) |
+| coste | partir 0.35 · comentar 0.5 · informe 0.6 · refactorizar 1.0 |
+
+Se actúa si `utilidad >= 0.55`. **Cerrar** es aparte: no compite con el umbral;
+lo decide `desea_cerrar()` con la carga pendiente y el autoanálisis, y solo si
+no hay un flujo abierto.
+
+**Para no romperse a sí misma**, antes de cada acción corre un autoanálisis:
+presupuesto de módulos en verde, `numpy` disponible y rutas correctas. Si algo
+falla, solo permite diagnóstico. Toda acción va en `try/except`: un fallo se
+anota y LucIA sigue.
+
+```python
+from STMGNRL.mainLCSTM import LucIAComandos
+
+lucia = LucIAComandos()
+lucia.utilidad("refactorizar", "…/ENRN/__init__.py")   # 0.486
+lucia.ciclo(["…/ENRN/__init__.py"])                     # salud → probar → …
+lucia.cerrar()                                          # solo si procede
+```
+
+### 1.17 Registro e IPFS
 
 `envios.json` → `registro.md` → pesos (`stm_pesos`) → IPFS en cuatro niveles
 (`stm_ipfs`) → limpieza. **P1 resuelta**: un CID sintético del shim
 (`QmLocal…` con `ok=False`) ya **no** cuenta como subida; el flujo baja a la
 API, al binario y, si no hay nada, a un CID local honesto.
 
-### 1.17 Registro de símbolos por AST (D4) y consola
+### 1.18 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
