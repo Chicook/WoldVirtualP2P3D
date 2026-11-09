@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.16.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.17.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -41,7 +41,7 @@ la **retirada automática** del modelo que no pasa los filtros.
 | `stm_particion.py` | 350 | Partición en módulos ≤450 y reparto en CONTRUCCION |
 | `stm_informe.py` | 369 | Comando `informacion codigo` (informe .md + hoja de ruta) |
 | `stm_entrenamiento.py` | 133 | Del informe `.md` a matriz y pesos neuronales |
-| `stm_agente.py` | 375 | **Nuevo**: LucIA ejecuta los comandos por utilidad (sin humano) |
+| `stm_agente.py` | 354 | LucIA ejecuta los comandos por utilidad (sin humano) |
 | `stm_creacion.py` | 216 | Comando `crear codigo` (diagnóstico → archivo nuevo) |
 | `stm_logica.py` | 245 | Comando `crear logica` (petición → función) |
 | `stm_comentarios.py` | 266 | **Nuevo**: comando `comentar archivo` (solo comentarios) |
@@ -414,10 +414,11 @@ secciones: ['resumen', 'Datos objetivos', 'Estructura', 'Deuda técnica',
 `LucIAComandos` para que LucIA use **todos** los comandos, incluido `cerrar`,
 sin esperar a un humano.
 
-La decisión no es un `if` arbitrario: es una utilidad entre 0 y 1.
+La decisión no es un `if` arbitrario: es una utilidad entre 0 y 1 con **cinco
+señales**.
 
 ```
-utilidad = 0.45·déficit + 0.30·urgencia + 0.15·éxito_previo + 0.10·(1 - coste)
+utilidad = 0.35·déficit + 0.25·urgencia + 0.10·éxito_previo + 0.10·(1−coste) + 0.20·red
 ```
 
 | Señal | Cómo se calcula |
@@ -426,10 +427,17 @@ utilidad = 0.45·déficit + 0.30·urgencia + 0.15·éxito_previo + 0.10·(1 - co
 | urgencia | 1.0 si pasa de 450 líneas · 0.5 si pasa de 300 · 0 si no |
 | éxito previo | aciertos/intentos de esa acción en la sesión (0.5 al empezar) |
 | coste | partir 0.35 · comentar 0.5 · informe 0.6 · refactorizar 1.0 |
+| **red** | predicción de LucIA: 0.9 si el `seq2seq` ya tiene un refactor de un código equivalente, 0.6 si hay memoria pero no coincide, 0.5 si no; **encogida** hacia 0.5 según los pasos aprendidos (`0.5 + (p−0.5)·min(1, pasos/8)`) |
 
-Se actúa si `utilidad >= 0.55`. **Cerrar** es aparte: no compite con el umbral;
-lo decide `desea_cerrar()` con la carga pendiente y el autoanálisis, y solo si
-no hay un flujo abierto.
+**Presupuesto de tiempo.** Cada acción lleva un coste estimado en segundos
+(`refactorizar`: 40 s por fragmento de 60 líneas; `comentar`: 0.4 s por línea) y
+la sesión tiene un máximo (300 s por defecto). Lo que no cabe se descarta con el
+motivo `no cabe en el presupuesto`, y el ciclo se corta con `agotado: true` en
+vez de quedarse minutos bloqueado.
+
+Se actúa si `utilidad >= 0.55` **y** cabe en el tiempo restante. **Cerrar** es
+aparte: no compite con el umbral; lo decide `desea_cerrar()` con la carga
+pendiente y el autoanálisis, y solo si no hay un flujo abierto.
 
 **Para no romperse a sí misma**, antes de cada acción corre un autoanálisis:
 presupuesto de módulos en verde, `numpy` disponible y rutas correctas. Si algo
@@ -437,12 +445,24 @@ falla, solo permite diagnóstico. Toda acción va en `try/except`: un fallo se
 anota y LucIA sigue.
 
 ```python
-from STMGNRL.mainLCSTM import LucIAComandos
+from STMGNRL.mainLCSTM import LucIAPlanificador
 
-lucia = LucIAComandos()
-lucia.utilidad("refactorizar", "…/ENRN/__init__.py")   # 0.486
-lucia.ciclo(["…/ENRN/__init__.py"])                     # salud → probar → …
-lucia.cerrar()                                          # solo si procede
+plan = LucIAPlanificador(presupuesto_segundos=120)
+plan.senal_red("…/ENRN/__init__.py")     # 0.9
+plan.estimar("refactorizar", ruta)        # 280.0 s
+plan.plan([ruta])                        # ordenado por utilidad/segundo
+plan.ejecutar([ruta])                    # ciclo con presupuesto
+plan.cerrar()                            # solo si procede
+```
+
+`LucIAPlanificador.plan()` ordena por **utilidad por segundo** y marca `cabe`;
+con 120 s de presupuesto y `ENRN/__init__.py` sale:
+
+```
+informe       util=0.598  seg=3    ef=0.1993  cabe=True
+partir        util=0.623  seg=5    ef=0.1246  cabe=True
+comentar      util=0.608  seg=168  ef=0.0036  cabe=False
+refactorizar  util=0.558  seg=280  ef=0.0020  cabe=False
 ```
 
 ### 1.17 Registro e IPFS

@@ -496,6 +496,89 @@ class LucIAComandos:
         return dict(self._agente.ciclo(rutas))
 
 
+class LucIAPlanificador:
+    """Planifica los comandos con dos señales mas: su red y el tiempo.
+
+    - **Prediccion de la red** (quinta senal de la utilidad): cuanto respalda
+      LucIA una accion segun lo que ha aprendido (memoria del seq2seq y pasos de
+      su red, encogida hacia 0.5 cuando aun sabe poco).
+    - **Presupuesto de tiempo**: cada accion lleva un coste estimado en segundos
+      y la sesion tiene un maximo; lo que no cabe se descarta y el ciclo se
+      corta cuando se agota, en vez de quedarse minutos bloqueado.
+    """
+
+    def __init__(self, presupuesto_segundos: float = 300.0,
+                 umbral: float = 0.55) -> None:
+        self._agente = None
+        clase = importar_agente() if importar_agente else None
+        if clase is not None:
+            try:
+                self._agente = clase(umbral=umbral,
+                                     presupuesto_segundos=presupuesto_segundos)
+            except Exception as err:  # noqa: BLE001 - nunca romper el arranque
+                logger.debug("No se pudo crear el planificador: %s", err)
+
+    @property
+    def disponible(self) -> bool:
+        """True si hay agente con el que planificar."""
+        return self._agente is not None
+
+    def senal_red(self, ruta: str) -> float:
+        """Prediccion de LucIA para ese archivo (0-1; 0.5 si no hay agente)."""
+        if not self._agente:
+            return 0.5
+        try:
+            contenido = Path(ruta).read_text(encoding="utf-8-sig")
+        except OSError:
+            contenido = ""
+        return float(self._agente.senal_red(contenido))
+
+    def estimar(self, comando: str, ruta: Optional[str] = None) -> float:
+        """Segundos estimados del comando sobre ese archivo."""
+        if not self._agente:
+            return 0.0
+        analisis = self._agente.analizar(ruta) if ruta else {}
+        return float(self._agente.estimar_tiempo(comando, analisis))
+
+    def restante(self) -> float:
+        """Segundos que quedan del presupuesto de la sesion."""
+        return float(self._agente.restante()) if self._agente else 0.0
+
+    def plan(self, rutas: List[str],
+             acciones: Tuple[str, ...] = ("partir", "refactorizar",
+                                          "comentar", "informe")) -> List[Dict[str, Any]]:
+        """Ordena las acciones por **utilidad por segundo** y marca las que caben."""
+        if not self._agente:
+            return []
+        filas: List[Dict[str, Any]] = []
+        for ruta in rutas:
+            analisis = self._agente.analizar(ruta)
+            for accion in acciones:
+                valor, senales = self._agente.utilidad(accion, analisis)
+                segundos = self._agente.estimar_tiempo(accion, analisis)
+                filas.append({
+                    "ruta": str(ruta), "accion": accion,
+                    "utilidad": valor, "segundos": segundos,
+                    "eficiencia": round(valor / max(segundos, 1.0), 4),
+                    "red": senales["red"],
+                    "cabe": segundos <= self._agente.restante(),
+                })
+        return sorted(filas, key=lambda fila: (not fila["cabe"],
+                                               -fila["eficiencia"]))
+
+    def ejecutar(self, rutas: List[str]) -> Dict[str, Any]:
+        """Ciclo autonomo con presupuesto de tiempo."""
+        if not self._agente:
+            return {"acciones": [], "cerrado": False, "motivo": "sin agente"}
+        return dict(self._agente.ciclo(rutas))
+
+    def cerrar(self) -> bool:
+        """Cierra solo si la decision matematica lo autoriza."""
+        if not self._agente:
+            return False
+        return bool(self._agente.cerrar_si_procede())
+
+
 def obtener_diagnostico_orquestador() -> Dict[str, Any]:
     """Genera un reporte estructural para validar la salud de todo el stack."""
     cf = get_cliente_iafree() if get_cliente_iafree else None

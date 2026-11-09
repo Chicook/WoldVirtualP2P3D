@@ -37,31 +37,91 @@ ACCIONES = ("presupuesto", "estado", "probar", "partir", "comentar",
 COSTES = {"presupuesto": 0.05, "estado": 0.1, "probar": 0.2, "partir": 0.35,
           "comentar": 0.5, "informe": 0.6, "refactorizar": 1.0, "cerrar": 0.05}
 
-#: Pesos de la utilidad.
-PESOS = {"deficit": 0.45, "urgencia": 0.30, "exito": 0.15, "coste": 0.10}
+#: Segundos típicos de cada acción (medidos en CPU con un 7B).
+TIEMPOS = {"presupuesto": 1, "estado": 1, "probar": 2, "partir": 5,
+           "informe": 3, "comentar": 30, "refactorizar": 90, "cerrar": 2}
+
+#: Pesos de la utilidad (suman 1). ``red`` es la predicción de LucIA.
+PESOS = {"deficit": 0.35, "urgencia": 0.25, "exito": 0.10, "coste": 0.10,
+         "red": 0.20}
 
 
 class AgenteRFPRMN:
     """Ejecuta comandos de RFPRMN decidiendo por utilidad, no por ``input()``."""
 
     def __init__(self, umbral: float = 0.55, umbral_cierre: float = 0.20,
-                 limite: int = 450) -> None:
+                 limite: int = 450, presupuesto_segundos: float = 300.0) -> None:
         self.umbral = float(umbral)
         self.umbral_cierre = float(umbral_cierre)
         self.limite = int(limite)
+        self.presupuesto_tiempo = float(presupuesto_segundos)
+        self._inicio = 0.0
         self.historial: dict[str, list[int]] = {}
         self.registro: list[dict] = []
         self.pendientes: list[str] = []
         self._en_flujo = False
         self._decision: bool = False
 
+    # -- tiempo -----------------------------------------------------------
+    def restante(self) -> float:
+        """Segundos que quedan del presupuesto de esta sesión."""
+        if not self._inicio:
+            return self.presupuesto_tiempo
+        import time as _time
+
+        return max(0.0, self.presupuesto_tiempo - (_time.monotonic() - self._inicio))
+
+    def estimar_tiempo(self, accion: str, analisis: dict | None = None) -> float:
+        """Segundos estimados de la acción (el refactor crece por fragmentos)."""
+        lineas = int((analisis or {}).get("lineas", 0) or 0)
+        if accion == "refactorizar":
+            fragmentos = max(1, -(-lineas // 60))
+            return max(30.0, float(fragmentos) * 40.0)
+        if accion == "comentar":
+            return max(10.0, float(lineas) * 0.4)
+        return float(TIEMPOS.get(accion, 10))
+
+    # -- señal de la red (quinta) -----------------------------------------
+    def senal_red(self, contenido: str = "", pasos: int | None = None) -> float:
+        """Predicción de LucIA (0-1): probabilidad de que el refactor valga.
+
+        Se apoya en lo que ya aprendió: si el ``seq2seq`` tiene un refactor
+        memorizado para un código equivalente, sube; si no, se queda en 0.5. La
+        señal se **encoge** hacia 0.5 según lo que haya aprendido la red, porque
+        con pocas muestras su opinión no debe pesar como una certeza.
+        """
+        valor = 0.5
+        try:
+            from . import stm_seq2seq
+
+            if contenido and stm_seq2seq.generar(contenido):
+                valor = 0.9
+            elif stm_seq2seq.estado().get("pares", 0):
+                valor = 0.6
+        except Exception:  # noqa: BLE001 - sin memoria, señal neutra
+            valor = 0.5
+        if pasos is None:
+            try:
+                from .stm_lucia import pasos_aprendidos
+
+                pasos = pasos_aprendidos()
+            except Exception:  # noqa: BLE001
+                pasos = 0
+        confianza = min(1.0, max(0.0, float(pasos or 0) / 8.0))
+        return round(0.5 + (valor - 0.5) * confianza, 4)
+
     # -- señales ----------------------------------------------------------
     def analizar(self, ruta: str | Path) -> dict:
-        """Diagnóstico de deuda del archivo (0-100 y métricas)."""
+        """Diagnóstico de deuda del archivo (0-100, métricas y contenido)."""
         try:
-            return diagnostico_deuda(ruta)
+            informe = diagnostico_deuda(ruta)
         except ErrorProyecto as error:
             return {"puntuacion": 100, "lineas": 0, "motivos": [], "error": str(error)}
+        try:
+            informe["contenido"] = Path(str(ruta)).read_text(encoding="utf-8-sig")
+        except OSError:
+            informe["contenido"] = ""
+        return informe
 
     def autoanalisis(self) -> dict:
         """Comprobación de integridad antes de tocar nada."""
@@ -94,20 +154,29 @@ class AgenteRFPRMN:
             return 0.5
         return 0.0
 
-    def utilidad(self, accion: str, analisis: dict | None = None) -> tuple[float, dict]:
-        """Utilidad de una acción (0-1) y las señales que la componen."""
+    def utilidad(self, accion: str, analisis: dict | None = None,
+                 red: float | None = None) -> tuple[float, dict]:
+        """Utilidad de una acción (0-1) y las señales que la componen.
+
+        La quinta señal (``red``) es la predicción de LucIA: cuánto respaldo
+        tiene la acción según lo aprendido. Se puede pasar ya calculada.
+        """
         analisis = analisis or {}
         puntuacion = float(analisis.get("puntuacion", 100))
+        if red is None:
+            red = self.senal_red(str(analisis.get("contenido", "")))
         senales = {
             "deficit": max(0.0, min(1.0, (100.0 - puntuacion) / 100.0)),
             "urgencia": self.urgencia(analisis),
             "exito": self.exito_previo(accion),
             "coste": COSTES.get(accion, 0.5),
+            "red": max(0.0, min(1.0, float(red))),
         }
         valor = (PESOS["deficit"] * senales["deficit"]
                  + PESOS["urgencia"] * senales["urgencia"]
                  + PESOS["exito"] * senales["exito"]
-                 + PESOS["coste"] * (1.0 - senales["coste"]))
+                 + PESOS["coste"] * (1.0 - senales["coste"])
+                 + PESOS["red"] * senales["red"])
         return round(min(1.0, max(0.0, valor)), 4), senales
 
     # -- decisión ---------------------------------------------------------
@@ -121,6 +190,10 @@ class AgenteRFPRMN:
         valor, _ = self.utilidad(accion, analisis)
         if valor < self.umbral:
             return False, valor, f"utilidad {valor} < umbral {self.umbral}"
+        tiempo = self.estimar_tiempo(accion, analisis)
+        if tiempo > self.restante():
+            return False, valor, (f"no cabe en el presupuesto: {int(tiempo)}s "
+                                  f"> {int(self.restante())}s")
         return True, valor, "utilidad suficiente"
 
     def desea_cerrar(self) -> tuple[bool, float, str]:
@@ -246,11 +319,18 @@ class AgenteRFPRMN:
     def ciclo(self, rutas: list[str | Path]) -> dict:
         """Orden lógico: salud → probar → partir/refactorizar/comentar → informe."""
         resultados: list[dict] = []
+        import time as _time
+
+        self._inicio = _time.monotonic()
         self.pendientes = [str(ruta) for ruta in rutas]
         if not self.ejecutar("presupuesto"):
             return {"acciones": resultados, "cerrado": False,
                     "motivo": "presupuesto en rojo"}
+        agotado = False
         for ruta in rutas:
+            if self.restante() <= 0:
+                agotado = True
+                break
             analisis = self.analizar(ruta)
             objetivos = []
             if int(analisis.get("lineas", 0) or 0) > self.limite:
@@ -270,4 +350,5 @@ class AgenteRFPRMN:
         if cerrar:
             self.cerrar_si_procede()
         return {"acciones": resultados, "cerrado": cerrar,
-                "puntuacion_cierre": valor, "motivo": motivo}
+                "puntuacion_cierre": valor, "motivo": motivo,
+                "agotado": agotado, "restante": round(self.restante(), 1)}
