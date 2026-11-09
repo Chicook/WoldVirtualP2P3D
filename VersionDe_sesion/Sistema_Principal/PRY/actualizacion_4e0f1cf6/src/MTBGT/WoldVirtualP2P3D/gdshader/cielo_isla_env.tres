@@ -1,4 +1,4 @@
-[gd_resource type="Environment" load_steps=3 format=3 uid="uid://cvncieloislaenv"]
+[gd_resource type="Environment" format=3 uid="uid://bhucxb1socg1t"]
 
 [ext_resource type="Material" uid="uid://bvycielo01mat" path="res://gdshader/cielo_material.tres" id="1_skymat"]
 

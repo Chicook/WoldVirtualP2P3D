@@ -4,6 +4,7 @@ extends RefCounted
 ## primitivas procedurales, color plano y edición por transformación.
 
 const VoxelSuave := preload("res://gdscrip/VoxelSuave.gd")
+const PrimGeometria := preload("res://gdscrip/PrimGeometria.gd")
 
 const TIPOS := ["cubo", "esfera", "cilindro", "cono", "toro"]
 const NOMBRES := {
@@ -53,6 +54,11 @@ static func crear_malla(tipo: String, params := {}) -> Mesh:
 	if tipo == TIPO_VOXEL:
 		var voxel := VoxelSuave.new()
 		return voxel.generar(params)
+	# Con parámetros de forma (corte, hueco, giro, estrechado, cizalla) la malla
+	# se genera con el motor paramétrico; con parámetros neutros se usa la
+	# primitiva rápida de siempre.
+	if PrimGeometria.es_tipo_soportado(tipo) and not PrimGeometria.params_neutros(params):
+		return PrimGeometria.generar(tipo, params)
 	match tipo:
 		"esfera":
 			var esfera := SphereMesh.new()
@@ -87,12 +93,16 @@ static func crear_malla(tipo: String, params := {}) -> Mesh:
 	return caja
 
 
-static func crear_material(color: Color, vertice := false) -> StandardMaterial3D:
+static func crear_material(color: Color, vertice := false, transparente := false) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
 	mat.roughness = 0.86 if vertice else 0.62
 	mat.metallic = 0.0
 	mat.vertex_color_use_as_albedo = vertice
+	# Un objeto temporal se dibuja translúcido, como el fantasma de Second Life.
+	if transparente:
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.albedo_color.a = 0.5
 	return mat
 
 
@@ -100,6 +110,10 @@ static func crear_forma(tipo: String, params := {}) -> Shape3D:
 	if tipo == TIPO_VOXEL:
 		var malla := crear_malla(TIPO_VOXEL, params)
 		return malla.create_trimesh_shape()
+	# Los prims con forma usan una colisión trimesh ajustada a su malla real.
+	if PrimGeometria.es_tipo_soportado(tipo) and not PrimGeometria.params_neutros(params):
+		var forma_malla := PrimGeometria.generar(tipo, params)
+		return forma_malla.create_trimesh_shape()
 	match tipo:
 		"esfera":
 			var esfera := SphereShape3D.new()
@@ -124,17 +138,31 @@ static func a_dict(datos: Dictionary) -> Dictionary:
 	var rot: Vector3 = datos.get("rot", Vector3.ZERO)
 	var esc: Vector3 = datos.get("escala", Vector3.ONE)
 	var color: Color = datos.get("color", COLORES[0])
+	var tipo := str(datos.get("tipo", "cubo"))
 	var salida := {
 		"id": int(datos.get("id", 0)),
-		"tipo": str(datos.get("tipo", "cubo")),
+		"tipo": tipo,
 		"pos": [pos.x, pos.y, pos.z],
 		"rot": [rot.x, rot.y, rot.z],
 		"escala": [esc.x, esc.y, esc.z],
 		"color": color.to_html(true),
 	}
 	var params = datos.get("params", {})
-	if params is Dictionary and not params.is_empty():
-		salida["params"] = VoxelSuave.normalizar_params(params)
+	if tipo == TIPO_VOXEL:
+		if params is Dictionary and not params.is_empty():
+			salida["params"] = VoxelSuave.normalizar_params(params)
+	elif PrimGeometria.es_tipo_soportado(tipo):
+		# Solo se guarda la forma cuando de verdad difiere de la primitiva.
+		if params is Dictionary and not PrimGeometria.params_neutros(params):
+			salida["params"] = PrimGeometria.normalizar(params)
+	# Propiedades del objeto (estilo pestaña «Object» de SL): solo si no son por defecto.
+	var nombre := str(datos.get("nombre", ""))
+	var phantom := bool(datos.get("phantom", false))
+	var temporal := bool(datos.get("temporal", false))
+	if nombre != "" or phantom or temporal:
+		salida["nombre"] = nombre
+		salida["phantom"] = phantom
+		salida["temporal"] = temporal
 	return salida
 
 
@@ -147,6 +175,9 @@ static func desde_dict(d: Dictionary) -> Dictionary:
 	if tipo == TIPO_VOXEL:
 		var crudo = d.get("params", {})
 		params = VoxelSuave.normalizar_params(crudo if crudo is Dictionary else {})
+	elif PrimGeometria.es_tipo_soportado(tipo):
+		var crudo_forma = d.get("params", {})
+		params = PrimGeometria.normalizar(crudo_forma if crudo_forma is Dictionary else {})
 	return {
 		"id": int(d.get("id", 0)),
 		"tipo": tipo,
@@ -156,6 +187,9 @@ static func desde_dict(d: Dictionary) -> Dictionary:
 				Vector3(0.15, 0.15, 0.15), Vector3(40.0, 40.0, 40.0)),
 		"color": Color.html(str(d.get("color", "#d9d9e0"))),
 		"params": params,
+		"nombre": str(d.get("nombre", "")),
+		"phantom": bool(d.get("phantom", false)),
+		"temporal": bool(d.get("temporal", false)),
 	}
 
 
@@ -165,7 +199,7 @@ static func serializar_isla(prims: Dictionary, siguiente: int, uuid: String) -> 
 		lista.append(a_dict(prims[id]))
 	lista.sort_custom(func(a, b): return int(a["id"]) < int(b["id"]))
 	return JSON.stringify({
-		"version": 1,
+		"version": 2,
 		"siguiente": maxi(1, siguiente),
 		"uuid": uuid,
 		"prims": lista,
@@ -177,7 +211,8 @@ static func deserializar_isla(texto: String) -> Dictionary:
 	var parsed = JSON.parse_string(texto)
 	if not (parsed is Dictionary):
 		return {}
-	if int(parsed.get("version", 0)) != 1:
+	var version := int(parsed.get("version", 0))
+	if version < 1 or version > 2:
 		return {}
 	var prims := {}
 	var mayor := 0

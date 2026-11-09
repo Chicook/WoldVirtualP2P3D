@@ -78,6 +78,46 @@ namespace Visor3D.Seguridad.SMTPLC
         };
 
         /// <summary>
+        /// Marcadores de adaptadores que Windows crea POR SOFTWARE. Están presentes
+        /// en equipos FÍSICOS con Hyper-V, VBS o WSL2 activos y usan la OUI de
+        /// Hyper-V (00:15:5D), así que no pueden contar como prueba de
+        /// virtualización: eran el falso positivo que bloqueaba el registro en
+        /// hardware real.
+        /// El adaptador de un INVITADO de Hyper-V se llama "Microsoft Hyper-V
+        /// Network Adapter" (sin "Virtual Ethernet"), de modo que sí sigue contando.
+        /// </summary>
+        private static readonly string[] MarcadoresAdaptadorNoFisico = new[]
+        {
+            "hyper-v virtual ethernet",     // conmutador virtual del anfitrion
+            "vethernet",                    // "vEthernet (Default Switch)", "vEthernet (WSL)"
+            "virtualbox host-only",
+            "vmware virtual ethernet",      // adaptadores VMnet del anfitrion
+            "tap-windows", "wintun",
+            "wireguard", "tailscale", "zerotier",
+            "pseudo-interface", "teredo", "isatap", "6to4",
+        };
+
+        /// <summary>
+        /// Indica si un adaptador es de los que Windows genera por software
+        /// (conmutadores de Hyper-V/WSL2, host-only de VirtualBox, túneles,
+        /// loopback) y por tanto NO es evidencia de estar dentro de una VM.
+        /// Función pura para poder probarla sin depender del hardware real.
+        /// </summary>
+        public static bool EsAdaptadorNoFisico(string nombre, string descripcion, NetworkInterfaceType tipo)
+        {
+            if (tipo == NetworkInterfaceType.Loopback || tipo == NetworkInterfaceType.Tunnel)
+                return true;
+
+            string texto = $"{nombre} {descripcion}".ToLowerInvariant();
+            foreach (var marcador in MarcadoresAdaptadorNoFisico)
+            {
+                if (texto.Contains(marcador))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Ejecuta una evaluación multicapa para determinar si el entorno actual es una Máquina Virtual.
         /// </summary>
         public static VmDetectionResult Analyze()
@@ -88,7 +128,7 @@ namespace Visor3D.Seguridad.SMTPLC
             var artifacts = new List<string>();
 
             // 1. Análisis WMI: Placa base, Fabricante, Modelo e HypervisorPresent
-            InspectWmiComputerSystem(detectedHypervisors, artifacts, ref score);
+            InspectWmiComputerSystem(detectedHypervisors, artifacts, ref score, out bool hypervisorPresent);
 
             // 2. Análisis WMI: BIOS y Firmware
             InspectWmiBios(detectedHypervisors, artifacts, ref score);
@@ -111,6 +151,16 @@ namespace Visor3D.Seguridad.SMTPLC
             // Normalizar score y armar resultado final
             result.ConfidenceScore = Math.Min(1.0, score);
             result.IsVm = result.ConfidenceScore >= UmbralVm;
+
+            // "Hipervisor de CPU" no es prueba por si sola: Windows enciende
+            // HypervisorPresent con VBS, Credential Guard, Hyper-V o WSL2 en equipos
+            // FISICOS. Solo se anuncia como hipervisor detectado si el veredicto final
+            // es VM, para no nombrar en el mensaje un hipervisor que no existe.
+            if (result.IsVm && hypervisorPresent)
+            {
+                detectedHypervisors.Add("Hipervisor de CPU");
+            }
+
             result.DetectedHypervisors = detectedHypervisors.ToList();
             result.Artifacts = artifacts;
 
@@ -126,8 +176,9 @@ namespace Visor3D.Seguridad.SMTPLC
             return result;
         }
 
-        private static void InspectWmiComputerSystem(HashSet<string> hypervisors, List<string> artifacts, ref double score)
+        private static void InspectWmiComputerSystem(HashSet<string> hypervisors, List<string> artifacts, ref double score, out bool hypervisorPresent)
         {
+            hypervisorPresent = false;
             try
             {
                 using var searcher = new ManagementObjectSearcher("SELECT Manufacturer, Model, HypervisorPresent FROM Win32_ComputerSystem");
@@ -135,21 +186,21 @@ namespace Visor3D.Seguridad.SMTPLC
                 {
                     string manufacturer = obj["Manufacturer"]?.ToString() ?? "";
                     string model = obj["Model"]?.ToString() ?? "";
-                    bool hypervisorPresent = false;
+                    bool hpPresent = false;
 
                     if (obj["HypervisorPresent"] != null && bool.TryParse(obj["HypervisorPresent"].ToString(), out bool hp))
                     {
-                        hypervisorPresent = hp;
+                        hpPresent = hp;
                     }
 
-                    if (hypervisorPresent)
+                    if (hpPresent)
                     {
                         // Windows activa este flag con VBS, Credential Guard, Hyper-V, WSL2 o
-                        // sandboxing en equipos físicos, así que por sí solo no puede superar
+                        // sandboxing en equipos fisicos, así que por sí solo no puede superar
                         // el umbral de VM: sólo corrobora otras señales.
+                        hypervisorPresent = true;
                         score += 0.25;
                         artifacts.Add("Flag HypervisorPresent en Win32_ComputerSystem está ACTIVO (VBS/Hyper-V de Windows; señal corroborante, no concluyente).");
-                        hypervisors.Add("Hipervisor de CPU");
                     }
 
                     string combined = $"{manufacturer} {model}".ToLowerInvariant();
@@ -235,15 +286,27 @@ namespace Visor3D.Seguridad.SMTPLC
         {
             try
             {
+                bool yaPuntuado = false;
                 foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
                 {
+                    // Los conmutadores virtuales de Hyper-V/WSL2 llevan la OUI de
+                    // Hyper-V y estan tambien en equipos fisicos: no cuentan.
+                    if (EsAdaptadorNoFisico(nic.Name, nic.Description, nic.NetworkInterfaceType))
+                        continue;
+
                     string mac = nic.GetPhysicalAddress().ToString();
                     if (mac.Length < 6) continue;
 
                     string formattedOui = $"{mac.Substring(0, 2)}:{mac.Substring(2, 2)}:{mac.Substring(4, 2)}".ToUpperInvariant();
                     if (KnownVmMacOui.TryGetValue(formattedOui, out string? vmName))
                     {
-                        score += 0.50;
+                        // Una sola evidencia por categoria: varias NIC con el mismo
+                        // OUI no deben sumar varias veces y superar el umbral solas.
+                        if (!yaPuntuado)
+                        {
+                            score += 0.50;
+                            yaPuntuado = true;
+                        }
                         artifacts.Add($"Dirección MAC de adaptador ({nic.Name}) coincide con OUI de '{vmName}' ({formattedOui}).");
                         hypervisors.Add(vmName);
                     }
@@ -262,12 +325,19 @@ namespace Visor3D.Seguridad.SMTPLC
                 string driversPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers");
                 if (!Directory.Exists(driversPath)) return;
 
+                bool yaPuntuado = false;
                 foreach (var driver in VmDriverFiles)
                 {
                     string fullPath = Path.Combine(driversPath, driver);
                     if (File.Exists(fullPath))
                     {
-                        score += 0.45;
+                        // Varios controladores de la misma familia no deben sumar
+                        // varias veces: una evidencia por categoria ya basta.
+                        if (!yaPuntuado)
+                        {
+                            score += 0.45;
+                            yaPuntuado = true;
+                        }
                         artifacts.Add($"Controlador de virtualización presente en el sistema: '{driver}'.");
                         hypervisors.Add(IdentifyDriverOwner(driver));
                     }
@@ -284,6 +354,7 @@ namespace Visor3D.Seguridad.SMTPLC
             try
             {
                 var running = Process.GetProcesses();
+                bool yaPuntuado = false;
                 foreach (var proc in running)
                 {
                     try
@@ -291,7 +362,13 @@ namespace Visor3D.Seguridad.SMTPLC
                         string procName = proc.ProcessName.ToLowerInvariant();
                         if (VmProcessNames.Contains(procName))
                         {
-                            score += 0.50;
+                            // Una evidencia por categoria (varios procesos del mismo
+                            // guest tools no deben sumar varias veces).
+                            if (!yaPuntuado)
+                            {
+                                score += 0.50;
+                                yaPuntuado = true;
+                            }
                             artifacts.Add($"Proceso de utilidades de hipervisor en ejecución: '{proc.ProcessName}.exe'.");
                             hypervisors.Add(IdentifyProcessOwner(procName));
                         }

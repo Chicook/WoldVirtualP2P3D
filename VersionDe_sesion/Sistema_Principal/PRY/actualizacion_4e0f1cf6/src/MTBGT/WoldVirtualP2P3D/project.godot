@@ -14,6 +14,10 @@ config/name="WoldVirtualP2P3D"
 run/main_scene="uid://5bh8su08n101"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
+[autoload]
+
+OptimizadorAvatares="*res://gdscrip/OptimizadorAvatares.gd"
+
 [display]
 
 window/stretch/mode="canvas_items"

@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://b8tpman202601" path="res://gdscrip/TeleportManager.gd" id="5_s7nl5"]
 [ext_resource type="Script" uid="uid://datppanel2601" path="res://gdscrip/TeleportPanel.gd" id="6_fl0rh"]
 [ext_resource type="Script" uid="uid://dbpowhi8rrk81" path="res://gdscrip/PlayerSync.gd" id="7_rbb7m"]
-[ext_resource type="Script" path="res://gdscrip/Construccion.gd" id="8_const"]
+[ext_resource type="Script" uid="uid://cxfe6v21sy8cc" path="res://gdscrip/Construccion.gd" id="8_const"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_njqwk"]
 
@@ -54,7 +54,7 @@ transform = Transform3D(1, 0, 0, 0, 8.704111, 0, 0, 0, 1, -0.80192566, -4.460106
 mesh = SubResource("BoxMesh_xrivr")
 
 [node name="USERBASE" parent="." unique_id=1527827746 instance=ExtResource("4_jucsg")]
-transform = Transform3D(0.9999999, 0, 0, 0, 0.9999999, 0, 0, 0, 0.9999999, 1.1641532e-10, 41.952972, 0)
+transform = Transform3D(0.9999999, 0, 0, 0, 0.9999999, 0, 0, 0, 0.9999999, 1.1641532e-10, 40.03992, 0)
 
 [node name="TeleportManager" type="Node3D" parent="." unique_id=910101001]
 script = ExtResource("5_s7nl5")
@@ -65,7 +65,7 @@ script = ExtResource("6_fl0rh")
 [node name="PlayerSync" type="Node3D" parent="." unique_id=910101003]
 script = ExtResource("7_rbb7m")
 
-[node name="Constructor" type="Node3D" parent="."]
+[node name="Constructor" type="Node3D" parent="." unique_id=749078413]
 script = ExtResource("8_const")
 
 [editable path="ISLA3DCHUNK"]

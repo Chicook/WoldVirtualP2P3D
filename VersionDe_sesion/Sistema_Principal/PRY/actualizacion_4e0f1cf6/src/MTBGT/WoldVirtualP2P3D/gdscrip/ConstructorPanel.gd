@@ -21,9 +21,13 @@ signal deshacer_paso_solicitado
 signal rehacer_paso_solicitado
 signal inventario_guardado_solicitado
 signal inventario_mostrado
+signal forma_solicitada(params: Dictionary)
+signal gizmo_modo_cambiada(modo: int)
+signal propiedades_solicitadas(props: Dictionary)
 
 const Prims = preload("res://gdscrip/Prims.gd")
 const VoxelSuave = preload("res://gdscrip/VoxelSuave.gd")
+const PrimGeometria = preload("res://gdscrip/PrimGeometria.gd")
 const HERRAMIENTAS := ["Seleccionar", "Subir", "Bajar", "Suavizar", "Aplanar", "Mover",
 		"Playa", "Rugosidad", "Revertir"]
 const AYUDAS_HERRAMIENTA := [
@@ -64,6 +68,12 @@ var _btn_terreno: Button = null
 var _grupo: ButtonGroup = null
 var _botones_herr: Array[Button] = []
 var _valores := {} # HSlider -> Label con el valor formateado
+var _sliders_forma := {} # clave -> HSlider
+var _etiquetas_forma := {} # clave -> Label
+var _forma_actual := {}
+var _nombre_edit: LineEdit = null
+var _chk_phantom: CheckButton = null
+var _chk_temporal: CheckButton = null
 var _abierto := false
 var _herramienta := 0
 
@@ -359,6 +369,10 @@ func _construir() -> void:
 	caja.add_child(_snap)
 	_slider_snap_paso = _deslizador(caja, "Paso", 0.1, 2.0, 0.1, 0.5, _on_snap_paso)
 
+	_seccion_manipulador(caja)
+	_seccion_forma(caja)
+	_seccion_propiedades(caja)
+
 	_lbl_seleccion = _etiqueta("Selección: —", 12, Color(0.65, 0.9, 1.0))
 	_lbl_seleccion.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	caja.add_child(_lbl_seleccion)
@@ -372,6 +386,140 @@ func _construir() -> void:
 	caja.add_child(btn_salir)
 
 	_construir_inventario()
+
+
+## Sección «FORMA DEL OBJETO»: parámetros de construcción del prim (estilo SL).
+## Los deslizadores solo emiten al terminar el arrastre, para no regenerar la
+## malla en cada fotograma.
+func _seccion_manipulador(caja: VBoxContainer) -> void:
+	caja.add_child(HSeparator.new())
+	caja.add_child(_etiqueta("MANIPULADOR", 14, Color(0.45, 0.9, 0.8)))
+	var fila := HBoxContainer.new()
+	fila.add_theme_constant_override("separation", 6)
+	var grupo := ButtonGroup.new()
+	var nombres := ["Mover", "Girar", "Escalar"]
+	for i in nombres.size():
+		var b := _boton(nombres[i])
+		b.toggle_mode = true
+		b.button_group = grupo
+		b.tooltip_text = "Manipulador de ejes: %s (tecla %d)" % [nombres[i], i + 1]
+		b.pressed.connect(func(): gizmo_modo_cambiada.emit(i))
+		fila.add_child(b)
+		if i == 0:
+			b.button_pressed = true
+	caja.add_child(fila)
+
+
+func _seccion_propiedades(caja: VBoxContainer) -> void:
+	caja.add_child(HSeparator.new())
+	caja.add_child(_etiqueta("PROPIEDADES", 14, Color(0.45, 0.9, 0.8)))
+	var lbl := _etiqueta("Nombre", 12, Color(0.78, 0.86, 0.95))
+	caja.add_child(lbl)
+	_nombre_edit = LineEdit.new()
+	_nombre_edit.placeholder_text = "Nombre del objeto"
+	_nombre_edit.focus_mode = Control.FOCUS_NONE
+	_nombre_edit.text_submitted.connect(func(_t): _emitir_propiedades())
+	_nombre_edit.focus_exited.connect(_emitir_propiedades)
+	caja.add_child(_nombre_edit)
+	_chk_phantom = CheckButton.new()
+	_chk_phantom.text = "Fantasma (atravesable)"
+	_chk_phantom.focus_mode = Control.FOCUS_NONE
+	_chk_phantom.tooltip_text = "El objeto deja de tener colisión: se puede atravesar"
+	_chk_phantom.toggled.connect(func(_v): _emitir_propiedades())
+	caja.add_child(_chk_phantom)
+	_chk_temporal = CheckButton.new()
+	_chk_temporal.text = "Temporal (translúcido)"
+	_chk_temporal.focus_mode = Control.FOCUS_NONE
+	_chk_temporal.tooltip_text = "Marca el objeto como temporal (se dibuja translúcido)"
+	_chk_temporal.toggled.connect(func(_v): _emitir_propiedades())
+	caja.add_child(_chk_temporal)
+
+
+func _emitir_propiedades() -> void:
+	propiedades_solicitadas.emit({
+		"nombre": _nombre_edit.text.strip_edges(),
+		"phantom": _chk_phantom.button_pressed,
+		"temporal": _chk_temporal.button_pressed,
+	})
+
+
+## Refleja las propiedades del objeto seleccionado en los controles.
+func set_props_ui(datos: Dictionary) -> void:
+	if _nombre_edit == null:
+		return
+	_nombre_edit.text = str(datos.get("nombre", ""))
+	_chk_phantom.set_pressed_no_signal(bool(datos.get("phantom", false)))
+	_chk_temporal.set_pressed_no_signal(bool(datos.get("temporal", false)))
+
+
+func _seccion_forma(caja: VBoxContainer) -> void:
+	_forma_actual = PrimGeometria.HUELLAS.duplicate()
+	caja.add_child(HSeparator.new())
+	caja.add_child(_etiqueta("FORMA DEL OBJETO", 14, Color(0.45, 0.9, 0.8)))
+	var pista := _etiqueta("Selecciona un objeto y ajusta su forma. Se aplica al soltar el deslizador.", 11, Color(0.55, 0.65, 0.75))
+	pista.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	caja.add_child(pista)
+	_deslizador_forma(caja, "Corte ini", "corte_ini", 0.0, 1.0, 0.01)
+	_deslizador_forma(caja, "Corte fin", "corte_fin", 0.0, 1.0, 0.01)
+	_deslizador_forma(caja, "Hueco", "hueco", 0.0, 0.95, 0.01)
+	_deslizador_forma(caja, "Giro", "giro", -360.0, 360.0, 15.0)
+	_deslizador_forma(caja, "Giro fin", "giro_fin", -360.0, 360.0, 15.0)
+	_deslizador_forma(caja, "Estrech. X", "estrechado_x", -1.0, 1.0, 0.05)
+	_deslizador_forma(caja, "Estrech. Y", "estrechado_y", -1.0, 1.0, 0.05)
+	_deslizador_forma(caja, "Cizalla X", "cizalla_x", -1.0, 1.0, 0.05)
+	_deslizador_forma(caja, "Cizalla Y", "cizalla_y", -1.0, 1.0, 0.05)
+	var btn := _boton("Restablecer forma")
+	btn.tooltip_text = "Devuelve el objeto a su forma primitiva"
+	btn.pressed.connect(_restablecer_forma)
+	caja.add_child(btn)
+
+
+func _deslizador_forma(padre: VBoxContainer, titulo: String, clave: String,
+		minimo: float, maximo: float, paso: float) -> void:
+	var fila := HBoxContainer.new()
+	fila.add_theme_constant_override("separation", 6)
+	var lbl := _etiqueta(titulo, 12, Color(0.78, 0.86, 0.95))
+	lbl.custom_minimum_size = Vector2(64, 0)
+	fila.add_child(lbl)
+	var slider := HSlider.new()
+	slider.min_value = minimo
+	slider.max_value = maximo
+	slider.step = paso
+	slider.value = float(_forma_actual.get(clave, 0.0))
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.focus_mode = Control.FOCUS_NONE
+	slider.custom_minimum_size = Vector2(140, 22)
+	fila.add_child(slider)
+	var valor := _etiqueta(_formato(slider.value), 11, Color(0.55, 0.85, 1.0))
+	valor.custom_minimum_size = Vector2(46, 0)
+	fila.add_child(valor)
+	slider.value_changed.connect(func(v: float):
+		_forma_actual[clave] = v
+		valor.text = _formato(v))
+	slider.drag_ended.connect(func(cambiado: bool):
+		if cambiado:
+			forma_solicitada.emit(_forma_actual.duplicate()))
+	padre.add_child(fila)
+	_sliders_forma[clave] = slider
+	_etiquetas_forma[clave] = valor
+
+
+## Refleja la forma del objeto seleccionado en los deslizadores.
+func set_forma_ui(params) -> void:
+	if _sliders_forma.is_empty():
+		return
+	var p := PrimGeometria.normalizar(params if params is Dictionary else {})
+	_forma_actual = p.duplicate()
+	for clave in _sliders_forma:
+		var s: HSlider = _sliders_forma[clave]
+		s.set_value_no_signal(float(p[clave]))
+		var l: Label = _etiquetas_forma[clave]
+		l.text = _formato(float(p[clave]))
+
+
+func _restablecer_forma() -> void:
+	set_forma_ui({})
+	forma_solicitada.emit(PrimGeometria.HUELLAS.duplicate())
 
 
 ## Pestaña «Inventario»: todo lo construido en la isla y las copias guardadas.

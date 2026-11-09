@@ -21,9 +21,15 @@ class MotorDefensa:
 
     # ------------------------------------------------------------ capacidades
     def escanear(self, raices: Optional[Iterable[Path]] = None) -> Informe:
-        """Barrido estatico del arbol buscando el patron del dropper."""
+        """Barrido estatico del arbol buscando el patron del dropper.
+
+        Incluye la comprobacion de la allowlist: una entrada obsoleta se
+        denuncia como hallazgo MEDIA. Bloquea el CI (``escanear`` sale 1) pero
+        no el arranque del visor, que solo corta con severidad ALTA.
+        """
         objetivo = [Path(r) for r in raices] if raices is not None else self.raices
         hallazgos = deteccion.escanear_arbol(objetivo)
+        hallazgos.extend(deteccion.hallazgos_allowlist())
         resumen = deteccion.resumen(hallazgos)
         return Informe(hallazgos=hallazgos, resumen={"deteccion": resumen})
 

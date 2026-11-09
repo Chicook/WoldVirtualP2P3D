@@ -74,7 +74,7 @@ namespace Visor3D.Services
         {
             var info = typeof(WebNodoService).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            if (string.IsNullOrWhiteSpace(info)) return "2.7.8";
+            if (string.IsNullOrWhiteSpace(info)) return "2.7.9";
             int plus = info.IndexOf('+');
             return (plus >= 0 ? info.Substring(0, plus) : info).Trim();
         }

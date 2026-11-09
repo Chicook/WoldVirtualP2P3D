@@ -8,6 +8,8 @@ extends Node3D
 
 const Terreno := preload("res://gdscrip/TerrenoEditable.gd")
 const Prims := preload("res://gdscrip/Prims.gd")
+const PrimGeometria := preload("res://gdscrip/PrimGeometria.gd")
+const GizmoManipulador := preload("res://gdscrip/GizmoManipulador.gd")
 const VoxelSuave := preload("res://gdscrip/VoxelSuave.gd")
 const PanelConstruccion := preload("res://gdscrip/ConstructorPanel.gd")
 const Historial := preload("res://gdscrip/construccion/HistorialEdicion.gd")
@@ -54,6 +56,13 @@ var _ultimo_impacto := Vector3.ZERO
 var _impacto_previo := Vector3.ZERO
 var _mira: MeshInstance3D = null
 var _resalte: MeshInstance3D = null
+var _gizmo = null
+var _gizmo_modo := 0
+var _gizmo_eje := -1
+var _gizmo_arrastrando := false
+var _gizmo_inicio := {}
+var _gizmo_antes := {}
+var _gizmo_ultimo_envio := 0
 var _recibiendo := {}
 var _sucio := {}
 var _colision_pendiente := {}
@@ -90,12 +99,19 @@ func _ready() -> void:
 	_panel.color_solicitado.connect(_aplicar_color)
 	_panel.escala_solicitada.connect(_aplicar_escala)
 	_panel.eje_escala_cambiada.connect(_on_eje_escala)
+	_panel.forma_solicitada.connect(_aplicar_forma)
 	_panel.deshacer_solicitado.connect(_deshacer_isla)
 	_panel.deshacer_paso_solicitado.connect(_deshacer_paso)
 	_panel.rehacer_paso_solicitado.connect(_rehacer_paso)
 	_panel.inventario_guardado_solicitado.connect(_guardar_en_inventario)
 	_panel.inventario_mostrado.connect(_refrescar_inventario)
+	_panel.gizmo_modo_cambiada.connect(_on_gizmo_modo)
+	_panel.propiedades_solicitadas.connect(_aplicar_propiedades)
 	_crear_mira()
+	_gizmo = GizmoManipulador.new()
+	_gizmo.name = "GizmoManipulador"
+	_gizmo.visible = false
+	add_child(_gizmo)
 	set_process(true)
 
 
@@ -345,6 +361,8 @@ func _on_herramienta(indice: int) -> void:
 	_herramienta = indice
 	if indice != Herramienta.SELECCION:
 		_seleccionar(null)
+	if _gizmo_arrastrando:
+		_gizmo_soltar()
 
 
 # ------------------------------------------------------------------ entrada
@@ -352,14 +370,21 @@ func _on_herramienta(indice: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _modo:
 		return
+	if event is InputEventMouseMotion and _gizmo_arrastrando:
+		_gizmo_arrastrar()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			if _herramienta == Herramienta.SELECCION:
-				_seleccionar_bajo_raton()
+				if not _gizmo_press():
+					_seleccionar_bajo_raton()
 			else:
 				_iniciar_pincel()
-		elif _pincelando:
-			_terminar_pincel()
+		else:
+			if _gizmo_arrastrando:
+				_gizmo_soltar()
+			elif _pincelando:
+				_terminar_pincel()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -392,6 +417,18 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	if not event.echo:
 		match event.keycode:
+			KEY_1:
+				_on_gizmo_modo(GizmoManipulador.Modo.MOVER)
+				get_viewport().set_input_as_handled()
+				return
+			KEY_2:
+				_on_gizmo_modo(GizmoManipulador.Modo.GIRAR)
+				get_viewport().set_input_as_handled()
+				return
+			KEY_3:
+				_on_gizmo_modo(GizmoManipulador.Modo.ESCALAR)
+				get_viewport().set_input_as_handled()
+				return
 			KEY_ESCAPE:
 				if _seleccionado != null:
 					_seleccionar(null)
@@ -808,13 +845,15 @@ func _instanciar_prim(idx: int, datos: Dictionary) -> void:
 	var malla := MeshInstance3D.new()
 	malla.name = "Malla"
 	malla.mesh = malla_mesh
-	malla.material_override = Prims.crear_material(datos["color"], tipo == Prims.TIPO_VOXEL)
+	malla.material_override = Prims.crear_material(datos["color"], tipo == Prims.TIPO_VOXEL,
+			bool(datos.get("temporal", false)))
 	cuerpo.add_child(malla)
 	var colision := CollisionShape3D.new()
 	colision.name = "Colision"
 	# El voxel ya tiene su malla: reutilizarla evita regenerar el SDF dos veces.
 	colision.shape = (malla_mesh.create_trimesh_shape() if tipo == Prims.TIPO_VOXEL
 			else Prims.crear_forma(tipo, params))
+	colision.disabled = bool(datos.get("phantom", false))
 	cuerpo.add_child(colision)
 	_posicionar_prim(cuerpo, datos)
 	contenedor.add_child(cuerpo)
@@ -1312,6 +1351,321 @@ func _on_eje_escala(_eje: int) -> void:
 		_panel.set_escala_ui(_escala_objetivo(datos))
 
 
+# -------------------------------------------------------------------- forma
+
+## Aplica parámetros de forma (corte, hueco, giro, estrechado, cizalla) al
+## objeto seleccionado. Regenera malla y colisión, lo registra en el historial
+## y lo difunde por red.
+func _aplicar_forma(params: Dictionary) -> void:
+	if _seleccionado == null or _sel_isla < 0 or _sel_id <= 0:
+		_avisar("Selecciona un objeto para cambiar su forma.")
+		return
+	var datos: Dictionary = _prims[_sel_isla].get(_sel_id, {})
+	if datos.is_empty():
+		return
+	if not _puedo_editar(_sel_isla):
+		_avisar("Solo puedes editar objetos de tu propia isla.")
+		return
+	var antes := _instantanea_prims(_sel_isla)
+	datos["params"] = _norm_params(str(datos["tipo"]), params)
+	_prims[_sel_isla][_sel_id] = datos
+	_rehacer_prim(_sel_isla, _sel_id, datos)
+	_enviar_forma(_sel_isla, _sel_id, datos["params"])
+	_registrar_prims(_sel_isla, antes)
+
+
+## Regenera en el nodo existente la malla y la colisión según los parámetros.
+func _rehacer_prim(idx: int, id: int, datos: Dictionary) -> void:
+	var nodo: Node3D = _nodos.get(idx, {}).get(id)
+	if nodo == null or not is_instance_valid(nodo):
+		return
+	var tipo := str(datos["tipo"])
+	var params: Dictionary = datos.get("params", {})
+	var malla := nodo.get_node_or_null("Malla") as MeshInstance3D
+	if malla != null:
+		malla.mesh = Prims.crear_malla(tipo, params)
+		malla.material_override = Prims.crear_material(datos["color"],
+				tipo == Prims.TIPO_VOXEL, bool(datos.get("temporal", false)))
+	var colision := nodo.get_node_or_null("Colision") as CollisionShape3D
+	if colision != null:
+		# El voxel reutiliza su propia malla; el resto pide la forma al catálogo.
+		colision.shape = (malla.mesh.create_trimesh_shape() if malla != null
+				and tipo == Prims.TIPO_VOXEL else Prims.crear_forma(tipo, params))
+		colision.disabled = bool(datos.get("phantom", false))
+	if nodo == _seleccionado:
+		_seleccionar(nodo)
+
+
+## Saneado de parámetros según el tipo de prim.
+func _norm_params(tipo: String, params: Dictionary) -> Dictionary:
+	if tipo == Prims.TIPO_VOXEL:
+		return VoxelSuave.normalizar_params(params)
+	if PrimGeometria.es_tipo_soportado(tipo):
+		return PrimGeometria.normalizar(params)
+	return {}
+
+
+func _enviar_forma(idx: int, id: int, params: Dictionary) -> void:
+	if multiplayer.is_server():
+		_difundir_forma(idx, id, params)
+	else:
+		rpc_id(1, "_solicitar_forma", idx, id, params)
+
+
+func _difundir_forma(idx: int, id: int, params: Dictionary) -> void:
+	if multiplayer.get_peers().is_empty():
+		return
+	rpc("_forma_actualizada", idx, id, params)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _solicitar_forma(idx: int, id: int, params: Dictionary) -> void:
+	if not multiplayer.is_server():
+		return
+	var remitente := multiplayer.get_remote_sender_id()
+	if not _validar_remitente(idx, remitente):
+		_avisar_remoto(remitente, "No puedes editar objetos de otra isla.")
+		return
+	if not _aplicar_forma_red(idx, id, params):
+		return
+	for peer in multiplayer.get_peers():
+		if peer != remitente:
+			rpc_id(peer, "_forma_actualizada", idx, id, params)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _forma_actualizada(idx: int, id: int, params: Dictionary) -> void:
+	_aplicar_forma_red(idx, id, params)
+
+
+func _aplicar_forma_red(idx: int, id: int, params: Dictionary) -> bool:
+	var datos: Dictionary = _prims.get(idx, {}).get(id, {})
+	if datos.is_empty():
+		return false
+	datos["params"] = _norm_params(str(datos["tipo"]), params)
+	_prims[idx][id] = datos
+	_rehacer_prim(idx, id, datos)
+	_sucio[idx] = true
+	return true
+
+
+# ------------------------------------------------------------------ propiedades
+
+## Propiedades del objeto (pestaña «Object» de SL): nombre, fantasma y temporal.
+func _aplicar_propiedades(props: Dictionary) -> void:
+	if _seleccionado == null or _sel_isla < 0 or _sel_id <= 0:
+		_avisar("Selecciona un objeto para cambiar sus propiedades.")
+		return
+	var datos: Dictionary = _prims[_sel_isla].get(_sel_id, {})
+	if datos.is_empty():
+		return
+	if not _puedo_editar(_sel_isla):
+		_avisar("Solo puedes editar objetos de tu propia isla.")
+		return
+	var antes := _instantanea_prims(_sel_isla)
+	datos["nombre"] = str(props.get("nombre", datos.get("nombre", "")))
+	datos["phantom"] = bool(props.get("phantom", datos.get("phantom", false)))
+	datos["temporal"] = bool(props.get("temporal", datos.get("temporal", false)))
+	_prims[_sel_isla][_sel_id] = datos
+	_rehacer_prim(_sel_isla, _sel_id, datos)
+	_enviar_props(_sel_isla, _sel_id, datos)
+	_registrar_prims(_sel_isla, antes)
+	_actualizar_texto_seleccion()
+
+
+func _enviar_props(idx: int, id: int, datos: Dictionary) -> void:
+	if multiplayer.is_server():
+		_difundir_props(idx, id, datos)
+	else:
+		rpc_id(1, "_solicitar_props", idx, id, datos.get("nombre", ""),
+				datos.get("phantom", false), datos.get("temporal", false))
+
+
+func _difundir_props(idx: int, id: int, datos: Dictionary) -> void:
+	if multiplayer.get_peers().is_empty():
+		return
+	rpc("_props_actualizadas", idx, id, datos.get("nombre", ""),
+			datos.get("phantom", false), datos.get("temporal", false))
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _solicitar_props(idx: int, id: int, nombre: String, phantom: bool, temporal: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	var remitente := multiplayer.get_remote_sender_id()
+	if not _validar_remitente(idx, remitente):
+		_avisar_remoto(remitente, "No puedes editar objetos de otra isla.")
+		return
+	if not _aplicar_props_red(idx, id, nombre, phantom, temporal):
+		return
+	for peer in multiplayer.get_peers():
+		if peer != remitente:
+			rpc_id(peer, "_props_actualizadas", idx, id, nombre, phantom, temporal)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _props_actualizadas(idx: int, id: int, nombre: String, phantom: bool, temporal: bool) -> void:
+	_aplicar_props_red(idx, id, nombre, phantom, temporal)
+
+
+func _aplicar_props_red(idx: int, id: int, nombre: String, phantom: bool, temporal: bool) -> bool:
+	var datos: Dictionary = _prims.get(idx, {}).get(id, {})
+	if datos.is_empty():
+		return false
+	datos["nombre"] = nombre
+	datos["phantom"] = phantom
+	datos["temporal"] = temporal
+	_prims[idx][id] = datos
+	_rehacer_prim(idx, id, datos)
+	_sucio[idx] = true
+	return true
+
+
+# -------------------------------------------------------------------- gizmo
+
+func _on_gizmo_modo(m: int) -> void:
+	_gizmo_modo = m
+	if _gizmo != null:
+		_gizmo.set_modo(m)
+	if _gizmo_arrastrando:
+		_gizmo_soltar()
+
+
+func _rayo_camara() -> Array:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return []
+	var p := get_viewport().get_mouse_position()
+	return [cam.project_ray_origin(p), cam.project_ray_normal(p)]
+
+
+func _actualizar_gizmo() -> void:
+	if _gizmo == null:
+		return
+	var activo: bool = _modo and _herramienta == Herramienta.SELECCION \
+			and _seleccionado != null and is_instance_valid(_seleccionado)
+	if not activo:
+		_gizmo.visible = false
+		if _gizmo_arrastrando:
+			_gizmo_soltar()
+		return
+	_gizmo.visible = true
+	_gizmo.global_position = _seleccionado.global_position
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		var d := cam.global_position.distance_to(_gizmo.global_position)
+		var s := clampf(d * 0.13, 0.4, 8.0)
+		_gizmo.scale = Vector3(s, s, s)
+	# Resalte del eje bajo el ratón cuando no se está arrastrando.
+	if not _gizmo_arrastrando and _herramienta == Herramienta.SELECCION:
+		var r := _rayo_camara()
+		if not r.is_empty():
+			var umbral := maxf(0.1, _gizmo.largo_mundo() * 0.17)
+			_gizmo.resaltar(_gizmo.eje_bajo_rayo(r[0], r[1], umbral))
+
+
+func _gizmo_press() -> bool:
+	if _gizmo == null or _seleccionado == null or _sel_id <= 0:
+		return false
+	var r := _rayo_camara()
+	if r.is_empty():
+		return false
+	var umbral := maxf(0.1, _gizmo.largo_mundo() * 0.17)
+	var eje: int = _gizmo.eje_bajo_rayo(r[0], r[1], umbral)
+	if eje < 0:
+		return false
+	var datos: Dictionary = _prims[_sel_isla].get(_sel_id, {})
+	if datos.is_empty():
+		return false
+	_gizmo_eje = eje
+	_gizmo_arrastrando = true
+	_gizmo_antes = _instantanea_prims(_sel_isla)
+	_gizmo_inicio = {"pos": datos["pos"], "rot": datos["rot"], "escala": datos["escala"]}
+	if _gizmo_modo == GizmoManipulador.Modo.GIRAR:
+		var pt = _gizmo.punto_en_plano_giro(eje, r[0], r[1])
+		_gizmo_inicio["angulo0"] = _gizmo.angulo_en_plano(eje, pt) if pt != null else 0.0
+	else:
+		_gizmo_inicio["t0"] = _gizmo.parametro_en_eje(eje, r[0], r[1])
+	return true
+
+
+func _gizmo_arrastrar() -> void:
+	if not _gizmo_arrastrando or _sel_id <= 0:
+		return
+	var r := _rayo_camara()
+	if r.is_empty():
+		return
+	var datos: Dictionary = _prims.get(_sel_isla, {}).get(_sel_id, {})
+	if datos.is_empty():
+		return
+	var base_pos: Vector3 = _gizmo_inicio["pos"]
+	var base_rot: Vector3 = _gizmo_inicio["rot"]
+	var base_esc: Vector3 = _gizmo_inicio["escala"]
+	var pos := base_pos
+	var rot := base_rot
+	var esc := base_esc
+	var eje: int = _gizmo_eje
+	match _gizmo_modo:
+		GizmoManipulador.Modo.MOVER:
+			var t0: float = _gizmo_inicio.get("t0", 0.0)
+			var t1: float = _gizmo.parametro_en_eje(eje, r[0], r[1])
+			pos = base_pos + _gizmo.direccion_eje(eje) * (t1 - t0)
+			pos.x = clampf(pos.x, -RADIO_ISLA, RADIO_ISLA)
+			pos.z = clampf(pos.z, -RADIO_ISLA, RADIO_ISLA)
+			pos.y = clampf(pos.y, 0.0, 140.0)
+		GizmoManipulador.Modo.GIRAR:
+			var pt = _gizmo.punto_en_plano_giro(eje, r[0], r[1])
+			if pt != null:
+				var a0: float = _gizmo_inicio.get("angulo0", 0.0)
+				var grados := rad_to_deg(_gizmo.angulo_en_plano(eje, pt) - a0)
+				if eje == 0:
+					rot.x = base_rot.x + grados
+				elif eje == 1:
+					rot.y = base_rot.y + grados
+				else:
+					rot.z = base_rot.z + grados
+				if _snap:
+					rot = Vector3(snappedf(rot.x, 15.0), snappedf(rot.y, 15.0), snappedf(rot.z, 15.0))
+		GizmoManipulador.Modo.ESCALAR:
+			var te0: float = _gizmo_inicio.get("t0", 0.0)
+			var te1: float = _gizmo.parametro_en_eje(eje, r[0], r[1])
+			var delta := te1 - te0
+			if eje == 0:
+				esc.x = clampf(base_esc.x + delta, 0.15, 40.0)
+			elif eje == 1:
+				esc.y = clampf(base_esc.y + delta, 0.15, 40.0)
+			else:
+				esc.z = clampf(base_esc.z + delta, 0.15, 40.0)
+		_:
+			return
+	datos["pos"] = pos
+	datos["rot"] = rot
+	datos["escala"] = esc
+	_prims[_sel_isla][_sel_id] = datos
+	_aplicar_datos_prim(_sel_isla, _sel_id, datos)
+	var ahora := Time.get_ticks_msec()
+	if ahora - _gizmo_ultimo_envio >= 90:
+		_gizmo_ultimo_envio = ahora
+		_enviar_prim_actual(_sel_isla, _sel_id)
+
+
+func _gizmo_soltar() -> void:
+	if not _gizmo_arrastrando:
+		return
+	_gizmo_arrastrando = false
+	if _sel_id > 0 and _sel_isla >= 0:
+		_registrar_prims(_sel_isla, _gizmo_antes)
+		var datos: Dictionary = _prims.get(_sel_isla, {}).get(_sel_id, {})
+		if not datos.is_empty():
+			_enviar_prim_actual(_sel_isla, _sel_id)
+			_panel.set_escala_ui(_escala_objetivo(datos))
+		if _seleccionado != null and is_instance_valid(_seleccionado):
+			_seleccionar(_seleccionado)
+	_gizmo_eje = -1
+	_gizmo_inicio = {}
+	_gizmo_antes = {}
+
+
 # ---------------------------------------------------------------- seleccion
 
 func _seleccionar_bajo_raton() -> void:
@@ -1340,6 +1694,8 @@ func _seleccionar(nodo) -> void:
 		_sel_isla = -1
 		_sel_id = -1
 		_panel.set_seleccion("Selección: —")
+		_panel.set_forma_ui({})
+		_panel.set_props_ui({})
 		return
 	_seleccionado = nodo
 	_sel_isla = int(nodo.get_meta("isla"))
@@ -1348,6 +1704,8 @@ func _seleccionar(nodo) -> void:
 	_actualizar_texto_seleccion()
 	if not datos.is_empty():
 		_panel.set_escala_ui(_escala_objetivo(datos))
+		_panel.set_forma_ui(datos.get("params", {}))
+		_panel.set_props_ui(datos)
 	_crear_resalte(nodo)
 
 
@@ -1356,9 +1714,13 @@ func _actualizar_texto_seleccion() -> void:
 	if datos.is_empty():
 		_panel.set_seleccion("Selección: —")
 		return
-	_panel.set_seleccion("Selección: %s #%d · %.1f × %.1f × %.1f m" % [
+	var etiqueta := "Selección: %s #%d · %.1f × %.1f × %.1f m" % [
 		Prims.NOMBRES.get(datos["tipo"], datos["tipo"]), _sel_id,
-		datos["escala"].x, datos["escala"].y, datos["escala"].z])
+		datos["escala"].x, datos["escala"].y, datos["escala"].z]
+	var nombre := str(datos.get("nombre", ""))
+	if nombre != "":
+		etiqueta += " · «%s»" % nombre
+	_panel.set_seleccion(etiqueta)
 
 
 func _crear_resalte(nodo: Node3D) -> void:
@@ -1612,6 +1974,7 @@ func _process(delta: float) -> void:
 		if _mira_t >= 0.07:
 			_mira_t = 0.0
 			_actualizar_mira()
+		_actualizar_gizmo()
 		if _pincelando:
 			_pincel_t += delta
 			if _pincel_t >= PASO_PINCEL:
