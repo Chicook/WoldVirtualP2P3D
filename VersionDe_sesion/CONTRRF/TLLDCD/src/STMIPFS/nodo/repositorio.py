@@ -95,7 +95,43 @@ def estado() -> dict:
             "version": version_repo(),
             "peer_id": str((config.get("Identity") or {}).get("PeerID", "")),
             "api": str((config.get("Addresses") or {}).get("API", "")),
-            "gateway": str((config.get("Addresses") or {}).get("Gateway", ""))}
+            "gateway": str((config.get("Addresses") or {}).get("Gateway", "")),
+            "legado": str(rutas.repo_legado()),
+            "legado_presente": (rutas.repo_legado() / "config").is_file(),
+            "aviso": rutas.aviso_conflicto()}
+
+
+def adoptar_legado(forzar: bool = False) -> dict:
+    """Trae la identidad del ``~/.ipfs`` antiguo al repositorio del proyecto.
+
+    Copia solo ``config`` y ``keystore/``: conserva el PeerID y la clave, pero
+    **no** migra bloques ni pins (serían datos grandes y no hacen falta para
+    publicar los pesos). Se niega si el repo del proyecto ya tiene config, salvo
+    ``forzar``.
+    """
+    import shutil
+
+    legado = rutas.repo_legado()
+    destino = rutas.dir_repo()
+    if not (legado / "config").is_file():
+        return {"ok": False, "motivo": f"no hay repositorio antiguo en {legado}"}
+    if (destino / "config").is_file() and not forzar:
+        return {"ok": False, "motivo": "el repositorio del proyecto ya existe",
+                "repo": str(destino)}
+    copiados: list[str] = []
+    try:
+        destino.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(legado / "config", destino / "config")
+        copiados.append("config")
+        if (legado / "keystore").is_dir():
+            shutil.copytree(legado / "keystore", destino / "keystore",
+                            dirs_exist_ok=True)
+            copiados.append("keystore")
+    except OSError as error:
+        return {"ok": False, "motivo": f"copia fallida: {error}",
+                "copiados": copiados}
+    return {"ok": True, "copiados": copiados, "repo": str(destino),
+            "nota": "bloques y pins no se migran"}
 
 
 def asegurar() -> dict:

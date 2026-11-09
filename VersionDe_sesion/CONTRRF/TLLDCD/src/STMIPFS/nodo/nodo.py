@@ -50,6 +50,10 @@ class NodoIPFS:
         self._listo = False
         return daemon.parar()
 
+    def adoptar_legado(self, forzar: bool = False) -> dict:
+        """Trae la identidad del ``~/.ipfs`` antiguo al repo del proyecto."""
+        return repositorio.adoptar_legado(forzar=forzar)
+
     # -- estado -----------------------------------------------------------
     @property
     def listo(self) -> bool:

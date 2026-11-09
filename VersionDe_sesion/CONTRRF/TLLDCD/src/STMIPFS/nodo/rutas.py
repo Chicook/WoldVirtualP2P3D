@@ -65,8 +65,54 @@ def ruta_puntero() -> Path:
     return dir_datos() / "pesos.json"
 
 
+def repo_legado() -> Path:
+    """Repositorio global antiguo (``~/.ipfs``), que ya no se usa."""
+    return Path.home() / ".ipfs"
+
+
+def repos_detectados() -> list[dict]:
+    """Repositorios inicializados que hay en la máquina, con su origen.
+
+    Sirve para avisar de una instalación antigua en ``~/.ipfs`` que se estaría
+    ignorando: el nodo solo usa ``dir_repo()``.
+    """
+    candidatos = [
+        ("entorno", Path(os.environ["IPFS_PATH"]).expanduser()
+         if os.environ.get("IPFS_PATH", "").strip() else None),
+        ("proyecto", DIR_REPO),
+        ("legado", repo_legado()),
+        ("antiguo", DIR_STMIPFS.parent / "STM_CH" / "ipfs_repo"),
+    ]
+    vistos: list[dict] = []
+    for origen, ruta in candidatos:
+        if ruta is None or not (ruta / "config").is_file():
+            continue
+        if any(visto["ruta"] == str(ruta) for visto in vistos):
+            continue
+        vistos.append({"origen": origen, "ruta": str(ruta),
+                       "activo": ruta == dir_repo()})
+    return vistos
+
+
+def hay_conflicto() -> bool:
+    """True si existe un repositorio inicializado distinto del activo."""
+    return any(not repo["activo"] for repo in repos_detectados())
+
+
+def aviso_conflicto() -> str:
+    """Texto de aviso sobre repositorios que se están ignorando (o cadena vacía)."""
+    otros = [repo for repo in repos_detectados() if not repo["activo"]]
+    if not otros:
+        return ""
+    detalle = ", ".join(f"{repo['origen']} ({repo['ruta']})" for repo in otros)
+    return (f"hay repositorios IPFS que no se usan: {detalle}. "
+            f"El nodo trabaja solo con {dir_repo()}; usa adoptar_legado() "
+            "para traer la identidad del antiguo.")
+
+
 def describir() -> dict:
     """Rutas activas y de dónde salen (para diagnósticos)."""
     return {"binario": str(ruta_binario()), "binario_existe": ruta_binario().is_file(),
             "repo": str(dir_repo()), "repo_existe": dir_repo().is_dir(),
-            "datos": str(dir_datos()), "log": str(ruta_log())}
+            "datos": str(dir_datos()), "log": str(ruta_log()),
+            "repos": repos_detectados(), "conflicto": hay_conflicto()}

@@ -32,6 +32,8 @@ def entorno(tmp_path, monkeypatch):
     monkeypatch.setenv("WOLD_IPFS_BIN", str(tmp_path / "ipfs.exe"))
     monkeypatch.setenv("IPFS_PATH", str(tmp_path / "repo"))
     monkeypatch.setenv("WOLD_IPFS_DATOS", str(tmp_path / "datos"))
+    monkeypatch.setattr(rutas, "DIR_REPO", tmp_path / "repo")
+    monkeypatch.setattr(rutas, "DIR_STMIPFS", tmp_path)
     monkeypatch.setattr(cliente, "disponible", lambda *_a, **_k: False)
     monkeypatch.setattr(binario, "descargar",
                         lambda *_a, **_k: {"ok": False,
@@ -175,3 +177,78 @@ def test_estado_del_nodo_incluye_las_piezas(entorno):
     datos = NodoIPFS().estado()
     assert set(datos) == {"rutas", "binario", "repositorio", "daemon", "pesos", "listo"}
     assert datos["listo"] is False
+
+
+# --- Un solo repositorio: el del proyecto ------------------------------------
+
+def test_sin_legado_no_hay_conflicto(entorno, monkeypatch):
+    monkeypatch.setattr(rutas, "repo_legado", lambda: entorno / "legado")
+    assert rutas.repos_detectados() == []
+    assert rutas.hay_conflicto() is False
+    assert rutas.aviso_conflicto() == ""
+
+
+def test_un_repositorio_antiguo_se_detecta_y_avisa(entorno, monkeypatch):
+    legado = entorno / "legado"
+    legado.mkdir()
+    (legado / "config").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(rutas, "repo_legado", lambda: legado)
+    detectados = rutas.repos_detectados()
+    assert [repo["origen"] for repo in detectados] == ["legado"]
+    assert detectados[0]["activo"] is False
+    assert rutas.hay_conflicto() is True
+    assert "no se usan" in rutas.aviso_conflicto()
+
+
+def test_el_repo_activo_no_cuenta_como_conflicto(entorno, monkeypatch):
+    repo = entorno / "repo"
+    repo.mkdir()
+    (repo / "config").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(rutas, "repo_legado", lambda: entorno / "legado")
+    assert rutas.hay_conflicto() is False
+
+
+def test_adoptar_legado_trae_config_y_keystore(entorno, monkeypatch):
+    legado = entorno / "legado"
+    (legado / "keystore").mkdir(parents=True)
+    (legado / "config").write_text('{"Identity": {"PeerID": "12D3KooPrueba"}}',
+                                   encoding="utf-8")
+    (legado / "keystore" / "key_1").write_text("clave", encoding="utf-8")
+    monkeypatch.setattr(rutas, "repo_legado", lambda: legado)
+    resultado = repositorio.adoptar_legado()
+    assert resultado["ok"] is True
+    assert set(resultado["copiados"]) == {"config", "keystore"}
+    assert "12D3KooPrueba" in (entorno / "repo" / "config").read_text(encoding="utf-8")
+    assert (entorno / "repo" / "keystore" / "key_1").is_file()
+
+
+def test_adoptar_legado_no_pisa_un_repo_existente(entorno, monkeypatch):
+    legado = entorno / "legado"
+    legado.mkdir()
+    (legado / "config").write_text("{}", encoding="utf-8")
+    (entorno / "repo").mkdir()
+    (entorno / "repo" / "config").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(rutas, "repo_legado", lambda: legado)
+    resultado = repositorio.adoptar_legado()
+    assert resultado["ok"] is False and "ya existe" in resultado["motivo"]
+
+
+def test_adoptar_legado_sin_legado(entorno, monkeypatch):
+    monkeypatch.setattr(rutas, "repo_legado", lambda: entorno / "nada")
+    assert repositorio.adoptar_legado()["ok"] is False
+
+
+def test_el_launcher_antiguo_usa_el_mismo_repo(entorno):
+    """El launcher antiguo delega en el nodo, aunque haya otra copia del árbol.
+
+    Se carga ``ipfs_utils`` por ruta: en la suite completa ``STMIPFS`` puede
+    resolver al snapshot de PRY, que no tiene ``nodo`` y falsearía la prueba.
+    """
+    import importlib.util
+
+    archivo = SRC / "STMIPFS" / "SBSTMPYIPFS" / "ipfs_utils.py"
+    especificacion = importlib.util.spec_from_file_location("ipfs_utils_tlldcd",
+                                                            archivo)
+    modulo = importlib.util.module_from_spec(especificacion)
+    especificacion.loader.exec_module(modulo)
+    assert modulo.localizar_repo() == rutas.dir_repo()

@@ -1,9 +1,9 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.21.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.22.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`), en el subsistema `LC_STM/seq2seq` y en el nodo IPFS
-`STMIPFS/nodo/`.
+`STMIPFS/nodo/` (instalado en `STMIPFS/ipfs.exe`, Kubo 0.43.1).
 
 Cierra los issues **#80** y **#81**, corrige el fallo de descarga de modelos,
 resuelve las fases R1–R6 de la discusión #84, añade el **puente LucIA ↔ red
@@ -569,8 +569,24 @@ lucia.recuperar()                  # IPFS → .modelos, con SHA-256
 lucia.cerrar()                     # publica y para el daemon
 ```
 
-E2E con la clase: `asegurar` ok, `publicar` con CID
-`bafkreigtzkqe…ifdri`, `cerrar` con daemon parado.
+**Instalado en el proyecto, no en temporales:**
+
+```
+binario: STMIPFS\ipfs.exe · 87,3 MB · ipfs version 0.43.1
+repo:    STMIPFS\.ipfs · versión 18 · PeerID 12D3KooWMrveUwtzt5uY1PDSb8BnHTS6LG2mwjFGxAwCPDSje7Gb
+```
+
+E2E sobre esa instalación real (`LucIAIPFS`): `asegurar` ok con daemon
+arrancado, `publicar` con CID
+`bafkreicnrl2hzxoueyxuw5cnmeupcjuegndw3yrosyucj5mpv775viv4ja` y los dos pesos
+reales (`lucia_rn_31x1.pkl`, `seq2seq.json`), `cerrar` con daemon parado.
+
+**Y un solo repositorio:** el nodo trabaja siempre con `STMIPFS/.ipfs`. Si
+existe el antiguo `~/.ipfs`, `rutas.repos_detectados()` lo detecta y
+`rutas.aviso_conflicto()` lo dice; `NodoIPFS.adoptar_legado()` puede traer su
+`config` y `keystore/` (conserva PeerID) sin migrar bloques ni pins. El
+launcher antiguo (`SBSTMPYIPFS/ipfs_utils.localizar_repo`) y el puente
+`pesos_ipfs` ahora delegan en `nodo.rutas`, así que **no hay dos verdades**.
 
 **Sin red o sin ganas de descargar** el módulo es honesto: si falta el binario
 devuelve `{"ok": false, "paso": "binario"}`; si falta el daemon, `publicar` deja
