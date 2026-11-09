@@ -129,6 +129,7 @@ namespace Visor3D
                 _godotHostMain?.StopGodot();
                 _p2pServicio?.Dispose();
                 DetenerTunelWebNodo();
+                _timerValidacionTunel?.Stop();
             };
 
             // Navegación de bienvenida
@@ -3538,6 +3539,144 @@ namespace Visor3D
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Polling para detectar solicitudes de validación de túnel SSH desde LucIA (Godot).
+        /// Cuando Godot crea tunel_solicitud.json, se muestra diálogo de confirmación al usuario.
+        /// </summary>
+        private void PollSolicitudValidacionTunel()
+        {
+            if (_validacionTunelEnCurso || string.IsNullOrEmpty(_rutaDatosGodot))
+                return;
+
+            var rutaSolicitud = Path.Combine(_rutaDatosGodot, "tunel_solicitud.json");
+            if (!File.Exists(rutaSolicitud))
+                return;
+
+            try
+            {
+                var json = File.ReadAllText(rutaSolicitud);
+                var datos = System.Text.Json.JsonDocument.Parse(json);
+                var accion = datos.RootElement.GetProperty("accion").GetString();
+
+                if (accion == "iniciar_tunel_ssh")
+                {
+                    _validacionTunelEnCurso = true;
+                    File.Delete(rutaSolicitud);  // Eliminar solicitud procesada
+
+                    // Mostrar diálogo de confirmación manual
+                    Dispatcher.Invoke(() => MostrarDialogoConfirmacionTunel());
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PollValidacion] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Muestra diálogo de confirmación al usuario antes de iniciar el túnel SSH.
+        /// </summary>
+        private void MostrarDialogoConfirmacionTunel()
+        {
+            var resultado = MessageBox.Show(
+                "LucIA solicita validar tu conexión mediante un túnel SSH efímero.\n\n" +
+                "Esto permitirá que otros usuarios se conecten a tu sesión de forma segura.\n\n" +
+                "¿Deseas iniciar el túnel SSH?",
+                "Validación de conexión - LucIA",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question
+            );
+
+            if (resultado == MessageBoxResult.Yes)
+            {
+                Task.Run(async () => await IniciarTunelSSHManual());
+            }
+            else
+            {
+                // Usuario rechazó: escribir resultado de error
+                EscribirResultadoValidacion(false, "Usuario rechazó el túnel SSH");
+                _validacionTunelEnCurso = false;
+            }
+        }
+
+        /// <summary>
+        /// Inicia el túnel SSH efímero usando P2PTunnelManager.
+        /// </summary>
+        private async Task IniciarTunelSSHManual()
+        {
+            try
+            {
+                // Iniciar el servicio P2P si no está activo
+                if (_p2pServicio == null)
+                {
+                    _p2pServicio = new RedP2P.RedP2PServicio("LucIA-Host", 7890);
+                    await _p2pServicio.IniciarAsync();
+                }
+
+                // Esperar a que el túnel esté activo
+                var timeout = TimeSpan.FromSeconds(30);
+                var inicio = DateTime.UtcNow;
+
+                while (_p2pServicio.TunnelActivo == false && DateTime.UtcNow - inicio < timeout)
+                {
+                    await Task.Delay(500);
+                }
+
+                if (_p2pServicio.TunnelActivo)
+                {
+                    // Escribir resultado exitoso
+                    EscribirResultadoValidacion(true, "Túnel SSH iniciado correctamente");
+                    Dispatcher.Invoke(() =>
+                    {
+                        TxtEstadoP2P.Text = $"🟢 Túnel SSH activo: {_p2pServicio.UrlPublicaPropia}";
+                    });
+                }
+                else
+                {
+                    EscribirResultadoValidacion(false, "Timeout: no se pudo establecer el túnel SSH");
+                }
+            }
+            catch (Exception ex)
+            {
+                EscribirResultadoValidacion(false, $"Error al iniciar túnel: {ex.Message}");
+            }
+            finally
+            {
+                _validacionTunelEnCurso = false;
+            }
+        }
+
+        /// <summary>
+        /// Escribe el resultado de la validación en validacion_resultado.json para que Godot lo lea.
+        /// </summary>
+        private void EscribirResultadoValidacion(bool exito, string mensaje)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_rutaDatosGodot))
+                    return;
+
+                var rutaResultado = Path.Combine(_rutaDatosGodot, "validacion_resultado.json");
+                var datos = new
+                {
+                    exito = exito,
+                    mensaje = mensaje,
+                    timestamp = DateTime.UtcNow.ToString("o")
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(datos, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+                File.WriteAllText(rutaResultado, json);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[EscribirResultado] Error: {ex.Message}");
+            }
         }
     }
 }
