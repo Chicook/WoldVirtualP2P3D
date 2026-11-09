@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.17.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.18.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -464,6 +464,23 @@ partir        util=0.623  seg=5    ef=0.1246  cabe=True
 comentar      util=0.608  seg=168  ef=0.0036  cabe=False
 refactorizar  util=0.558  seg=280  ef=0.0020  cabe=False
 ```
+
+#### Sexta señal: la nota real del candidato
+
+La señal `red` mira la memoria (¿hay un refactor equivalente?). Cuando el flujo
+ya tiene un candidato, `evaluar_y_aprender` da su nota real, y esa nota entra en
+la decisión de **aplicar** con `nota_de_aprobacion`:
+
+```
+nota = 0.5·red + 0.5·calidad_objetiva     (si la calidad objetiva >= 0.55)
+nota = calidad_objetiva                    (si la calidad es menor: veto)
+nota = 1.0                                 (red ausente o aún aprendiendo)
+```
+
+La **calidad objetiva es condición necesaria**: un refactor que pierde
+definiciones no se aplica aunque la red esté confiada. Debajo de `0.55` se pide
+confirmación; por encima, se aplica y se registra la nota en el `[LUCIA]` del
+flujo.
 
 ### 1.17 Registro e IPFS
 

@@ -51,6 +51,8 @@ SALIDA = 1
 MIN_PASOS = 8
 #: Puntuación mínima para aceptar sin preguntar una vez entrenada.
 UMBRAL = 0.55
+#: Nota mínima para aplicar sin preguntar (red + calidad objetiva).
+UMBRAL_APLICAR = 0.55
 #: Pesos persistentes de la red de LucIA (uno por arquitectura del vector).
 RUTA_RED = DIR_DATOS / f"lucia_rn_{ENTRADA}x{SALIDA}.pkl"
 #: Carpeta donde se archiva el README de cada expediente procesado.
@@ -339,6 +341,26 @@ def evaluar_y_aprender(expediente: Expediente, candidato: str,
             "pasos": pasos_previos,
             "motivo": f"puntuación {puntuacion:.2f} (umbral {UMBRAL:.2f}); "
                       f"calidad objetiva {nota:.2f}"}
+
+
+def nota_de_aprobacion(veredicto: dict, original: str, candidato: str) -> float:
+    """Sexta señal: mezcla la nota de la red con la calidad objetiva (0-1).
+
+    Si la red no está o aún está aprendiendo, devuelve ``1.0`` (no bloquea):
+    sin muestras suficientes su opinión no debe frenar el flujo. Con la red ya
+    entrenada, ``0.5·red + 0.5·calidad``, pero la **calidad objetiva es condición
+    necesaria**: si un refactor pierde definiciones o no documenta, ninguna
+    confianza de la red lo salva (devuelve la calidad y el flujo preguntará).
+    """
+    if not veredicto.get("disponible"):
+        return 1.0
+    if int(veredicto.get("pasos", 0)) < MIN_PASOS:
+        return 1.0
+    calidad_objetiva = float(calidad(original, candidato))
+    if calidad_objetiva < UMBRAL:
+        return round(calidad_objetiva, 4)
+    red = float(veredicto.get("puntuacion", 0.0))
+    return round(0.5 * red + 0.5 * calidad_objetiva, 4)
 
 
 # --- Estado ------------------------------------------------------------------

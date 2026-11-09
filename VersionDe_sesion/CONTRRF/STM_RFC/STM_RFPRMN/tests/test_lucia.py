@@ -81,6 +81,52 @@ def test_el_contexto_es_compacto_y_menciona_la_deuda(tmp_path):
     assert len(contexto) < 900
 
 
+# --- Sexta señal: nota de aprobación (red + calidad objetiva) ----------------
+
+def test_sin_red_la_nota_no_bloquea():
+    from STM_RFPRMN_stmDL.stm_lucia import nota_de_aprobacion
+
+    veredicto = {"disponible": False, "aceptado": True, "puntuacion": 0.0, "pasos": 0}
+    assert nota_de_aprobacion(veredicto, "x = 1\n", "x = 1\n") == 1.0
+
+
+def test_con_la_red_aprendiendo_no_bloquea():
+    from STM_RFPRMN_stmDL.stm_lucia import MIN_PASOS, nota_de_aprobacion
+
+    veredicto = {"disponible": True, "puntuacion": 0.1, "pasos": MIN_PASOS - 1}
+    assert nota_de_aprobacion(veredicto, "x = 1\n", "x = 1\n") == 1.0
+
+
+def test_con_la_red_entrenada_mezcla_red_y_calidad():
+    from STM_RFPRMN_stmDL.stm_lucia import nota_de_aprobacion
+
+    original = "def sumar(a, b):\n    return a + b\n"
+    bueno = 'def sumar(a, b):\n    """Suma."""\n    return a + b\n'
+    nota = nota_de_aprobacion({"disponible": True, "puntuacion": 0.9,
+                               "pasos": 8}, original, bueno)
+    assert 0.7 <= nota <= 1.0
+
+
+def test_la_red_no_salva_un_refactor_objetivamente_malo():
+    from STM_RFPRMN_stmDL.stm_lucia import UMBRAL_APLICAR, nota_de_aprobacion
+
+    original = "def sumar(a, b):\n    return a + b\n"
+    malo = "def otra():\n    return 0\n"
+    nota = nota_de_aprobacion({"disponible": True, "puntuacion": 0.95,
+                               "pasos": 8}, original, malo)
+    assert nota < UMBRAL_APLICAR, "una red confiada no debe tapar un refactor malo"
+
+
+def test_la_calidad_no_salva_un_rechazo_claro_de_la_red():
+    from STM_RFPRMN_stmDL.stm_lucia import UMBRAL_APLICAR, nota_de_aprobacion
+
+    original = "def sumar(a, b):\n    return a + b\n"
+    bueno = 'def sumar(a, b):\n    """Suma."""\n    return a + b\n'
+    nota = nota_de_aprobacion({"disponible": True, "puntuacion": 0.0,
+                               "pasos": 8}, original, bueno)
+    assert nota < UMBRAL_APLICAR
+
+
 # --- Vector de entrada -------------------------------------------------------
 
 def test_el_vector_tiene_la_dimension_de_la_red(tmp_path):

@@ -19,9 +19,8 @@ from .stm_base import (
 )
 from .stm_fs import escribir_texto_atomico
 from .stm_fragmentos import calcular_rangos, quitar_solape
-from .stm_lucia import (
-    evaluar_y_aprender, guardar_expediente, preparar as preparar_expediente,
-)
+from .stm_lucia import (UMBRAL_APLICAR, evaluar_y_aprender, guardar_expediente,
+                        nota_de_aprobacion, preparar as preparar_expediente)
 from .stm_gestion import (
     comando_crear_carpeta, comando_crear_archivo, comando_refactorizar,
     actualizar, comando_enviar,
@@ -339,11 +338,11 @@ class FlujoRefactorLucIA:
             # LucIA puntúa con su red (aprende del par expediente → calidad).
             if self.expediente is not None:
                 veredicto = evaluar_y_aprender(self.expediente, nuevo, self.contenido)
-                _imprimir_seguro(f"[LUCIA] {veredicto['motivo']}")
-                if veredicto["disponible"] and not veredicto["aceptado"]:
+                nota = nota_de_aprobacion(veredicto, self.contenido, nuevo)
+                _imprimir_seguro(f"[LUCIA] {veredicto['motivo']} | nota {nota:.2f}")
+                if nota < UMBRAL_APLICAR and self.confirmar_parcial:
                     advertir("LucIA no valida el resultado con su red neuronal.")
-                    if self.confirmar_parcial and not pedir_confirmacion(
-                            "¿Se aplica igualmente?"):
+                    if not pedir_confirmacion("¿Se aplica igualmente?"):
                         return False
             # Éxito: escritura atómica, nota de LucIA, registro y limpieza final.
             if not self._aplicar(nuevo):

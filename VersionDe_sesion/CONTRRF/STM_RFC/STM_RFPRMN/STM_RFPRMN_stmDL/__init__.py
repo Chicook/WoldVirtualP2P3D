@@ -21,7 +21,7 @@ import importlib
 from pathlib import Path
 from typing import Any
 
-__version__ = "2.17.0"
+__version__ = "2.18.0"
 
 _MODULOS = ("stm_base", "stm_rutas", "stm_fs", "stm_fragmentos", "stm_gestion",
             "stm_analisis", "stm_lucia", "stm_embeddings", "stm_calidad",
