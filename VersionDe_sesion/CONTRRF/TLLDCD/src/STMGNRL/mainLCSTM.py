@@ -600,6 +600,98 @@ class LucIAPlanificador:
         return bool(self._agente.cerrar_si_procede())
 
 
+class LucIAIPFS:
+    """Conecta el nodo IPFS con los pesos de LucIA y su maquina de comandos.
+
+    El nodo vive en ``STMIPFS/nodo`` (binario, repositorio, daemon, cliente y
+    pesos). Esta clase pone encima lo que necesita LucIA:
+
+    - ``asegurar()``: deja el nodo listo (descarga Kubo si falta, inicializa el
+      repositorio y arranca el daemon) y, si no hay pesos locales, los recupera.
+    - ``publicar()``: empaqueta los pesos (red, agente, seq2seq) y los sube.
+    - ``recuperar()``: los baja, verifica el SHA-256 y los deja en ``.modelos``.
+    - ``cerrar()``: publica y para el daemon.
+    """
+
+    #: Carpeta de pesos que produce STM_RFPRMN.
+    DIR_PESOS: Final[Path] = (CONTRRF_DIR / "STM_RFC" / "STM_RFPRMN"
+                              / ".modelos")
+    #: Archivos de estado que viajan en el paquete.
+    PATRONES: Final[Tuple[str, ...]] = ("lucia_rn_*.pkl", "agente.json",
+                                        "seq2seq.json")
+
+    def __init__(self, arrancar: bool = False) -> None:
+        self._nodo = None
+        try:
+            from STMIPFS.nodo import NodoIPFS
+
+            self._nodo = NodoIPFS(descargar=True)
+        except Exception as err:  # noqa: BLE001 - IPFS es opcional
+            logger.debug("Nodo IPFS no disponible: %s", err)
+        if arrancar:
+            self.asegurar()
+
+    @property
+    def disponible(self) -> bool:
+        """True si el paquete del nodo se pudo cargar."""
+        return self._nodo is not None
+
+    def asegurar(self) -> Dict[str, Any]:
+        """Deja el nodo listo y recupera los pesos si faltan localmente."""
+        if not self._nodo:
+            return {"ok": False, "motivo": "nodo IPFS no disponible"}
+        resultado = dict(self._nodo.asegurar())
+        if resultado.get("ok") and not self.archivos():
+            recuperado = self.recuperar()
+            resultado["pesos_recuperados"] = recuperado.get("archivos", [])
+        return resultado
+
+    def estado(self) -> Dict[str, Any]:
+        """Estado del nodo más la carpeta de pesos de LucIA."""
+        if not self._nodo:
+            return {"disponible": False, "pesos": []}
+        datos = dict(self._nodo.estado())
+        datos["disponible"] = True
+        datos["pesos"] = [archivo.name for archivo in self.archivos()]
+        return datos
+
+    def archivos(self) -> List[Path]:
+        """Archivos de pesos que existen ahora mismo."""
+        if not self.DIR_PESOS.is_dir():
+            return []
+        encontrados: List[Path] = []
+        for patron in self.PATRONES:
+            encontrados += sorted(self.DIR_PESOS.glob(patron))
+        return encontrados
+
+    def publicar(self) -> Dict[str, Any]:
+        """Sube el paquete de pesos al nodo."""
+        if not self._nodo:
+            return {"ok": False, "motivo": "nodo IPFS no disponible"}
+        archivos = self.archivos()
+        if not archivos:
+            return {"ok": False, "motivo": "no hay pesos en .modelos"}
+        datos = dict(self._nodo.publicar(archivos))
+        if datos.get("ok"):
+            logger.info("Pesos publicados en IPFS: %s", datos.get("cid"))
+        return datos
+
+    def recuperar(self) -> Dict[str, Any]:
+        """Baja el paquete y lo restaura en la carpeta de pesos de LucIA."""
+        if not self._nodo:
+            return {"ok": False, "motivo": "nodo IPFS no disponible"}
+        return dict(self._nodo.recuperar(destino=self.DIR_PESOS))
+
+    def cerrar(self) -> Dict[str, Any]:
+        """Publica los pesos y para el daemon."""
+        if not self._nodo:
+            return {"ok": False, "motivo": "nodo IPFS no disponible"}
+        publicacion = self.publicar()
+        parada = self._nodo.parar()
+        return {"ok": bool(publicacion.get("ok")), "publicacion": publicacion,
+                "daemon": parada}
+
+
 def obtener_diagnostico_orquestador() -> Dict[str, Any]:
     """Genera un reporte estructural para validar la salud de todo el stack."""
     cf = get_cliente_iafree() if get_cliente_iafree else None

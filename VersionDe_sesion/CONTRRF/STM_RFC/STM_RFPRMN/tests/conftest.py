@@ -19,6 +19,7 @@ import os
 import shutil
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 import pytest
@@ -38,6 +39,11 @@ def tmp_path(request):
     nombre = "".join(c if c.isalnum() else "_" for c in request.node.name)[:40]
     carpeta = RAIZ_TEMPORALES / f"{nombre}-{next(_CONTADOR)}"
     shutil.rmtree(carpeta, ignore_errors=True)
+    if carpeta.exists():
+        # Una ejecución anterior dejó algo que no se pudo borrar (un binario en
+        # uso, por ejemplo): se usa un nombre único en vez de fallar.
+        carpeta = RAIZ_TEMPORALES / f"{nombre}-{uuid.uuid4().hex[:8]}"
+        shutil.rmtree(carpeta, ignore_errors=True)
     carpeta.mkdir(parents=True)
     yield carpeta
     shutil.rmtree(carpeta, ignore_errors=True)

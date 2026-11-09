@@ -1,8 +1,9 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.20.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.21.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
-`STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
+`STM_RFPRMN_stmDL/`), en el subsistema `LC_STM/seq2seq` y en el nodo IPFS
+`STMIPFS/nodo/`.
 
 Cierra los issues **#80** y **#81**, corrige el fallo de descarga de modelos,
 resuelve las fases R1–R6 de la discusión #84, añade el **puente LucIA ↔ red
@@ -529,7 +530,53 @@ es el respaldo entre máquinas, no el único almacén.
 (`QmLocal…` con `ok=False`) ya **no** cuenta como subida; el flujo baja a la
 API, al binario y, si no hay nada, a un CID local honesto.
 
-### 1.18 Registro de símbolos por AST (D4) y consola
+### 1.19 Nodo IPFS por código (`STMIPFS/nodo`)
+
+El proyecto tenía Kubo en scripts (`.bat`) y en clases grandes, pero **el nodo
+no existía**: sin binario, sin repositorio del proyecto y sin daemon. Ahora se
+activa todo desde Python, sin `.bat`, en módulos pequeños:
+
+| Módulo | Responsabilidad |
+|---|---|
+| `rutas.py` | una fuente de rutas (binario, repo, datos) con `WOLD_IPFS_BIN`, `IPFS_PATH`, `WOLD_IPFS_DATOS` |
+| `binario.py` | localizar Kubo y **descargarlo verificado** (zip oficial, SHA-256 opcional) |
+| `repositorio.py` | `ipfs init --profile=server`, config, versión y limpieza de bloqueos |
+| `daemon.py` | arrancar/parar, espera del API, PID y log; sin `.bat` |
+| `cliente.py` | API v0 (id, add, cat, pin, repo/stat, swarm) solo con stdlib |
+| `pesos.py` | empaquetar, publicar con pin, recuperar y **verificar SHA-256** |
+| `nodo.py` | fachada `NodoIPFS`: `asegurar()`, `publicar()`, `recuperar()`, `parar()` |
+
+**Verificado de verdad** en esta máquina, con Kubo 0.43.1 descargado por el
+propio módulo:
+
+```
+instalar 0.43.1 -> {"ok": true, "version": "ipfs version 0.43.1"}
+asegurar nodo   -> {"ok": true, "arrancado": true, "api": "http://127.0.0.1:5001"}
+publicar        -> {"ok": true, "cid": "bafkreif7ntpd2pevtaws65iocpooswm3g34qf7iq3qi26arawotp45uqry"}
+recuperar       -> {"ok": true, "archivos": ["agente.json", "lucia_rn_31x1.pkl"]}
+restaurado pkl  -> b'\x80\x04pesos-de-prueba'   (binario intacto)
+parar           -> {"ok": true, "detenido": true}
+```
+
+Y la clase que lo conecta todo, en `mainLCSTM.py`:
+
+```python
+from STMGNRL.mainLCSTM import LucIAIPFS
+
+lucia = LucIAIPFS(arrancar=True)   # binario + repo + daemon + recuperar si falta
+lucia.publicar()                   # pesos de .modelos → IPFS (CID real)
+lucia.recuperar()                  # IPFS → .modelos, con SHA-256
+lucia.cerrar()                     # publica y para el daemon
+```
+
+E2E con la clase: `asegurar` ok, `publicar` con CID
+`bafkreigtzkqe…ifdri`, `cerrar` con daemon parado.
+
+**Sin red o sin ganas de descargar** el módulo es honesto: si falta el binario
+devuelve `{"ok": false, "paso": "binario"}`; si falta el daemon, `publicar` deja
+el paquete en disco y **no inventa CID**.
+
+### 1.20 Registro de símbolos por AST (D4) y consola
 
 `__init__.py` descubre los símbolos leyendo el árbol sintáctico de cada
 submódulo: no hay listas a mano que se desincronicen. Se registran funciones y
