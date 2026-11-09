@@ -337,41 +337,44 @@ python RFPRMN.py            # y dentro:  comentar archivo
 
 ### 1.14 Informe de código (`informacion codigo`)
 
-Genera un `.md` en `TLLDCD/src/STM_DOC` con la ficha del archivo, su deuda y la
-hoja de ruta de la refactorización.
+El archivo va a una **IA de código** y **LucIA escribe el `.md`** con sus
+propias palabras, sin dejar detalles por el camino. El documento se guarda en
+`TLLDCD/src/STM_DOC/informe_<nombre>.md`.
 
 ```bash
 python RFPRMN.py            # y dentro:  informacion codigo
-# Archivo del que sacar el informe: …\ENRN\__init__.py
-# ¿Incluir también el diagnóstico de LucIA (modelo local)? (s/n): n
-✔ Informe escrito: …\TLLDCD\src\STM_DOC\informe___init__.md
+# Archivo del que sacar el informe: …\utilidades2.py
+# ¿Enviar el código a la IA para que redacte el informe? (s/n): s
+✔ Informe escrito: …\STM_DOC\informe_utilidades2.md
 ```
 
-Contenido real generado para `ENRN/__init__.py`:
+Cadena completa:
+
+1. El código se parte en **unidades completas** (clases y `def`), nunca a mitad
+   de una definición, y cada bloque cabe en el contexto del modelo.
+2. La **IA de código** analiza cada bloque y devuelve Markdown detallado.
+3. **LucIA lo reescribe** sin resumir. Se comprueba que no se pierda ningún
+   detalle (nombres entre comillas y cifras); si falta algo se reintenta con la
+   lista y, si aun así falta, se añade al final en
+   `## Detalles del análisis original`.
+4. El documento se completa con **datos objetivos** calculados aquí (métricas,
+   estructura, deuda y hoja de ruta), de modo que **nunca queda incompleto**
+   aunque el modelo omita algo.
+5. Si no hay IA disponible, el informe sale igual con los datos objetivos.
+
+Fragmento real (54 líneas, con `codellama:7b`):
 
 ```markdown
-- **Tamaño**: 390 líneas · 47 funciones · 3 clases
-- **Puntuación de deuda**: 42/100 (crítico)
+# Informe de código · utilidades2.py
 
-## Deuda técnica
-- 35 funciones sin docstring (-20)
-- 12 líneas de más de 100 caracteres (-4)
-- complejidad alta (39 decisiones) (-10)
-- 71 avisos de ruff (-24)
+> Redactado por LucIA a partir del análisis de la IA de código (`codellama:7b`).
 
-## Hoja de ruta
-1. **Documentar 35 funciones** con `comentar archivo` (solo añade comentarios).
-2. **Dividir la lógica más compleja** (39 puntos de decisión)…
-3. **Reformatear 12 líneas largas** (más de 100 caracteres).
-4. **Pasar lint**: 71 avisos de ruff.
-5. **Línea base**: ejecutar pruebas y `test` antes de tocar nada…
-6. **Cambios pequeños y reversibles**, uno por responsabilidad.
+Este archivo es una biblioteca de funciones de utilidades… La función
+`area_circulo` toma un parámetro `radio` y devuelve el área…
+
+## Datos objetivos
+…## Estructura  ## Deuda técnica  ## Hoja de ruta
 ```
-
-La hoja de ruta **no es genérica**: se construye a partir de la deuda real
-(partición si pasa de 450, docstrings, `except` genéricos, argumentos mutables,
-complejidad, líneas largas, TODO y lint), ordenada por gravedad, y cada paso
-indica el comando que lo resuelve.
 
 ### 1.15 Registro e IPFS
 

@@ -170,3 +170,89 @@ def test_el_comando_avisa_si_no_hay_ruta(monkeypatch):
 def test_construir_falla_si_no_se_puede_leer(tmp_path):
     with pytest.raises(ErrorProyecto):
         stm_informe.construir_informe(tmp_path / "no-existe.py")
+
+
+# --- Envío a la IA de código, sin cortar -------------------------------------
+
+def test_trocear_codigo_no_parte_unidades(tmp_path):
+    codigo = _grande()
+    bloques = stm_informe.trocear_codigo(codigo, maximo=1500)
+    assert len(bloques) > 1
+    for bloque in bloques:
+        assert len(bloque) <= 1500 + 200
+    # ninguna función se queda partida entre bloques
+    enteras = sum(bloque.count("def funcion_") for bloque in bloques)
+    assert enteras == 24
+
+
+def test_trocear_codigo_conserva_todo(tmp_path):
+    codigo = _grande()
+    bloques = stm_informe.trocear_codigo(codigo, maximo=1500)
+    for indice in range(24):
+        assert any(f"def funcion_{indice}(" in bloque for bloque in bloques)
+
+
+def test_analizar_con_ia_une_los_bloques(tmp_path, monkeypatch):
+    archivo = tmp_path / "grande.py"
+    archivo.write_text(_grande(), encoding="utf-8")
+    monkeypatch.setattr(stm_informe, "_endpoint", lambda: "http://x")
+    llamadas: list[str] = []
+
+    def _pedir(_sistema, contenido, _modelo, _endpoint, num_predict=900):
+        llamadas.append(contenido)
+        return f"Analisis del bloque {len(llamadas)}"
+
+    monkeypatch.setattr(stm_informe, "_pedir", _pedir)
+    texto = stm_informe.analizar_con_ia(_grande(), archivo, "fake")
+    assert texto.count("Analisis del bloque") == len(llamadas)
+    assert all("def funcion_" in contenido for contenido in llamadas)
+
+
+def test_faltantes_detecta_lo_que_falta():
+    original = "La clase `Neurona` tiene 390 líneas y 35 funciones."
+    assert stm_informe.faltantes(original, "La clase tiene líneas.") != []
+    assert stm_informe.faltantes(original, original) == []
+
+
+def test_reescribir_reintenta_si_faltan_detalles(monkeypatch):
+    monkeypatch.setattr(stm_informe, "_endpoint", lambda: "http://x")
+    original = "La clase `Neurona` tiene 390 líneas."
+    respuestas = iter(["La clase tiene líneas.", "La clase `Neurona` tiene 390 líneas."])
+    monkeypatch.setattr(stm_informe, "_pedir",
+                        lambda *_a, **_k: next(respuestas))
+    resultado = stm_informe.reescribir_con_lucia(original, "fake")
+    assert resultado["completo"] is True
+    assert "390" in resultado["texto"]
+
+
+def test_reescribir_anota_lo_que_sigue_faltando(monkeypatch):
+    monkeypatch.setattr(stm_informe, "_endpoint", lambda: "http://x")
+    monkeypatch.setattr(stm_informe, "_pedir",
+                        lambda *_a, **_k: "texto sin datos")
+    resultado = stm_informe.reescribir_con_lucia(
+        "La clase `Neurona` tiene 390 líneas.", "fake")
+    assert resultado["completo"] is False
+    assert resultado["faltantes"]
+
+
+def test_el_informe_con_ia_lleva_la_redaccion_y_los_datos(tmp_path, destino, monkeypatch):
+    archivo = tmp_path / "limpio.py"
+    archivo.write_text(LIMPIO, encoding="utf-8")
+    monkeypatch.setattr(stm_informe, "_modelo_codigo", lambda: "fake")
+    monkeypatch.setattr(stm_informe, "_endpoint", lambda: "http://x")
+    monkeypatch.setattr(stm_informe, "_pedir",
+                        lambda *_a, **_k: "Lucia: el modulo esta claro y sano.")
+    salida = stm_informe.generar_informe(archivo, con_ia=True)
+    texto = salida.read_text(encoding="utf-8")
+    assert "Redactado por LucIA" in texto
+    assert "el modulo esta claro" in texto
+    assert "## Datos objetivos" in texto
+
+
+def test_sin_ia_el_informe_sale_completo_igual(tmp_path, destino, monkeypatch):
+    archivo = tmp_path / "limpio.py"
+    archivo.write_text(LIMPIO, encoding="utf-8")
+    monkeypatch.setattr(stm_informe, "_modelo_codigo", lambda: "")
+    salida = stm_informe.generar_informe(archivo, con_ia=True)
+    texto = salida.read_text(encoding="utf-8")
+    assert "## Hoja de ruta" in texto and "## Deuda técnica" in texto
