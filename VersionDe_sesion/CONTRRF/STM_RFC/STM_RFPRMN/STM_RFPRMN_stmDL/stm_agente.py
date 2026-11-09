@@ -27,6 +27,7 @@ from .stm_entrenamiento import convertir_si_existe
 from .stm_informe import generar_informe
 from .stm_particion import partir_archivo
 from .stm_comentarios import comentar_archivo
+from .stm_pesos_ipfs import cargar_historial, guardar_historial, sincronizar_al_iniciar, subir
 from .test import diagnostico_deuda
 
 #: Acciones que el agente sabe lanzar.
@@ -56,12 +57,14 @@ class AgenteRFPRMN:
         self.limite = int(limite)
         self.presupuesto_tiempo = float(presupuesto_segundos)
         self._inicio = 0.0
-        self.historial: dict[str, list[float]] = {}
+        self.historial: dict[str, list[float]] = cargar_historial()
         self.ultima_calidad: float | None = None
         self.registro: list[dict] = []
         self.pendientes: list[str] = []
         self._en_flujo = False
         self._decision: bool = False
+        # Al iniciar: si no hay pesos locales, se intentan traer de IPFS.
+        sincronizar_al_iniciar()
 
     # -- tiempo -----------------------------------------------------------
     def restante(self) -> float:
@@ -322,9 +325,16 @@ class AgenteRFPRMN:
         return resultado
 
     def _cerrar(self) -> bool:
-        """Cierra la máquina de comandos (y reparte lo que sobre en CONTRUCCION)."""
+        """Cierra la máquina: guarda el historial, sube los pesos y reparte."""
         from . import repartir_carpeta
 
+        guardar_historial(self.historial)
+        recibo = subir()
+        if recibo.get("ok"):
+            informar(f"Pesos en IPFS: {recibo.get('cid')} "
+                     f"({', '.join(recibo.get('archivos', []))}).")
+        else:
+            advertir(f"Los pesos no se subieron a IPFS ({recibo.get('motivo')}).")
         repartir_carpeta()
         informar("LucIA cierra su máquina de comandos.")
         return True

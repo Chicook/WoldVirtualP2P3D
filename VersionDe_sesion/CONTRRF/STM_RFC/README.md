@@ -1,6 +1,6 @@
 # STM_RFC · README del sistema RFPRMN
 
-Fecha: 2026-11-09 · **v2.19.0**. Todo lo descrito está implementado y verificado
+Fecha: 2026-11-09 · **v2.20.0**. Todo lo descrito está implementado y verificado
 por ejecución en `STM_RFPRMN/` (fachada `RFPRMN.py` + paquete
 `STM_RFPRMN_stmDL/`) y en el subsistema `LC_STM/seq2seq`.
 
@@ -41,7 +41,8 @@ la **retirada automática** del modelo que no pasa los filtros.
 | `stm_particion.py` | 350 | Partición en módulos ≤450 y reparto en CONTRUCCION |
 | `stm_informe.py` | 369 | Comando `informacion codigo` (informe .md + hoja de ruta) |
 | `stm_entrenamiento.py` | 133 | Del informe `.md` a matriz y pesos neuronales |
-| `stm_agente.py` | 354 | LucIA ejecuta los comandos por utilidad (sin humano) |
+| `stm_agente.py` | 378 | LucIA ejecuta los comandos por utilidad (sin humano) |
+| `stm_pesos_ipfs.py` | 181 | **Nuevo**: pesos e historial a IPFS al cerrar; al iniciar se bajan |
 | `stm_creacion.py` | 216 | Comando `crear codigo` (diagnóstico → archivo nuevo) |
 | `stm_logica.py` | 245 | Comando `crear logica` (petición → función) |
 | `stm_comentarios.py` | 266 | **Nuevo**: comando `comentar archivo` (solo comentarios) |
@@ -492,6 +493,34 @@ plan.exito("refactorizar")     # 0.6
 plan.aprendizaje()             # {'informe': {'calidad_media': 1.0, 'intentos': 1},
                                #  'refactorizar': {'calidad_media': 0.6, 'intentos': 2}}
 ```
+
+#### Pesos en IPFS: al cerrar se suben, al iniciar se bajan
+
+`stm_pesos_ipfs` cierra el ciclo entre sesiones.
+
+**Al cerrar** (`cerrar`, y también cuando LucIA cierra su máquina):
+
+1. Empaqueta en un `.zip` los pesos de la red (`lucia_rn_*.pkl`), el historial
+   del agente (`agente.json`) y la memoria del `seq2seq` (`seq2seq.json`).
+2. Lo sube con los cuatro niveles de `stm_ipfs` (manager → API → CLI → CID local).
+3. Apunta `cid`, `sha256`, `via`, `archivos` y fecha en `.modelos/ipfs_pesos.json`.
+
+**Al iniciar** (al crear el agente): si no hay pesos locales y el puntero tiene
+un CID **real**, descarga el paquete, **comprueba el SHA-256** y restaura los
+archivos; si no coincide, no toca nada.
+
+```python
+from STM_RFPRMN_stmDL.stm_pesos_ipfs import estado, subir, descargar
+
+estado()      # {'pesos': 5, 'cid': 'Qm…', 'via': 'api-http', 'archivos': [...]}
+subir()       # empaqueta + sube + apunta el CID
+descargar()   # verifica el SHA-256 y restaura
+```
+
+**Honestidad sobre IPFS:** sin daemon, `stm_ipfs` devuelve un CID local
+(`modo: local-sin-daemon`) que **no se puede descargar**; en ese caso no se
+intenta y se informa. Los pesos siguen en disco, así que no se pierde nada: IPFS
+es el respaldo entre máquinas, no el único almacén.
 
 ### 1.17 Registro e IPFS
 
