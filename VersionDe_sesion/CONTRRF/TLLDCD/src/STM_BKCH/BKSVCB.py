@@ -10,7 +10,7 @@ Servidor de bloques inmutable y libro mayor distribuido para WoldVirtualP2P3D:
   - Consenso PoNL (Proof of Neural Learning) y servidor HTTP REST/JSON-RPC.
 """
 from __future__ import annotations
-import os, sys, time, json, hashlib, logging, threading, atexit
+import os, sys, time, json, hashlib, logging, re, threading, atexit
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -399,24 +399,32 @@ Este archivo es tu identificación portable en el metaverso.
             return {"exito": False, "error": f"Error al generar ZIP: {str(e)}"}
 
     def _buscar_cuenta_por_huella(self, compromiso: str) -> Optional[Dict[str, Any]]:
-        """Busca una transaccion ALTA_CUENTA con la huella comprometida dada."""
+        """Busca una cuenta (alta o migración) con la huella comprometida dada.
+
+        Se miran los dos tipos a propósito: si solo se mirara ALTA_CUENTA, una
+        cuenta migrada podría migrarse otra vez y tener dos bloques.
+        """
         for bloque in self.cadena:
             for tx in bloque.transacciones:
-                if tx.get("tipo") == "ALTA_CUENTA" and (tx.get("datos") or {}).get("huella_comprometida") == compromiso:
+                if (tx.get("tipo") in ("ALTA_CUENTA", "MIGRACION_CUENTA")
+                        and (tx.get("datos") or {}).get("huella_comprometida") == compromiso):
                     return tx
         for tx in self.transacciones_pendientes:
-            if tx.get("tipo") == "ALTA_CUENTA" and (tx.get("datos") or {}).get("huella_comprometida") == compromiso:
+            if (tx.get("tipo") in ("ALTA_CUENTA", "MIGRACION_CUENTA")
+                    and (tx.get("datos") or {}).get("huella_comprometida") == compromiso):
                 return tx
         return None
 
     def _buscar_cuenta_por_nick(self, nick: str) -> Optional[Dict[str, Any]]:
-        """Busca una transaccion ALTA_CUENTA con el nick dado."""
+        """Busca una cuenta (alta o migración) con el nick dado."""
         for bloque in self.cadena:
             for tx in bloque.transacciones:
-                if tx.get("tipo") == "ALTA_CUENTA" and (tx.get("datos") or {}).get("nick") == nick:
+                if (tx.get("tipo") in ("ALTA_CUENTA", "MIGRACION_CUENTA")
+                        and (tx.get("datos") or {}).get("nick") == nick):
                     return tx
         for tx in self.transacciones_pendientes:
-            if tx.get("tipo") == "ALTA_CUENTA" and (tx.get("datos") or {}).get("nick") == nick:
+            if (tx.get("tipo") in ("ALTA_CUENTA", "MIGRACION_CUENTA")
+                    and (tx.get("datos") or {}).get("nick") == nick):
                 return tx
         return None
 

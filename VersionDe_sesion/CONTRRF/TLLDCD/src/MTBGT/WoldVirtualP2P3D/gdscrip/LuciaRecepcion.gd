@@ -84,30 +84,42 @@ func _montar_formulario() -> void:
 	_capa.add_child(raiz)
 
 	_titulo = _etiqueta("LucIA te recibe en Wold Virtual 3D", 30, Color(0.72, 0.94, 1.0, 1.0), 7)
-	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_titulo.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_titulo.offset_left = -420.0
-	_titulo.offset_right = 420.0
-	_titulo.offset_top = 24.0
-	_titulo.offset_bottom = 64.0
+	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_titulo.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_titulo.offset_left = 40.0
+	_titulo.offset_right = 640.0
+	_titulo.offset_top = 22.0
+	_titulo.offset_bottom = 62.0
 	raiz.add_child(_titulo)
 
 	_sub = _etiqueta(_texto_subtitulo(), 18, Color(0.62, 0.82, 1.0, 1.0), 4)
-	_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_sub.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_sub.offset_left = -420.0
-	_sub.offset_right = 420.0
-	_sub.offset_top = 66.0
-	_sub.offset_bottom = 120.0
+	_sub.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_sub.offset_left = 40.0
+	_sub.offset_right = 620.0
+	_sub.offset_top = 68.0
+	_sub.offset_bottom = 140.0
 	raiz.add_child(_sub)
 
+	# Fila a todo el ancho: un hueco flexible a la izquierda y el panel fijo a la
+	# derecha. Así el formulario nunca se sale de pantalla ni tapa a LucIA.
+	var fila := HBoxContainer.new()
+	fila.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fila.offset_left = 24.0
+	fila.offset_right = -24.0
+	fila.offset_top = 118.0
+	fila.offset_bottom = -24.0
+	raiz.add_child(fila)
+
+	var hueco := Control.new()
+	hueco.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fila.add_child(hueco)
+
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	panel.offset_left = -340.0
-	panel.offset_right = 340.0
-	panel.offset_top = -340.0  # Formulario de migración (3 campos) + validación
-	panel.offset_bottom = -24.0
+	panel.custom_minimum_size = Vector2(560, 0)
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	fila.add_child(panel)
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = Color(0.03, 0.05, 0.10, 0.92)
 	estilo.border_color = Color(0.35, 0.8, 1.0, 0.9)
@@ -120,7 +132,10 @@ func _montar_formulario() -> void:
 	panel.add_theme_stylebox_override("panel", estilo)
 	raiz.add_child(panel)
 
+	# Sin ScrollContainer: el panel mide lo que mida su contenido y el
+	# CenterContainer lo centra. Con scroll, el VBox se quedaba a 0 de alto.
 	var caja := VBoxContainer.new()
+	caja.custom_minimum_size = Vector2(500, 0)
 	caja.add_theme_constant_override("separation", 10)
 	panel.add_child(caja)
 
@@ -144,24 +159,6 @@ func _montar_formulario() -> void:
 		caja.add_child(_boton)
 
 	if _modo == "existente":
-		# Link de validación de conexión (generado por LucIA como host)
-		_link_validacion = _etiqueta("Link de validación: generando...", 14, Color(0.45, 0.95, 0.55, 1.0), 2)
-		_link_validacion.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_link_validacion.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		caja.add_child(_link_validacion)
-
-		_estado = _etiqueta("", 15, Color(1.0, 0.8, 0.4, 1.0), 3)
-		_estado.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_estado.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		caja.add_child(_estado)
-
-		_boton = Button.new()
-		_boton.text = "Validar conexión"
-		_boton.add_theme_font_size_override("font_size", 19)
-		_boton.custom_minimum_size = Vector2(0, 48)
-		_boton.pressed.connect(_on_validar_conexion)
-		caja.add_child(_boton)
-
 		if not FileAccess.file_exists(RUTA_CUENTA):
 			# Cuenta antigua: LucIA pide el .zip de registro de PC, la llave de
 			# acceso y la frase semilla, y los sustituye por el hash único.
@@ -194,12 +191,35 @@ func _montar_formulario() -> void:
 			_semilla.custom_minimum_size = Vector2(0, 42)
 			caja.add_child(_semilla)
 
+			_estado = _etiqueta("", 15, Color(1.0, 0.8, 0.4, 1.0), 3)
+			_estado.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_estado.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			caja.add_child(_estado)
+
 			_boton_sec = Button.new()
 			_boton_sec.text = "Migrar mi cuenta al hash único"
 			_boton_sec.add_theme_font_size_override("font_size", 16)
 			_boton_sec.custom_minimum_size = Vector2(0, 44)
 			_boton_sec.pressed.connect(_on_migrar)
 			caja.add_child(_boton_sec)
+		else:
+			# Cuenta nueva: enlace de validación + validar conexión.
+			_link_validacion = _etiqueta("Link de validación: generando...", 14, Color(0.45, 0.95, 0.55, 1.0), 2)
+			_link_validacion.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_link_validacion.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			caja.add_child(_link_validacion)
+
+			_estado = _etiqueta("", 15, Color(1.0, 0.8, 0.4, 1.0), 3)
+			_estado.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_estado.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			caja.add_child(_estado)
+
+			_boton = Button.new()
+			_boton.text = "Validar conexión"
+			_boton.add_theme_font_size_override("font_size", 19)
+			_boton.custom_minimum_size = Vector2(0, 48)
+			_boton.pressed.connect(_on_validar_conexion)
+			caja.add_child(_boton)
 
 	if _nick:
 		_nick.grab_focus()
