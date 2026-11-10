@@ -1,122 +1,71 @@
-"""Submodulo de RFPRMN (refactor: tope 400/450 lineas)."""
+"""Comandos de gestión del proyecto PRY <-> RFC (issue #81).
+
+Las operaciones destructivas son transaccionales:
+
+- ``_refactorizar_layout_actual`` y ``comando_enviar`` ya **no borran el
+  destino antes de copiar**: usan ``reemplazar_directorio`` (copia temporal +
+  verificación por huella + intercambio con rollback).
+- ``_actualizar_layout_actual`` verifica la nueva versión **antes** de purgar
+  las anteriores, y reporta con precisión los restos que no pudo limpiar.
+- ``_registrar_envio`` escribe el JSON de forma atómica y con bloqueo, y
+  conserva el registro corrupto en vez de perderlo.
+- Las rutas críticas (RAIZ, PRY, RFC, CONTRRF, TLLDCD y la propia herramienta)
+  están protegidas contra borrado.
+"""
 from __future__ import annotations
-import ast, json, os, re, shutil, stat, subprocess, sys, textwrap, time, urllib.error, urllib.parse, urllib.request, uuid
-from dataclasses import asdict, dataclass
+
+import json
+import os
+import shutil
+import uuid
 from pathlib import Path
-from typing import Callable, Optional
-try:
-    from .stm_base import (E, informar, exito, advertir, reportar_error, pedir_confirmacion, ErrorProyecto, RaizProyectoNoEncontrada, encontrar_raiz, RAIZ, ORIGEN, DESTINO, CONFIG_IA_LOCAL, RFC_DIR, PRY_DIR, SRC_DIR, MODULO_DIR, TLLDCD_DIR, CONTRRF_DIR, _caja, _panel, ANCHO_TERMINAL, _imprimir_seguro, RESPUESTAS_AFIRMATIVAS, LIMITE_TAMANO_ANALISIS, EXTENSIONES_POR_LENGUAJE, PATRON_MARCADOR_PENDIENTE, carpetas_creadas, __version__)
-    # Una sola fuente de verdad para el registro de envíos: se comparte con
-    # stm_registro (quien redacta/borra el registro) para que quien escribe y
-    # quien lee apunten SIEMPRE al mismo archivo.
-    from .stm_registro import DIR_REGISTRO as DIR_REGISTRO_JSON, RUTA_JSON as REGISTRO_ENVIOS
-except ImportError:
-    pass
-# --- Utilidades de sistema de archivos --------------------------------------
 
-def hacer_escribible(ruta: str) -> None:
-    """Otorga permiso de escritura a ``ruta`` de forma recursiva."""
-    if os.path.islink(ruta):
-        return
-    os.chmod(ruta, os.stat(ruta).st_mode | stat.S_IWRITE)
-    if os.path.isdir(ruta):
-        with os.scandir(ruta) as entradas:
-            for entrada in entradas:
-                hacer_escribible(entrada.path)
+from .stm_base import (
+    advertir, exito, informar, reportar_error, pedir_confirmacion, ErrorProyecto,
+    RAIZ, RFC_DIR, PRY_DIR, MODULO_DIR, TLLDCD_DIR,
+    CONTRRF_DIR, EXTENSIONES_POR_LENGUAJE, carpetas_creadas,
+)
+from .stm_fs import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
+    bloqueo, borrar_contenido, copiar_contenido, eliminar_ruta,
+    encontrar_contenido_actual, es_subruta, escribir_json_atomico,
+    hacer_escribible, reemplazar_directorio, rutas_se_solapan,
+    _contar_ficheros, _forzar_borrado,
+)
+from .stm_registro import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
+    DIR_REGISTRO as DIR_REGISTRO_JSON, RUTA_JSON as REGISTRO_ENVIOS,
+)
+from .stm_rutas import rutas_protegidas, ultima_actualizacion_pry as _ultima_actualizacion_pry
 
-
-def _forzar_borrado(funcion, ruta: str, _info) -> None:
-    """Manejador onerror de rmtree: quita solo-lectura y reintenta."""
-    try:
-        os.chmod(ruta, stat.S_IWRITE)
-    except OSError:
-        pass
-    try:
-        funcion(ruta)
-    except OSError:
-        pass
+#: Mensaje único cuando el layout no es el esperado (P4: sin rama heredada).
+_MENSAJE_LAYOUT = (
+    "No se reconoce el layout del proyecto (faltan las carpetas de RFC/PRY). "
+    "Configúralas con 'configurar rutas' o con RFPRMN_RFC_DIR / RFPRMN_PRY_DIR.")
 
 
-def eliminar_ruta(ruta: str) -> None:
-    """Elimina un archivo o un árbol de directorios completo.
+# --- Utilidades --------------------------------------------------------------
 
-    Tolera atributos de solo-lectura (repo IPFS) y bloqueos transitorios
-    de Windows (reintenta con espera); si el sistema lo bloquea de forma
-    persistente, lanza el OSError original.
-    """
-    ultimo_error: Optional[OSError] = None
-    for intento in range(4):
-        try:
-            if os.path.isdir(ruta) and not os.path.islink(ruta):
-                shutil.rmtree(ruta, onerror=_forzar_borrado)
-            else:
-                try:
-                    os.remove(ruta)
-                except PermissionError:
-                    os.chmod(ruta, stat.S_IWRITE)
-                    os.remove(ruta)
-            if not os.path.exists(ruta):
-                return
-            ultimo_error = OSError(f"No se pudo eliminar (posible bloqueo): {ruta}")
-        except OSError as error:
-            ultimo_error = error
-            try:
-                hacer_escribible(ruta)
-            except OSError:
-                pass
-        time.sleep(0.5 * (intento + 1))
-    raise ultimo_error if ultimo_error is not None else OSError(f"No se pudo eliminar: {ruta}")
+#: Carpeta de la herramienta dentro de TLLDCD: SIEMPRE se conserva al limpiar.
+CARPETA_HERRAMIENTA = TLLDCD_DIR / "STM_RFC"
 
 
-def borrar_contenido(carpeta: str) -> None:
-    """Vacía ``carpeta``, reintentando tras corregir permisos si es necesario."""
-    for item in os.listdir(carpeta):
-        ruta = os.path.join(carpeta, item)
-        try:
-            eliminar_ruta(ruta)
-        except PermissionError:
-            hacer_escribible(ruta)
-            eliminar_ruta(ruta)
+def _misma_ruta(a: str | Path, b: str | Path) -> bool:
+    """True si ambas rutas apuntan al mismo sitio (comparación normalizada)."""
+    return es_subruta(a, b) and es_subruta(b, a)
 
 
-def copiar_contenido(origen: str, destino: str) -> None:
-    """Copia recursivamente el contenido de ``origen`` dentro de ``destino``."""
-    os.makedirs(destino, exist_ok=True)
-    for item in os.listdir(origen):
-        origen_item = os.path.join(origen, item)
-        destino_item = os.path.join(destino, item)
-        if os.path.isdir(origen_item) and not os.path.islink(origen_item):
-            shutil.copytree(origen_item, destino_item, dirs_exist_ok=True)
-        else:
-            shutil.copy2(origen_item, destino_item)
+def _zonas_protegidas() -> tuple[Path, ...]:
+    """Raíces del proyecto que nunca deben borrarse como un todo."""
+    return tuple(rutas_protegidas())
 
 
-def encontrar_contenido_actual(carpeta: str) -> str:
-    """Desciende por carpetas ``actualizacion_*`` anidadas hasta el contenido real."""
-    actual = carpeta
-    while True:
-        contenido = os.listdir(actual)
-        if len(contenido) != 1:
-            return actual
-        hijo = contenido[0]
-        ruta = os.path.join(actual, hijo)
-        if not hijo.startswith("actualizacion_") or not os.path.isdir(ruta):
-            return actual
-        actual = ruta
-
-
-# --- Comandos de gestión del proyecto ---------------------------------------
-
-def _ultima_actualizacion_pry() -> Optional[Path]:
-    """Devuelve la actualizacion_* más reciente de PRY (None si no hay)."""
-    try:
-        cands = [h for h in PRY_DIR.iterdir()
-                 if h.is_dir() and h.name.startswith("actualizacion_")]
-    except OSError:
-        return None
-    if not cands:
-        return None
-    return max(cands, key=lambda p: p.stat().st_mtime)
+def _comprobar_borrado(ruta: str | Path) -> None:
+    """Aborta si ``ruta`` es una raíz crítica o vive dentro de la herramienta."""
+    objetivo = Path(ruta)
+    if any(_misma_ruta(objetivo, zona) for zona in _zonas_protegidas()):
+        raise ErrorProyecto(f"Borrado bloqueado: {objetivo} es una ruta crítica.")
+    if es_subruta(objetivo, MODULO_DIR):
+        raise ErrorProyecto(
+            f"Borrado bloqueado: {objetivo} pertenece a la herramienta.")
 
 
 def _es_layout_actual() -> bool:
@@ -129,35 +78,21 @@ def _es_layout_actual() -> bool:
         return False
 
 
+# --- Comandos PRY <-> RFC ----------------------------------------------------
+
 def comando_refactorizar() -> None:
     """Copia el contenido actual de PRY hacia RFC, previa confirmación."""
-    if _es_layout_actual():
-        _refactorizar_layout_actual()
+    if not _es_layout_actual():
+        reportar_error(_MENSAJE_LAYOUT)
         return
-    if not ORIGEN.is_dir():
-        reportar_error(f"Origen no encontrado: {ORIGEN}")
-        return
-
-    advertir("esta acción reemplazará todo el contenido de RFC.")
-    if not pedir_confirmacion("¿Desea continuar?"):
-        informar("Operación cancelada.")
-        return
-
-    try:
-        os.makedirs(DESTINO, exist_ok=True)
-        origen = encontrar_contenido_actual(str(ORIGEN))
-        borrar_contenido(str(DESTINO))
-        copiar_contenido(origen, str(DESTINO))
-        exito(f"Contenido copiado de {origen} a {DESTINO}")
-    except OSError as error:
-        reportar_error(f"Error al copiar el contenido: {error}")
+    _refactorizar_layout_actual()
 
 
 def _refactorizar_layout_actual() -> None:
-    """Rama actual: PRY/<última actualizacion>/src -> RFC/src verificado.
+    """Rama actual: ``PRY/<última actualizacion>/src`` -> ``RFC/src`` verificado.
 
-    Trae de vuelta solo la carpeta ``src`` (sin la envoltura
-    actualizacion_*) y registra el movimiento en envios.json.
+    La copia se verifica por huella (ruta + tamaño + SHA-256) y solo entonces
+    sustituye al ``src`` anterior; si la copia falla, RFC queda como estaba.
     """
     ultima = _ultima_actualizacion_pry()
     if ultima is None:
@@ -171,35 +106,42 @@ def _refactorizar_layout_actual() -> None:
         informar("Operación cancelada.")
         return
     try:
-        RFC_DIR.mkdir(parents=True, exist_ok=True)
-        if destino.exists():
-            eliminar_ruta(str(destino))
-        shutil.copytree(str(origen), str(destino))
-        n_origen = _contar_ficheros(origen)
-        n_destino = _contar_ficheros(destino)
-        if n_origen != n_destino:
-            _registrar_envio(origen, destino, n_destino, f"FALLO verificacion {n_destino}/{n_origen}")
-            reportar_error(f"Copia incompleta ({n_destino}/{n_origen} ficheros).")
-            return
-        exito(f"Contenido copiado de {origen} a {destino} ({n_destino} ficheros verificados)")
-        _registrar_envio(origen, destino, n_destino, "OK refactorizar")
-    except OSError as error:
+        info = reemplazar_directorio(origen, destino)
+    except (ErrorProyecto, OSError) as error:
+        _registrar_envio(origen, destino, 0, f"FALLO {error}")
         reportar_error(f"Error al copiar el contenido: {error}")
+        return
+    exito(f"Contenido copiado de {origen} a {destino} "
+          f"({info['ficheros']} ficheros verificados)")
+    _registrar_envio(origen, destino, info["ficheros"], "OK refactorizar")
 
 
 def crear_carpeta(ruta: str, nombre: str) -> str:
-    """Crea (si no existe) ``nombre`` dentro de ``ruta`` y devuelve la ruta final."""
-    carpeta = os.path.join(ruta, nombre)
-    if not os.path.exists(carpeta):
-        os.makedirs(carpeta)
-    return carpeta
+    """Crea (si no existe) ``nombre`` dentro de ``ruta`` y devuelve la ruta final.
+
+    El nombre debe ser un nombre simple: se rechazan ``.``, ``..`` y cualquier
+    separador de ruta, en lugar de «sanearlo» en silencio.
+    """
+    base = Path(ruta)
+    limpio = nombre.strip()
+    if not limpio or limpio in {".", ".."} or Path(limpio).name != limpio:
+        raise ErrorProyecto(f"Nombre de carpeta no válido: {nombre!r}")
+    carpeta = base / limpio
+    if not es_subruta(carpeta, base):
+        raise ErrorProyecto(f"La carpeta saldría de {base}: {carpeta}")
+    carpeta.mkdir(parents=True, exist_ok=True)
+    return str(carpeta)
 
 
 def comando_crear_carpeta() -> None:
     """Solicita interactivamente una ruta y un nombre, y crea la carpeta."""
-    ruta = input("Ruta donde crear: ")
-    nombre = input("Nombre de la carpeta: ")
-    carpeta = crear_carpeta(ruta, nombre)
+    ruta = input("Ruta donde crear: ").strip().strip("\"'")
+    nombre = input("Nombre de la carpeta: ").strip()
+    try:
+        carpeta = crear_carpeta(ruta, nombre)
+    except (ErrorProyecto, OSError) as error:
+        reportar_error(f"No se pudo crear la carpeta: {error}")
+        return
     exito(f"Carpeta creada en: {carpeta}")
     relativa = os.path.relpath(carpeta, RAIZ)
     if relativa not in carpetas_creadas:
@@ -208,65 +150,70 @@ def comando_crear_carpeta() -> None:
 
 def comando_crear_archivo() -> None:
     """Solicita interactivamente ruta, nombre y lenguaje, y crea un archivo vacío."""
-    ruta = input("Ruta donde crear: ").strip()
+    ruta = input("Ruta donde crear: ").strip().strip("\"'")
     nombre = input("Nombre del archivo (sin extensión): ").strip()
     lenguaje = input("Lenguaje de programación (ej: python, csharp, html): ").strip().lower()
 
-    extension = EXTENSIONES_POR_LENGUAJE.get(lenguaje, f".{lenguaje}")
+    extension = EXTENSIONES_POR_LENGUAJE.get(lenguaje, f".{lenguaje}" if lenguaje else "")
+    if not nombre or not extension:
+        reportar_error("Nombre o lenguaje no válido.")
+        return
+    if Path(nombre).name != nombre:
+        reportar_error(f"El nombre del archivo no puede incluir rutas: {nombre!r}")
+        return
     if not nombre.endswith(extension):
         nombre += extension
-
-    archivo = os.path.join(ruta, nombre)
-    os.makedirs(os.path.dirname(archivo), exist_ok=True)
-    if not os.path.exists(archivo):
-        open(archivo, "w", encoding="utf-8").close()
+    archivo = Path(ruta) / nombre
+    try:
+        archivo.parent.mkdir(parents=True, exist_ok=True)
+        if not archivo.exists():
+            archivo.touch()
+    except OSError as error:
+        reportar_error(f"No se pudo crear el archivo: {error}")
+        return
     exito(f"Archivo creado en: {archivo}")
 
 
-#: Carpeta de la herramienta dentro de TLLDCD: SIEMPRE se conserva al limpiar
-#: TLLDCD (contiene la herramienta, que debe viajar con el proyecto).
-CARPETA_HERRAMIENTA = TLLDCD_DIR / "STM_RFC"
-#: Registro de envíos ("github minimalista"): vive junto al paquete, en
-#: stm_registro_json/STM_RFC/envios.json (ver stm_registro), de modo que
-#: viaja con STM_RFC y sobrevive al vaciado de RFC.
-#: ``DIR_REGISTRO_JSON`` y ``REGISTRO_ENVIOS`` se importan de stm_registro
-#: (arriba) para que escritor y lector compartan la MISMA ruta.
-
-
-def _contar_ficheros(carpeta: Path) -> int:
-    """Cuenta ficheros recursivos (sin seguir symlinks)."""
-    total = 0
-    for _raiz, _dirs, fichs in os.walk(carpeta, followlinks=False):
-        total += len(fichs)
-    return total
-
-
 def _registrar_envio(origen: Path, destino: Path, ficheros: int, estado: str) -> None:
-    """Anota el envío en stm_registro_json/envios.json (sobrevive al vaciado)."""
-    try:
-        datos = json.loads(REGISTRO_ENVIOS.read_text(encoding="utf-8")) if REGISTRO_ENVIOS.exists() else []
-    except (OSError, ValueError):
-        datos = []
-    datos.append({
-        "carpeta": origen.name, "origen": str(origen), "destino": str(destino),
+    """Anota el envío en ``stm_registro_json/envios.json`` (issue #81, punto 6).
+
+    Escritura atómica bajo bloqueo: si el JSON estuviera corrupto se conserva
+    una copia ``.corrupto`` y se empieza una lista nueva, sin perder el rastro.
+    """
+    evento = {
+        "carpeta": Path(origen).name, "origen": str(origen), "destino": str(destino),
         "ficheros": ficheros, "estado": estado,
         "fecha": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
-    })
+    }
     try:
         REGISTRO_ENVIOS.parent.mkdir(parents=True, exist_ok=True)
-        REGISTRO_ENVIOS.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
-    except OSError as error:
+        with bloqueo(REGISTRO_ENVIOS):
+            datos: object = []
+            if REGISTRO_ENVIOS.exists():
+                try:
+                    datos = json.loads(REGISTRO_ENVIOS.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    with_ = REGISTRO_ENVIOS.with_name(REGISTRO_ENVIOS.name + ".corrupto")
+                    try:
+                        shutil.copy2(REGISTRO_ENVIOS, with_)
+                        advertir(f"Registro ilegible; copia conservada en {with_.name}.")
+                    except OSError:
+                        pass
+                    datos = []
+            if not isinstance(datos, list):
+                datos = []
+            datos.append(evento)
+            escribir_json_atomico(REGISTRO_ENVIOS, datos)
+    except (ErrorProyecto, OSError) as error:
         advertir(f"No se pudo registrar el envío ({error}).")
 
 
 def comando_enviar() -> None:
     """Pide una carpeta y envía el directorio COMPLETO a su destino.
 
-    Registra la ruta completa del origen en stm_registro_json/envios.json.
-    Destino según ubicación: si el origen está en CONTRRF/RFC se envía
-    a TLLDCD/<nombre> (p. ej. RFC/src -> TLLDCD/src); en caso contrario
-    se envía a RFC/<nombre>. La copia se verifica por conteo y solo
-    entonces se limpia el origen (TLLDCD conserva siempre STM_RFC).
+    El destino se sustituye solo cuando la copia está verificada (nada de
+    borrar-y-luego-copiar). Registra el envío y, si todo cuadra, limpia el
+    origen salvo las rutas protegidas.
     """
     entrada = input("Ruta de la carpeta a enviar: ").strip().strip("\"'")
     if not entrada:
@@ -276,98 +223,88 @@ def comando_enviar() -> None:
     if not origen.exists() or not origen.is_dir():
         reportar_error(f"La carpeta no existe: {origen}")
         return
-    if (origen == MODULO_DIR or MODULO_DIR in origen.parents
-            or origen in MODULO_DIR.parents):
+    if es_subruta(origen, MODULO_DIR) or _misma_ruta(origen, MODULO_DIR.parent):
         reportar_error("No se puede enviar la carpeta propia de la herramienta.")
         return
-    if origen == RFC_DIR.resolve() or RFC_DIR.resolve() in origen.parents:
+    if any(_misma_ruta(origen, zona) for zona in (RAIZ, PRY_DIR, RFC_DIR, CONTRRF_DIR)):
+        reportar_error(f"Origen protegido (raíz del proyecto): {origen}")
+        return
+
+    if _misma_ruta(origen, RFC_DIR) or es_subruta(origen, RFC_DIR):
         destino = (TLLDCD_DIR / origen.name).resolve()
-        if destino == MODULO_DIR or MODULO_DIR in destino.parents:
-            reportar_error("El destino chocaría con la herramienta.")
-            return
     else:
         destino = (RFC_DIR / origen.name).resolve()
-        if destino == MODULO_DIR or MODULO_DIR in destino.parents:
-            reportar_error("El destino chocaría con la herramienta.")
-            return
+    if es_subruta(destino, MODULO_DIR):
+        reportar_error("El destino chocaría con la herramienta.")
+        return
+    if rutas_se_solapan(origen, destino) and not _misma_ruta(origen, destino):
+        reportar_error(f"Origen y destino se solapan: {origen} / {destino}")
+        return
+    if _misma_ruta(origen, destino):
+        reportar_error("El origen y el destino son la misma carpeta.")
+        return
 
-    advertir(f"Se enviará el directorio completo {origen} a {destino} y se limpiará el origen.")
+    advertir(f"Se enviará el directorio completo {origen} a {destino} "
+             "y se limpiará el origen.")
     if not pedir_confirmacion("¿Desea continuar?"):
         informar("Operación cancelada.")
         return
     try:
-        destino.parent.mkdir(parents=True, exist_ok=True)
-        if destino.exists():
-            eliminar_ruta(str(destino))
-        shutil.copytree(str(origen), str(destino))
-        n_origen = _contar_ficheros(origen)
-        n_destino = _contar_ficheros(destino)
-        if n_origen != n_destino:
-            _registrar_envio(origen, destino, n_destino, f"FALLO verificacion {n_destino}/{n_origen}")
-            reportar_error(f"Copia incompleta ({n_destino}/{n_origen} ficheros): no se borra el origen.")
-            return
-        exito(f"Directorio {origen.name} enviado a {destino} ({n_destino} ficheros verificados)")
-        _registrar_envio(origen, destino, n_destino, "OK")
-        if origen == TLLDCD_DIR:
-            fallos: list[str] = []
-            protegidas = {MODULO_DIR.resolve(), CARPETA_HERRAMIENTA.resolve()}
-            for hijo in list(origen.iterdir()):
-                if hijo.resolve() in protegidas:
-                    continue
-                try:
-                    eliminar_ruta(str(hijo))
-                except OSError as error_hijo:
-                    fallos.append(f"{hijo.name}: {error_hijo}")
-            if fallos:
-                for f in fallos:
-                    advertir(f"No se pudo borrar: {f}")
-                reportar_error("Limpieza parcial: reintenta 'enviar' tras cerrar el daemon IPFS.")
-            else:
-                exito(f"TLLDCD limpio; solo queda: {MODULO_DIR.name}")
-        else:
-            eliminar_ruta(str(origen))
-            exito(f"Origen eliminado: {origen}")
-    except OSError as error:
-        reportar_error(f"Error al enviar: {error}")
+        info = reemplazar_directorio(origen, destino)
+    except (ErrorProyecto, OSError) as error:
+        _registrar_envio(origen, destino, 0, f"FALLO {error}")
+        reportar_error(f"Error al enviar ({error}): no se borra el origen.")
+        return
+    exito(f"Directorio {origen.name} enviado a {destino} "
+          f"({info['ficheros']} ficheros verificados)")
+    _registrar_envio(origen, destino, info["ficheros"], "OK")
+    if _misma_ruta(origen, TLLDCD_DIR):
+        _limpiar_tlldcd(origen)
+        return
+    try:
+        _comprobar_borrado(origen)
+        eliminar_ruta(str(origen))
+        exito(f"Origen eliminado: {origen}")
+    except (ErrorProyecto, OSError) as error:
+        advertir(f"El envío se completó, pero el origen no se pudo limpiar: {error}")
 
+
+def _limpiar_tlldcd(origen: Path) -> None:
+    """Vacía TLLDCD conservando la herramienta y su carpeta contenedora."""
+    fallos: list[str] = []
+    protegidas = {MODULO_DIR.resolve(), CARPETA_HERRAMIENTA.resolve()}
+    for hijo in list(origen.iterdir()):
+        try:
+            if hijo.resolve() in protegidas:
+                continue
+            _comprobar_borrado(hijo)
+            eliminar_ruta(str(hijo))
+        except (ErrorProyecto, OSError) as error:
+            fallos.append(f"{hijo.name}: {error}")
+    if fallos:
+        for fallo in fallos:
+            advertir(f"No se pudo borrar: {fallo}")
+        reportar_error("Limpieza parcial: reintenta 'enviar' tras cerrar el daemon IPFS.")
+    else:
+        exito(f"TLLDCD limpio; solo queda: {MODULO_DIR.name}")
+
+
+# --- Actualización PRY -------------------------------------------------------
 
 def actualizar() -> None:
     """Promueve el contenido de RFC a PRY como una nueva versión histórica."""
-    if _es_layout_actual():
-        _actualizar_layout_actual()
+    if not _es_layout_actual():
+        reportar_error(_MENSAJE_LAYOUT)
         return
-    if not ORIGEN.is_dir():
-        reportar_error(f"Origen no encontrado: {ORIGEN}")
-        return
-    if not DESTINO.is_dir() or not os.listdir(DESTINO):
-        reportar_error("No hay contenido refactorizado para actualizar.")
-        return
-
-    advertir("PRY será reemplazado por una nueva versión de RFC.")
-    if not pedir_confirmacion("¿Seguro que deseas continuar?"):
-        informar("Operación cancelada.")
-        return
-
-    try:
-        origen = encontrar_contenido_actual(str(DESTINO))
-        borrar_contenido(str(ORIGEN))
-        numero = uuid.uuid4().hex[:8]
-        destino = os.path.join(ORIGEN, f"actualizacion_{numero}")
-        copiar_contenido(origen, destino)
-        borrar_contenido(str(DESTINO))
-        exito(f"Actualización completada en: {destino}")
-        informar(f"Contenido eliminado de: {DESTINO}")
-    except OSError as error:
-        reportar_error(f"Error al actualizar: {error}")
+    _actualizar_layout_actual()
 
 
 def _actualizar_layout_actual() -> None:
-    """Rama actual: RFC (CONTRRF) -> PRY (Sistema_Principal) versionado.
+    """Rama actual: RFC (CONTRRF) -> PRY versionado y verificado (issue #81).
 
-    Copia verificada (conteo), purga las versiones anteriores de PRY
-    (solo queda la nueva) y vacía RFC por completo, verificando que
-    no quede ningún resto. Al terminar publica registro.md en lenguaje
-    natural, lo convierte en pesos, lo sube a IPFS y limpia el registro.
+    Orden seguro: copiar -> verificar huella -> registrar -> purgar versiones
+    anteriores -> vaciar RFC -> publicar el registro. Nunca se purga nada antes
+    de que la nueva versión esté verificada.
     """
     if not RFC_DIR.is_dir() or not os.listdir(RFC_DIR):
         reportar_error("No hay contenido en RFC para actualizar.")
@@ -376,53 +313,73 @@ def _actualizar_layout_actual() -> None:
         reportar_error(f"PRY no encontrado: {PRY_DIR}")
         return
 
-    advertir("PRY recibirá una nueva versión del contenido de RFC; las anteriores se purgan.")
+    advertir("PRY recibirá una nueva versión del contenido de RFC; "
+             "las anteriores se purgan.")
     if not pedir_confirmacion("¿Seguro que deseas continuar?"):
         informar("Operación cancelada.")
         return
+    origen = Path(encontrar_contenido_actual(str(RFC_DIR)))
+    numero = uuid.uuid4().hex[:8]
+    destino = PRY_DIR / f"actualizacion_{numero}"
     try:
-        origen = encontrar_contenido_actual(str(RFC_DIR))
-        n_origen = _contar_ficheros(Path(origen))
-        numero = uuid.uuid4().hex[:8]
-        destino = PRY_DIR / f"actualizacion_{numero}"
-        copiar_contenido(origen, str(destino))
-        n_destino = _contar_ficheros(destino)
-        if n_origen != n_destino:
-            _registrar_envio(Path(origen), destino, n_destino, f"FALLO verificacion {n_destino}/{n_origen}")
-            reportar_error(f"Copia incompleta ({n_destino}/{n_origen}): PRY y RFC intactos.")
-            try:
-                eliminar_ruta(str(destino))
-            except OSError:
-                pass
-            return
-        exito(f"Actualización completada en: {destino} ({n_destino} ficheros verificados)")
-        _registrar_envio(Path(origen), destino, n_destino, "OK actualizar")
-        purgadas: list[str] = []
-        for hijo in list(PRY_DIR.iterdir()):
-            if hijo == destino or not hijo.name.startswith("actualizacion_"):
-                continue
-            try:
-                eliminar_ruta(str(hijo))
-                purgadas.append(hijo.name)
-                exito(f"Versión anterior purgada: {hijo.name}")
-            except OSError as error_hijo:
-                advertir(f"No se pudo purgar {hijo.name}: {error_hijo}")
-        try:
-            borrar_contenido(str(RFC_DIR))
-        except OSError as error_rfc:
-            advertir(f"Limpieza RFC parcial: {error_rfc}")
-        restos = [p.name for p in RFC_DIR.iterdir()] if RFC_DIR.is_dir() else []
-        if restos:
-            reportar_error(f"RFC no quedó vacío (posible bloqueo): {restos}. Reintenta tras cerrar el daemon IPFS.")
-        else:
-            informar(f"Contenido eliminado de: {RFC_DIR}")
-            try:
-                from .stm_registro import publicar_registro_actualizar
-                publicar_registro_actualizar({
-                    "origen": str(origen), "destino": str(destino),
-                    "ficheros": n_destino, "purgadas": purgadas})
-            except Exception as error_pub:
-                advertir(f"No se pudo publicar el registro ({error_pub}).")
-    except OSError as error:
-        reportar_error(f"Error al actualizar: {error}")
+        info = reemplazar_directorio(origen, destino)
+    except (ErrorProyecto, OSError) as error:
+        _registrar_envio(origen, destino, 0, f"FALLO {error}")
+        reportar_error(f"Copia incompleta ({error}): PRY y RFC intactos.")
+        return
+    exito(f"Actualización completada en: {destino} "
+          f"({info['ficheros']} ficheros verificados)")
+    _registrar_envio(origen, destino, info["ficheros"], "OK actualizar")
+    purgadas, fallos_purga = _purgar_versiones_anteriores(destino)
+    if fallos_purga:
+        advertir(f"{len(fallos_purga)} versión(es) anterior(es) no se pudieron purgar.")
+    _vaciar_rfc()
+    _publicar(origen, destino, info["ficheros"], purgadas)
 
+
+def _purgar_versiones_anteriores(destino: Path) -> tuple[list[str], list[str]]:
+    """Borra las ``actualizacion_*`` de PRY salvo la recién creada.
+
+    Solo se llama con la nueva versión ya verificada, de modo que un fallo de
+    limpieza nunca deja el proyecto sin versión válida.
+    """
+    purgadas: list[str] = []
+    fallos: list[str] = []
+    for hijo in list(PRY_DIR.iterdir()):
+        if hijo == destino or not hijo.name.startswith("actualizacion_"):
+            continue
+        try:
+            eliminar_ruta(str(hijo))
+            purgadas.append(hijo.name)
+            exito(f"Versión anterior purgada: {hijo.name}")
+        except OSError as error:
+            fallos.append(f"{hijo.name}: {error}")
+            advertir(f"No se pudo purgar {hijo.name}: {error}")
+    return purgadas, fallos
+
+
+def _vaciar_rfc() -> bool:
+    """Vacía RFC y verifica que no quede ningún resto."""
+    try:
+        borrar_contenido(str(RFC_DIR))
+    except OSError as error:
+        advertir(f"Limpieza RFC parcial: {error}")
+    restos = [p.name for p in RFC_DIR.iterdir()] if RFC_DIR.is_dir() else []
+    if restos:
+        reportar_error(f"RFC no quedó vacío (posible bloqueo): {restos}. "
+                       "Reintenta tras cerrar el daemon IPFS.")
+        return False
+    informar(f"Contenido eliminado de: {RFC_DIR}")
+    return True
+
+
+def _publicar(origen: Path, destino: Path, ficheros: int,
+              purgadas: list[str]) -> None:
+    """Publica el registro de la actualización (md -> pesos -> IPFS -> limpio)."""
+    try:
+        from .stm_registro import publicar_registro_actualizar
+        publicar_registro_actualizar({
+            "origen": str(origen), "destino": str(destino),
+            "ficheros": ficheros, "purgadas": purgadas})
+    except Exception as error_pub:  # noqa: BLE001 - nunca invalida la actualización
+        advertir(f"No se pudo publicar el registro ({error_pub}).")

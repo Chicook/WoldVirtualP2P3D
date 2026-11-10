@@ -1,75 +1,70 @@
-"""Paquete STM_RFPRMN_stmDL: nucleo modularizado de RFPRMN.
+"""Paquete STM_RFPRMN_stmDL: núcleo modularizado de RFPRMN.
 
-Expone un registro perezoso (PEP 562) y la clase RegistroRFPRMN para
-resolver los ~75 simbolos publicos sin cargar todos los backends
-(Ollama/HF/OpenRouter) al arrancar.
+El registro de símbolos ya **no se mantiene a mano** (D4): se descubre leyendo
+el árbol sintáctico de cada submódulo con ``ast``. Así no hay deriva entre lo
+que el código define y lo que el registro publica.
+
+Reglas del descubrimiento:
+
+- funciones y clases de nivel superior: siempre (públicas y privadas),
+- constantes y variables de nivel superior: solo si no empiezan por ``_``,
+- los nombres importados **no** se registran (evita duplicados y ruido),
+- si un nombre aparece en dos módulos, gana el primero en ``_MODULOS``.
+
+La carga sigue siendo perezosa (PEP 562): ``from paquete import X`` resuelve
+``X`` en su módulo solo cuando se usa.
 """
 from __future__ import annotations
 
+import ast
 import importlib
-import sys
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
-__version__ = "2.0.0"
+__version__ = "2.24.0"
 
-_MODULOS = ("stm_base", "stm_gestion", "stm_analisis", "stm_modelos", "stm_refactor", "stm_flujo", "stm_registro")
+_MODULOS = ("stm_base", "stm_rutas", "stm_fs", "stm_fragmentos", "stm_gestion",
+            "stm_analisis", "stm_lucia", "stm_embeddings", "stm_calidad",
+            "stm_corpus", "stm_seq2seq", "stm_modelos", "stm_descarga",
+            "stm_descartes", "stm_openrouter", "stm_refactor", "stm_particion",
+            "stm_informe", "stm_entrenamiento", "stm_creacion", "stm_logica",
+            "stm_comentarios", "stm_agente", "stm_pesos_ipfs", "stm_flujo",
+            "stm_registro", "stm_pesos", "stm_ipfs", "test")
 
-# Mapa simbolo -> modulo que lo define (resolucion perezosa).
+
+def _simbolos_del_modulo(modulo: str) -> list[str]:
+    """Símbolos de nivel superior definidos en ``modulo`` (vía AST)."""
+    ruta = Path(__file__).with_name(f"{modulo}.py")
+    try:
+        arbol = ast.parse(ruta.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return []
+    nombres: list[str] = []
+    for nodo in arbol.body:
+        if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            if not nodo.name.startswith("__"):
+                nombres.append(nodo.name)
+        elif isinstance(nodo, ast.Assign):
+            for objetivo in nodo.targets:
+                if isinstance(objetivo, ast.Name) and not objetivo.id.startswith("_"):
+                    nombres.append(objetivo.id)
+        elif isinstance(nodo, ast.AnnAssign):
+            objetivo = nodo.target
+            if isinstance(objetivo, ast.Name) and not objetivo.id.startswith("_"):
+                nombres.append(objetivo.id)
+    return nombres
+
+
+#: Mapa símbolo -> módulo que lo define (resolución perezosa).
 _REGISTRO: dict[str, str] = {}
-_BASE_SYMS = ["Estilo", "E", "ANCHO_TERMINAL", "_caja", "_panel", "RESPUESTAS_AFIRMATIVAS",
-    "LIMITE_TAMANO_ANALISIS", "EXTENSIONES_POR_LENGUAJE", "PATRON_MARCADOR_PENDIENTE",
-    "ErrorProyecto", "RaizProyectoNoEncontrada", "_imprimir_seguro", "informar", "exito",
-    "advertir", "reportar_error", "pedir_confirmacion", "MODULO_DIR", "TLLDCD_DIR",
-    "CONTRRF_DIR", "SRC_DIR", "encontrar_raiz", "RAIZ", "ORIGEN", "DESTINO",
-    "CONFIG_IA_LOCAL", "RFC_DIR", "PRY_DIR", "carpetas_creadas"]
-for _s in _BASE_SYMS:
-    _REGISTRO[_s] = "stm_base"
-_GESTION_SYMS = ["hacer_escribible", "_forzar_borrado", "eliminar_ruta", "borrar_contenido",
-    "copiar_contenido", "encontrar_contenido_actual", "_ultima_actualizacion_pry",
-    "_es_layout_actual", "comando_refactorizar", "_refactorizar_layout_actual",
-    "crear_carpeta", "comando_crear_carpeta", "comando_crear_archivo", "DIR_REGISTRO_JSON",
-    "REGISTRO_ENVIOS",
-    "DIR_REGISTRO_JSON",
-    "_contar_ficheros", "_registrar_envio", "comando_enviar", "actualizar",
-    "_actualizar_layout_actual"]
-for _s in _GESTION_SYMS:
-    _REGISTRO[_s] = "stm_gestion"
-_ANALISIS_SYMS = ["AnalisisArchivo", "analizar_archivo_local", "crear_plan_refactorizacion",
-    "_crear_diagnostico_respaldo", "_cargar_configuracion_ia_local", "consultar_ia_local",
-    "ConsultorIA", "comando_ia_local"]
-for _s in _ANALISIS_SYMS:
-    _REGISTRO[_s] = "stm_analisis"
-_MODELOS_SYMS = ["DIR_MODELOS_LOCAL", "HF_REPO_CODIGO", "HF_ARCHIVO_CODIGO",
-    "MODELOS_CODIGO_LIGEROS", "LIMITE_LINEAS_REFACTOR", "REGISTRO_REFACTOR_MD",
-    "MODELOS_OR_CODIGO", "ENDPOINT_OPENROUTER", "_leer_openrouter_key", "_chat_openrouter",
-    "_refactorizar_con_openrouter", "_descargar_peso_hf", "_modelos_ollama_instalados",
-    "_es_modelo_codigo", "_leer_candidatos_codigo", "_borrar_peso_local",
-    "_descargar_modelo_ollama", "_modelos_usados_registro", "_asegurar_modelo_codigo",
-    "_borrar_modelo_ollama", "_liberar_ollama"]
-for _s in _MODELOS_SYMS:
-    _REGISTRO[_s] = "stm_modelos"
-_REFACTOR_SYMS = ["_generar_fragmento", "_refactorizar_con_modelo",
-    "_validar_refactor", "_registrar_refactor_md", "_pedir_extra_o_diagnostico",
-    "comando_ds_ialocal", "_fallback_openrouter"]
-for _s in _REFACTOR_SYMS:
-    _REGISTRO[_s] = "stm_refactor"
-_FLUJO_SYMS = ["FlujoRefactorLucIA", "cerrar", "mostrar_menu", "ejecutar_comandos"]
-for _s in _FLUJO_SYMS:
-    _REGISTRO[_s] = "stm_flujo"
-_REGISTRO_SYMS = ["DIR_REGISTRO", "RUTA_JSON", "RUTA_MD", "RUTA_PESOS",
-    "DIM_VECTOR", "IPFS_API_URL", "IPFS_GATEWAY_URL", "NOMBRE_PESOS",
-    "leer_eventos", "construir_texto", "texto_a_vector",
-    "norma", "seccionar_md", "cuantizar", "desnormalizar",
-    "similitud_coseno", "md_a_pesos", "verificar_pesos", "vista_previa",
-    "url_pasarela", "subir_a_ipfs", "limpiar_registro", "limpiar_caches",
-    "publicar_registro_actualizar"]
-for _s in _REGISTRO_SYMS:
-    _REGISTRO[_s] = "stm_registro"
-_REGISTRO["LINEAS_POR_FRAGMENTO"] = "stm_modelos"
+for _modulo in _MODULOS:
+    for _simbolo in _simbolos_del_modulo(_modulo):
+        _REGISTRO.setdefault(_simbolo, _modulo)
+del _modulo, _simbolo
 
-__all__ = sorted(_REGISTRO.keys()) + ["RegistroRFPRMN", "crear_instancia", "version_info",
-    "modulos_estado", "verificar_presupuesto", "resolver", "nombres", "__version__"]
+__all__ = sorted(_REGISTRO.keys()) + ["RegistroRFPRMN", "crear_instancia",
+    "version_info", "modulos_estado", "verificar_presupuesto", "resolver",
+    "nombres", "__version__"]
 
 
 def _importar(modulo: str):
@@ -86,7 +81,7 @@ def resolver(nombre: str) -> Any:
 
 
 def nombres() -> list[str]:
-    """Lista ordenada de símbolos públicos registrados."""
+    """Lista ordenada de símbolos registrados."""
     return sorted(_REGISTRO.keys())
 
 
@@ -104,8 +99,8 @@ def __dir__() -> list[str]:
 class RegistroRFPRMN:
     """Registro central: mapa nombre -> (módulo, objeto) con carga perezosa.
 
-    Evita importar los backends pesados (Ollama/HF) hasta su primer uso
-    y ofrece introspección y verificación de presupuesto de líneas.
+    Evita importar los backends pesados (Ollama/HF/red neuronal) hasta su
+    primer uso y ofrece introspección y verificación de presupuesto de líneas.
     """
 
     _cache: dict[str, Any] = {}
@@ -143,11 +138,11 @@ class RegistroRFPRMN:
     def precargar(cls, *nombres_sel: str) -> dict[str, Any]:
         """Carga anticipada de una lista de símbolos; devuelve los resueltos."""
         out: dict[str, Any] = {}
-        for n in nombres_sel:
+        for nombre in nombres_sel:
             try:
-                out[n] = cls.obtener(n)
-            except Exception as e:
-                cls._fallos[n] = str(e)
+                out[nombre] = cls.obtener(nombre)
+            except Exception as error:  # noqa: BLE001 - se acumula el fallo
+                cls._fallos[nombre] = str(error)
         return out
 
     @classmethod
@@ -164,9 +159,9 @@ class RegistroRFPRMN:
     @classmethod
     def resumen(cls) -> dict[str, Any]:
         """Resumen del registro: módulos, nº símbolos y estado de caché."""
-        por_mod: dict[str, int] = {m: 0 for m in _MODULOS}
-        for _n, _m in _REGISTRO.items():
-            por_mod[_m] = por_mod.get(_m, 0) + 1
+        por_mod: dict[str, int] = {modulo: 0 for modulo in _MODULOS}
+        for modulo in _REGISTRO.values():
+            por_mod[modulo] = por_mod.get(modulo, 0) + 1
         return {"version": __version__, "modulos": list(_MODULOS),
                 "simbolos_totales": len(_REGISTRO), "por_modulo": por_mod,
                 "cacheados": len(cls._cache), "fallos": len(cls._fallos)}
@@ -175,19 +170,19 @@ class RegistroRFPRMN:
     def verificar_imports(cls) -> dict[str, str]:
         """Intenta importar cada submódulo; devuelve {modulo: 'OK'|'error'}."""
         estado: dict[str, str] = {}
-        for m in _MODULOS:
+        for modulo in _MODULOS:
             try:
-                cls.cargar_modulo(m)
-                estado[m] = "OK"
-            except Exception as e:
-                estado[m] = f"ERROR: {e}"
+                cls.cargar_modulo(modulo)
+                estado[modulo] = "OK"
+            except Exception as error:  # noqa: BLE001 - se informa del fallo
+                estado[modulo] = f"ERROR: {error}"
         return estado
 
     @classmethod
     def buscar(cls, patron: str) -> list[str]:
         """Busca símbolos por subcadena (insensible a mayúsculas)."""
-        p = patron.lower()
-        return sorted(n for n in _REGISTRO if p in n.lower())
+        objetivo = patron.lower()
+        return sorted(nombre for nombre in _REGISTRO if objetivo in nombre.lower())
 
     @classmethod
     def es_comando(cls, nombre: str) -> bool:
@@ -199,37 +194,37 @@ class RegistroRFPRMN:
     @classmethod
     def comandos(cls) -> list[str]:
         """Lista de comandos interactivos disponibles."""
-        return sorted(n for n in _REGISTRO if cls.es_comando(n))
+        return sorted(nombre for nombre in _REGISTRO if cls.es_comando(nombre))
 
 
 def crear_instancia(raiz: str | Path | None = None):
     """Crea una instancia de la fachada RFPRMN (import diferido)."""
-    from .stm_flujo import ejecutar_comandos as _ej  # noqa: F401 (calienta import)
-    mod = importlib.import_module("RFPRMN")
-    cls = getattr(mod, "RFPRMN")
-    return cls(raiz=raiz) if raiz is not None else cls()
+    modulo = importlib.import_module("RFPRMN")
+    clase = getattr(modulo, "RFPRMN")
+    return clase(raiz=raiz) if raiz is not None else clase()
 
 
 def version_info() -> dict[str, Any]:
     """Versión del paquete y nº de símbolos registrados."""
-    return {"version": __version__, "simbolos": len(_REGISTRO), "modulos": list(_MODULOS)}
+    return {"version": __version__, "simbolos": len(_REGISTRO),
+            "modulos": list(_MODULOS)}
 
 
 def modulos_estado() -> dict[str, Any]:
     """Estado de cada submódulo: import OK/ERROR + nº de líneas físicas."""
     base = Path(__file__).resolve().parent
     estado: dict[str, Any] = {}
-    for m in _MODULOS:
-        f = base / f"{m}.py"
+    for modulo in _MODULOS:
+        archivo = base / f"{modulo}.py"
         try:
-            n = len(f.read_text(encoding="utf-8").splitlines()) if f.exists() else -1
+            lineas = len(archivo.read_text(encoding="utf-8").splitlines()) if archivo.exists() else -1
         except OSError:
-            n = -1
+            lineas = -1
         try:
-            _importar(m)
-            estado[m] = {"import": "OK", "lineas": n}
-        except Exception as e:
-            estado[m] = {"import": f"ERROR: {e}", "lineas": n}
+            _importar(modulo)
+            estado[modulo] = {"import": "OK", "lineas": lineas}
+        except Exception as error:  # noqa: BLE001 - se informa del fallo
+            estado[modulo] = {"import": f"ERROR: {error}", "lineas": lineas}
     return estado
 
 
@@ -237,34 +232,36 @@ def verificar_presupuesto(max_lineas: int = 450) -> dict[str, Any]:
     """Verifica que ningún módulo supere ``max_lineas`` (anti-regresión)."""
     base = Path(__file__).resolve().parent
     detalle: dict[str, int] = {}
-    for m in _MODULOS:
-        f = base / f"{m}.py"
+    for modulo in _MODULOS:
+        archivo = base / f"{modulo}.py"
         try:
-            detalle[m] = len(f.read_text(encoding="utf-8").splitlines())
+            detalle[modulo] = len(archivo.read_text(encoding="utf-8").splitlines())
         except OSError:
-            detalle[m] = -1
-    # Incluye la fachada RFPRMN.py y este __init__ en el control.
-    for extra in [base.parent / "RFPRMN.py", base / "__init__.py"]:
+            detalle[modulo] = -1
+    for extra in (base.parent / "RFPRMN.py", base / "__init__.py"):
         try:
-            detalle[extra.name if extra.name != "__init__.py" else "STM_RFPRMN_stmDL/__init__.py"] = len(
-                extra.read_text(encoding="utf-8").splitlines())
+            etiqueta = extra.name if extra.name != "__init__.py" else "STM_RFPRMN_stmDL/__init__.py"
+            detalle[etiqueta] = len(extra.read_text(encoding="utf-8").splitlines())
         except OSError:
             pass
-    excedidos = {k: v for k, v in detalle.items() if v > max_lineas}
+    excedidos = {nombre: lineas for nombre, lineas in detalle.items()
+                 if lineas > max_lineas}
     return {"max": max_lineas, "detalle": detalle, "excedidos": excedidos,
             "ok": not excedidos}
 
 
 def tabla_comandos() -> list[tuple[str, str]]:
     """Pares (comando, módulo) de los comandos interactivos registrados."""
-    return [(n, _REGISTRO[n]) for n in sorted(_REGISTRO) if RegistroRFPRMN.es_comando(n)]
+    return [(nombre, _REGISTRO[nombre]) for nombre in sorted(_REGISTRO)
+            if RegistroRFPRMN.es_comando(nombre)]
 
 
 def ayuda_comando(nombre: str) -> str:
     """Una línea de ayuda para un comando (vacía si no es comando)."""
-    if not RegistroRFPRMN.es_comando(nombre.strip().lower()):
+    limpio = nombre.strip().lower()
+    if not RegistroRFPRMN.es_comando(limpio):
         return ""
-    return f"{nombre.strip().lower()} (módulo {RegistroRFPRMN.modulo_de(nombre.strip().lower())})"
+    return f"{limpio} (módulo {RegistroRFPRMN.modulo_de(limpio)})"
 
 
 def diagnostico_imports() -> dict[str, Any]:
@@ -277,99 +274,39 @@ def diagnostico_imports() -> dict[str, Any]:
 def contar_lineas() -> dict[str, int]:
     """Nº de líneas físicas por submódulo (sin importar nada)."""
     base = Path(__file__).resolve().parent
-    out: dict[str, int] = {}
-    for m in _MODULOS:
-        f = base / f"{m}.py"
+    salida: dict[str, int] = {}
+    for modulo in _MODULOS:
+        archivo = base / f"{modulo}.py"
         try:
-            out[m] = len(f.read_text(encoding="utf-8").splitlines()) if f.exists() else -1
+            salida[modulo] = len(archivo.read_text(encoding="utf-8").splitlines()) if archivo.exists() else -1
         except OSError:
-            out[m] = -1
-    out["__init__"] = len(Path(__file__).read_text(encoding="utf-8").splitlines())
-    return out
+            salida[modulo] = -1
+    salida["__init__"] = len(Path(__file__).read_text(encoding="utf-8").splitlines())
+    return salida
 
 
 def informe_salud(max_lineas: int = 450) -> dict[str, Any]:
     """Informe combinado: imports + líneas + presupuesto en un solo dict."""
     salud_imports = RegistroRFPRMN.verificar_imports()
     lineas = contar_lineas()
-    presup = verificar_presupuesto(max_lineas)
-    ok_imports = all(v == "OK" for v in salud_imports.values())
+    presupuesto = verificar_presupuesto(max_lineas)
+    ok_imports = all(valor == "OK" for valor in salud_imports.values())
     return {"imports_ok": ok_imports, "imports": salud_imports,
-            "lineas": lineas, "presupuesto": presup,
-            "saludable": ok_imports and bool(presup["ok"])}
+            "lineas": lineas, "presupuesto": presupuesto,
+            "saludable": ok_imports and bool(presupuesto["ok"])}
 
 
 def simbolos_por_modulo(modulo: str) -> list[str]:
-    """Símbolos públicos definidos en ``modulo`` (KeyError si no existe)."""
+    """Símbolos registrados que define ``modulo`` (KeyError si no existe)."""
     if modulo not in _MODULOS:
         raise KeyError(f"Módulo desconocido: {modulo}")
-    return sorted(n for n, m in _REGISTRO.items() if m == modulo)
+    return sorted(nombre for nombre, origen in _REGISTRO.items() if origen == modulo)
 
 
 def documentar_registro() -> str:
     """Resumen en texto del registro (nº símbolos por módulo)."""
     lineas_out = [f"STM_RFPRMN_stmDL v{__version__}: {len(_REGISTRO)} símbolos"]
-    for m in _MODULOS:
-        n = sum(1 for _m in _REGISTRO.values() if _m == m)
-        lineas_out.append(f"  - {m}: {n} símbolos")
+    for modulo in _MODULOS:
+        cantidad = sum(1 for origen in _REGISTRO.values() if origen == modulo)
+        lineas_out.append(f"  - {modulo}: {cantidad} símbolos")
     return "\n".join(lineas_out)
-
-
-# --- Re-exports directos (compatibilidad: from paquete import X) --------------
-# Se cargan de forma tolerante para no romper si un backend pesado falla.
-try:
-    from .stm_base import (  # noqa: F401,E402
-        Estilo, E, ANCHO_TERMINAL, _caja, _panel, RESPUESTAS_AFIRMATIVAS,
-        LIMITE_TAMANO_ANALISIS, EXTENSIONES_POR_LENGUAJE, PATRON_MARCADOR_PENDIENTE,
-        ErrorProyecto, RaizProyectoNoEncontrada, _imprimir_seguro, informar, exito,
-        advertir, reportar_error, pedir_confirmacion, MODULO_DIR, TLLDCD_DIR,
-        CONTRRF_DIR, SRC_DIR, encontrar_raiz, RAIZ, ORIGEN, DESTINO,
-        CONFIG_IA_LOCAL, RFC_DIR, PRY_DIR, carpetas_creadas,
-    )
-except Exception:
-    pass
-try:
-    from .stm_gestion import (  # noqa: F401,E402
-        hacer_escribible, eliminar_ruta, borrar_contenido, copiar_contenido,
-        encontrar_contenido_actual, comando_refactorizar, crear_carpeta,
-        comando_crear_carpeta, comando_crear_archivo, _contar_ficheros,
-        DIR_REGISTRO_JSON, REGISTRO_ENVIOS,
-        _registrar_envio, comando_enviar, actualizar,
-    )
-except Exception:
-    pass
-try:
-    from .stm_analisis import (  # noqa: F401,E402
-        AnalisisArchivo, analizar_archivo_local, crear_plan_refactorizacion,
-        consultar_ia_local, ConsultorIA, comando_ia_local,
-    )
-except Exception:
-    pass
-try:
-    from .stm_modelos import (  # noqa: F401,E402
-        DIR_MODELOS_LOCAL, LIMITE_LINEAS_REFACTOR, LINEAS_POR_FRAGMENTO,
-        REGISTRO_REFACTOR_MD, _borrar_peso_local,
-    )
-except Exception:
-    pass
-try:
-    from .stm_refactor import (  # noqa: F401,E402
-        comando_ds_ialocal,
-    )
-except Exception:
-    pass
-try:
-    from .stm_flujo import (  # noqa: F401,E402
-        FlujoRefactorLucIA, cerrar, mostrar_menu, ejecutar_comandos,
-    )
-except Exception:
-    pass
-try:
-    from .stm_registro import (  # noqa: F401,E402
-        DIR_REGISTRO, RUTA_MD, RUTA_PESOS, DIM_VECTOR, leer_eventos,
-        construir_texto, texto_a_vector, md_a_pesos, subir_a_ipfs,
-        limpiar_registro, limpiar_caches, publicar_registro_actualizar, verificar_pesos,
-        similitud_coseno, vista_previa, url_pasarela,
-    )
-except Exception:
-    pass

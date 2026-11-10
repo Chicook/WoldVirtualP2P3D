@@ -1,0 +1,164 @@
+{
+  "version": "2026.3.1",
+  "servidor": "CelebroBlockchainServer-BKSVCB",
+  "total_bloques": 5,
+  "dificultad": 2,
+  "cadena": [
+    {
+      "indice": 0,
+      "hash_bloque": "085561caa8af289000bd9331d66d4fd5a1e7b5e3115079595fb85410a2ef8634",
+      "hash_previo": "0000000000000000000000000000000000000000000000000000000000000000",
+      "merkle_root": "0dccdfce214923de382ee80b635c36c2b4ab8400918e25f7a498bfa89108eed0",
+      "dificultad": 1,
+      "nonce": 5,
+      "total_transacciones": 1,
+      "transacciones": [
+        {
+          "tipo": "GENESIS_COGNITIVO",
+          "emisor": "SYSTEM_CELEBRO",
+          "receptor": "CLUSTER_P2P",
+          "descripcion": "Arranque formal de la blockchain neuronal WoldVirtualP2P3D",
+          "hash_semilla": "3b218672129981a04a1db4804536c640f281449eb882a8949b0ea226595de840"
+        }
+      ],
+      "estado_neuronal": {
+        "total_neuronas": 50,
+        "capas": [
+          "ENRN",
+          "RF_SL",
+          "RF_EN",
+          "RNP",
+          "SLRN"
+        ],
+        "version_cluster": "2026.3.1",
+        "consenso": "Proof-of-Neural-Learning (PoNL)"
+      }
+    },
+    {
+      "indice": 1,
+      "hash_bloque": "005db024a7c5971d8ce897181dca241dc4e972f342b640cea24e70fab05604ab",
+      "hash_previo": "085561caa8af289000bd9331d66d4fd5a1e7b5e3115079595fb85410a2ef8634",
+      "merkle_root": "a0f01247cbeb4a0909cdda1d68e19576322ecd684c39aa56e9f94aa787caa093",
+      "dificultad": 2,
+      "nonce": 15,
+      "total_transacciones": 1,
+      "transacciones": [
+        {
+          "id_tx": "61d066d90c2e7520",
+          "tipo": "ALTA_CUENTA",
+          "emisor": "BKSVCB",
+          "receptor": "chicookfarrior",
+          "cid_ipfs": "",
+          "datos": {
+            "nick": "chicookfarrior",
+            "huella_comprometida": "ed11014c1d5b43f1759f7235578c41a867b287381fb2e7955db5861587d6c543",
+            "ubicacion_hash": "",
+            "fecha_alta": "2026-11-09 21:35:24",
+            "alta_ts": 1794256524.5680995
+          }
+        }
+      ],
+      "estado_neuronal": {
+        "activas": 50,
+        "deriva_acumulada": 0.0,
+        "pasos_sesion": 0,
+        "minero": "CelebroLocalNode"
+      }
+    },
+    {
+      "indice": 2,
+      "hash_bloque": "001abce1941771500b9d84d176211e3210ae85b71acd3fa647a4877cccbe66e1",
+      "hash_previo": "005db024a7c5971d8ce897181dca241dc4e972f342b640cea24e70fab05604ab",
+      "merkle_root": "da5877042283014120f222ad1daba51999a283135513752b6a0cfda4c45b739e",
+      "dificultad": 2,
+      "nonce": 330,
+      "total_transacciones": 1,
+      "transacciones": [
+        {
+          "id_tx": "e4c27160053a469c",
+          "tipo": "MIGRACION_CUENTA",
+          "emisor": "BKSVCB",
+          "receptor": "chicook",
+          "cid_ipfs": "",
+          "datos": {
+            "nick": "chicook",
+            "huella_comprometida": "f0abc34bd8b0f19e86ea028069b754157489413ae65417c31addc8e6f2ca74de",
+            "ubicacion_hash": "af3603d00817775082c31835fc4750844730166951bba57580377912a9465371",
+            "fecha_migracion": "2026-11-09 21:46:03",
+            "migracion_ts": 1794257163.5154128,
+            "tipo_migracion": "LLAVE_SEMILLA_A_HASH_UNICO",
+            "prueba_llave_semilla": "b815c551d050dc58aac91e06a198abfa2acf81a111284a2f05ad08208b3d1721"
+          }
+        }
+      ],
+      "estado_neuronal": {
+        "activas": 50,
+        "deriva_acumulada": 0.0,
+        "pasos_sesion": 0,
+        "minero": "CelebroLocalNode"
+      }
+    },
+    {
+      "indice": 3,
+      "hash_bloque": "00d906b1487b988fd1c0d7d7b138be3b047501b3fdd7a18f140556ac8e8e318d",
+      "hash_previo": "001abce1941771500b9d84d176211e3210ae85b71acd3fa647a4877cccbe66e1",
+      "merkle_root": "1f90a631d324d5f7ac8a6627f9f3be8a48eafddf97054c3f46f6694302d65f10",
+      "dificultad": 2,
+      "nonce": 319,
+      "total_transacciones": 1,
+      "transacciones": [
+        {
+          "id_tx": "11af4d932997c3ed",
+          "tipo": "ALTA_CUENTA",
+          "emisor": "BKSVCB",
+          "receptor": "pruebademo280",
+          "cid_ipfs": "",
+          "datos": {
+            "nick": "pruebademo280",
+            "huella_comprometida": "aede55a90991028dba2febab54bd407943027407e28caf1b9a5a90d30b0c782a",
+            "ubicacion_hash": "",
+            "fecha_alta": "2026-11-09 22:36:02",
+            "alta_ts": 1794260162.91959
+          }
+        }
+      ],
+      "estado_neuronal": {
+        "activas": 50,
+        "deriva_acumulada": 0.0,
+        "pasos_sesion": 0,
+        "minero": "CelebroLocalNode"
+      }
+    },
+    {
+      "indice": 4,
+      "hash_bloque": "006a03f25cb7fa959a88b9b391c73d299be132e85a04c8b8240d174f6c7ac478",
+      "hash_previo": "00d906b1487b988fd1c0d7d7b138be3b047501b3fdd7a18f140556ac8e8e318d",
+      "merkle_root": "65eb2741146abcbd0b052a0eb7170e898707955cb7c02474a8bef7c367b2a125",
+      "dificultad": 2,
+      "nonce": 100,
+      "total_transacciones": 1,
+      "transacciones": [
+        {
+          "id_tx": "3e9ed3f7dcd2d33d",
+          "tipo": "ALTA_CUENTA",
+          "emisor": "BKSVCB",
+          "receptor": "pruebademo280",
+          "cid_ipfs": "",
+          "datos": {
+            "nick": "pruebademo280",
+            "huella_comprometida": "63bdb3ff64ee82d5789ec5300c85404168773bbc3e26f1484080d2b68722a7d8",
+            "ubicacion_hash": "af3603d00817775082c31835fc4750844730166951bba57580377912a9465371",
+            "fecha_alta": "2026-11-09 22:57:32",
+            "alta_ts": 1794261452.458449
+          }
+        }
+      ],
+      "estado_neuronal": {
+        "activas": 50,
+        "deriva_acumulada": 0.0,
+        "pasos_sesion": 0,
+        "minero": "CelebroLocalNode"
+      }
+    }
+  ]
+}

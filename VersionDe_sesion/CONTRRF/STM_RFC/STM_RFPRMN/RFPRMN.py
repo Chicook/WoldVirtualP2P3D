@@ -1,17 +1,15 @@
 """CLI del ciclo de vida del código de WoldVirtualP2P3D (fachada).
 
-La lógica vive en STM_RFPRMN_stmDL/ (6 módulos de <=450 líneas).
-Este archivo mantiene compatibilidad total: todos los símbolos públicos
-del RFPRMN.py original se re-exportan, y la clase RFPRMN expone cada
-comando como método. Funcionalidad intacta.
+La lógica vive en ``STM_RFPRMN_stmDL/``; aquí se re-exporta y se expone la CLI.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Callable, Optional
 
-__version__ = "2.0.0"
+__version__ = "2.24.0"
 
 _MODULO_DIR = Path(__file__).resolve().parent
 _PAQUETE_DIR = _MODULO_DIR / "STM_RFPRMN_stmDL"
@@ -63,6 +61,13 @@ from STM_RFPRMN_stmDL.stm_registro import (  # noqa: E402,F401
     DIR_REGISTRO, RUTA_MD, RUTA_PESOS, publicar_registro_actualizar,
     limpiar_registro, verificar_pesos, vista_previa, similitud_coseno,
 )
+from STM_RFPRMN_stmDL.stm_rutas import (  # noqa: E402,F401
+    comando_configurar_rutas, comando_rutas, estado_rutas, guardar_rutas,
+)
+from STM_RFPRMN_stmDL.stm_lucia import describir as describir_lucia  # noqa: E402
+from STM_RFPRMN_stmDL.stm_corpus import sembrar_corpus  # noqa: E402
+from STM_RFPRMN_stmDL.stm_seq2seq import describir as describir_seq2seq  # noqa: E402
+from STM_RFPRMN_stmDL.stm_creacion import comando_crear_codigo  # noqa: E402
 
 __all__ = sorted(set(_Registro.nombres()) | {"RFPRMN", "cerrar", "mostrar_menu",
     "ejecutar_comandos", "__version__"})
@@ -242,10 +247,19 @@ _COMANDOS_AYUDA: dict[str, str] = {
     "actualizar": "Reemplaza PRY con la versión refactorizada de RFC.",
     "enviar": "Envía una carpeta con su contenido a CONTRRF/RFC.",
     "ia local": "Analiza un archivo con LucIA y crea un plan de refactorización.",
-    "ds ialocal": "Plan de LucIA + refactor con modelo local y registro .md.",
+    "ds ialocal": "Plan de LucIA + refactor local (registro .md; --openrouter lo activa).",
+    "crear codigo": "Crea un archivo nuevo a partir de un diagnóstico de LucIA.",
+    "crear logica": "Escribe una función a partir de lo que le pidas en lenguaje natural.",
+    "comentar archivo": "Documenta con LucIA las funciones de un archivo existente.",
+    "informacion codigo": "Informe .md con la deuda técnica y la hoja de ruta.",
+    "test": "Prueba un archivo y diagnostica su deuda técnica.",
     "cerrar": "Cierra el sistema limpiando modelos descargados.",
     "estado": "Muestra el estado de los submódulos y su nº de líneas.",
     "presupuesto": "Verifica que ningún módulo supere el tope de 450 líneas.",
+    "rutas": "Muestra las rutas activas de RFC/PRY y de qué fuente salen.",
+    "configurar rutas": "Elige los directorios de RFC y PRY (se guardan en .config).",
+    "lucia": "Estado de la red neuronal de LucIA (muestras aprendidas y pesos).",
+    "seq2seq": "Estado del subsistema seq2seq (pares memorizados).",
     "ayuda": "Muestra esta ayuda.",
 }
 
@@ -265,16 +279,12 @@ def imprimir_ayuda() -> None:
 
 def version_info() -> dict:
     """Versión de la fachada y nº de símbolos públicos re-exportados."""
-    return {"version": __version__, "simbolos": len(__all__),
-            "modulos": ["stm_base", "stm_gestion", "stm_analisis",
-                        "stm_modelos", "stm_refactor", "stm_flujo",
-                        "stm_registro"]}
+    from STM_RFPRMN_stmDL import modulos_estado
+    return {"version": __version__, "simbolos": len(__all__), "modulos": list(modulos_estado())}
+
 
 def estado_sistema() -> dict:
-    """Estado de import + líneas de cada submódulo del paquete.
-
-    Delega en STM_RFPRMN_stmDL.modulos_estado() y lo muestra en caja.
-    """
+    """Estado de import + líneas de cada submódulo (delega en el paquete)."""
     from STM_RFPRMN_stmDL import modulos_estado
     estado = modulos_estado()
     filas = [(m, f"{v['import']} · {v['lineas']} líneas") for m, v in estado.items()]
@@ -297,7 +307,7 @@ def verificar_sistema(max_lineas: int = 450) -> dict:
     return resultado
 
 def _ejecutar_extra(entrada: str) -> bool:
-    """Ejecuta los comandos extra de la fachada (estado/presupuesto/ayuda).
+    """Ejecuta los comandos extra de la fachada (estado/presupuesto/rutas/ayuda).
 
     Devuelve True si ``entrada`` era un comando extra (ya ejecutado).
     """
@@ -306,6 +316,15 @@ def _ejecutar_extra(entrada: str) -> bool:
         return True
     if entrada == "presupuesto":
         verificar_sistema()
+        return True
+    if entrada == "rutas":
+        comando_rutas()
+        return True
+    if entrada == "configurar rutas":
+        comando_configurar_rutas()
+        return True
+    if entrada == "lucia":
+        _imprimir_seguro(describir_lucia())
         return True
     if entrada in ("ayuda", "help", "?"):
         imprimir_ayuda()
@@ -345,10 +364,22 @@ def main(argv: list[str] | None = None) -> int:
     """Punto de entrada CLI no interactivo.
 
     Sin argumentos abre la shell interactiva clásica (compatibilidad).
-    Acepta: --ayuda, --version, --estado, --presupuesto, --comando NOMBRE.
+    Acepta: --ayuda, --version, --estado, --presupuesto, --comando NOMBRE
+    y --consumir-modelos (borra el modelo tras usarlo; por defecto se conserva).
+
     Devuelve código de salida (0 = OK).
     """
     args = list(sys.argv[1:] if argv is None else argv)
+    if "--consumir-modelos" in args:
+        # La política viaja por entorno: la leen el flujo y el fallback sin
+        # tener que enhebrar un parámetro por toda la cadena de comandos.
+        os.environ["RFPRMN_CONSUMIR_MODELOS"] = "1"
+        args = [argumento for argumento in args if argumento != "--consumir-modelos"]
+    if "--openrouter" in args:
+        # El respaldo OpenRouter está desactivado por defecto (pendiente de
+        # configuración); esta bandera lo habilita solo para esta ejecución.
+        os.environ["RFPRMN_OPENROUTER"] = "1"
+        args = [argumento for argumento in args if argumento != "--openrouter"]
     if not args:
         ejecutar_comandos()
         return 0
@@ -365,6 +396,28 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args[0] == "--presupuesto":
         return 0 if verificar_sistema()["ok"] else 1
+    if args[0] in ("--rutas", "rutas"):
+        comando_rutas()
+        return 0
+    if args[0] in ("--configurar-rutas", "configurar rutas"):
+        comando_configurar_rutas()
+        return 0
+    if args[0] in ("--lucia", "lucia"):
+        _imprimir_seguro(describir_lucia())
+        _imprimir_seguro(describir_seq2seq())
+        return 0
+    if args[0] in ("--seq2seq", "seq2seq"):
+        _imprimir_seguro(describir_seq2seq())
+        return 0
+    if args[0] in ("--sembrar-lucia", "sembrar lucia"):
+        limite = int(args[1]) if len(args) > 1 and args[1].isdigit() else 12
+        resultado = sembrar_corpus(MODULO_DIR / "STM_RFPRMN_stmDL", limite)
+        if not resultado["disponible"] or resultado["muestras"] == 0:
+            reportar_error(f"No se pudo sembrar: {resultado['motivo']}")
+            return 1
+        exito(f"Semilla: {resultado['muestras']} muestras de {resultado['archivos']} "
+              f"archivos ({resultado['pasos']} pasadas).")
+        return 0
     if args[0] == "--comando" and len(args) > 1:
         nombre = " ".join(args[1:]).strip().lower()
         fachada = RFPRMN()
@@ -376,12 +429,19 @@ def main(argv: list[str] | None = None) -> int:
             "crear archivo": fachada.crear_archivo_cmd,
             "ia local": fachada.ia_local,
             "ds ialocal": fachada.ds_ialocal,
+            "crear codigo": comando_crear_codigo,
+            "rutas": comando_rutas,
+            "configurar rutas": comando_configurar_rutas,
         }
         accion = tabla.get(nombre)
         if accion is None:
             reportar_error(f"Comando no reconocido: '{nombre}' (prueba --ayuda)")
             return 2
-        accion()
+        try:
+            accion()
+        except (KeyboardInterrupt, EOFError):
+            informar("Entrada interrumpida (sin más datos); no se modificó nada.")
+            return 1
         return 0
     reportar_error(f"Argumento no reconocido: {args[0]} (prueba --ayuda)")
     return 2
