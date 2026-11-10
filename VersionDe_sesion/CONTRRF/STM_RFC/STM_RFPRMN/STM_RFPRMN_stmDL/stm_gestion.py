@@ -34,7 +34,10 @@ from .stm_fs import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
 from .stm_registro import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
     DIR_REGISTRO as DIR_REGISTRO_JSON, RUTA_JSON as REGISTRO_ENVIOS,
 )
-from .stm_rutas import rutas_protegidas, ultima_actualizacion_pry as _ultima_actualizacion_pry
+from .stm_rutas import (
+    rutas_protegidas, ultima_actualizacion_pry as _ultima_actualizacion_pry,
+    actualizar_rutas_finales,
+)
 
 #: Mensaje único cuando el layout no es el esperado (P4: sin rama heredada).
 _MENSAJE_LAYOUT = (
@@ -330,6 +333,7 @@ def _actualizar_layout_actual() -> None:
     exito(f"Actualización completada en: {destino} "
           f"({info['ficheros']} ficheros verificados)")
     _registrar_envio(origen, destino, info["ficheros"], "OK actualizar")
+    _actualizar_rutas_finales(destino)
     purgadas, fallos_purga = _purgar_versiones_anteriores(destino)
     if fallos_purga:
         advertir(f"{len(fallos_purga)} versión(es) anterior(es) no se pudieron purgar.")
@@ -371,6 +375,15 @@ def _vaciar_rfc() -> bool:
         return False
     informar(f"Contenido eliminado de: {RFC_DIR}")
     return True
+
+
+def _actualizar_rutas_finales(destino: Path) -> None:
+    """Registra las rutas finales de la nueva versión (nunca invalida actualizar)."""
+    try:
+        archivo = actualizar_rutas_finales(destino)
+        informar(f"Rutas finales actualizadas en {archivo}")
+    except Exception as error:  # noqa: BLE001 - no invalida la actualización
+        advertir(f"No se pudieron actualizar las rutas finales ({error}).")
 
 
 def _publicar(origen: Path, destino: Path, ficheros: int,

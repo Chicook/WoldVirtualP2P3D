@@ -63,6 +63,7 @@ from STM_RFPRMN_stmDL.stm_registro import (  # noqa: E402,F401
 )
 from STM_RFPRMN_stmDL.stm_rutas import (  # noqa: E402,F401
     comando_configurar_rutas, comando_rutas, estado_rutas, guardar_rutas,
+    actualizar_rutas_finales, leer_rutas_finales,
 )
 from STM_RFPRMN_stmDL.stm_lucia import describir as describir_lucia  # noqa: E402
 from STM_RFPRMN_stmDL.stm_corpus import sembrar_corpus  # noqa: E402
