@@ -1,0 +1,134 @@
+[
+  {
+    "ruta": "gltfimport\\avatares\\AVH1.gltf",
+    "sha256_corrupto": "d72e15093d5b30cd6d683e29aa77ad3246124d47d7151d8161ab5c0e19194d48"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVH2.gltf",
+    "sha256_corrupto": "a09c88021eeb1a39dc4b67ab007a9deda7d037e8a26bb1c7e118a22aa923e4b9"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVH3.gltf",
+    "sha256_corrupto": "b71b4d50ae5f0789828699542028ad8d2a917c8885fc314fa750e2dc6d770f4e"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVH4.gltf",
+    "sha256_corrupto": "2cac2d0ef0238f5cdaa7f5753b812da3fe13f8cf375f05295adf44674892fd7f"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVMJ1.gltf",
+    "sha256_corrupto": "794bf8f4fa34179a00065d9b2e01d0b79df86ac084c6e170e072a6d1772c6930"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVMJ2.gltf",
+    "sha256_corrupto": "3dc1ae33493fc45f93c44267b138f45131a4226b915a3811f26b5af85e3ca272"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVMJ3.gltf",
+    "sha256_corrupto": "cb7ad916e2429c96854d547d5c551524173df48c389705651d9a12921f89b99a"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVMJ4.gltf",
+    "sha256_corrupto": "0544bb35ba6c1923fe28c34aaa78e020b9c9c5c75efefec7b5aedaece803439c"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVH1.bin",
+    "sha256_corrupto": "31c8380a693cf1c629fc0fd06c93783696e4d4fcc6e2a624b91a0b7d86667752"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVH2.bin",
+    "sha256_corrupto": "b8632792c689cedf74346e15e16be4ab11cb52ac0b2203a9d98d9d4cbfe83932"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVH3.bin",
+    "sha256_corrupto": "b8632792c689cedf74346e15e16be4ab11cb52ac0b2203a9d98d9d4cbfe83932"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVH4.bin",
+    "sha256_corrupto": "b8632792c689cedf74346e15e16be4ab11cb52ac0b2203a9d98d9d4cbfe83932"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVMJ1.bin",
+    "sha256_corrupto": "fcc249493dab14e0939a1f46b6e4bea77b876d466453a95746baa72a9027ccf7"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVMJ2.bin",
+    "sha256_corrupto": "b35ce7b0d8e7524dbc90b6528ff6df2047c8e79096e094470cac92e5c18a1ff1"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVMJ3.bin",
+    "sha256_corrupto": "b35ce7b0d8e7524dbc90b6528ff6df2047c8e79096e094470cac92e5c18a1ff1"
+  },
+  {
+    "ruta": "gltfimport\\avatares\\AVMJ4.bin",
+    "sha256_corrupto": "fcc249493dab14e0939a1f46b6e4bea77b876d466453a95746baa72a9027ccf7"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVHM\\AVmj1.glb",
+    "sha256_corrupto": "84ab9a6a055781dd538e5b1292846a7d90cd1e44c083e0686120a22c80e9eb07"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVHM\\AVmj2.glb",
+    "sha256_corrupto": "ed9e4d1efadf14330b2add8ab6e0d461c0135b23eb6c0cd70eee72ad54d11c77"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVHM\\AVmj3.glb",
+    "sha256_corrupto": "2cfdfc4442bc1becc222e7a799eefb052a26279bf7cef0988e2f62af51b5ef51"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVHM\\AVmj4.glb",
+    "sha256_corrupto": "10389dcd8c8c78a17b8cd82fe07d8728b6c0e8dc082422d0085e00eff97ef692"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVHM\\AVmj5.glb",
+    "sha256_corrupto": "b5c76f9a4856c1a6d6e83fb4b6b90e6d9d5cc11c6c3eb015217cf7d616b8eb67"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVHM\\AVmj6.glb",
+    "sha256_corrupto": "a1e8367eb81fb4e206ce1527ccc96555869235f3738998f8218ae37059e0dd49"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVHM\\AVmj7.glb",
+    "sha256_corrupto": "b8499d34de48174eddca9a2cf886d531a30ea91715edbb911e6d05f97c79ed8c"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm1.glb",
+    "sha256_corrupto": "2d1328660d1c4a26069f45e9299e9e31e787a83a4cbee7a498a250bf2e36fae3"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm2.glb",
+    "sha256_corrupto": "f61518c604210744b95f5d916904cff3567b1bfa7d657a588d905202e2194b8a"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm3.glb",
+    "sha256_corrupto": "cc54af731f575a64fbe7e8dcb176fd975c6dcffc84487a1d1d629ac5df18a7e4"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm4.glb",
+    "sha256_corrupto": "8fe4dc87bc4022ac010fde50263d8bf306669474948e7940d80092fd0f76745f"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm5.glb",
+    "sha256_corrupto": "d3b0d40edaa2a7da85543b90399d95ad4e81bb50b7b2e61dc885ddbbfd7de215"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm6.glb",
+    "sha256_corrupto": "b04c09910206c53cd40ad7d10c56963a84019bbd9452c446f17fbfb35a6935ce"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm7.glb",
+    "sha256_corrupto": "802086e7e730e109bffb33bfb774e1a043157fd57b1056d62c0207ce6afcfed7"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm8.glb",
+    "sha256_corrupto": "83ed5165a183b674d4dcd41f586fae6449bb13822da9e46a76800c8d8817989e"
+  },
+  {
+    "ruta": "AreaDeTrabajo\\GTLF_GODOT\\GltfIMP\\AVATARES\\AVMJ\\avhm9.glb",
+    "sha256_corrupto": "391fada9ee4dda2217507761fd9881f7e0dd29820931e21046444d1a1888f2a7"
+  },
+  {
+    "ruta": "ESCENAS\\sceneOPTM\\constructor\\UA\\UserAnimados\\Import_UserAnimados\\ctr_tscn_userBS\\importblend\\hm1.blend",
+    "sha256_corrupto": "2d8068dd8092aa392e546ec6bb17f3ff57b23e16e79bcd9f368c4154c014fd5f"
+  }
+]

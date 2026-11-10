@@ -1,0 +1,16 @@
+# Godot
+.godot/
+*.translation
+
+# Artefactos de Blender
+_work_rig.blend
+_work_rig.blend1
+*.blend1
+
+# Python
+__pycache__/
+*.pyc
+
+# Sistema
+.DS_Store
+Thumbs.db
