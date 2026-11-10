@@ -1,13 +1,21 @@
 """Submodulo de RFPRMN (refactor: tope 400/450 lineas)."""
 from __future__ import annotations
-import ast, json, os, re, shutil, stat, subprocess, sys, textwrap, urllib.error, urllib.parse, urllib.request, uuid
+import ast
+import json
+import os
+import re
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Optional
-try:
-    from .stm_base import (E, informar, exito, advertir, reportar_error, pedir_confirmacion, CONFIG_IA_LOCAL, LIMITE_TAMANO_ANALISIS, PATRON_MARCADOR_PENDIENTE, _panel, _imprimir_seguro)
-except ImportError:
-    pass
+from .stm_base import (  # noqa: F401
+    E, informar, exito, advertir, reportar_error, pedir_confirmacion,
+    CONFIG_IA_LOCAL, LIMITE_TAMANO_ANALISIS, PATRON_MARCADOR_PENDIENTE,
+    _panel, _imprimir_seguro,
+)
+from .stm_rutas import describir_config_ia_local, ruta_config_ia_local
 
 # --- Análisis estático de código --------------------------------------------
 
@@ -149,9 +157,20 @@ def _crear_diagnostico_respaldo(analisis: AnalisisArchivo) -> str:
 
 
 def _cargar_configuracion_ia_local() -> tuple[str, str]:
-    """Lee ``IAlocal.json`` y valida que el endpoint apunte a este mismo equipo."""
-    with open(CONFIG_IA_LOCAL, "r", encoding="utf-8") as archivo_config:
-        configuracion = json.load(archivo_config)
+    """Lee ``IAlocal.json`` y valida que el endpoint apunte a este mismo equipo.
+
+    La ruta se resuelve en :mod:`stm_rutas` (env → última actualización de PRY
+    → ``RFC/src`` heredado → ``STM_RFPRMN/.config``), no contra ``RFC/src`` a
+    secas: ese árbol está vacío tras un ``actualizar`` (R1).
+    """
+    ruta_config = ruta_config_ia_local()
+    try:
+        with open(ruta_config, "r", encoding="utf-8") as archivo_config:
+            configuracion = json.load(archivo_config)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"{ruta_config} no existe. Rutas probadas: {describir_config_ia_local()}"
+        ) from error
 
     endpoint = str(configuracion.get("endpoint", "http://localhost:11434")).rstrip("/")
     uri_local = urllib.parse.urlparse(endpoint)
@@ -164,6 +183,43 @@ def _cargar_configuracion_ia_local() -> tuple[str, str]:
     return endpoint, modelo
 
 
+def _modelo_instalado(endpoint: str, preferido: str) -> str:
+    """Devuelve un modelo realmente instalado; el preferido si lo está.
+
+    Evita el 404 cuando ``IAlocal.json`` apunta a un modelo que nunca se
+    descargó: en ese caso se usa el instalado más ligero por parámetros.
+    """
+    try:
+        with urllib.request.urlopen(f"{endpoint}/api/tags", timeout=5) as respuesta:
+            datos = json.loads(respuesta.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001 - sin Ollama se intenta el preferido
+        return preferido
+    nombres: list[str] = []
+    for modelo in datos.get("models", []):
+        if isinstance(modelo, dict):
+            nombre = str(modelo.get("name") or modelo.get("model") or "").strip()
+            if nombre:
+                nombres.append(nombre)
+    if not nombres:
+        return preferido
+    # Los modelos de embeddings no sirven para /api/chat: se descartan. Si no
+    # queda ninguno de chat, se mantiene el preferido (y se degradará solo).
+    sin_embeddings = [nombre for nombre in nombres
+                      if not any(marca in nombre.lower()
+                                 for marca in ("embed", "minilm", "bge", "arctic"))]
+    if not sin_embeddings:
+        return preferido
+    nombres = sin_embeddings
+    if preferido.lower() in {nombre.lower() for nombre in nombres}:
+        return preferido
+
+    def _tamano(nombre: str) -> float:
+        coincidencia = re.search(r"(\d+(?:\.\d+)?)\s*b\b", nombre.lower())
+        return float(coincidencia.group(1)) if coincidencia else 9.0
+
+    return sorted(nombres, key=_tamano)[0]
+
+
 def consultar_ia_local(contenido: str, analisis: AnalisisArchivo) -> str:
     """Pide un diagnóstico a LucIA vía un modelo local (Ollama); si el motor
     no responde o la configuración es inválida, cae en el respaldo local."""
@@ -174,6 +230,7 @@ def consultar_ia_local(contenido: str, analisis: AnalisisArchivo) -> str:
     )
     try:
         endpoint, modelo = _cargar_configuracion_ia_local()
+        modelo = _modelo_instalado(endpoint, modelo)
         contexto = (
             f"Archivo: {Path(analisis.ruta).name}\n"
             f"Métricas: {json.dumps(analisis.a_dict(), ensure_ascii=False)}\n"
