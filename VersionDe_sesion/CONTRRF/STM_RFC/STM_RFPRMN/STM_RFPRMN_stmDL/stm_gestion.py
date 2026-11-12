@@ -34,7 +34,11 @@ from .stm_fs import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
 from .stm_registro import (  # noqa: F401  (re-exportados: compatibilidad de RFPRMN)
     DIR_REGISTRO as DIR_REGISTRO_JSON, RUTA_JSON as REGISTRO_ENVIOS,
 )
-from .stm_rutas import rutas_protegidas, ultima_actualizacion_pry as _ultima_actualizacion_pry
+from .stm_rutas import (
+    rutas_protegidas, ultima_actualizacion_pry as _ultima_actualizacion_pry,
+    actualizar_rutas_finales,
+)
+from .stm_creacion import comando_copiar_codigo, copiar_codigo
 
 #: Mensaje único cuando el layout no es el esperado (P4: sin rama heredada).
 _MENSAJE_LAYOUT = (
@@ -146,6 +150,56 @@ def comando_crear_carpeta() -> None:
     relativa = os.path.relpath(carpeta, RAIZ)
     if relativa not in carpetas_creadas:
         carpetas_creadas.append(relativa)
+
+
+def crear_archivo(ruta: str, nombre: str, lenguaje: str = "") -> str:
+    """Crea un archivo vacio en ``ruta/nombre`` sin interaccion (API programatica).
+
+    Equivalente no interactivo de ``comando_crear_archivo``: no pide input,
+    no imprime nada por pantalla y devuelve la ruta final del archivo creado.
+    Es el metodo que invocan las neuronas (NeuronaConstructiva, NeuronaCodigo)
+    en tiempo de ejecucion.
+
+    Parameters
+    ----------
+    ruta : str
+        Directorio donde se creara el archivo (se crea si no existe).
+    nombre : str
+        Nombre del archivo, con o sin extension.  Si ``lenguaje`` se facilita
+        y ``nombre`` no lleva extension, se anade la extension correspondiente.
+    lenguaje : str, opcional
+        Lenguaje de programacion (ej: ``'python'``, ``'csharp'``, ``'gdscript'``).
+        Se usa para resolver la extension via ``EXTENSIONES_POR_LENGUAJE``.
+        Si esta vacio se trata ``nombre`` tal cual.
+
+    Returns
+    -------
+    str
+        Ruta absoluta del archivo creado (o ya existente).
+
+    Raises
+    ------
+    ErrorProyecto
+        Si el nombre incluye separadores de ruta o si ruta/nombre no son validos.
+    OSError
+        Si el sistema de archivos rechaza la operacion.
+    """
+    base = Path(ruta)
+    limpio = nombre.strip()
+    if not limpio or Path(limpio).name != limpio:
+        raise ErrorProyecto(f"Nombre de archivo no valido: {nombre!r}")
+    if lenguaje:
+        ext = EXTENSIONES_POR_LENGUAJE.get(
+            lenguaje.strip().lower(),
+            f".{lenguaje.strip().lower()}",
+        )
+        if ext and not limpio.endswith(ext):
+            limpio += ext
+    archivo = base / limpio
+    archivo.parent.mkdir(parents=True, exist_ok=True)
+    if not archivo.exists():
+        archivo.touch()
+    return str(archivo)
 
 
 def comando_crear_archivo() -> None:
@@ -330,6 +384,7 @@ def _actualizar_layout_actual() -> None:
     exito(f"Actualización completada en: {destino} "
           f"({info['ficheros']} ficheros verificados)")
     _registrar_envio(origen, destino, info["ficheros"], "OK actualizar")
+    _actualizar_rutas_finales(destino)
     purgadas, fallos_purga = _purgar_versiones_anteriores(destino)
     if fallos_purga:
         advertir(f"{len(fallos_purga)} versión(es) anterior(es) no se pudieron purgar.")
@@ -371,6 +426,15 @@ def _vaciar_rfc() -> bool:
         return False
     informar(f"Contenido eliminado de: {RFC_DIR}")
     return True
+
+
+def _actualizar_rutas_finales(destino: Path) -> None:
+    """Registra las rutas finales de la nueva versión (nunca invalida actualizar)."""
+    try:
+        archivo = actualizar_rutas_finales(destino)
+        informar(f"Rutas finales actualizadas en {archivo}")
+    except Exception as error:  # noqa: BLE001 - no invalida la actualización
+        advertir(f"No se pudieron actualizar las rutas finales ({error}).")
 
 
 def _publicar(origen: Path, destino: Path, ficheros: int,

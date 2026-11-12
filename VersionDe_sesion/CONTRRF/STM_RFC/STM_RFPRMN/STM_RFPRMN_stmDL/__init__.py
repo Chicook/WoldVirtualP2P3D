@@ -29,12 +29,20 @@ _MODULOS = ("stm_base", "stm_rutas", "stm_fs", "stm_fragmentos", "stm_gestion",
             "stm_descartes", "stm_openrouter", "stm_refactor", "stm_particion",
             "stm_informe", "stm_entrenamiento", "stm_creacion", "stm_logica",
             "stm_comentarios", "stm_agente", "stm_pesos_ipfs", "stm_flujo",
-            "stm_registro", "stm_pesos", "stm_ipfs", "test")
+            "stm_registro", "stm_pesos", "stm_ipfs", "stm_cli", "stm_adjuntar",
+            "stm_shell", "sbstm_mdl.sbstm_agnt", "sbstm_mdl.sbstm_flj",
+            "sbstm_mdl.sbstm_ptcn", "sbstm_mdl.sbrtstm.snrtstm_sbstm_agnt",
+            "test")
+
+
+def _ruta_modulo(modulo: str) -> Path:
+    """Ruta del archivo de ``modulo`` (admite submódulos separados por puntos)."""
+    return Path(__file__).resolve().parent.joinpath(*modulo.split(".")).with_suffix(".py")
 
 
 def _simbolos_del_modulo(modulo: str) -> list[str]:
     """Símbolos de nivel superior definidos en ``modulo`` (vía AST)."""
-    ruta = Path(__file__).with_name(f"{modulo}.py")
+    ruta = _ruta_modulo(modulo)
     try:
         arbol = ast.parse(ruta.read_text(encoding="utf-8"))
     except (OSError, SyntaxError):
@@ -212,10 +220,9 @@ def version_info() -> dict[str, Any]:
 
 def modulos_estado() -> dict[str, Any]:
     """Estado de cada submódulo: import OK/ERROR + nº de líneas físicas."""
-    base = Path(__file__).resolve().parent
     estado: dict[str, Any] = {}
     for modulo in _MODULOS:
-        archivo = base / f"{modulo}.py"
+        archivo = _ruta_modulo(modulo)
         try:
             lineas = len(archivo.read_text(encoding="utf-8").splitlines()) if archivo.exists() else -1
         except OSError:
@@ -233,7 +240,7 @@ def verificar_presupuesto(max_lineas: int = 450) -> dict[str, Any]:
     base = Path(__file__).resolve().parent
     detalle: dict[str, int] = {}
     for modulo in _MODULOS:
-        archivo = base / f"{modulo}.py"
+        archivo = _ruta_modulo(modulo)
         try:
             detalle[modulo] = len(archivo.read_text(encoding="utf-8").splitlines())
         except OSError:
@@ -273,10 +280,9 @@ def diagnostico_imports() -> dict[str, Any]:
 
 def contar_lineas() -> dict[str, int]:
     """Nº de líneas físicas por submódulo (sin importar nada)."""
-    base = Path(__file__).resolve().parent
     salida: dict[str, int] = {}
     for modulo in _MODULOS:
-        archivo = base / f"{modulo}.py"
+        archivo = _ruta_modulo(modulo)
         try:
             salida[modulo] = len(archivo.read_text(encoding="utf-8").splitlines()) if archivo.exists() else -1
         except OSError:

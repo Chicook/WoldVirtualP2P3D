@@ -14,19 +14,29 @@ Dos fases, que es como lo pide el proyecto:
 Nunca se corta una clase ni una ``def`` por la mitad: las unidades son nodos de
 nivel superior (AST). Si una sola unidad supera el tope, se avisa: eso hay que
 dividirlo a mano.
+
+El análisis y el empaquetado viven en ``sbstm_mdl/sbstm_ptcn.py`` (clase
+``Particionador``); aquí se re-exportan para conservar la API histórica.
 """
 from __future__ import annotations
 
-import ast
 import os
+import sys
 from pathlib import Path
 
-from .stm_base import (
+#: Directorio que contiene el paquete (``.../STM_RFPRMN``). Se añade al path
+#: para que los imports absolutos resuelvan también en ejecución directa (F5).
+_RAIZ_PAQUETE = Path(__file__).resolve().parents[1]
+if str(_RAIZ_PAQUETE) not in sys.path:
+    sys.path.insert(0, str(_RAIZ_PAQUETE))
+
+from STM_RFPRMN_stmDL.stm_base import (  # noqa: E402
     CONTRRF_DIR, ErrorProyecto, _imprimir_seguro, _panel, advertir, exito,
     informar, pedir_confirmacion, reportar_error,
 )
-from .stm_fragmentos import LIMITE_LINEAS_REFACTOR
-from .stm_fs import escribir_texto_atomico
+from STM_RFPRMN_stmDL.stm_fragmentos import LIMITE_LINEAS_REFACTOR  # noqa: E402
+from STM_RFPRMN_stmDL.stm_fs import escribir_texto_atomico  # noqa: E402
+from STM_RFPRMN_stmDL.sbstm_mdl.sbstm_ptcn import Particionador  # noqa: E402
 
 #: Carpeta donde aterriza el código refactorizado.
 DIR_CONSTRUCCION = CONTRRF_DIR / "CONTRUCCION"
@@ -34,130 +44,14 @@ DIR_CONSTRUCCION = CONTRRF_DIR / "CONTRUCCION"
 DIR_SUBSISTEMA = (CONTRRF_DIR / "TLLDCD" / "src" / "LC_STM" / "red_neuronal"
                   / "ENRN" / "STM_SBSISTEMA")
 #: Líneas que ocupa el bloque de importación de subsistemas en la parte 1.
-BOOTSTRAP = 8
+BOOTSTRAP = Particionador.BOOTSTRAP
 
-
-def _texto(contenido: str, nodo) -> str:
-    """Código fuente exacto de un nodo (sin líneas vacías en los extremos)."""
-    return (ast.get_source_segment(contenido, nodo) or "").strip("\n")
-
-
-def _es_docstring(nodo) -> bool:
-    """True si el nodo es el docstring del módulo."""
-    return (isinstance(nodo, ast.Expr) and isinstance(nodo.value, ast.Constant)
-            and isinstance(nodo.value.value, str))
-
-
-def _es_import(nodo) -> bool:
-    """True para ``import`` y ``from ... import ...``."""
-    return isinstance(nodo, (ast.Import, ast.ImportFrom))
-
-
-def _nombre(nodo) -> str:
-    """Nombre legible de una unidad (o ``bloque_<línea>`` si es una asignación)."""
-    if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-        return nodo.name
-    return f"bloque_{getattr(nodo, 'lineno', 0)}"
-
-
-def _tipo(nodo) -> str:
-    """Clase, función o bloque."""
-    if isinstance(nodo, ast.ClassDef):
-        return "clase"
-    if isinstance(nodo, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return "funcion"
-    return "bloque"
-
-
-def separar_unidades(contenido: str) -> tuple[str, list[dict]]:
-    """Devuelve ``(cabecera, unidades)``; lanza si no es Python válido."""
-    try:
-        arbol = ast.parse(contenido)
-    except SyntaxError as error:
-        raise ErrorProyecto(f"Sintaxis inválida (línea {error.lineno}: {error.msg}).")
-    cabecera: list[str] = []
-    unidades: list[dict] = []
-    for nodo in arbol.body:
-        if _es_docstring(nodo) or _es_import(nodo):
-            cabecera.append(_texto(contenido, nodo))
-            continue
-        texto = _texto(contenido, nodo)
-        unidades.append({"nombre": _nombre(nodo), "tipo": _tipo(nodo),
-                         "lineas": len(texto.splitlines()), "texto": texto})
-    return "\n".join(cabecera), unidades
-
-
-def _imports(cabecera: str) -> list[str]:
-    """Líneas de import de una cabecera, sin duplicados."""
-    vistas: list[str] = []
-    for linea in cabecera.splitlines():
-        limpia = linea.strip()
-        if limpia.startswith(("import ", "from ")) and limpia not in vistas:
-            vistas.append(limpia)
-    return vistas
-
-
-def _empaquetar(cabecera: str, unidades: list[dict], limite: int,
-                reserva: int = BOOTSTRAP) -> list[list[dict]]:
-    """Reparte las unidades en partes que quepan en ``limite`` líneas."""
-    coste = len(cabecera.splitlines()) + 4
-    partes: list[list[dict]] = [[]]
-    usadas = 0
-    for unidad in unidades:
-        tope = limite - coste - (reserva if len(partes) == 1 else 0)
-        extra = unidad["lineas"] + 2
-        if partes[-1] and usadas + extra > tope:
-            partes.append([])
-            usadas = 0
-        partes[-1].append(unidad)
-        usadas += extra
-    return partes
-
-
-def plan_de_particion(contenido: str, limite: int = LIMITE_LINEAS_REFACTOR) -> dict:
-    """Calcula cómo quedaría el módulo sin escribir nada."""
-    cabecera, unidades = separar_unidades(contenido)
-    if not unidades:
-        raise ErrorProyecto("El archivo no tiene clases ni funciones que repartir.")
-    total = len(contenido.splitlines())
-    if total <= limite:
-        return {"necesita": False, "total": total, "cabecera": cabecera,
-                "unidades": unidades, "partes": [unidades], "problemas": []}
-    partes = _empaquetar(cabecera, unidades, limite)
-    reserva = 7 + max(1, len(partes) - 1)
-    if reserva != BOOTSTRAP:
-        partes = _empaquetar(cabecera, unidades, limite, reserva)
-    coste = len(cabecera.splitlines()) + 4
-    problemas = [u["nombre"] for parte in partes for u in parte
-                 if u["lineas"] + coste > limite]
-    return {"necesita": True, "total": total, "cabecera": cabecera,
-            "unidades": unidades, "partes": partes, "problemas": problemas}
-
-
-def _bloque_imports(stem: str, indices: list[int],
-                    carpeta_rel: str | None = None) -> str:
-    """Re-exporta las partes; añade ``sys.path`` si están en otra carpeta."""
-    lineas = ["", "# --- Partes/subsistemas extraídos automáticamente ---"]
-    if carpeta_rel:
-        lineas += ["import sys as _sys",
-                   "from pathlib import Path as _Path",
-                   f'_partes = _Path(__file__).resolve().parent / "{carpeta_rel}"',
-                   "if _partes.is_dir() and str(_partes) not in _sys.path:",
-                   "    _sys.path.insert(0, str(_partes))"]
-    lineas += [f"from {stem}_p{indice} import *  # noqa: F401,F403"
-               for indice in indices]
-    return "\n".join(lineas) + "\n"
-
-
-def _componente(cabecera: str, unidades: list[dict], stem: str,
-                indices: list[int], carpeta_rel: str | None = None) -> str:
-    """Cabecera + unidades + re-export de las partes."""
-    piezas = [cabecera] if cabecera else []
-    piezas += [unidad["texto"] for unidad in unidades]
-    texto = "\n\n\n".join(piezas).rstrip() + "\n"
-    if indices:
-        texto += _bloque_imports(stem, indices, carpeta_rel)
-    return texto
+#: API histórica: antes eran funciones sueltas en este módulo.
+separar_unidades = Particionador.separar_unidades
+plan_de_particion = Particionador.plan_de_particion
+_imports = Particionador._imports
+_empaquetar = Particionador._empaquetar
+_componente = Particionador._componente
 
 
 def _informe(ruta: Path, destino: Path, partes: list[list[dict]],
@@ -367,3 +261,9 @@ def comando_partir_archivo() -> None:
         reportar_error("No se indicó ningún archivo.")
         return
     partir_archivo(os.path.expandvars(os.path.expanduser(entrada)))
+
+
+if __name__ == "__main__":
+    # Ejecución directa (F5 / python stm_particion.py): confirma que carga.
+    print(f"stm_particion OK · {Particionador.__name__} · "
+          f"tope {LIMITE_LINEAS_REFACTOR} líneas")

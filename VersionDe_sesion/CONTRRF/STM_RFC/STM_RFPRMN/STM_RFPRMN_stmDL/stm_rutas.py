@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -40,10 +41,23 @@ MODULO_DIR = Path(__file__).resolve().parent.parent
 CONTRRF_DIR = MODULO_DIR.parent.parent
 #: `.../CONTRRF/TLLDCD` (rama heredada que aún se conserva).
 TLLDCD_DIR = CONTRRF_DIR / "TLLDCD"
-#: `src` de trabajo: RFC legado o TLLDCD según lo que exista.
+#: `src` de trabajo: RFC legado, TLLDCD, o actualizacion_* en PRY según lo que exista.
 SRC_DIR = CONTRRF_DIR / "RFC" / "src"
 if (TLLDCD_DIR / "src").is_dir():
     SRC_DIR = TLLDCD_DIR / "src"
+else:
+    # Buscar en la última actualización de PRY
+    pry_dir = CONTRRF_DIR.parent / "Sistema_Principal" / "PRY"
+    if pry_dir.is_dir():
+        try:
+            actualizaciones = [hijo for hijo in pry_dir.iterdir()
+                              if hijo.is_dir() and hijo.name.startswith("actualizacion_")]
+            if actualizaciones:
+                ultima = max(actualizaciones, key=lambda ruta: ruta.stat().st_mtime)
+                if (ultima / "src").is_dir():
+                    SRC_DIR = ultima / "src"
+        except (OSError, FileNotFoundError):
+            pass
 
 # --- Datos propios de la herramienta -----------------------------------------
 
@@ -279,6 +293,7 @@ def estado_rutas() -> dict:
         "archivo_existe": ARCHIVO_RUTAS.is_file(),
         "entorno_rfc": os.environ.get("RFPRMN_RFC_DIR", ""),
         "entorno_pry": os.environ.get("RFPRMN_PRY_DIR", ""),
+        "rutas_finales": leer_rutas_finales(),
     }
 
 
@@ -308,6 +323,38 @@ def guardar_rutas(rfc: str | Path, pry: str | Path) -> Path:
     temporal.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
     os.replace(temporal, ARCHIVO_RUTAS)
     return ARCHIVO_RUTAS
+
+
+def actualizar_rutas_finales(destino: str | Path) -> Path:
+    """Registra las rutas finales de la última ``actualizacion_*`` generada.
+
+    La llama ``actualizar`` cuando crea y verifica la nueva carpeta de versión
+    en PRY. Guarda en ``.config/rutas.json`` la carpeta final, su ``src`` y la
+    fecha, bajo la clave ``rutas_finales``. NO altera ``rfc``/``pry`` (los
+    directorios de trabajo): repuntar ``pry`` a la subcarpeta rompería
+    ``ultima_actualizacion_pry`` y la purga de versiones. Escritura atómica;
+    devuelve la ruta del archivo escrito.
+    """
+    final = Path(os.path.expandvars(str(destino))).expanduser().resolve()
+    src_final = final / "src" if (final / "src").is_dir() else final
+    DIR_CONFIG.mkdir(parents=True, exist_ok=True)
+    datos = _leer_config_rutas()
+    datos["rutas_finales"] = {
+        "carpeta": str(final),
+        "src": str(src_final),
+        "nombre": final.name,
+        "fecha": datetime.now().isoformat(timespec="seconds"),
+    }
+    temporal = ARCHIVO_RUTAS.with_name(ARCHIVO_RUTAS.name + ".tmp")
+    temporal.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
+    os.replace(temporal, ARCHIVO_RUTAS)
+    return ARCHIVO_RUTAS
+
+
+def leer_rutas_finales() -> dict:
+    """Rutas finales registradas por ``actualizar`` (``{}`` si aún no hay)."""
+    finales = _leer_config_rutas().get("rutas_finales")
+    return finales if isinstance(finales, dict) else {}
 
 
 def comando_rutas() -> None:
