@@ -214,3 +214,75 @@ def comando_crear_codigo() -> None:
     descripcion = input("¿Qué debe hacer el código? (lenguaje natural): ").strip()
     lenguaje = input("Lenguaje (python, csharp, javascript...): ").strip().lower()
     crear_codigo(ruta, descripcion, lenguaje or "python")
+
+
+def copiar_codigo(ruta_origen: str | Path, ruta_destino: str | Path) -> dict[str, Any]:
+    """Copia todas las líneas de un archivo de código fuente a otro archivo destino.
+
+    Solo copia las líneas íntegras tal cual, sin alterar lógica ni dependencias,
+    escribiendo de forma atómica en el archivo de destino.
+
+    Parameters
+    ----------
+    ruta_origen : str | Path
+        Ruta del archivo de código fuente existente a copiar.
+    ruta_destino : str | Path
+        Ruta del archivo de código destino donde se pegará el contenido.
+
+    Returns
+    -------
+    dict[str, Any]
+        Diccionario con 'ok', 'origen', 'destino', 'lineas' y 'caracteres'.
+    """
+    origen = Path(os.path.expandvars(os.path.expanduser(str(ruta_origen).strip().strip("\"'")))).resolve()
+    destino = Path(os.path.expandvars(os.path.expanduser(str(ruta_destino).strip().strip("\"'")))).resolve()
+
+    if not origen.exists():
+        raise ErrorProyecto(f"El archivo fuente no existe: {origen}")
+    if not origen.is_file():
+        raise ErrorProyecto(f"La ruta de origen no es un archivo: {origen}")
+
+    try:
+        contenido = origen.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        contenido = origen.read_text(encoding="latin-1")
+
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    escribir_texto_atomico(destino, contenido)
+
+    num_lineas = len(contenido.splitlines())
+    return {
+        "ok": True,
+        "origen": str(origen),
+        "destino": str(destino),
+        "lineas": num_lineas,
+        "caracteres": len(contenido),
+    }
+
+
+def comando_copiar_codigo(ruta_origen: str = "", ruta_destino: str = "") -> bool:
+    """Comando 'copiar codigo': copia las líneas de un archivo fuente a un archivo destino."""
+    orig = ruta_origen.strip().strip("\"'")
+    if not orig:
+        orig = input("Ruta del archivo de código fuente: ").strip().strip("\"'")
+    if not orig:
+        reportar_error("Ruta de origen no válida.")
+        return False
+
+    dest = ruta_destino.strip().strip("\"'")
+    if not dest:
+        dest = input("Ruta del archivo de código vacío (destino): ").strip().strip("\"'")
+    if not dest:
+        reportar_error("Ruta de destino no válida.")
+        return False
+
+    try:
+        res = copiar_codigo(orig, dest)
+        exito(f"Código copiado exitosamente ({res['lineas']} líneas):")
+        informar(f"  Origen : {res['origen']}")
+        informar(f"  Destino: {res['destino']}")
+        return True
+    except (ErrorProyecto, OSError) as error:
+        reportar_error(f"No se pudo copiar el código: {error}")
+        return False
+

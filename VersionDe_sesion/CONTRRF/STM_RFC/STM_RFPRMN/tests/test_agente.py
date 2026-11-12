@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import pytest
 
-from STM_RFPRMN_stmDL import stm_agente, stm_base
+from STM_RFPRMN_stmDL import stm_base
+# La implementación vive en sbstm_mdl/sbstm_agnt.py; ``stm_agente`` la re-exporta.
+from STM_RFPRMN_stmDL.sbstm_mdl import sbstm_agnt as stm_agente
 from STM_RFPRMN_stmDL.stm_agente import AgenteRFPRMN
 
 

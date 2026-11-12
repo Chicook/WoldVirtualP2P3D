@@ -184,8 +184,9 @@ __pycache__/
 venv/
 *.egg-info/
 
-# Intérprete Python empaquetado (runtime completo 3.15.x; ejecutable, no versionar)
-VersionDe_sesion/CONTRRF/TLLDCD/src/LC_STM/python/
+# Sandbox de trabajo TLLDCD (incluye el runtime Python LC_STM/python):
+# fuera de git; el repo se alimenta solo via enviar -> actualizar (RFC/PRY).
+VersionDe_sesion/CONTRRF/TLLDCD/
 
 # ──────────────────────────────────────────────────────────────────────────
 # 12. NODE / WEB
@@ -275,3 +276,22 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 **/STM_HRTS/opencode/init
 
 config.bat
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 19. RUNTIME LOCAL, TEMPORALES Y COPIAS DE DISTRIBUCIÓN
+#     Se ignoran por patrón, no borrando nada. El código fuente y los assets
+#     pequeños siguen versionados; los ZIP/EXE/PCK ya están excluidos arriba.
+# ══════════════════════════════════════════════════════════════════════════════
+_tmp_*/
+_tmp_*
+_acl_reports/
+VersionDe_sesion/.python/
+VersionDe_sesion/Sistema_Principal/PRY/actualizacion_*/
+**/__pycache__/
+*.py[cod]
+*.log
+
+# Proyecto de construcción generado en tiempo de ejecución (ISLA3D del usuario)
+**/ConstructorGodot/ISLA3D/
+**/ConstructorGodot/.godot/
+

@@ -12,7 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from STM_RFPRMN_stmDL import stm_flujo
+# La implementación vive en sbstm_mdl/sbstm_flj.py; ``stm_flujo`` solo la re-exporta.
+from STM_RFPRMN_stmDL.sbstm_mdl import sbstm_flj as stm_flujo
 from STM_RFPRMN_stmDL.stm_base import ErrorProyecto
 
 MODULO_DIR = Path(__file__).resolve().parent.parent
@@ -40,7 +41,7 @@ def _flujo(tmp_path, contenido: str = ORIGEN_VALIDO):
 # --- estructura --------------------------------------------------------------
 
 def test_ejecutar_se_define_una_sola_vez():
-    arbol = ast.parse((MODULO_DIR / "STM_RFPRMN_stmDL" / "stm_flujo.py")
+    arbol = ast.parse((MODULO_DIR / "STM_RFPRMN_stmDL" / "sbstm_mdl" / "sbstm_flj.py")
                       .read_text(encoding="utf-8"))
     clase = next(n for n in arbol.body
                  if isinstance(n, ast.ClassDef) and n.name == "FlujoRefactorLucIA")

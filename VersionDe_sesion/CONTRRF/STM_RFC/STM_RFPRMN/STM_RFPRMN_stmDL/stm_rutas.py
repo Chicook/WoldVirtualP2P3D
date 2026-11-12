@@ -41,10 +41,23 @@ MODULO_DIR = Path(__file__).resolve().parent.parent
 CONTRRF_DIR = MODULO_DIR.parent.parent
 #: `.../CONTRRF/TLLDCD` (rama heredada que aún se conserva).
 TLLDCD_DIR = CONTRRF_DIR / "TLLDCD"
-#: `src` de trabajo: RFC legado o TLLDCD según lo que exista.
+#: `src` de trabajo: RFC legado, TLLDCD, o actualizacion_* en PRY según lo que exista.
 SRC_DIR = CONTRRF_DIR / "RFC" / "src"
 if (TLLDCD_DIR / "src").is_dir():
     SRC_DIR = TLLDCD_DIR / "src"
+else:
+    # Buscar en la última actualización de PRY
+    pry_dir = CONTRRF_DIR.parent / "Sistema_Principal" / "PRY"
+    if pry_dir.is_dir():
+        try:
+            actualizaciones = [hijo for hijo in pry_dir.iterdir()
+                              if hijo.is_dir() and hijo.name.startswith("actualizacion_")]
+            if actualizaciones:
+                ultima = max(actualizaciones, key=lambda ruta: ruta.stat().st_mtime)
+                if (ultima / "src").is_dir():
+                    SRC_DIR = ultima / "src"
+        except (OSError, FileNotFoundError):
+            pass
 
 # --- Datos propios de la herramienta -----------------------------------------
 
