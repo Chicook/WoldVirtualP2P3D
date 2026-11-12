@@ -1,0 +1,211 @@
+[gd_scene load_steps=3 format=3 uid="uid://de4o3w5xxy4nd"]
+
+[ext_resource type="Script" path="res://gdscrip/InterfazConexion.gd" id="1_interfaz"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.12, 0.13, 0.16, 1.0)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="PruevaDeConexion" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_interfaz")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.09, 0.11, 1.0)
+
+[node name="MainMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxMain" type="VBoxContainer" parent="MainMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="HeaderPanel" type="PanelContainer" parent="MainMargin/VBoxMain"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="MainMargin/VBoxMain/HeaderPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="HBoxHeader" type="HBoxContainer" parent="MainMargin/VBoxMain/HeaderPanel/Margin"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MainMargin/VBoxMain/HeaderPanel/Margin/HBoxHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "PANEL DE CONTROL — BASE NEURONAL 1 (BLOK1)"
+
+[node name="LblEstado" type="Label" parent="MainMargin/VBoxMain/HeaderPanel/Margin/HBoxHeader"]
+unique_name_in_owner = true
+modulate = Color(1, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "DESCONECTADO"
+
+[node name="ConnectionPanel" type="PanelContainer" parent="MainMargin/VBoxMain"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="MainMargin/VBoxMain/ConnectionPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxConfig" type="HBoxContainer" parent="MainMargin/VBoxMain/ConnectionPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LblHost" type="Label" parent="MainMargin/VBoxMain/ConnectionPanel/Margin/HBoxConfig"]
+layout_mode = 2
+text = "Host:"
+
+[node name="LineHost" type="LineEdit" parent="MainMargin/VBoxMain/ConnectionPanel/Margin/HBoxConfig"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "127.0.0.1"
+
+[node name="LblPort" type="Label" parent="MainMargin/VBoxMain/ConnectionPanel/Margin/HBoxConfig"]
+layout_mode = 2
+text = "Puerto:"
+
+[node name="LinePort" type="LineEdit" parent="MainMargin/VBoxMain/ConnectionPanel/Margin/HBoxConfig"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "8765"
+
+[node name="BtnConectar" type="Button" parent="MainMargin/VBoxMain/ConnectionPanel/Margin/HBoxConfig"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "Conectar"
+
+[node name="BtnDesconectar" type="Button" parent="MainMargin/VBoxMain/ConnectionPanel/Margin/HBoxConfig"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+disabled = true
+text = "Desconectar"
+
+[node name="VSeparator" type="VSeparator" parent="MainMargin/VBoxMain/ConnectionPanel/Margin/HBoxConfig"]
+layout_mode = 2
+
+[node name="LblLatencia" type="Label" parent="MainMargin/VBoxMain/ConnectionPanel/Margin/HBoxConfig"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Latencia: -- ms"
+
+[node name="ControlPanel" type="PanelContainer" parent="MainMargin/VBoxMain"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="MainMargin/VBoxMain/ControlPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxActions" type="HBoxContainer" parent="MainMargin/VBoxMain/ControlPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LblModo" type="Label" parent="MainMargin/VBoxMain/ControlPanel/Margin/HBoxActions"]
+layout_mode = 2
+text = "Modo Pipeline:"
+
+[node name="OptModo" type="OptionButton" parent="MainMargin/VBoxMain/ControlPanel/Margin/HBoxActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="BtnInferencia" type="Button" parent="MainMargin/VBoxMain/ControlPanel/Margin/HBoxActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "Test Inferencia"
+
+[node name="BtnDiagnostico" type="Button" parent="MainMargin/VBoxMain/ControlPanel/Margin/HBoxActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Diagnóstico"
+
+[node name="BtnSanar" type="Button" parent="MainMargin/VBoxMain/ControlPanel/Margin/HBoxActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "Auto-Sanar"
+
+[node name="BtnLimpiar" type="Button" parent="MainMargin/VBoxMain/ControlPanel/Margin/HBoxActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Limpiar Log"
+
+[node name="StatusInfoPanel" type="PanelContainer" parent="MainMargin/VBoxMain"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="MainMargin/VBoxMain/StatusInfoPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="LblAccion" type="Label" parent="MainMargin/VBoxMain/StatusInfoPanel/Margin"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Acción: [Esperando inferencia...]"
+
+[node name="LogPanel" type="PanelContainer" parent="MainMargin/VBoxMain"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="MainMargin/VBoxMain/LogPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
+
+[node name="TxtLog" type="RichTextLabel" parent="MainMargin/VBoxMain/LogPanel/Margin"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
+text = ""
