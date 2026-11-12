@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:34:59.995602",
+  "pasos_entrenamiento": 189239,
+  "deriva_acumulada": 1.897756,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 189239,
+    "motivo": "LC_entrenar_vulkan_structs_b7023",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.897756,
+    "norma_tensor": 2.84766,
+    "delta_aplicada": 0.007333,
+    "gsnr": 0.8706,
+    "entropia_shannon": 5.3865,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.0132,
+      "pasos_q": 189239
+    },
+    "timestamp": 1794346499.9946852
+  },
+  "resumen_pesos": {
+    "min": -0.09211999922990799,
+    "max": 2.0,
+    "media": 0.0741456001996994
+  }
+}

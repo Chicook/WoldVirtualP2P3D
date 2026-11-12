@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:49:46.000137",
+  "pasos_entrenamiento": 3905,
+  "deriva_acumulada": 0.399135,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 3905,
+    "motivo": "LC_entrenar_reporte_entrenamiento_blockchain_20261110_204500_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.399135,
+    "norma_tensor": 3.21499,
+    "delta_aplicada": 0.041664,
+    "gsnr": 0.8775,
+    "entropia_shannon": 5.3593,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.96516,
+      "pasos_q": 3905
+    },
+    "timestamp": 1794343785.99927
+  },
+  "resumen_pesos": {
+    "min": -0.5064899921417236,
+    "max": 2.0,
+    "media": 0.062738798558712
+  }
+}

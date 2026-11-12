@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T20:45:12.000329",
+  "pasos_entrenamiento": 11202,
+  "deriva_acumulada": 0.577213,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 11202,
+    "motivo": "LC_entrenar_HOJA_DE_RUTA_b3",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.577213,
+    "norma_tensor": 3.08647,
+    "delta_aplicada": 0.015267,
+    "gsnr": 0.8559,
+    "entropia_shannon": 5.31,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.34233,
+      "pasos_q": 11202
+    },
+    "timestamp": 1794339911.9991276
+  },
+  "resumen_pesos": {
+    "min": -0.31505998969078064,
+    "max": 2.0,
+    "media": 0.0857371985912323
+  }
+}

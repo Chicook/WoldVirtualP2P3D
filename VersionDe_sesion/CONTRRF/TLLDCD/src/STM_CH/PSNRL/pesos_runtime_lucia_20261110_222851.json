@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:28:52.000521",
+  "pasos_entrenamiento": 47871,
+  "deriva_acumulada": 0.884209,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 47871,
+    "motivo": "LC_entrenar_GodotTTS_b11",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.884209,
+    "norma_tensor": 2.89627,
+    "delta_aplicada": 0.007456,
+    "gsnr": 0.9095,
+    "entropia_shannon": 5.3901,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.19084,
+      "pasos_q": 47871
+    },
+    "timestamp": 1794346131.999306
+  },
+  "resumen_pesos": {
+    "min": -0.19317999482154846,
+    "max": 2.0,
+    "media": 0.05910960212349892
+  }
+}

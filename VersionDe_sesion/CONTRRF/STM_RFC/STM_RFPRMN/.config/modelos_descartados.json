@@ -1,0 +1,5 @@
+{
+  "qwen2.5-coder:3b": "validación global: El refactor ocupa 636 líneas (tope 450): se rechaza para no truncar código y se conserva el original.",
+  "starcoder2:3b": "ningún fragmento válido",
+  "deepseek-coder:6.7b": "ningún fragmento válido"
+}

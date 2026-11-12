@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-11T04:05:21.996110",
+  "pasos_entrenamiento": 29625,
+  "deriva_acumulada": 0.007674,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 29625,
+    "motivo": "LC_entrenar_reporte_entrenamiento_HullClasses_20261111_035339_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.007674,
+    "norma_tensor": 0.21353,
+    "delta_aplicada": 0.007329,
+    "gsnr": 0.8672,
+    "entropia_shannon": 5.361,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 2.94863,
+      "pasos_q": 1060
+    },
+    "timestamp": 1794366321.995127
+  },
+  "resumen_pesos": {
+    "min": -0.032519999891519547,
+    "max": 0.16282999515533447,
+    "media": 0.005607599392533302
+  }
+}

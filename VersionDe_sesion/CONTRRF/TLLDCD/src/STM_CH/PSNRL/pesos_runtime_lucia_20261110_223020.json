@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:30:20.999608",
+  "pasos_entrenamiento": 79818,
+  "deriva_acumulada": 1.112931,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 79818,
+    "motivo": "LC_entrenar_astcenc_vecmathlib_sve_8_b6",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.112931,
+    "norma_tensor": 2.86732,
+    "delta_aplicada": 0.007227,
+    "gsnr": 0.8583,
+    "entropia_shannon": 5.3276,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.14333,
+      "pasos_q": 79818
+    },
+    "timestamp": 1794346220.9987037
+  },
+  "resumen_pesos": {
+    "min": -0.1614599972963333,
+    "max": 2.0,
+    "media": 0.059942398220300674
+  }
+}

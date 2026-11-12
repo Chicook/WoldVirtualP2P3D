@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:27:43.000898",
+  "pasos_entrenamiento": 25281,
+  "deriva_acumulada": 0.722242,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 25281,
+    "motivo": "LC_entrenar_shader_baker_export_plugin_platform_metal_b1",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.722242,
+    "norma_tensor": 2.91566,
+    "delta_aplicada": 0.007329,
+    "gsnr": 0.8665,
+    "entropia_shannon": 5.3734,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.72278,
+      "pasos_q": 25281
+    },
+    "timestamp": 1794346062.9996746
+  },
+  "resumen_pesos": {
+    "min": -0.23930999636650085,
+    "max": 2.0,
+    "media": 0.05048000440001488
+  }
+}

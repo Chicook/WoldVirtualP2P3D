@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:46:07.991269",
+  "pasos_entrenamiento": 4792,
+  "deriva_acumulada": 0.432132,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 4792,
+    "motivo": "LC_entrenar_reporte_entrenamiento_EphemeralTunnelRunner_20261110_204517_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.432132,
+    "norma_tensor": 3.23919,
+    "delta_aplicada": 0.034079,
+    "gsnr": 0.8648,
+    "entropia_shannon": 5.3515,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.47948,
+      "pasos_q": 4792
+    },
+    "timestamp": 1794343567.9901044
+  },
+  "resumen_pesos": {
+    "min": -0.47018998861312866,
+    "max": 2.0,
+    "media": 0.07839199900627136
+  }
+}
