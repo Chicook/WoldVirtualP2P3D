@@ -295,3 +295,17 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_*/
 **/ConstructorGodot/ISLA3D/
 **/ConstructorGodot/.godot/
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 20. GESTIÓN CANÓNICA PARA MERGES LIMPIOS
+#     Patrones anclados a la raíz: no ocultan fuentes homónimas en subcarpetas.
+#     Los artefactos de build, ZIP/EXE/PCK y copias runtime ya están arriba.
+# ══════════════════════════════════════════════════════════════════════════════
+/_tmp_*
+/_acl_reports/
+/_tmp_*/**
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
