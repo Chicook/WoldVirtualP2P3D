@@ -187,6 +187,7 @@ venv/
 # TLLDCD: se versiona el código del visor; solo se excluyen runtimes generados.
 /VersionDe_sesion/CONTRRF/TLLDCD/src/LC_STM/python/
 /VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/Servidor3D/
+/VersionDe_sesion/CONTRRF/TLLDCD/src/MTBGT/WoldVirtualP2P3D/AreaDeTrabajo/
 
 # ──────────────────────────────────────────────────────────────────────────
 # 12. NODE / WEB
