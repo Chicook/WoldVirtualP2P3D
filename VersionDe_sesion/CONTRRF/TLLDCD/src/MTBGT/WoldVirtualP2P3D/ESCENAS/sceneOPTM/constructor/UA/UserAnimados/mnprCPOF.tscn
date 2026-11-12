@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://wpk6ydgco7cn"]
+
+[ext_resource type="PackedScene" uid="uid://ch414pj1ltcd" path="res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/scenesconstr/registro.tscn" id="1_gj1mw"]
+
+[node name="mnprCPOF" type="Node3D" unique_id=485620310]
+
+[node name="REGISTRO" parent="." unique_id=1649366261 instance=ExtResource("1_gj1mw")]

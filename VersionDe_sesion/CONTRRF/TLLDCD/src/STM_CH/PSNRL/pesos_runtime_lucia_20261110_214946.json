@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:49:46.999778",
+  "pasos_entrenamiento": 4179,
+  "deriva_acumulada": 0.410244,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 4179,
+    "motivo": "LC_entrenar_reporte_entrenamiento_cielo_material_20261110_204447_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.410244,
+    "norma_tensor": 3.22996,
+    "delta_aplicada": 0.039542,
+    "gsnr": 0.8959,
+    "entropia_shannon": 5.4022,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.47876,
+      "pasos_q": 4179
+    },
+    "timestamp": 1794343786.9986682
+  },
+  "resumen_pesos": {
+    "min": -0.4756399989128113,
+    "max": 2.0,
+    "media": 0.06325119733810425
+  }
+}

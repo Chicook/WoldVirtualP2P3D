@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-11T04:05:16.993108",
+  "pasos_entrenamiento": 28699,
+  "deriva_acumulada": 0.000977,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 28699,
+    "motivo": "LC_entrenar_reporte_entrenamiento_AssemblyInfo_20261111_035404_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.000977,
+    "norma_tensor": 0.0322,
+    "delta_aplicada": 0.007281,
+    "gsnr": 0.8985,
+    "entropia_shannon": 5.3646,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.0511,
+      "delta_q": 1.33298,
+      "pasos_q": 134
+    },
+    "timestamp": 1794366316.9918318
+  },
+  "resumen_pesos": {
+    "min": -0.005960000213235617,
+    "max": 0.02022000029683113,
+    "media": 0.0014396000187844038
+  }
+}

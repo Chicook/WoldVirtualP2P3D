@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:34:03.999758",
+  "pasos_entrenamiento": 164812,
+  "deriva_acumulada": 1.722512,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 164812,
+    "motivo": "LC_entrenar_SDL_hidapi_xboxone_b73",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.722512,
+    "norma_tensor": 2.84123,
+    "delta_aplicada": 0.007257,
+    "gsnr": 0.8644,
+    "entropia_shannon": 5.3405,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.02399,
+      "pasos_q": 164812
+    },
+    "timestamp": 1794346443.9987502
+  },
+  "resumen_pesos": {
+    "min": -0.08692000061273575,
+    "max": 2.0,
+    "media": 0.07135540246963501
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:28:55.995241",
+  "pasos_entrenamiento": 49175,
+  "deriva_acumulada": 0.893587,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 49175,
+    "motivo": "LC_entrenar_rendering_context_driver_vulkan_wayland_b3",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.893587,
+    "norma_tensor": 2.89421,
+    "delta_aplicada": 0.007414,
+    "gsnr": 0.8835,
+    "entropia_shannon": 5.4008,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.68706,
+      "pasos_q": 49175
+    },
+    "timestamp": 1794346135.9941778
+  },
+  "resumen_pesos": {
+    "min": -0.17958000302314758,
+    "max": 2.0,
+    "media": 0.060317203402519226
+  }
+}

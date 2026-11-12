@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:55:19.999993",
+  "pasos_entrenamiento": 119190,
+  "deriva_acumulada": 1.396507,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 119190,
+    "motivo": "LC_entrenar_orquestador_lucia_b5",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.396507,
+    "norma_tensor": 2.92595,
+    "delta_aplicada": 0.007266,
+    "gsnr": 0.8682,
+    "entropia_shannon": 5.3619,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.04044,
+      "pasos_q": 119190
+    },
+    "timestamp": 1794344119.998708
+  },
+  "resumen_pesos": {
+    "min": -0.18488000333309174,
+    "max": 2.0,
+    "media": 0.0875403955578804
+  }
+}

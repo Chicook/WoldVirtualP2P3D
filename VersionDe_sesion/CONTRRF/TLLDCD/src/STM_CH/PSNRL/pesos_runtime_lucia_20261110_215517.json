@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:55:18.001217",
+  "pasos_entrenamiento": 118390,
+  "deriva_acumulada": 1.390786,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 118390,
+    "motivo": "LC_entrenar_ChunkManager_b41",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.390786,
+    "norma_tensor": 2.92608,
+    "delta_aplicada": 0.007369,
+    "gsnr": 0.8704,
+    "entropia_shannon": 5.3851,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.07336,
+      "pasos_q": 118390
+    },
+    "timestamp": 1794344117.9999688
+  },
+  "resumen_pesos": {
+    "min": -0.1884700059890747,
+    "max": 2.0,
+    "media": 0.08731260150671005
+  }
+}

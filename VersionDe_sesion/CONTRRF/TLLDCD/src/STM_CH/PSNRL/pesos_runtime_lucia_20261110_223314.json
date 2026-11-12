@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:33:14.999152",
+  "pasos_entrenamiento": 146193,
+  "deriva_acumulada": 1.588782,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 146193,
+    "motivo": "LC_entrenar_psa_crypto_xof_b6",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.588782,
+    "norma_tensor": 2.85378,
+    "delta_aplicada": 0.007352,
+    "gsnr": 0.8862,
+    "entropia_shannon": 5.3973,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.04126,
+      "pasos_q": 146193
+    },
+    "timestamp": 1794346394.9977887
+  },
+  "resumen_pesos": {
+    "min": -0.11630000174045563,
+    "max": 2.0,
+    "media": 0.06785479933023453
+  }
+}

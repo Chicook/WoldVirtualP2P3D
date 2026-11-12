@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T20:45:03.999732",
+  "pasos_entrenamiento": 7905,
+  "deriva_acumulada": 0.517042,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 7905,
+    "motivo": "LC_entrenar_LocationFingerprinter_b12",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.517042,
+    "norma_tensor": 3.02843,
+    "delta_aplicada": 0.021967,
+    "gsnr": 0.873,
+    "entropia_shannon": 5.3817,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.50693,
+      "pasos_q": 7905
+    },
+    "timestamp": 1794339903.9988582
+  },
+  "resumen_pesos": {
+    "min": -0.2984600067138672,
+    "max": 2.0,
+    "media": 0.08595339953899384
+  }
+}
