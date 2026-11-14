@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:27:00.999687",
+  "pasos_entrenamiento": 9892,
+  "deriva_acumulada": 0.556316,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 9892,
+    "motivo": "LC_entrenar_rasterizer_scene_gles3_b56",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.556316,
+    "norma_tensor": 2.94786,
+    "delta_aplicada": 0.017945,
+    "gsnr": 0.9046,
+    "entropia_shannon": 5.3946,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.85118,
+      "pasos_q": 9892
+    },
+    "timestamp": 1794346020.9987297
+  },
+  "resumen_pesos": {
+    "min": -0.29398998618125916,
+    "max": 2.0,
+    "media": 0.0465627945959568
+  }
+}

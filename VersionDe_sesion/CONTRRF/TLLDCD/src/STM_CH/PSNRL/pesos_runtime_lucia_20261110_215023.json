@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:50:24.000359",
+  "pasos_entrenamiento": 11485,
+  "deriva_acumulada": 0.582484,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 11485,
+    "motivo": "LC_entrenar_reporte_entrenamiento_reporte_entrenamiento_CuentaLinux_20261110_204519_20261110_214603_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.582484,
+    "norma_tensor": 3.32798,
+    "delta_aplicada": 0.015594,
+    "gsnr": 0.8892,
+    "entropia_shannon": 5.4251,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.03352,
+      "pasos_q": 11485
+    },
+    "timestamp": 1794343823.9990437
+  },
+  "resumen_pesos": {
+    "min": -0.6675199866294861,
+    "max": 2.0,
+    "media": 0.08813279867172241
+  }
+}

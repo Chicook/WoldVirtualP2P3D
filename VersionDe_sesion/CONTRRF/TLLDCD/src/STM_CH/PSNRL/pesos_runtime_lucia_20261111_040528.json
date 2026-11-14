@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-11T04:05:28.996494",
+  "pasos_entrenamiento": 30709,
+  "deriva_acumulada": 0.015598,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 30709,
+    "motivo": "LC_entrenar_reporte_entrenamiento_ODETestClass_20261111_035341_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.015598,
+    "norma_tensor": 0.44776,
+    "delta_aplicada": 0.007383,
+    "gsnr": 0.8709,
+    "entropia_shannon": 5.3681,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 2.25196,
+      "pasos_q": 2144
+    },
+    "timestamp": 1794366328.9938664
+  },
+  "resumen_pesos": {
+    "min": -0.0742499977350235,
+    "max": 0.334879994392395,
+    "media": 0.011392000131309032
+  }
+}

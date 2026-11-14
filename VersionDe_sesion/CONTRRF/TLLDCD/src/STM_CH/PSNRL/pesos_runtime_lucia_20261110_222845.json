@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:28:46.001067",
+  "pasos_entrenamiento": 45544,
+  "deriva_acumulada": 0.867463,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 45544,
+    "motivo": "LC_entrenar_library_godot_webxr_b31",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.867463,
+    "norma_tensor": 2.89947,
+    "delta_aplicada": 0.00745,
+    "gsnr": 0.9426,
+    "entropia_shannon": 5.4124,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.47937,
+      "pasos_q": 45544
+    },
+    "timestamp": 1794346125.999555
+  },
+  "resumen_pesos": {
+    "min": -0.1998099982738495,
+    "max": 2.0,
+    "media": 0.055985599756240845
+  }
+}

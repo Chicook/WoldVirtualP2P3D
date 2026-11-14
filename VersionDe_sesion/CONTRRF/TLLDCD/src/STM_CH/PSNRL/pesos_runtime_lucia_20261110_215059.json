@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:50:59.989240",
+  "pasos_entrenamiento": 16471,
+  "deriva_acumulada": 0.646625,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 16471,
+    "motivo": "LC_entrenar_reporte_entrenamiento_reporte_entrenamiento_stm_rutas_20261110_211309_20261110_214639_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.646625,
+    "norma_tensor": 3.40563,
+    "delta_aplicada": 0.011067,
+    "gsnr": 0.8899,
+    "entropia_shannon": 5.4163,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.94628,
+      "pasos_q": 16471
+    },
+    "timestamp": 1794343859.9882638
+  },
+  "resumen_pesos": {
+    "min": -0.6607699990272522,
+    "max": 2.0,
+    "media": 0.07724320143461227
+  }
+}

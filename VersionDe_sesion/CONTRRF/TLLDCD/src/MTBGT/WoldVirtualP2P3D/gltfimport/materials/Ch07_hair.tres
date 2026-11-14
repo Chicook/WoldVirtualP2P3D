@@ -1,0 +1,14 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://bjdxd1r6agyro"]
+
+[ext_resource type="Texture2D" uid="uid://d22t31007thvm" path="res://gltfimport/avatares/av_texturas/AVMJ1_Ch07_1002_Diffuse.png" id="1_u7ikd"]
+[ext_resource type="Texture2D" uid="uid://dx2k5ikskmmwd" path="res://gltfimport/avatares/av_texturas/AVMJ1_Ch07_1002_Normal.png" id="2_osqay"]
+
+[resource]
+resource_name = "Ch07_hair"
+transparency = 4
+cull_mode = 2
+albedo_texture = ExtResource("1_u7ikd")
+roughness = 0.5527864
+normal_enabled = true
+normal_texture = ExtResource("2_osqay")
+metadata/_gltf_primary_texture_coord = 0

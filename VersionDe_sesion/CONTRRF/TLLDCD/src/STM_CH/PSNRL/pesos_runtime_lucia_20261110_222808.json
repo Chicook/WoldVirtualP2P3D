@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:28:08.999106",
+  "pasos_entrenamiento": 33874,
+  "deriva_acumulada": 0.783735,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 33874,
+    "motivo": "LC_entrenar_jolt_physics_server_3d_b58",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.783735,
+    "norma_tensor": 2.90541,
+    "delta_aplicada": 0.007357,
+    "gsnr": 0.8736,
+    "entropia_shannon": 5.3844,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.85274,
+      "pasos_q": 33874
+    },
+    "timestamp": 1794346088.9981887
+  },
+  "resumen_pesos": {
+    "min": -0.22746999561786652,
+    "max": 2.0,
+    "media": 0.05350299924612045
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:46:26.997492",
+  "pasos_entrenamiento": 7538,
+  "deriva_acumulada": 0.508412,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 7538,
+    "motivo": "LC_entrenar_reporte_entrenamiento_pycore_pybuffer_20261110_214012_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.508412,
+    "norma_tensor": 3.30308,
+    "delta_aplicada": 0.022066,
+    "gsnr": 0.8404,
+    "entropia_shannon": 5.3193,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.68368,
+      "pasos_q": 7538
+    },
+    "timestamp": 1794343586.9966245
+  },
+  "resumen_pesos": {
+    "min": -0.47308000922203064,
+    "max": 2.0,
+    "media": 0.06546700745820999
+  }
+}

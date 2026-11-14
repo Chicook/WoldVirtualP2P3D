@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:29:10.000591",
+  "pasos_entrenamiento": 54062,
+  "deriva_acumulada": 0.928439,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 54062,
+    "motivo": "LC_entrenar_bone_attachment_3d_b10",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.928439,
+    "norma_tensor": 2.88682,
+    "delta_aplicada": 0.007387,
+    "gsnr": 0.879,
+    "entropia_shannon": 5.4027,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.38953,
+      "pasos_q": 54062
+    },
+    "timestamp": 1794346149.9989033
+  },
+  "resumen_pesos": {
+    "min": -0.18108999729156494,
+    "max": 2.0,
+    "media": 0.0615554004907608
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:41:51.999987",
+  "pasos_entrenamiento": 42017,
+  "deriva_acumulada": 0.841142,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 42017,
+    "motivo": "LC_entrenar_levenshtein_examples_b1534",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.841142,
+    "norma_tensor": 2.89153,
+    "delta_aplicada": 0.007264,
+    "gsnr": 0.9059,
+    "entropia_shannon": 5.3575,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.7126,
+      "pasos_q": 42017
+    },
+    "timestamp": 1794343311.9990294
+  },
+  "resumen_pesos": {
+    "min": -0.16931000351905823,
+    "max": 2.0,
+    "media": 0.09910520911216736
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:28:49.000287",
+  "pasos_entrenamiento": 46666,
+  "deriva_acumulada": 0.875529,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 46666,
+    "motivo": "LC_entrenar_AndroidBinXmlParser_b27",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.875529,
+    "norma_tensor": 2.89696,
+    "delta_aplicada": 0.007773,
+    "gsnr": 0.9416,
+    "entropia_shannon": 5.4921,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.41271,
+      "pasos_q": 46666
+    },
+    "timestamp": 1794346128.999255
+  },
+  "resumen_pesos": {
+    "min": -0.19541999697685242,
+    "max": 2.0,
+    "media": 0.057350996881723404
+  }
+}

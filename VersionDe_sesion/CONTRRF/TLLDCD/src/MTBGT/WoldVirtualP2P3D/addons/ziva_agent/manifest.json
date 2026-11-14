@@ -1,0 +1,14 @@
+{
+  "version": "v3.3.6",
+  "godotCppVersion": "v4.2.0",
+  "serverUrl": "https://ziva.sh",
+  "branch": "main",
+  "commit": "5cad8af",
+  "runtime": {
+    "windows-x64": {
+      "asset": "ziva-runtime-v3.3.6-windows-x64.tar.zst",
+      "sha256": "965f9f8103eb42df9c1e83ecdbb253e854a04440f841ef9bdb0e25cd1a8ee0a0",
+      "size": 60189082
+    }
+  }
+}
