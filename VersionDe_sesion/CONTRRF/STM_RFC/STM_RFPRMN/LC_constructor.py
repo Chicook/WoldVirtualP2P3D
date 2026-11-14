@@ -41,8 +41,6 @@ from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
     COMANDO_MTBGT,
     COMANDO_RED,
     COMANDO_TODO,
-    DIM_ENTRADA,
-    DIM_SALIDA,
     NOMBRE_MTBGT_PREDETERMINADO,
     NOMBRE_PREDETERMINADO,
     NOMBRE_RED_PREDETERMINADO,
@@ -50,21 +48,18 @@ from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
     SUBCARPETAS_RED,
     SUBCARPETAS_SRC,
     SUBCARPETAS_SRC_BASE,
-    InterpreteOrden,
+    ConstructorLucIA,
     cargar_lcbs_neuronal,
     cargar_modulo_red,
-    crear_jerarquia,
     descubrir_jerarquia_src,
     descubrir_subcarpetas_src,
     localizar_lcbs_neuronal,
     localizar_red_neuronal,
-    obtener_clase_constructiva,
-    silencio,
 )
-from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
+from STM_LC_CONSTRUCTOR_MD import (
     RUTA_FUENTE_PREDETERMINADA as _RUTA_FUENTE_MD1,
 )
-from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
+from STM_LC_CONSTRUCTOR_MD import (
     interpretar_orden as _interpretar_orden,
 )
 
@@ -136,276 +131,19 @@ def interpretar_orden(orden: str | Mapping[str, Any]) -> dict[str, Any]:
     return _interpretar_orden(orden, _rutas_predeterminadas())
 
 
-class ConstructorLucIA:
-    """Ejecuta las órdenes de construcción de LucIA.
-
-    ``maquina`` permite inyectar una fachada RFPRMN ya construida (pruebas).
-    """
-
-    COMANDOS = (COMANDO_CARPETA, COMANDO_RED, COMANDO_MTBGT, COMANDO_TODO)
-
-    def __init__(self, ruta_red: str | Path | None = None,
-                 maquina: Any | None = None) -> None:
-        self.ruta_red = ruta_red
-        self.rfprmn = maquina if maquina is not None else RFPRMN()
-        self._red: Any | None = None
-
-    # -- neuronas ---------------------------------------------------------
-    def _crear_constructiva(self, ruta: Path, nombre: str,
-                            subcarpetas: tuple[str, ...]) -> Any:
-        """Instancia la neurona constructiva con la orden ya normalizada."""
-        modulo = cargar_modulo_red(self.ruta_red)
-        clase = obtener_clase_constructiva()
-        neurona = modulo.NeuronaEntradaXavier(DIM_ENTRADA, DIM_SALIDA)
-        creativa = modulo.NeuronaEntradaXavier.NeuronaCreativa(neurona)
-        return clase(creativa, self.rfprmn, str(ruta), nombre, subcarpetas)
-
-    def _metricas_red(self, constructiva: Any, texto: str, nombre: str,
-                      subcarpetas: tuple[str, ...]) -> dict[str, Any]:
-        """Calcula impulso, entropía y afinidades de la orden."""
-        datos: dict[str, Any] = {
-            "familia": "ENRN.EN2_RN", "neurona": "NeuronaEntradaXavier",
-            "dim_entrada": DIM_ENTRADA, "dim_salida": DIM_SALIDA,
-        }
-        try:
-            datos["impulso"] = round(float(constructiva.impulso_creativo()), 6)
-            datos["entropia"] = round(float(constructiva.entropia(texto)), 6)
-            similitudes = {
-                sub: round(float(constructiva.similitud(nombre, sub)), 6)
-                for sub in subcarpetas
-            }
-            datos["similitudes"] = similitudes
-            if similitudes:
-                datos["afinidad_maxima"] = max(similitudes.values())
-        except Exception as error:  # noqa: BLE001 - métrica diagnóstica
-            datos["error"] = f"{type(error).__name__}: {error}"
-        return datos
-
-    def _calcular_red_general(self, constructiva: Any,
-                              texto: str) -> dict[str, Any]:
-        """Pasa la orden por LCBS_NEURONAL: ENRN -> RF_EN + salud global."""
-        vector = constructiva.vector(texto)
-        datos: dict[str, Any] = {"modulo": "LCBS_NEURONAL"}
-        try:
-            modulo = cargar_lcbs_neuronal()
-            with silencio():
-                if self._red is None:
-                    self._red = modulo.RedNeuronal(
-                        input_size=int(vector.size), output_size=4,
-                        latente_size=16, seed=2026)
-                accion, diagnostico = self._red.procesar(vector, modo="xavier")
-                salud = self._red.salud()
-        except Exception as error:  # noqa: BLE001 - se reporta sin romper
-            datos.update({"ok": False,
-                          "error": f"{type(error).__name__}: {error}"})
-            return datos
-        datos.update({
-            "ok": True,
-            "version": getattr(modulo, "__version__", ""),
-            "familias": list(getattr(modulo.RedNeuronal, "FAMILIAS", ())),
-            "salud": {familia: bool(info.get("ok"))
-                      for familia, info in salud.items()},
-            "accion": [round(float(valor), 6) for valor in accion],
-            "diagnostico": {clave: valor for clave, valor in diagnostico.items()
-                            if isinstance(valor, (int, float, str, bool))},
-        })
-        return datos
-
-    def _crear_solo_carpetas(self, base: Path, nombre: str,
-                             subcarpetas: tuple[str, ...]) -> dict[str, Any]:
-        """Crea la jerarquía sin red neuronal y resume los pasos por nivel."""
-        resultado = crear_jerarquia(str(base), nombre, subcarpetas, self.rfprmn)
-        if resultado.get("ok"):
-            raiz = resultado["raiz"]
-            niveles = list(dict.fromkeys(
-                Path(sub).parts[0] for sub in subcarpetas if Path(sub).parts))
-            resultado["pasos"] = [
-                {"paso": 1, "carpeta": Path(raiz).name, "ruta": raiz},
-                *({"paso": numero, "carpeta": nivel,
-                   "ruta": str(Path(raiz) / nivel)}
-                  for numero, nivel in enumerate(niveles, start=2)),
-            ]
-        return resultado
-
-    # -- API pública ------------------------------------------------------
-    def crear_carpeta(self, ruta: str | Path = "",
-                      nombre: str = NOMBRE_PREDETERMINADO,
-                      subcarpetas: Iterable[str] | None = None,
-                      archivos: Iterable[str] | None = None) -> dict[str, Any]:
-        """Crea ``ruta/nombre`` y, si es ``src``, su jerarquía completa.
-
-        Sin ``ruta`` usa ``RUTA_PREDETERMINADA`` y sin ``nombre`` usa
-        ``NOMBRE_PREDETERMINADO``.  Si ``subcarpetas`` es ``None`` y el nombre
-        es ``src`` se usa ``SUBCARPETAS_SRC``, toda la jerarquía de carpetas de
-        ``TLLDCD/src``; en otro caso sólo la raíz.
-        ``archivos`` permite crear ficheros vacíos dentro de la raíz.
-        """
-        ruta_texto = str(ruta or "").strip().strip("\"'") or RUTA_PREDETERMINADA
-        base = Path(os.path.expandvars(os.path.expanduser(ruta_texto))).resolve()
-        nombre = str(nombre or NOMBRE_PREDETERMINADO).strip()
-        if subcarpetas is None:
-            subcarpetas = (
-                descubrir_subcarpetas_src(RUTA_FUENTE_PREDETERMINADA)
-                if nombre.lower() == NOMBRE_PREDETERMINADO else ())
-        elif isinstance(subcarpetas, str):
-            subcarpetas = InterpreteOrden.Campos.dividir_subcarpetas(subcarpetas)
-        else:
-            subcarpetas = tuple(str(s).strip() for s in subcarpetas
-                                if str(s).strip())
-
-        resultado = self._crear_solo_carpetas(base, nombre, subcarpetas)
-        if USAR_RED_NEURONAL:
-            try:
-                # Para la red se usan los nombres de primer nivel: el cálculo
-                # matemático no necesita recorrer 1200 rutas anidadas.
-                subcarpetas_red = tuple(dict.fromkeys(
-                    Path(s).parts[0] for s in subcarpetas if Path(s).parts))
-                constructiva = self._crear_constructiva(
-                    base, nombre, subcarpetas_red)
-                texto_orden = " ".join((str(base), nombre, *subcarpetas_red))
-                red_general = self._calcular_red_general(
-                    constructiva, texto_orden)
-                metricas = self._metricas_red(
-                    constructiva, texto_orden, nombre, subcarpetas_red)
-            except Exception as error:  # noqa: BLE001 - la creación ya ocurrió
-                red_general = {"ok": False,
-                               "error": f"{type(error).__name__}: {error}"}
-                metricas = {}
-        else:
-            red_general = {"ok": True, "omitida": True,
-                           "motivo": "modo solo carpetas (red desactivada)"}
-            metricas = {}
-        resultado.update({
-            "comando": COMANDO_CARPETA,
-            "ruta": str(base),
-            "nombre": nombre,
-            "subcarpetas": list(subcarpetas),
-            "red_general": red_general,
-            "neurona_entrada": metricas,
-            "rfprmn": {"version": getattr(_RFPRMN, "__version__", "")},
-        })
-        archivos_creados: list[str] = []
-        if archivos is not None and resultado.get("ok"):
-            if isinstance(archivos, str):
-                archivos = (archivos,)
-            try:
-                for nombre_archivo in archivos:
-                    archivos_creados.append(
-                        self.rfprmn.crear_archivo(resultado["raiz"],
-                                                  str(nombre_archivo)))
-            except Exception as error:  # noqa: BLE001 - resultado degradado
-                resultado["ok"] = False
-                resultado["error"] = f"{type(error).__name__}: {error}"
-        resultado["archivos"] = archivos_creados
-        if not red_general.get("ok"):
-            resultado["advertencia"] = (
-                "La red general no pudo calcular; la jerarquía se creó igualmente.")
-        return resultado
-
-    def crear_red_neuronal(
-        self, ruta: str | Path = "",
-        nombre: str = NOMBRE_RED_PREDETERMINADO,
-        subcarpetas: Iterable[str] | None = None,
-    ) -> dict[str, Any]:
-        """Segunda acción: crea ``LC_STM/RedNeuronal`` con sus seis familias."""
-        resultado = self.crear_carpeta(
-            ruta or RUTA_RED_PREDETERMINADA,
-            nombre or NOMBRE_RED_PREDETERMINADO,
-            SUBCARPETAS_RED if subcarpetas is None else subcarpetas)
-        resultado["comando"] = COMANDO_RED
-        return resultado
-
-    def comando_crear_red_neuronal(
-        self, ruta: str | Path = "",
-        nombre: str = NOMBRE_RED_PREDETERMINADO,
-        subcarpetas: Iterable[str] | None = None,
-    ) -> dict[str, Any]:
-        """Alias de la segunda acción con sus valores predeterminados."""
-        return self.crear_red_neuronal(ruta, nombre, subcarpetas)
-
-    def crear_mtbgt(
-        self, ruta: str | Path = "",
-        subcarpetas: Iterable[str] | None = None,
-        archivos: Iterable[str] | None = None,
-    ) -> dict[str, Any]:
-        """Tercera acción: ``MTBGT`` con sus carpetas (sin archivos por ahora)."""
-        ruta_texto = str(ruta or RUTA_MTBGT_PREDETERMINADA).strip().strip("\"'")
-        root = Path(os.path.expandvars(
-            os.path.expanduser(ruta_texto))).resolve()
-        resultado = self.crear_carpeta(
-            root.parent, root.name,
-            SUBCARPETAS_MTBGT if subcarpetas is None else subcarpetas,
-            ARCHIVOS_MTBGT if archivos is None else archivos)
-        resultado["comando"] = COMANDO_MTBGT
-        resultado["ruta_mtbgt"] = str(root)
-        return resultado
-
-    def comando_crear_mtbgt(
-        self, ruta: str | Path = "",
-        subcarpetas: Iterable[str] | None = None,
-        archivos: Iterable[str] | None = None,
-    ) -> dict[str, Any]:
-        """Alias de la tercera acción con sus valores predeterminados."""
-        return self.crear_mtbgt(ruta, subcarpetas, archivos)
-
-    def crear_todo(self) -> dict[str, Any]:
-        """Secuencia completa: ``src``, ``RedNeuronal`` y ``MTBGT``."""
-        src = self.crear_carpeta()
-        red = self.crear_red_neuronal()
-        mtbgt = self.crear_mtbgt()
-        acciones = [src, red, mtbgt]
-        return {
-            "ok": all(accion.get("ok") for accion in acciones),
-            "comando": COMANDO_TODO,
-            "acciones": acciones,
-            "total": sum(int(accion.get("total", 0)) for accion in acciones),
-        }
-
-    def comando_crear_todo(self) -> dict[str, Any]:
-        """Alias de la secuencia completa."""
-        return self.crear_todo()
-
-    def comando_crear_carpeta(self, ruta: str | Path = "",
-                              nombre: str = NOMBRE_PREDETERMINADO,
-                              subcarpetas: Iterable[str] | None = None) -> dict[str, Any]:
-        """Alias del comando con la ruta y el nombre predeterminados."""
-        return self.crear_carpeta(ruta, nombre, subcarpetas)
-
-    def ejecutar(self, orden: str | Mapping[str, Any]) -> dict[str, Any]:
-        """Interpreta y ejecuta una orden completa de la máquina de comandos."""
-        datos = interpretar_orden(orden)
-        if datos.get("error"):
-            return {"ok": False, "comando": datos.get("comando", "crear carpeta"),
-                    "error": datos["error"]}
-        comando = datos.get("comando", "crear carpeta")
-        if comando not in self.COMANDOS:
-            return {"ok": False, "comando": comando,
-                    "error": f"Comando no soportado: {comando!r}. "
-                             f"Disponibles: {', '.join(self.COMANDOS)}"}
-        if comando == COMANDO_TODO:
-            return self.crear_todo()
-        if comando == COMANDO_MTBGT:
-            return self.crear_mtbgt(
-                datos.get("ruta") or RUTA_MTBGT_PREDETERMINADA,
-                datos.get("subcarpetas"))
-        if comando == COMANDO_RED:
-            return self.crear_red_neuronal(
-                datos.get("ruta") or RUTA_RED_PREDETERMINADA,
-                datos.get("nombre") or NOMBRE_RED_PREDETERMINADO,
-                datos.get("subcarpetas"))
-        return self.crear_carpeta(datos.get("ruta") or RUTA_PREDETERMINADA,
-                                  datos.get("nombre") or NOMBRE_PREDETERMINADO,
-                                  datos.get("subcarpetas"))
-
-
 _CONSTRUCTOR: ConstructorLucIA | None = None
 
 
 def obtener_constructor() -> ConstructorLucIA:
-    """Constructor compartido (carga perezosa de la red y de RFPRMN)."""
+    """Constructor compartido (carga perezosa de la red y de RFPRMN).
+
+    Se le pasa el proveedor de rutas para que cada ejecución respete
+    ``runtime.lc_trabajando`` sin recrear la instancia.
+    """
     global _CONSTRUCTOR
     if _CONSTRUCTOR is None:
-        _CONSTRUCTOR = ConstructorLucIA()
+        _CONSTRUCTOR = ConstructorLucIA(
+            rutas=_rutas_predeterminadas, usar_red=USAR_RED_NEURONAL)
     return _CONSTRUCTOR
 
 

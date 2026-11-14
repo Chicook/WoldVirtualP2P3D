@@ -1,12 +1,13 @@
-"""Paquete STM_LC_CONSTRUCTOR_MD: constructor y parser de LucIA.
+"""Paquete STM_LC_CONSTRUCTOR_MD: constructor, parser y ejecutor de LucIA.
 
 La API se expone de forma perezosa (PEP 562): importar el paquete no carga
-``STM_MD1`` ni ``STM_MD2`` hasta que se pide uno de sus símbolos. Así se
-evitan importaciones circulares y el aviso de ``runpy`` al ejecutar
+``STM_MD1``, ``STM_MD2`` ni ``STM_MD3`` hasta que se pide uno de sus símbolos.
+Así se evitan importaciones circulares y el aviso de ``runpy`` al ejecutar
 ``python -m ...STM_MD1``.
 
 - ``STM_MD1``: descubrimiento de carpetas, red neuronal y creación.
 - ``STM_MD2``: interpretación de órdenes (texto, JSON o dict).
+- ``STM_MD3``: ejecución de las órdenes de construcción.
 """
 
 from __future__ import annotations
@@ -46,7 +47,26 @@ _SIMBOLOS_MD2 = frozenset({
     "SUBCARPETAS_MTBGT",
 })
 
-__all__ = [nombre for nombre in sorted(_SIMBOLOS_MD1 | _SIMBOLOS_MD2)]
+_SIMBOLOS_MD3 = frozenset({
+    "ConstructorLucIA",
+    "ARCHIVOS_MTBGT",
+    "USAR_RED_NEURONAL",
+    "comando_crear_carpeta",
+    "comando_crear_mtbgt",
+    "comando_crear_red_neuronal",
+    "comando_crear_todo",
+    "crear_carpeta",
+    "crear_mtbgt",
+    "crear_red_neuronal",
+    "crear_todo",
+    "ejecutar_orden",
+    "obtener_constructor",
+})
+
+__all__ = [
+    nombre for nombre in sorted(
+        _SIMBOLOS_MD1 | _SIMBOLOS_MD2 | _SIMBOLOS_MD3)
+]
 
 
 def __getattr__(nombre: str) -> Any:
@@ -59,6 +79,10 @@ def __getattr__(nombre: str) -> Any:
         from . import STM_MD2
 
         return getattr(STM_MD2, nombre)
+    if nombre in _SIMBOLOS_MD3:
+        from . import STM_MD3
+
+        return getattr(STM_MD3, nombre)
     raise AttributeError(f"module {__name__!r} has no attribute {nombre!r}")
 
 
