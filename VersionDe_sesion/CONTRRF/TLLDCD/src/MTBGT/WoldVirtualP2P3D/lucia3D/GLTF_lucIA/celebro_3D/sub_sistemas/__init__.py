@@ -144,7 +144,7 @@ def obtener_clase_sesion() -> Any:
     Carga de forma diferida la clase SesionNeuronalP2P desde SNSBSTNPRB.
     Garantiza aislamiento ante inicializaciones circulares del paquete Celebro.
     """
-    from SBSTM.SNSBSTNPRB import SesionNeuronalP2P
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.SNSBSTNPRB import SesionNeuronalP2P
     return SesionNeuronalP2P
 
 
@@ -394,7 +394,7 @@ atexit.register(_finalizacion_modulo_sbstm)
 
 
 try:
-    from SBSTM.accesores import (
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.accesores import (
         obtener_procesador_rplc,
         reprocesar_respuesta_lucia,
         obtener_motor_voz,

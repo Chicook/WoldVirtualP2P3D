@@ -279,7 +279,7 @@ def sincronizar_y_subir_al_cierre(forzar_borrado: bool = False) -> Dict[str, Any
     """
     sys.path.insert(0, str(IPFSONL_DIR.parent.parent.parent.parent))
     try:
-        from STM_BKCH.compat_local import get_ipfs_manager
+        from STM_BKCH.stm_bkch1.compat_local import get_ipfs_manager
         mgr = get_ipfs_manager()
         res = mgr.subir_y_limpiar_psnrl(forzar_borrado_sin_daemon=forzar_borrado)
         _session_stats["cids_uploaded"] += len(res.get("cids", []))
@@ -293,7 +293,7 @@ def descargar_pesos_desde_ipfs(cid: str, destino_path: Union[str, Path]) -> bool
     """Recupera un archivo de pesos por CID y lo deposita en la ruta indicada."""
     sys.path.insert(0, str(IPFSONL_DIR.parent.parent.parent.parent))
     try:
-        from STM_BKCH.compat_local import get_ipfs_manager
+        from STM_BKCH.stm_bkch1.compat_local import get_ipfs_manager
         mgr = get_ipfs_manager()
         mgr.recuperar_pesos(cid, destino=destino_path)
         return True

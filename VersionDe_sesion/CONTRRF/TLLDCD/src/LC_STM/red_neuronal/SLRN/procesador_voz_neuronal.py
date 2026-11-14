@@ -15,7 +15,7 @@ import numpy as np
 logger = logging.getLogger("lucIA.RedNeuronal.Voz")
 
 _DIR_SRC = Path(__file__).resolve().parents[3]  # .../RFC/src
-_MODELS_DIR = _DIR_SRC / "SBSTM" / "tts_models"
+_MODELS_DIR = _DIR_SRC / "SBSTM" / "SistemasLC" / "tts_models"
 
 _MODELOS_PRIORITARIOS: List[Tuple[str, str, str]] = [
     (

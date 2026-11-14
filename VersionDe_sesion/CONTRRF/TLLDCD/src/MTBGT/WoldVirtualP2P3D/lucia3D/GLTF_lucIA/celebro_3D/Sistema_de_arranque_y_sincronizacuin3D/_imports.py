@@ -33,7 +33,7 @@ except Exception:
 
 # 3. IAFREE (OpenRouter Free Tier)
 try:
-    from SBSTM.IAFREE import ClienteIAFree, get_cliente_iafree
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.IAFREE import ClienteIAFree, get_cliente_iafree
 except Exception:
     try:
         from LC.celebro.CMFG.SBSTM.IAFREE import ClienteIAFree, get_cliente_iafree  # pyrefly: ignore[missing-import]
@@ -44,7 +44,7 @@ except Exception:
 
 # 4. STYLOS (Interfaz de terminal y renderizado ANSI)
 try:
-    from SBSTM.STYLOS import (
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.STYLOS import (
         ColoresLucIA,
         EstiloTerminalLucIA,
         Glifos,
@@ -76,7 +76,7 @@ except Exception:
 
 # 5. RPLC (Reprocesador Lingüístico-Cognitivo)
 try:
-    from SBSTM.RPLC import get_procesador_rplc, reprocesar_con_metricas
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.RPLC import get_procesador_rplc, reprocesar_con_metricas
     RPLC_DISPONIBLE: bool = True
 except Exception:
     try:
@@ -91,7 +91,7 @@ except Exception:
 # 6. Voice Engine (Voz juvenil de LucIA)
 VOZ_MOTIVO: str = ""
 try:
-    from SBSTM.voice_engine import (
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.voice_engine import (
         cancel_speech as cancelar_voz,
         configurar_prosodia_juvenil as prosodia_voz,
         speak as hablar_voz,
@@ -116,10 +116,10 @@ except Exception as err_local:
 
 # 7. SelectorModelos (Clase base de orquestación)
 try:
-    from SBSTM.selector_modelos import SelectorModelos
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.selector_modelos import SelectorModelos
 except ImportError:
     try:
-        from src.SBSTM.selector_modelos import SelectorModelos  # type: ignore
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.selector_modelos import SelectorModelos  # type: ignore
     except ImportError:
         class SelectorModelos:  # type: ignore
             pass
@@ -127,7 +127,7 @@ except ImportError:
 
 # 8. Accesores STM_JSON y STM_HRTS
 try:
-    from SBSTM.accesores import GestorHRTLucIA, GestorJSONLucIA
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.accesores import GestorHRTLucIA, GestorJSONLucIA
 except ImportError:
     GestorJSONLucIA = None  # type: ignore
     GestorHRTLucIA = None  # type: ignore
@@ -135,14 +135,14 @@ except ImportError:
 
 # 9. Gestor IA Local
 try:
-    from STM_IA.modelosIAlocal.IALOCAL import get_gestor_ialocal
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_IA.STM_Informacion.modelosIAlocal.IALOCAL import get_gestor_ialocal
 except ImportError:
     get_gestor_ialocal = None  # type: ignore
 
 
 # 10. Watchdog adaptativo
 try:
-    from SBSTM.watchdog import arrancar_watchdog
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.watchdog import arrancar_watchdog
     WATCHDOG_DISPONIBLE: bool = True
 except Exception:
     WATCHDOG_DISPONIBLE = False
@@ -151,7 +151,7 @@ except Exception:
 
 # 11. Memoria de Sesión
 try:
-    from SBSTM.memoria_sesion import MemoriaSesion, get_memoria
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.memoria_sesion import MemoriaSesion, get_memoria
     MEMORIA_DISPONIBLE: bool = True
 except Exception:
     MEMORIA_DISPONIBLE = False
@@ -162,7 +162,7 @@ except Exception:
 # 12. Helpers funcionales para subsistemas bajo demanda
 def get_openrouter_vault_key() -> str:
     try:
-        from STM_SGR.vault_openrouter import obtener_key
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_SGR.STM_CNX.vault_openrouter import obtener_key
         k = obtener_key()
         return k or ""
     except Exception:
@@ -171,19 +171,19 @@ def get_openrouter_vault_key() -> str:
 
 def confirmar_vault_openrouter() -> None:
     try:
-        from STM_SGR.vault_openrouter import confirmar_conexion
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_SGR.STM_CNX.vault_openrouter import confirmar_conexion
         confirmar_conexion()
     except Exception:
         pass
 
 
 def registrar_key_vault_openrouter() -> None:
-    from STM_SGR.vault_openrouter import registrar_key_usuario
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_SGR.STM_CNX.vault_openrouter import registrar_key_usuario
     registrar_key_usuario()
 
 
 def obtener_componentes_blockchain() -> Tuple[Any, Any]:
-    from STM_BKCH.BKSVCB import get_blockchain_server, iniciar_servidor_blockchain
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_BKCH.stm_bkch1.BKSVCB import get_blockchain_server, iniciar_servidor_blockchain
     return get_blockchain_server, iniciar_servidor_blockchain
 
 
@@ -193,7 +193,7 @@ def obtener_conversor_pesos_blockchain() -> Any:
 
 
 def instanciar_sesion_p2p() -> Any:
-    from SBSTM import obtener_clase_sesion
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1 import obtener_clase_sesion
     cls_sesion = obtener_clase_sesion()
     return cls_sesion()
 

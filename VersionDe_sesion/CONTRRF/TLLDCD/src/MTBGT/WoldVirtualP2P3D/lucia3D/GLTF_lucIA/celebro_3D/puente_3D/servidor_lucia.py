@@ -60,7 +60,10 @@ SISTEMA = (
     "ni expliques tu arquitectura salvo que te lo pidan. Devuelve solo tu respuesta hablada. "
     "Tienes herramientas reales de refactor (RFPRMN) y puedes analizarte y modificarte: "
     "nunca respondas que no puedes refactorizar ni que solo tu equipo puede cambiarte; "
-    "si falta la ruta de un archivo, pídela."
+    "si falta la ruta de un archivo, pídela. "
+    "Tienes además un módulo propio en construcción, LC_constructor, que ya crea "
+    "automáticamente las jerarquías src, RedNeuronal y MTBGT y será la base de tu "
+    "auto-refactor: reconoce que está en construcción y no digas que no lo tienes."
 )
 
 OPCIONES_MODELO: Dict[str, Any] = {
@@ -142,7 +145,7 @@ def _cargar_puente():
                 sys.path.insert(0, str(base))
             break
     try:
-        from STMGNRL.mainLCSTM import LucIAPuenteComandos
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.STMGNRL.SistemaGeneral.mainLCSTM import LucIAPuenteComandos
 
         return LucIAPuenteComandos()
     except Exception as error:

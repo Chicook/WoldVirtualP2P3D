@@ -40,14 +40,14 @@ REPO_DIR: Path = VERSION_DIR.parent
 # --------------------------------------------------------------- paquetes
 
 PAQUETE_IA: Path = SRC_DIR / "STM_IA"
-CONOCIMIENTO_DIR: Path = PAQUETE_IA / "conocimiento"
-IALOCAL_DIR: Path = PAQUETE_IA / "modelosIAlocal" / "IALOCAL"
-PAQUETE_JSON: Path = SRC_DIR / "STM_JSON"
-PAQUETE_CH: Path = SRC_DIR / "STM_CH"
-PAQUETE_BKCH: Path = SRC_DIR / "STM_BKCH"
-PAQUETE_SGR: Path = SRC_DIR / "STM_SGR"
-PAQUETE_SBSTM: Path = SRC_DIR / "SBSTM"
-PAQUETE_GENERAL: Path = SRC_DIR / "STMGNRL"
+CONOCIMIENTO_DIR: Path = PAQUETE_IA / "STM_Informacion" / "conocimiento"
+IALOCAL_DIR: Path = PAQUETE_IA / "STM_Informacion" / "modelosIAlocal" / "IALOCAL"
+PAQUETE_JSON: Path = SRC_DIR / "STM_JSON" / "STM_LC"
+PAQUETE_CH: Path = SRC_DIR / "STM_CH" / "STM_herramientas"
+PAQUETE_BKCH: Path = SRC_DIR / "STM_BKCH" / "stm_bkch1"
+PAQUETE_SGR: Path = SRC_DIR / "STM_SGR" / "STM_CNX"
+PAQUETE_SBSTM: Path = SRC_DIR / "SBSTM" / "SistemasLC"
+PAQUETE_GENERAL: Path = SRC_DIR / "STMGNRL" / "SistemaGeneral"
 
 # ------------------------------------------------------------------ godot
 
@@ -84,12 +84,49 @@ PYTEST_CACHE: Path = ADD_UTILS_DIR / "STM_HRTS" / ".pytest_cache"
 # ---------------------------------------------------- herramientas y runtime
 
 HERRAMIENTAS_DIR: Path = UTILS_DIR
-STM_CH_DIR: Path = PAQUETE_CH
+STM_CH_DIR: Path = SRC_DIR / "STM_CH"
 PYCACHE_DIR: Path = STM_CH_DIR / "pycache"
 PSNRL_DIR: Path = STM_CH_DIR / "PSNRL"
 LEDGER_PATH: Path = STM_CH_DIR / "blockchain_ledger.json"
 CACHE_IAFREE: Path = STM_CH_DIR / "openrouter_free_cache.json"
 RUFF_CACHE_CANON: Path = STM_HRTS_DIR / ".ruff_cache"
+
+# ------------------------------------------------ fuente unica: Rutas.json
+try:
+    from STM_CH.STM_herramientas.rutas_json import (
+        cargar as _cargar_rutas_json,
+        resolver as _resolver_ruta_json,
+    )
+    _RUTAS_JSON = _cargar_rutas_json()
+except Exception:  # noqa: BLE001 - el JSON es opcional, hay fallback calculado
+    _RUTAS_JSON = {}
+
+
+def _ruta_json(clave: str, por_defecto: Path) -> Path:
+    """Lee una ruta de Rutas.json; si falta, conserva la calculada."""
+    if not _RUTAS_JSON:
+        return por_defecto
+    try:
+        return _resolver_ruta_json(clave, _RUTAS_JSON)
+    except Exception:  # noqa: BLE001
+        return por_defecto
+
+
+PAQUETE_IA = _ruta_json("subsistemas.STM_IA.raiz", PAQUETE_IA)
+CONOCIMIENTO_DIR = _ruta_json("subsistemas.STM_IA.secciones.conocimiento",
+                              CONOCIMIENTO_DIR)
+IALOCAL_DIR = _ruta_json("subsistemas.STM_IA.secciones.IALOCAL", IALOCAL_DIR)
+PAQUETE_JSON = _ruta_json("subsistemas.STM_JSON.seccion", PAQUETE_JSON)
+PAQUETE_CH = _ruta_json("subsistemas.STM_CH.seccion", PAQUETE_CH)
+PAQUETE_BKCH = _ruta_json("subsistemas.STM_BKCH.seccion", PAQUETE_BKCH)
+PAQUETE_SGR = _ruta_json("subsistemas.STM_SGR.seccion", PAQUETE_SGR)
+PAQUETE_SBSTM = _ruta_json("subsistemas.SBSTM.seccion", PAQUETE_SBSTM)
+PAQUETE_GENERAL = _ruta_json("subsistemas.STMGNRL.seccion", PAQUETE_GENERAL)
+STM_CH_DIR = _ruta_json("subsistemas.STM_CH.raiz", STM_CH_DIR)
+PYCACHE_DIR = _ruta_json("runtime.pycache", PYCACHE_DIR)
+PSNRL_DIR = _ruta_json("runtime.psnrl", PSNRL_DIR)
+LEDGER_PATH = _ruta_json("runtime.ledger", LEDGER_PATH)
+CACHE_IAFREE = _ruta_json("runtime.cache_iafree", CACHE_IAFREE)
 
 # Raices compartidas con el resto de paquetes: se publican como ruta de verdad
 # para que STM_CH/rutas.py no vuelva a calcularlas.

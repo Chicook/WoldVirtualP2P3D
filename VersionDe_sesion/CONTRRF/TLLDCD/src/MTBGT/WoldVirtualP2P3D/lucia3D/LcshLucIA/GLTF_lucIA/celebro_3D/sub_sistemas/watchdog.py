@@ -96,7 +96,7 @@ class WatchdogSistema:
 
     def _comprobar_ram(self) -> bool:
         try:
-            from SBSTM.autodiagnostico import _ram_proceso_mb
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.autodiagnostico import _ram_proceso_mb
             mb = _ram_proceso_mb()
             if 0 <= mb and mb > _RAM_UMBRAL_MB:
                 self._emitir_alerta(
@@ -125,7 +125,7 @@ class WatchdogSistema:
 
     def _comprobar_blockchain(self) -> bool:
         try:
-            from STM_BKCH.BKSVCB import CelebroBlockchain
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_BKCH.stm_bkch1.BKSVCB import CelebroBlockchain
             bks = CelebroBlockchain()
             valida, err = bks.validar_cadena()
             if not valida:
@@ -140,7 +140,7 @@ class WatchdogSistema:
         with self._lock:
             self._alertas += 1
         try:
-            from SBSTM.gestor_errores import GestorErroresSistema
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.gestor_errores import GestorErroresSistema
             ges = GestorErroresSistema()
             entrada = ges.capturar(excepcion=None, contexto=f"[WATCHDOG] {contexto}", severidad=severidad)
             with ges._lock:

@@ -21,7 +21,7 @@ import threading
 import time
 from typing import Final, List, Optional, Tuple
 
-from SBSTM.voice_helpers import (
+from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.voice_helpers import (
     LimpiadorFoneticoLucIA,
     ModuladorExpresivoJuvenil,
     ReproductorMCIWindows,
@@ -99,7 +99,7 @@ class VoiceEngine:
 
     def _sintetizar_oficial_con_timeout(self, chunk: str, segundos: float = 45.0) -> bool:
         """Sintesis oficial con timeout solo en la fase de red/DSP (no en reproduccion)."""
-        from SBSTM.voice_helpers import sintetizar_oficial_dsp
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.voice_helpers import sintetizar_oficial_dsp
         caja: List[Optional[str]] = []
         def _run() -> None:
             try:

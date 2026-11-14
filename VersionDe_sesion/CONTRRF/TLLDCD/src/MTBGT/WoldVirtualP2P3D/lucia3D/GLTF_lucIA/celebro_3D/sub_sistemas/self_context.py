@@ -35,13 +35,13 @@ def construir_self_context(
         lineas.append("- Red neuronal: 50 neuronas.")
     # Ollama local
     try:
-        from STM_IA.modelosIAlocal.IALOCAL.gestor import ollama_disponible
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_IA.STM_Informacion.modelosIAlocal.IALOCAL.gestor import ollama_disponible
         lineas.append(f"- Ollama local: {'DISPONIBLE' if ollama_disponible() else 'NO DISPONIBLE (fast-failover a remoto/reflejo)'}.")
     except Exception:
         lineas.append("- Ollama local: estado desconocido.")
     # Blockchain
     try:
-        from SBSTM.autodiagnostico import AutodiagnosticoLucIA
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.autodiagnostico import AutodiagnosticoLucIA
         d = AutodiagnosticoLucIA().inspeccionar_blockchain()
         lineas.append(f"- Blockchain: {d.get('bloques', '?')} bloques, valida={d.get('valida', '?')}.")
     except Exception:
@@ -49,7 +49,7 @@ def construir_self_context(
     # Memoria
     try:
         if sesion_id:
-            from SBSTM.memoria_sesion import get_memoria
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.memoria_sesion import get_memoria
             m = get_memoria(sesion_id)
             lineas.append(f"- Memoria conversacional: {m.total()} turnos en ventana.")
     except Exception:

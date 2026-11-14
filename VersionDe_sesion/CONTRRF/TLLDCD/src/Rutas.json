@@ -1,0 +1,184 @@
+{
+  "version": "2026.3.1",
+  "descripcion": "Rutas canonicas del taller TLLDCD/src. Todas las rutas son relativas a este archivo.",
+  "base": ".",
+  "raices": {
+    "src": ".",
+    "tllcd": "..",
+    "contrrf": "../..",
+    "version": "../../..",
+    "repo": "../../../.."
+  },
+  "subsistemas": {
+    "LC_STM": {
+      "raiz": "LC_STM",
+      "secciones": {
+        "red_neuronal": "LC_STM/red_neuronal",
+        "red_neuronal_ENRN": "LC_STM/red_neuronal/ENRN",
+        "red_neuronal_RF_EN": "LC_STM/red_neuronal/RF_EN",
+        "red_neuronal_RF_SL": "LC_STM/red_neuronal/RF_SL",
+        "red_neuronal_RNP": "LC_STM/red_neuronal/RNP",
+        "red_neuronal_SLRN": "LC_STM/red_neuronal/SLRN",
+        "seq2seq": "LC_STM/seq2seq"
+      }
+    },
+    "SBSTM": {
+      "raiz": "SBSTM",
+      "seccion": "SBSTM/SistemasLC",
+      "secciones": {
+        "SistemasLC": "SBSTM/SistemasLC",
+        "STM_SBTM_1": "SBSTM/SistemasLC/STM_SBTM_1",
+        "STM_SBTM_2": "SBSTM/SistemasLC/STM_SBTM_2",
+        "STM_SBTM_3": "SBSTM/SistemasLC/STM_SBTM_3",
+        "tts_models": "SBSTM/SistemasLC/tts_models"
+      }
+    },
+    "STMGNRL": {
+      "raiz": "STMGNRL",
+      "seccion": "STMGNRL/SistemaGeneral",
+      "secciones": {
+        "SistemaGeneral": "STMGNRL/SistemaGeneral"
+      }
+    },
+    "STM_BKCH": {
+      "raiz": "STM_BKCH",
+      "seccion": "STM_BKCH/stm_bkch1",
+      "secciones": {
+        "stm_bkch1": "STM_BKCH/stm_bkch1"
+      }
+    },
+    "STM_CH": {
+      "raiz": "STM_CH",
+      "seccion": "STM_CH/STM_herramientas",
+      "secciones": {
+        "STM_herramientas": "STM_CH/STM_herramientas",
+        "PSNRL": "STM_CH/PSNRL",
+        "pycache": "STM_CH/pycache"
+      }
+    },
+    "STM_DOC": {
+      "raiz": "STM_DOC",
+      "secciones": {
+        "docs": "STM_DOC/docs",
+        "Desarrollo": "STM_DOC/Desarrollo",
+        "Otros_documentos": "STM_DOC/Otros_documentos"
+      }
+    },
+    "STM_HRTS": {
+      "raiz": "STM_HRTS",
+      "secciones": {
+        "STM_DEF": "STM_HRTS/STM_DEF",
+        "STM_PY": "STM_HRTS/STM_PY",
+        "utils": "STM_HRTS/utils",
+        "add_utils": "STM_HRTS/utils/add_utils",
+        "STM_UTILS": "STM_HRTS/utils/STM_UTILS",
+        "empaquetado": "STM_HRTS/empaquetado"
+      }
+    },
+    "STM_IA": {
+      "raiz": "STM_IA",
+      "seccion": "STM_IA/STM_Informacion",
+      "secciones": {
+        "STM_Informacion": "STM_IA/STM_Informacion",
+        "conocimiento": "STM_IA/STM_Informacion/conocimiento",
+        "modelosIAlocal": "STM_IA/STM_Informacion/modelosIAlocal",
+        "IALOCAL": "STM_IA/STM_Informacion/modelosIAlocal/IALOCAL"
+      }
+    },
+    "STM_JSON": {
+      "raiz": "STM_JSON",
+      "seccion": "STM_JSON/STM_LC",
+      "secciones": {
+        "STM_LC": "STM_JSON/STM_LC"
+      }
+    },
+    "STM_SGR": {
+      "raiz": "STM_SGR",
+      "seccion": "STM_SGR/STM_CNX",
+      "secciones": {
+        "STM_CNX": "STM_SGR/STM_CNX"
+      }
+    },
+    "STMIPFS": {
+      "raiz": "STMIPFS",
+      "secciones": {
+        "nodo": "STMIPFS/nodo",
+        "SBSTMPYIPFS": "STMIPFS/SBSTMPYIPFS",
+        "STM_BAT_IPFS": "STMIPFS/STM_BAT_IPFS"
+      }
+    },
+    "tests": {
+      "raiz": "tests",
+      "secciones": {
+        "STM_test1": "tests/STM_test1",
+        "STM_test2": "tests/STM_test2",
+        "STM_test3": "tests/STM_test3",
+        "godot": "tests/godot",
+        "STM_GDT": "tests/godot/STM_GDT"
+      }
+    },
+    "VSC#": {
+      "raiz": "VSC#",
+      "secciones": {
+        "Visor3Ddesarrollo": "VSC#/Visor3Ddesarrollo",
+        "webnodo": "VSC#/Visor3Ddesarrollo/webnodo"
+      }
+    },
+    "MTBGT": {
+      "raiz": "MTBGT",
+      "secciones": {
+        "WoldVirtualP2P3D": "MTBGT/WoldVirtualP2P3D",
+        "lucia3D": "MTBGT/WoldVirtualP2P3D/lucia3D"
+      }
+    }
+  },
+  "archivos": {
+    "mainLCSTM": "STMGNRL/SistemaGeneral/mainLCSTM.py",
+    "imports_STMGNRL": "STMGNRL/SistemaGeneral/_imports.py",
+    "BKSVCB": "STM_BKCH/stm_bkch1/BKSVCB.py",
+    "bksvcb_net": "STM_BKCH/stm_bkch1/bksvcb_net.py",
+    "compat_local": "STM_BKCH/stm_bkch1/compat_local.py",
+    "servidor_oficial": "STM_BKCH/stm_bkch1/servidor_oficial.py",
+    "rutas_STM_CH": "STM_CH/STM_herramientas/rutas.py",
+    "rutas_json": "STM_CH/STM_herramientas/rutas_json.py",
+    "rutas_canonicas": "STM_HRTS/utils/add_utils/rutas.py",
+    "registro_json": "STM_JSON/STM_LC/registro_json.py",
+    "vault_openrouter": "STM_SGR/STM_CNX/vault_openrouter.py",
+    "conocimiento": "STM_IA/STM_Informacion/conocimiento.py",
+    "gestor_IALOCAL": "STM_IA/STM_Informacion/modelosIAlocal/IALOCAL/gestor.py",
+    "ipfs_launcher": "STMIPFS/SBSTMPYIPFS/ipfs_launcher.py",
+    "accesores": "SBSTM/SistemasLC/STM_SBTM_1/accesores.py",
+    "autodiagnostico": "SBSTM/SistemasLC/STM_SBTM_1/autodiagnostico.py",
+    "comandos": "SBSTM/SistemasLC/STM_SBTM_1/comandos.py",
+    "IAFREE": "SBSTM/SistemasLC/STM_SBTM_1/IAFREE.py",
+    "memoria_sesion": "SBSTM/SistemasLC/STM_SBTM_2/memoria_sesion.py",
+    "RPLC": "SBSTM/SistemasLC/STM_SBTM_2/RPLC.py",
+    "selector_modelos": "SBSTM/SistemasLC/STM_SBTM_2/selector_modelos.py",
+    "self_context": "SBSTM/SistemasLC/STM_SBTM_2/self_context.py",
+    "SNSBSTNPRB": "SBSTM/SistemasLC/STM_SBTM_2/SNSBSTNPRB.py",
+    "STYLOS": "SBSTM/SistemasLC/STM_SBTM_3/STYLOS.py",
+    "subsistema_evolutivo": "SBSTM/SistemasLC/STM_SBTM_3/subsistema_evolutivo.py",
+    "subsistema_neural": "SBSTM/SistemasLC/STM_SBTM_3/subsistema_neural.py",
+    "voice_engine": "SBSTM/SistemasLC/STM_SBTM_3/voice_engine.py",
+    "watchdog": "SBSTM/SistemasLC/STM_SBTM_3/watchdog.py",
+    "RFPRMN": "../../STM_RFC/STM_RFPRMN/RFPRMN.py",
+    "LC_constructor": "../../STM_RFC/STM_RFPRMN/LC_constructor.py"
+  },
+  "runtime": {
+    "lc_trabajando": "../../CONTRUCCION/LCtrabajando",
+    "psnrl": "STM_CH/PSNRL",
+    "pycache": "STM_CH/pycache",
+    "ledger": "STM_CH/blockchain_ledger.json",
+    "cache_iafree": "STM_CH/openrouter_free_cache.json",
+    "stm_rfc": "../../STM_RFC",
+    "rfprmn_dir": "../../STM_RFC/STM_RFPRMN",
+    "rfprmn_paquete": "../../STM_RFC/STM_RFPRMN/STM_RFPRMN_stmDL",
+    "godot_project": "MTBGT/WoldVirtualP2P3D/project.godot"
+  },
+  "pythonpath": [
+    ".",
+    "..",
+    "../..",
+    "../../STM_RFC/STM_RFPRMN"
+  ]
+}

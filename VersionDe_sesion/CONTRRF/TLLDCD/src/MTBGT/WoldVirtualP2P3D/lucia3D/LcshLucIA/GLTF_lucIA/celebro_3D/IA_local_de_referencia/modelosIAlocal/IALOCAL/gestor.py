@@ -246,13 +246,13 @@ def generar(modelo: str, prompt: str, ctx: Optional[Dict[str, Any]] = None,
     try:
         _sid = str(ctx.get("sesion_id", ""))
         if _sid:
-            from SBSTM.memoria_sesion import get_memoria
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.memoria_sesion import get_memoria
             _mem = get_memoria(_sid).resumen_contexto()
     except Exception:
         _mem = ""
     _self = ""
     try:
-        from SBSTM.self_context import construir_self_context
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.self_context import construir_self_context
         _self = construir_self_context(sesion_id=str(ctx.get("sesion_id", "")))
     except Exception:
         _self = ""
@@ -326,7 +326,7 @@ class GestorIALocal:
         prompt_efectivo = prompt
         _es_diag = False
         try:
-            from SBSTM.autodiagnostico import es_peticion_diagnostico, ejecutar_diagnostico
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.autodiagnostico import es_peticion_diagnostico, ejecutar_diagnostico
             if es_peticion_diagnostico(prompt):
                 diag_txt = ejecutar_diagnostico()
                 prompt_efectivo = (
@@ -340,7 +340,7 @@ class GestorIALocal:
         try:
             _sid2 = str((ctx or {}).get("sesion_id", ""))
             if _sid2:
-                from SBSTM.memoria_sesion import get_memoria
+                from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.memoria_sesion import get_memoria
                 _ctxm = get_memoria(_sid2).resumen_contexto()
                 if _ctxm:
                     prompt_efectivo = f"{_ctxm}\n\nPregunta actual: {prompt_efectivo}"

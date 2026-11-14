@@ -14,7 +14,7 @@ def obtener_procesador_rplc() -> Optional[Any]:
     pasándola por 3 capas: vectorización → transformación sináptica → reformulación.
     """
     try:
-        from SBSTM.RPLC import get_procesador_rplc
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.RPLC import get_procesador_rplc
         return get_procesador_rplc()
     except Exception as _err:
         logger.warning("[SBSTM] RPLC no disponible: %s", _err)
@@ -28,7 +28,7 @@ def reprocesar_respuesta_lucia(texto_bruto: str, contexto_neuronal: Optional[Dic
     Si RPLC no está disponible, devuelve el texto original sin modificar.
     """
     try:
-        from SBSTM.RPLC import reprocesar_para_lucia
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.RPLC import reprocesar_para_lucia
         return reprocesar_para_lucia(texto_bruto, contexto_neuronal)
     except Exception:
         return texto_bruto
@@ -38,7 +38,7 @@ def reprocesar_respuesta_lucia(texto_bruto: str, contexto_neuronal: Optional[Dic
 def obtener_servicio_iafree() -> Optional[Any]:
     """Devuelve el cliente singleton de inferencia gratuita OpenRouter."""
     try:
-        from SBSTM.IAFREE import get_cliente_iafree
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.IAFREE import get_cliente_iafree
         return get_cliente_iafree()
     except Exception as _err:
         logger.warning("[SBSTM] IAFREE no disponible: %s", _err)
@@ -49,7 +49,7 @@ def obtener_servicio_iafree() -> Optional[Any]:
 def obtener_motor_stylos() -> Optional[Any]:
     """Devuelve la clase EstiloTerminalLucIA del motor de estilos visuales."""
     try:
-        from SBSTM.STYLOS import EstiloTerminalLucIA
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.STYLOS import EstiloTerminalLucIA
         return EstiloTerminalLucIA
     except Exception as _err:
         logger.warning("[SBSTM] STYLOS no disponible: %s", _err)
@@ -60,7 +60,7 @@ def obtener_motor_stylos() -> Optional[Any]:
 def obtener_motor_voz() -> Optional[Any]:
     """Retorna la instancia global del motor de voz de LucIA."""
     try:
-        from SBSTM.voice_engine import get_voice_engine
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.voice_engine import get_voice_engine
         return get_voice_engine()
     except Exception as _err:
         logger.warning("[SBSTM] Voice engine no disponible: %s", _err)
@@ -70,7 +70,7 @@ def obtener_motor_voz() -> Optional[Any]:
 def reproducir_voz_lucia(texto: str, esperar: bool = False, emocion: Optional[float] = None) -> None:
     """Reproduce texto con la voz juvenil oficial de LucIA (es-ES-ElviraNeural)."""
     try:
-        from SBSTM.voice_engine import speak
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.voice_engine import speak
         speak(texto, esperar=esperar, emocion=emocion)
     except Exception as _err:
         logger.debug("[SBSTM] Reproduccion de voz omitida: %s", _err)
@@ -79,7 +79,7 @@ def reproducir_voz_lucia(texto: str, esperar: bool = False, emocion: Optional[fl
 def cancelar_voz_lucia() -> None:
     """Interrumpe inmediatamente cualquier emision sonora de LucIA."""
     try:
-        from SBSTM.voice_engine import cancel_speech
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.voice_engine import cancel_speech
         cancel_speech()
     except Exception as _err:
         logger.debug("[SBSTM] Cancelacion de voz omitida: %s", _err)
@@ -90,7 +90,7 @@ class GestorJSONLucIA:
     """Puerta del orquestador al registro central STM_JSON."""
     def __init__(self) -> None:
         try:
-            from STM_JSON.registro_json import get_registro
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_JSON.STM_LC.registro_json import get_registro
             self.registro = get_registro()
         except Exception:
             self.registro = None

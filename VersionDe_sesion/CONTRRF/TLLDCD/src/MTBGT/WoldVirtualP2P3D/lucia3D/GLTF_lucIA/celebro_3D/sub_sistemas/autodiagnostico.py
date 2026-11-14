@@ -67,7 +67,7 @@ class AutodiagnosticoLucIA:
     def inspeccionar_blockchain(self) -> Dict[str, Any]:
         """Evalúa el estado del servidor blockchain BKSVCB y ledger."""
         try:
-            from STM_BKCH.BKSVCB import CelebroBlockchain
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_BKCH.stm_bkch1.BKSVCB import CelebroBlockchain
             bks = CelebroBlockchain()
             valida, err = bks.validar_cadena()
             return {
@@ -135,7 +135,7 @@ class AutodiagnosticoLucIA:
             pass
 
         try:
-            from SBSTM.IAFREE import get_cliente_iafree
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.IAFREE import get_cliente_iafree
             cliente = get_cliente_iafree()
             resultado["openrouter_activo"] = bool(cliente.esta_autenticado())
             resultado["modelos_free_total"] = len(cliente.gestor.listar_modelos())
@@ -177,7 +177,7 @@ class AutodiagnosticoLucIA:
     def inspeccionar_errores_recientes(self) -> Dict[str, Any]:
         """Consulta el GestorErroresSistema centralizado."""
         try:
-            from SBSTM.gestor_errores import obtener_gestor_errores
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.gestor_errores import obtener_gestor_errores
             res = obtener_gestor_errores().resumen_errores()
             return {
                 "total_errores_registrados": res.get("total", 0),
@@ -195,12 +195,12 @@ class AutodiagnosticoLucIA:
         except Exception as exc:
             extra["ipfs"] = f"NO_DISPONIBLE ({str(exc)[:60]})"
         try:
-            from SBSTM import voice_engine  # noqa
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3 import voice_engine  # noqa
             extra["voz"] = "DISPONIBLE"
         except Exception:
             extra["voz"] = "NO_DISPONIBLE"
         try:
-            from STM_IA import conocimiento
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_IA.STM_Informacion import conocimiento
             cdir = getattr(conocimiento, "CONOCIMIENTO_DIR", None)
             ndocs = len(list(cdir.glob("*"))) if cdir else -1
             extra["rag_docs"] = ndocs
@@ -221,7 +221,7 @@ class AutodiagnosticoLucIA:
         except Exception:
             extra["watchdog_vivo"] = False
         try:
-            from STM_SGR.vault_openrouter import obtener_key
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_SGR.STM_CNX.vault_openrouter import obtener_key
             extra["vault_key"] = bool(obtener_key())
         except Exception:
             try:

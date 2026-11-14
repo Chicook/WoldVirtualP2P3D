@@ -55,7 +55,7 @@ class C:
 # ─── CARGA DIFERIDA DEL NUCLEO ───────────────────────────────────────────────
 def _importar_nucleo():
     """Carga los modulos core desde STM_BKCH."""
-    from STM_BKCH.BKSVCB import get_blockchain_server, iniciar_servidor_blockchain
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_BKCH.stm_bkch1.BKSVCB import get_blockchain_server, iniciar_servidor_blockchain
     from STM_BKCH.compat_local import get_conversor_pesos
     get_gestor_pesos_vivos = lambda: None
     return get_blockchain_server, iniciar_servidor_blockchain, get_conversor_pesos, get_gestor_pesos_vivos
@@ -64,7 +64,7 @@ def _importar_nucleo():
 # ─── CLIENTE OLLAMA ──────────────────────────────────────────────────────────
 OLLAMA_URL  = "http://localhost:11434"
 try:
-    from STM_JSON.registro_json import ruta_de as _ruta_json
+    from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_JSON.STM_LC.registro_json import ruta_de as _ruta_json
     IA_CFG_PATH = _ruta_json("ialocal")
 except Exception:
     IA_CFG_PATH = ROOT_DIR / "LC" / "modelosIAlocal" / "IAlocal.json"
@@ -146,7 +146,7 @@ def consultar_ollama_stream(prompt: str, modelo: str,
 
 # ─── TELEMETRIA COMPACTA DE PESOS ────────────────────────────────────────────
 # _mini_pesos vive en snsbstnprb_utils.py para respetar el limite de 450 lineas.
-from SBSTM.snsbstnprb_utils import mini_pesos as _mini_pesos  # noqa: E402,F401
+from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.snsbstnprb_utils import mini_pesos as _mini_pesos  # noqa: E402,F401
 
 
 # ─── ORQUESTADOR PRINCIPAL ───────────────────────────────────────────────────
@@ -252,7 +252,7 @@ class SesionNeuronalP2P:
             if prompt.lower() in ("salir", "exit", "quit"):
                 print(C.c(C.YL, "\n  Cerrando sesion..."))
                 break
-            from SBSTM.snsbstnprb_utils import gestionar_comando
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.snsbstnprb_utils import gestionar_comando
             prompt = gestionar_comando(self, prompt)
             if not prompt:
                 continue
@@ -263,13 +263,13 @@ class SesionNeuronalP2P:
 
             ctx = ""
             try:
-                from SBSTM.memoria_sesion import get_memoria
+                from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.memoria_sesion import get_memoria
                 ctx = get_memoria(self._sesion_id).resumen_contexto()
             except Exception:
                 pass
             emo: Dict[str, Any] = {"valencia": 0.0, "etiqueta": "neutral"}
             try:
-                from SBSTM.emocion import analizar_emocion
+                from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.emocion import analizar_emocion
                 emo = analizar_emocion(prompt)
             except Exception:
                 pass
@@ -305,7 +305,7 @@ class SesionNeuronalP2P:
                           f"  [Bloque #{blk.indice}] Hash: {blk.hash_bloque[:28]}..."))
 
             # Post-procesado del turno: memoria, perfil, voz, dashboard, rubrica
-            from SBSTM.snsbstnprb_utils import postprocesar_turno
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.snsbstnprb_utils import postprocesar_turno
             postprocesar_turno(
                 sesion=self, prompt=prompt, respuesta=respuesta,
                 info_neural=info_neural, emo=emo, dt=dt, cid=cid,
@@ -359,19 +359,19 @@ class SesionNeuronalP2P:
     # ── REFLEJO NEURONAL (SIN OLLAMA) ─────────────────────────────────────────
     def _reflejo_neuronal(self, prompt: str) -> str:
         """Respuesta interna de la red neuronal cuando Ollama no esta disponible."""
-        from SBSTM.snsbstnprb_utils import reflejo_neuronal
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.snsbstnprb_utils import reflejo_neuronal
         return reflejo_neuronal(self.conversor, prompt)
 
     # ── COMANDOS AUXILIARES ───────────────────────────────────────────────────
     def _mostrar_estado(self) -> None:
         """Panel de estado compacto del sistema en tiempo real."""
-        from SBSTM.snsbstnprb_utils import mostrar_estado
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.snsbstnprb_utils import mostrar_estado
         mostrar_estado(self.bks, self.conversor, self.gestor_pv,
                        self._turno, self.modelo)
 
     def _cambiar_modelo(self, nombre: str) -> None:
         """Cambia el modelo Ollama activo durante la sesion."""
-        from SBSTM.snsbstnprb_utils import resolver_modelo
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.snsbstnprb_utils import resolver_modelo
         nuevo = resolver_modelo(nombre, _listar_modelos_ollama())
         if nuevo:
             self.modelo = nuevo
@@ -385,7 +385,7 @@ class SesionNeuronalP2P:
         if not self.bks or getattr(self, "_cerrado", False):
             return
         self._cerrado = True
-        from SBSTM.snsbstnprb_utils import cerrar_sesion
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.snsbstnprb_utils import cerrar_sesion
         cerrar_sesion(self.bks, self.conversor, self.gestor_pv,
                       self._sesion_id, self._turno)
 

@@ -212,7 +212,7 @@ class OrquestadorSistemaLucIA(SelectorModelos):
         if self.gestor_hrts:
             print(f"  [HRTS] {self.gestor_hrts.linea_estado()}")
         try:
-            from SBSTM.voice_engine import estado_voz as _estado_voz
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_3.voice_engine import estado_voz as _estado_voz
             print(f"  {_estado_voz()}")
         except Exception as _e_v:
             print(f"  [VOZ]  Voz Neuronal LucIA  : \033[38;5;203mNO DISPONIBLE ({_VOZ_MOTIVO or _e_v})\033[0m")

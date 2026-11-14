@@ -75,7 +75,7 @@ def gestionar_comando(sesion: Any, prompt: str) -> str:
                        sesion._turno, sesion.modelo)
         return ""
     if bajo.startswith("modelo "):
-        from SBSTM.SNSBSTNPRB import _listar_modelos_ollama  # noqa: E402
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.SNSBSTNPRB import _listar_modelos_ollama  # noqa: E402
         nuevo = resolver_modelo(prompt[7:].strip(), _listar_modelos_ollama())
         if nuevo:
             sesion.modelo = nuevo
@@ -85,14 +85,14 @@ def gestionar_comando(sesion: Any, prompt: str) -> str:
         return ""
     if bajo.startswith("saber "):
         try:
-            from STM_IA.conocimiento import contexto_para_prompt  # noqa: E402
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_IA.STM_Informacion.conocimiento import contexto_para_prompt  # noqa: E402
             print(contexto_para_prompt(prompt[6:].strip()) or "  Sin resultados.")
         except Exception as ex:
             print(f"  [conocimiento] {ex}")
         return ""
     if bajo in ("escuchar", "voz", "hablar"):
         try:
-            from SBSTM.escucha import escuchar_o_pedir  # noqa: E402
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.escucha import escuchar_o_pedir  # noqa: E402
             return escuchar_o_pedir()
         except Exception:
             return ""
@@ -149,15 +149,15 @@ def postprocesar_turno(sesion: Any, prompt: str, respuesta: str,
         val = 0.0
 
     try:
-        from SBSTM.memoria_sesion import get_memoria  # noqa: E402
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.memoria_sesion import get_memoria  # noqa: E402
         get_memoria(sesion._sesion_id).registrar_turno(
             prompt=prompt, respuesta=respuesta, tono=tono, valencia=val)
     except Exception:
         pass
 
     try:
-        from SBSTM.perfil import get_perfil  # noqa: E402
-        from STM_IA.conocimiento import palabras_clave  # noqa: E402
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.perfil import get_perfil  # noqa: E402
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_IA.STM_Informacion.conocimiento import palabras_clave  # noqa: E402
         get_perfil().aprender_turno(
             tono=tono, valencia=val, modelo=sesion.modelo,
             palabras_clave=palabras_clave(prompt))
@@ -165,8 +165,8 @@ def postprocesar_turno(sesion: Any, prompt: str, respuesta: str,
         pass
 
     try:
-        from SBSTM.emocion import modular_prosodia  # noqa: E402
-        from SBSTM.accesores import reproducir_voz_lucia  # noqa: E402
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.emocion import modular_prosodia  # noqa: E402
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_1.accesores import reproducir_voz_lucia  # noqa: E402
         emo_voz, _ = modular_prosodia(float(emo.get("valencia", 0.0)), val)
         reproducir_voz_lucia(respuesta, emocion=emo_voz)
     except Exception:
@@ -190,7 +190,7 @@ def postprocesar_turno(sesion: Any, prompt: str, respuesta: str,
           f"Txs pendientes: {len(sesion.bks.transacciones_pendientes)}")
 
     try:
-        from SBSTM.rubrica import evaluar_calidad  # noqa: E402
+        from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.rubrica import evaluar_calidad  # noqa: E402
         cal = evaluar_calidad(respuesta, tono)
         print(f"  Calidad: {cal['puntuacion']:.2f} ({cal['veredicto']})")
     except Exception:

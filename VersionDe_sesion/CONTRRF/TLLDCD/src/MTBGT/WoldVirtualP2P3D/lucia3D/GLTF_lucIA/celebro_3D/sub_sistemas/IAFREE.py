@@ -96,7 +96,7 @@ class GestorModelosGratuitos:
             except Exception:
                 pass
         try:
-            from STM_SGR.vault_openrouter import obtener_key
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.STM_SGR.STM_CNX.vault_openrouter import obtener_key
             clave_vault = obtener_key()
             if clave_vault and len(clave_vault) > 10:
                 return clave_vault
@@ -214,14 +214,14 @@ class ClienteIAFree:
         # Memoria conversacional + autoconocimiento vivo (conocete a ti misma)
         bloque_memoria = ""
         try:
-            from SBSTM.memoria_sesion import get_memoria
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.memoria_sesion import get_memoria
             if sesion_id:
                 bloque_memoria = get_memoria(sesion_id).resumen_contexto()
         except Exception:
             bloque_memoria = ""
         bloque_self = ""
         try:
-            from SBSTM.self_context import construir_self_context
+            from VersionDe_sesion.CONTRRF.TLLDCD.src.SBSTM.SistemasLC.STM_SBTM_2.self_context import construir_self_context
             bloque_self = construir_self_context(sesion_id=sesion_id)
         except Exception:
             bloque_self = ""

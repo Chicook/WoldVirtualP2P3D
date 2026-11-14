@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-13T01:26:55.395288",
+  "pasos_entrenamiento": 63,
+  "deriva_acumulada": 0.021768,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 63,
+    "motivo": "LC_entrenar_HOJA_DE_RUTA_MODULARIDAD_b63",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.021768,
+    "norma_tensor": 0.96587,
+    "delta_aplicada": 0.330472,
+    "gsnr": 0.8783,
+    "entropia_shannon": 5.4098,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.0729,
+      "delta_q": 1.7451,
+      "pasos_q": 63
+    },
+    "timestamp": 1794529615.3944037
+  },
+  "resumen_pesos": {
+    "min": -0.16157999634742737,
+    "max": 0.781470000743866,
+    "media": 0.017802998423576355
+  }
+}
