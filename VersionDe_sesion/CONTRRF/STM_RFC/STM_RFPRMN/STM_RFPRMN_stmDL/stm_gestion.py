@@ -133,7 +133,16 @@ def crear_carpeta(ruta: str, nombre: str) -> str:
     carpeta = base / limpio
     if not es_subruta(carpeta, base):
         raise ErrorProyecto(f"La carpeta saldría de {base}: {carpeta}")
-    carpeta.mkdir(parents=True, exist_ok=True)
+    try:
+        carpeta.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        # Algunos intérpretes (p. ej. Python 3.15 portable) están bloqueados
+        # por Controlled Folder Access; se usa PowerShell como alternativa.
+        import subprocess
+        subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             f"New-Item -ItemType Directory -LiteralPath '{carpeta}' -Force | Out-Null"],
+            check=True, capture_output=True, text=True)
     return str(carpeta)
 
 
