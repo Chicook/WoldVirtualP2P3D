@@ -225,7 +225,7 @@ def test_manifiesto_hrts_y_registro():
     assert any("numpy" in d for d in deps)
     scripts = reg.scripts()
     assert "lucia" in scripts
-    assert scripts["lucia"] == "STMGNRL.mainLCSTM:main"
+    assert scripts["lucia"] == "STMGNRL.SistemaGeneral.mainLCSTM:main"
 
 
 def test_minado_rapido_y_persistencia_atomica():

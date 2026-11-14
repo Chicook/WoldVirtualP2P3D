@@ -12,19 +12,33 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+try:
+    from STM_CH.STM_herramientas.rutas_json import obtener as _obtener_ruta_json
+except Exception:  # pragma: no cover
+    _obtener_ruta_json = None
+
+
+def _ruta_json_o(clave: str, por_defecto: Path) -> Path:
+    if _obtener_ruta_json is None:
+        return por_defecto
+    try:
+        return _obtener_ruta_json(clave)
+    except Exception:
+        return por_defecto
 from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Union
 
 CURRENT_FILE: Final[Path] = Path(__file__).resolve()
 GNRL_DIR: Final[Path] = CURRENT_FILE.parent
-SRC_DIR: Final[Path] = GNRL_DIR.parent.parent
-ROOT_DIR: Final[Path] = SRC_DIR.parent
-CONTRRF_DIR: Final[Path] = CURRENT_FILE.parents[4]
+SRC_DIR: Final[Path] = _ruta_json_o("raices.src", GNRL_DIR.parent.parent)
+ROOT_DIR: Final[Path] = _ruta_json_o("raices.tllcd", SRC_DIR.parent)
+CONTRRF_DIR: Final[Path] = _ruta_json_o("raices.contrrf", CURRENT_FILE.parents[4])
 ENV_FILE: Final[Path] = next((c for c in (GNRL_DIR / ".env", SRC_DIR / ".env", ROOT_DIR / ".env") if c.exists()), SRC_DIR / ".env")
 CELEBRO_DIR: Final[Path] = SRC_DIR / "STM_CH"
 PSNRL_DIR: Final[Path] = CELEBRO_DIR / "PSNRL"
 CMFG_DIR: Final[Path] = SRC_DIR
-SBSTM_DIR: Final[Path] = SRC_DIR / "SBSTM"
-STM_RFC_DIR: Final[Path] = CONTRRF_DIR / "STM_RFC"
+SBSTM_DIR: Final[Path] = _ruta_json_o("subsistemas.SBSTM.raiz", SRC_DIR / "SBSTM")
+STM_RFC_DIR: Final[Path] = _ruta_json_o("runtime.stm_rfc", CONTRRF_DIR / "STM_RFC")
 for _p in (GNRL_DIR, SRC_DIR, STM_RFC_DIR, ROOT_DIR, CONTRRF_DIR):
     if _p.exists() and str(_p) not in sys.path:
         sys.path.insert(0, str(_p))

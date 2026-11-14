@@ -29,10 +29,10 @@ from typing import Any, Callable, Dict, Final, List, Optional, Set, Tuple
 logger: logging.Logger = logging.getLogger("WoldVirtualP2P3D.SBSTM.Evolutivo")
 
 # ─── RESOLUCION DE RUTAS Y CONSTANTES ─────────────────────────────────────────
-PAQUETE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
-SRC_DIR: Final[Path] = PAQUETE_DIR.parent
-ROOT_DIR: Final[Path] = SRC_DIR.parent
-CONTRRF_DIR: Final[Path] = ROOT_DIR.parent
+PAQUETE_DIR: Final[Path] = Path(__file__).resolve().parent.parent.parent  # .../SBSTM
+SRC_DIR: Final[Path] = PAQUETE_DIR.parent                                 # .../src
+ROOT_DIR: Final[Path] = SRC_DIR.parent                                     # .../TLLDCD
+CONTRRF_DIR: Final[Path] = ROOT_DIR.parent                                 # .../CONTRRF
 LCTRABAJANDO_DIR: Final[Path] = CONTRRF_DIR / "CONTRUCCION" / "LCtrabajando"
 
 if not LCTRABAJANDO_DIR.exists():

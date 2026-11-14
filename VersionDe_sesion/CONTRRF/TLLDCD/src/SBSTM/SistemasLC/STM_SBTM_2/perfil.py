@@ -18,7 +18,7 @@ def _ruta_perfil() -> Path:
         from STM_CH.STM_herramientas.rutas import PSNRL_DIR
         d = Path(PSNRL_DIR)
     except ImportError:
-        d = Path(__file__).resolve().parents[2] / "STM_CH" / "PSNRL"
+        d = Path(__file__).resolve().parents[3] / "STM_CH" / "PSNRL"
     d.mkdir(parents=True, exist_ok=True)
     return d / "perfil_usuario.json"
 

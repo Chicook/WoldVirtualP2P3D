@@ -23,7 +23,7 @@ dev = [
 ]
 
 [project.scripts]
-lucia = "STMGNRL.mainLCSTM:main"
+lucia = "STMGNRL.SistemaGeneral.mainLCSTM:main"
 hrts = "STM_HRTS.__main__:main"
 
 [tool.ruff]

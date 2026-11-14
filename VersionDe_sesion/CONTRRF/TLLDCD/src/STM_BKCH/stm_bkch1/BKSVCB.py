@@ -43,12 +43,8 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from STM_BKCH.stm_bkch1.compat_local import get_conversor_pesos, ConversorRespuestaPesos, get_ipfs_manager, IPFSManager
-from SBSTM.SistemasLC.STM_SBTM_2.IALOCAL import (
-    ejecutar_flujo_sesion_local as _ialocal_pre_sesion,
-    cerrar_sesion_ialocal as _ialocal_cierre,
-    MODELOS_DIR as _IALOCAL_MODELOS_DIR,
-)
-_IALOCAL_DISPONIBLE = True
+# IALOCAL legado retirado: el runtime oficial vive en STM_IA.STM_Informacion.modelosIAlocal.IALOCAL.gestor.
+_IALOCAL_DISPONIBLE = False
 
 
 class BloqueNeuronal:
