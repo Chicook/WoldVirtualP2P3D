@@ -16,9 +16,10 @@ import importlib.util
 import logging
 import os
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Iterable
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Constantes y rutas
@@ -67,7 +68,6 @@ SUBCARPETAS_SRC_BASE: tuple[str, ...] = ()
 _MODULO_RED: ModuleType | None = None
 _CLASE_CONSTRUCTIVA: type | None = None
 _LCBS: ModuleType | None = None
-_NULO = open(os.devnull, "w", encoding="utf-8")
 
 
 @contextlib.contextmanager
@@ -76,7 +76,9 @@ def _silencio():
     nivel = logging.root.manager.disable
     logging.disable(logging.CRITICAL)
     try:
-        with contextlib.redirect_stdout(_NULO), contextlib.redirect_stderr(_NULO):
+        with open(os.devnull, "w", encoding="utf-8") as nulo, \
+                contextlib.redirect_stdout(nulo), \
+                contextlib.redirect_stderr(nulo):
             yield
     finally:
         logging.disable(nivel)
@@ -223,67 +225,9 @@ def _obtener_clase_constructiva() -> type:
 
     try:
         modulo = cargar_modulo_red()
-        creativa_cls = modulo.NeuronaEntradaXavier.NeuronaCreativa
-        base = creativa_cls.NeuronaConstructiva
+        base = modulo.NeuronaEntradaXavier.NeuronaCreativa.NeuronaConstructiva
     except Exception:  # red no disponible: constructor de carpetas puro
         base = object
-
-        class NeuronaConstructivaLucIA(base):
-            """Crea la jerarquía indicada, paso a paso y en orden."""
-
-            def __init__(self, creativa: Any, maquina: Any, ruta_base: str,
-                         nombre: str = _NOMBRE_PREDETERMINADO,
-                         subcarpetas: Iterable[str] | None = None) -> None:
-                self._creativa = creativa
-                self._maquina = maquina
-                self.ruta_base = str(ruta_base)
-                self.nombre = str(nombre)
-                self.subcarpetas = tuple(str(s) for s in (subcarpetas or ()))
-
-            def vector(self, texto: str) -> Any:
-                creativa = self._creativa
-                if creativa is not None and hasattr(creativa, "vector"):
-                    return creativa.vector(texto)
-                return texto
-
-            def _crear_si_falta(self, base: str, nombre: str) -> str:
-                limpio = str(nombre).strip()
-                if not limpio or limpio in {".", ".."} or Path(limpio).name != limpio:
-                    return self._maquina.crear_carpeta_en(base, nombre)
-                objetivo = Path(base) / limpio
-                try:
-                    if (objetivo.is_dir()
-                            and objetivo.parent.resolve() == Path(base).resolve()):
-                        return str(objetivo)
-                except OSError:
-                    pass
-                return self._maquina.crear_carpeta_en(base, nombre)
-
-            def crear_carpetas(self) -> dict[str, Any]:
-                raiz = ""
-                creadas: list[str] = []
-                pasos: list[dict[str, Any]] = []
-                try:
-                    raiz = self._crear_si_falta(self.ruta_base, self.nombre)
-                    pasos.append({"paso": 1, "carpeta": Path(raiz).name, "ruta": raiz})
-                    for numero, subcarpeta in enumerate(self.subcarpetas, start=2):
-                        ruta_sub = self._crear_si_falta(raiz, subcarpeta)
-                        creadas.append(ruta_sub)
-                        pasos.append({"paso": numero, "carpeta": subcarpeta,
-                                      "ruta": ruta_sub})
-                except Exception as error:  # noqa: BLE001 - resultado degradado
-                    return {"ok": False,
-                            "error": f"{type(error).__name__}: {error}",
-                            "raiz": raiz, "carpetas": creadas, "pasos": pasos,
-                            "total": (1 if raiz else 0) + len(creadas)}
-                return {"ok": True, "raiz": raiz, "carpetas": creadas,
-                        "total": 1 + len(creadas), "pasos": pasos}
-
-        _CLASE_CONSTRUCTIVA = NeuronaConstructivaLucIA
-        return _CLASE_CONSTRUCTIVA
-
-    creativa_cls = modulo.NeuronaEntradaXavier.NeuronaCreativa
-    base = creativa_cls.NeuronaConstructiva
 
     class NeuronaConstructivaLucIA(base):
         """Crea la jerarquía indicada, paso a paso y en orden."""
@@ -291,7 +235,9 @@ def _obtener_clase_constructiva() -> type:
         def __init__(self, creativa: Any, maquina: Any, ruta_base: str,
                      nombre: str = _NOMBRE_PREDETERMINADO,
                      subcarpetas: Iterable[str] | None = None) -> None:
-            super().__init__(creativa)
+            if base is not object:
+                super().__init__(creativa)
+            self._creativa = creativa
             self._maquina = maquina
             self.ruta_base = str(ruta_base)
             self.nombre = str(nombre)
@@ -299,7 +245,10 @@ def _obtener_clase_constructiva() -> type:
 
         def vector(self, texto: str) -> Any:
             """Vector Xavier de la orden para alimentar la red general."""
-            return self._creativa.vector(texto)
+            creativa = self._creativa
+            if creativa is not None and hasattr(creativa, "vector"):
+                return creativa.vector(texto)
+            return texto
 
         def _crear_si_falta(self, base: str, nombre: str) -> str:
             """Devuelve la carpeta existente o la crea validando el nombre."""
@@ -338,6 +287,11 @@ def _obtener_clase_constructiva() -> type:
 
     _CLASE_CONSTRUCTIVA = NeuronaConstructivaLucIA
     return _CLASE_CONSTRUCTIVA
+
+
+#: Alias publico para consumidores externos (``LC_constructor``).
+silencio = _silencio
+obtener_clase_constructiva = _obtener_clase_constructiva
 
 
 # ---------------------------------------------------------------------------
@@ -458,6 +412,8 @@ __all__ = [
     "cargar_lcbs_neuronal",
     "localizar_red_neuronal",
     "localizar_lcbs_neuronal",
+    "obtener_clase_constructiva",
+    "silencio",
     "SUBCARPETAS_SRC",
     "RUTA_FUENTE_PREDETERMINADA",
     "NOMBRE_PREDETERMINADO",

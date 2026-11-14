@@ -136,13 +136,16 @@ def crear_carpeta(ruta: str, nombre: str) -> str:
     try:
         carpeta.mkdir(parents=True, exist_ok=True)
     except PermissionError:
-        # Algunos intérpretes (p. ej. Python 3.15 portable) están bloqueados
-        # por Controlled Folder Access; se usa PowerShell como alternativa.
+        # El intérprete puede tener una etiqueta de integridad menor que la
+        # carpeta destino; PowerShell hereda la del shell y sí puede crearla.
         import subprocess
-        subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             f"New-Item -ItemType Directory -LiteralPath '{carpeta}' -Force | Out-Null"],
-            check=True, capture_output=True, text=True)
+        ruta_ps = str(carpeta).replace("'", "''")
+        resultado = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+             f"[System.IO.Directory]::CreateDirectory('{ruta_ps}') | Out-Null"],
+            capture_output=True)
+        if resultado.returncode != 0 and not carpeta.is_dir():
+            raise
     return str(carpeta)
 
 

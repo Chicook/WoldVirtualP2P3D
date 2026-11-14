@@ -5,6 +5,7 @@ Centraliza todas las importaciones dinámicas y defensivas de STMGNRL para evita
 bloques try/except frágiles dispersos en el orquestador principal.
 """
 from __future__ import annotations
+import importlib.util
 import logging
 import sys
 from pathlib import Path
@@ -225,21 +226,71 @@ def importar_agente() -> Any:
         return None
 
 
+def _ruta_canonica_constructor() -> Optional[Path]:
+    """Ruta de ``LC_constructor.py`` declarada en ``Rutas.json``.
+
+    Se prefiere la clave ``archivos.LC_constructor`` para que el sistema
+    principal ejecute siempre el modulo canonico, sin depender del ``cwd`` ni
+    de otro ``LC_constructor`` que aparezca antes en ``sys.path``.
+    """
+    if _obtener_ruta_json is not None:
+        try:
+            ruta = Path(_obtener_ruta_json("archivos.LC_constructor"))
+            if ruta.is_file():
+                return ruta
+        except Exception:
+            pass
+    candidata = _RFPRMN_DIR / "LC_constructor.py"
+    return candidata if candidata.is_file() else None
+
+
 def importar_constructor() -> Any:
     """Módulo ``LC_constructor`` para que LucIA cree jerarquías sola.
 
-    Vive junto a ``RFPRMN.py``; ``_RFPRMN_DIR`` ya está en ``sys.path``. Si no
+    Se carga desde la ruta canonica de ``Rutas.json`` y su salida se fija en
+    ``runtime.lc_trabajando`` (``CONTRRF/CONTRUCCION/LCtrabajando``). Si no
     importa, LucIA sigue conversando y el resto de comandos sigue disponible.
     """
     if not RFPRMN_DISPONIBLE:
         return None
+    ruta = _ruta_canonica_constructor()
     try:
-        import LC_constructor  # pyrefly: ignore[missing-import]
-
-        return LC_constructor
+        if ruta is not None:
+            existente = sys.modules.get("LC_constructor")
+            if (existente is not None
+                    and Path(str(getattr(existente, "__file__", ""))).resolve()
+                    == ruta.resolve()):
+                return existente
+            especificacion = importlib.util.spec_from_file_location(
+                "LC_constructor", ruta)
+            if especificacion is None or especificacion.loader is None:
+                raise ImportError(f"No se puede cargar {ruta}")
+            modulo = importlib.util.module_from_spec(especificacion)
+            sys.modules["LC_constructor"] = modulo
+            especificacion.loader.exec_module(modulo)
+        else:
+            import LC_constructor  # pyrefly: ignore[missing-import]
+            modulo = LC_constructor
+        _aplicar_ruta_trabajo(modulo)
+        return modulo
     except Exception as err:  # noqa: BLE001 - constructor opcional
-        logger.debug("LC_constructor no importable: %s", err)
+        logger.debug("LC_constructor no importable (%s): %s", ruta, err)
         return None
+
+
+def _aplicar_ruta_trabajo(modulo: Any) -> None:
+    """Alinea la salida de ``LC_constructor`` con ``runtime.lc_trabajando``."""
+    if _obtener_ruta_json is None:
+        return
+    try:
+        trabajo = Path(_obtener_ruta_json("runtime.lc_trabajando"))
+    except Exception:
+        return
+    if not trabajo.is_absolute():
+        trabajo = trabajo.resolve()
+    modulo.RUTA_PREDETERMINADA = str(trabajo)
+    modulo.RUTA_RED_PREDETERMINADA = str(trabajo / "src" / "LC_STM")
+    modulo.RUTA_MTBGT_PREDETERMINADA = str(trabajo / "src" / "MTBGT")
 
 
 def obtener_conversor_pesos_blockchain() -> Any:
