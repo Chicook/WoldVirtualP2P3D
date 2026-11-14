@@ -40,10 +40,10 @@ import numpy as np
 
 # ─── JERARQUIA DE DIRECTORIOS ────────────────────────────────────────────────
 CURRENT_FILE: Final[Path] = Path(__file__).resolve()
-SBSTM_DIR: Final[Path] = CURRENT_FILE.parent.parent
-SRC_DIR: Final[Path] = SBSTM_DIR.parent
-TLLDCD_DIR: Final[Path] = SRC_DIR.parent
-CONTRRF_DIR: Final[Path] = TLLDCD_DIR.parent
+SBSTM_DIR: Final[Path] = CURRENT_FILE.parents[2]   # .../SBSTM
+SRC_DIR: Final[Path] = CURRENT_FILE.parents[3]     # .../src
+TLLDCD_DIR: Final[Path] = CURRENT_FILE.parents[4]  # .../TLLDCD
+CONTRRF_DIR: Final[Path] = CURRENT_FILE.parents[5] # .../CONTRRF
 ROOT_DIR: Final[Path] = CONTRRF_DIR.parent
 
 # Directorio obligatorio donde LucIA deposita todo lo que genera para auto-refactorizarse:

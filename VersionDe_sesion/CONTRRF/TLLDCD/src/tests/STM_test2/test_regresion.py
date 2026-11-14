@@ -15,13 +15,13 @@ PAQUETES = [
     "STM_BKCH.stm_bkch1.BKSVCB",
     "STM_BKCH.stm_bkch1.bksvcb_net",
     "STM_BKCH.stm_bkch1.compat_local",
-    "STM_CH.rutas",
-    "STM_SGR.vault_openrouter",
-    "STM_JSON.registro_json",
+    "STM_CH.STM_herramientas.rutas",
+    "STM_SGR.STM_CNX.vault_openrouter",
+    "STM_JSON.STM_LC.registro_json",
     "STM_HRTS.utils.add_utils.rutas",
     "STM_HRTS.utils.add_utils.herramientas",
     "STM_HRTS.utils.add_utils.registro_hrts",
-    "STMGNRL.mainLCSTM",
+    "STMGNRL.SistemaGeneral.mainLCSTM",
 ]
 
 

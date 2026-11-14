@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # ---------------------------------------------------------------------------
 
 _ADD_UTILS_DIR: Path = Path(__file__).resolve().parent
-_SRC_DIR: Path = _ADD_UTILS_DIR.parents[2]        # add_utils -> utils -> STM_HRTS -> src
+_SRC_DIR: Path = _ADD_UTILS_DIR.parents[3]        # add_utils -> utils -> STM_HRTS -> src
 _RUTAS_PY: Path = _ADD_UTILS_DIR / "rutas.py"
 _LOG_PATH: Path = _ADD_UTILS_DIR / "sincronizar_rutas.log.json"
 

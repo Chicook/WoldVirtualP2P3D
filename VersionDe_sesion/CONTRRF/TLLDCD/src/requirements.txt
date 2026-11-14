@@ -1,0 +1,29 @@
+# Nucleo
+numpy
+psutil
+rich
+tqdm
+cryptography
+
+# Voz / TTS
+gtts
+# piper-tts  (requiere onnxruntime, sin rueda para Python 3.15)
+pedalboard
+sounddevice
+soundfile
+scipy
+
+# STT
+SpeechRecognition
+vosk
+
+# IA local / neuronal (torch disponible; transformers/huggingface_hub requieren PyYAML sin rueda en 3.15)
+torch
+# transformers
+# huggingface_hub
+# llama-cpp-python  (requiere compilacion C++; instalar solo con MSVC Build Tools)
+
+# No disponible en Python 3.15 (degradacion):
+# onnxruntime
+# piper-tts  (depende de onnxruntime)
+# PyYAML  (sin rueda para 3.15; bloquea transformers/huggingface_hub)

@@ -26,8 +26,20 @@ def init_stmch_rutas() -> bool:
 # 2. RFPRMN (Gestión de comandos y archivos)
 # La herramienta vive en CONTRRF/STM_RFC/STM_RFPRMN (cuatro niveles por encima
 # de STMGNRL), no en TLLDCD/STM_RFC; sin esta ruta el import fallaba siempre.
-_RFPRMN_DIR: Final[Path] = (Path(__file__).resolve().parents[4]
-                            / "STM_RFC" / "STM_RFPRMN")
+try:
+    from STM_CH.STM_herramientas.rutas_json import obtener as _obtener_ruta_json
+except Exception:  # pragma: no cover
+    _obtener_ruta_json = None
+
+if _obtener_ruta_json is not None:
+    try:
+        _RFPRMN_DIR: Final[Path] = _obtener_ruta_json("runtime.rfprmn_dir")
+    except Exception:
+        _RFPRMN_DIR: Final[Path] = (Path(__file__).resolve().parents[4]
+                                    / "STM_RFC" / "STM_RFPRMN")
+else:
+    _RFPRMN_DIR: Final[Path] = (Path(__file__).resolve().parents[4]
+                                / "STM_RFC" / "STM_RFPRMN")
 if _RFPRMN_DIR.is_dir() and str(_RFPRMN_DIR) not in sys.path:
     sys.path.insert(0, str(_RFPRMN_DIR))
 try:

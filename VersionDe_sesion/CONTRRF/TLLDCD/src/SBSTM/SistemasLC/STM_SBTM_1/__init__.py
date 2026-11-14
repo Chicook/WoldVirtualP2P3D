@@ -436,7 +436,7 @@ try:
         get_subsistema_evolutivo,
         ejecutar_ciclo_evolutivo,
     )
-    from ...STM_SBTM_1 import comandos_refactor  # noqa: F401 - registrar comandos en consola
+    from . import comandos_refactor  # noqa: F401 - registrar comandos en consola
 except ImportError:
     try:
         from ..STM_SBTM_3.subsistema_neural import (
@@ -456,7 +456,7 @@ except ImportError:
             get_subsistema_evolutivo,
             ejecutar_ciclo_evolutivo,
         )
-        from .. import comandos_refactor  # noqa: F401
+        from . import comandos_refactor  # noqa: F401
     except ImportError as _err:
         logger.warning("[SBSTM] Subsistema neural / evolutivo no disponible: %s", _err)
 

@@ -313,3 +313,6 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_*/
 .DS_Store
 Thumbs.db
 *.swp
+
+# TLLDCD runtime: PSNRL (datos de sesion, no versionar)
+/VersionDe_sesion/CONTRRF/TLLDCD/src/STM_CH/PSNRL/

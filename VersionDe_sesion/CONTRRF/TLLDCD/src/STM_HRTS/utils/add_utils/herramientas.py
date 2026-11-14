@@ -139,6 +139,9 @@ def catalogo() -> List[Herramienta]:
         if not archivo.is_file() or any(p.startswith(".") for p in archivo.relative_to(
                 rutas.HERRAMIENTAS_DIR).parts):
             continue
+        # Los __init__.py son paquetes, no herramientas ejecutables.
+        if archivo.name == "__init__.py":
+            continue
         # H1: excluir scripts destructivos del catálogo ordinario
         if archivo.stem.lower() in HERRAMIENTAS_PRIVILEGIADAS:
             continue
