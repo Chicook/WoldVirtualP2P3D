@@ -1,28 +1,30 @@
-"""Submodulo stm_base de RFPRMN (refactor: tope 400/450 lineas).
+"""Estilo de terminal, constantes, errores y mensajes de RFPRMN.
 
-Estilo de terminal, constantes, errores, mensajes y localización de la
-raíz del proyecto. Sin dependencias internas: es la base del paquete.
+Las rutas ya no se calculan aquí: viven en :mod:`stm_rutas` (única fuente de
+verdad, R1/R2) y se re-exportan para no romper a los módulos ni a la fachada
+que hacían ``from .stm_base import RFC_DIR``.
 """
 from __future__ import annotations
 
-import ast
-import json
 import os
 import re
 import shutil
-import stat
-import subprocess
 import sys
 import textwrap
-import urllib.error
-import urllib.parse
-import urllib.request
-import uuid
-from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
-__version__ = "2.0.0"
+from .stm_rutas import (  # noqa: F401  (re-exportados por compatibilidad)
+    CONFIG_IA_LOCAL, CONTRRF_DIR, DESTINO, DIR_CONFIG, DIR_DATOS,
+    DIR_MODELOS_LOCAL, MODULO_DIR, ORIGEN, PRY_DIR, RAIZ, REGISTRO_REFACTOR_MD,
+    RFC_DIR, RUTA_PRY_OFICIAL, RUTA_RFC_OFICIAL, SRC_DIR, TLLDCD_DIR,
+    encontrar_raiz,
+)
+
+__version__ = "2.24.0"
+
+#: El `src` del proyecto se añade al path para los imports del sistema.
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 # --- Estilo de terminal ------------------------------------------------------
 
@@ -159,20 +161,8 @@ def pedir_confirmacion(mensaje: str) -> bool:
     return respuesta in RESPUESTAS_AFIRMATIVAS
 
 
-# --- Localización de la raíz del proyecto -----------------------------------
+# --- Cachés de bytecode ------------------------------------------------------
 
-#: Archivo actual y árbol oficial VersionDe_sesion/CONTRRF/STM_RFC/STM_RFPRMN.
-#: NOTA: este módulo vive un nivel más abajo que RFPRMN.py (dentro de
-#: STM_RFPRMN_stmDL/), así que MODULO_DIR se ancla al directorio de
-#: RFPRMN.py (padre del paquete). CONTRRF se resuelve por posición real.
-MODULO_DIR = Path(__file__).resolve().parent.parent
-CONTRRF_DIR = MODULO_DIR.parent.parent
-TLLDCD_DIR = CONTRRF_DIR / "TLLDCD"
-SRC_DIR = CONTRRF_DIR / "RFC" / "src"
-if (TLLDCD_DIR / "src").is_dir():
-    SRC_DIR = TLLDCD_DIR / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
 #: El bytecode de esta herramienta se guarda en su propio directorio, NUNCA
 #: dentro de los árboles sincronizados (RFC/PRY): antes se redirigía al
 #: pycache de STM_CH dentro de RFC/src, lo que ensuciaba el contenido
@@ -200,14 +190,12 @@ def limpiar_caches_arranque() -> None:
     directorio limpio aunque después se lancen más comandos que
     recompilen e importen de nuevo.
     """
-    import shutil as _shutil
-
     for objetivo in (MODULO_DIR / "__pycache__",
                      MODULO_DIR / "STM_RFPRMN_stmDL" / "__pycache__",
                      PYCACHE_PROPIO):
         try:
             if objetivo.is_dir() and not objetivo.is_symlink():
-                _shutil.rmtree(_ruta_larga(objetivo), ignore_errors=True)
+                shutil.rmtree(_ruta_larga(objetivo), ignore_errors=True)
             elif objetivo.exists():
                 objetivo.unlink()
         except OSError:
@@ -220,64 +208,5 @@ try:
 except Exception:
     pass
 
-
-def encontrar_raiz(ruta: str | Path) -> str:
-    """Localiza la raíz del proyecto, soportando el layout actual
-    (VersionDe_sesion/CONTRRF/TLLDCD/src), el moderno (RFC +
-    Sistema_Principal/PRY) y el heredado (Construccion/CPRZ/PRY)."""
-    actual = Path(ruta).resolve()
-    if actual.is_file():
-        actual = actual.parent
-    for candidato in (actual, *actual.parents):
-        if (candidato / "src" / "STMGNRL" / "mainLCSTM.py").is_file():
-            return str(candidato)
-        if (candidato / "RFC" / "src" / "STMGNRL" / "mainLCSTM.py").is_file():
-            return str(candidato)
-        if (candidato / "RFC").is_dir() and (candidato.parent / "Sistema_Principal" / "PRY").is_dir():
-            return str(candidato.parent)
-        if (candidato / "CONTRRF" / "RFC").is_dir() and (candidato / "Sistema_Principal" / "PRY").is_dir():
-            return str(candidato)
-        if (candidato / "RFC").is_dir() and (candidato / "Sistema_Principal" / "PRY").is_dir():
-            return str(candidato)
-        if (candidato / "VersionDe_sesion" / "CONTRRF" / "RFC").is_dir() and (candidato / "VersionDe_sesion" / "Sistema_Principal" / "PRY").is_dir():
-            return str(candidato / "VersionDe_sesion")
-        if (candidato / "CONTRRF" / "STM_RFC").is_dir() and (candidato / "Sistema_Principal" / "PRY").is_dir():
-            return str(candidato)
-        if (candidato / "VersionDe_sesion" / "CONTRRF" / "STM_RFC").is_dir() and (candidato / "VersionDe_sesion" / "Sistema_Principal" / "PRY").is_dir():
-            return str(candidato / "VersionDe_sesion")
-        if (candidato / "Construccion" / "CPRZ" / "PRY").is_dir():
-            return str(candidato)
-    raise RaizProyectoNoEncontrada("No se encontró la raíz del proyecto.")
-
-
-RAIZ = Path(encontrar_raiz(__file__))
-if (RAIZ / "RFC" / "src" / "STMGNRL" / "mainLCSTM.py").is_file():
-    ORIGEN = RAIZ / "RFC" / "src"
-    DESTINO = RAIZ / "RFC"
-elif (RAIZ / "src" / "STMGNRL" / "mainLCSTM.py").is_file():
-    ORIGEN = RAIZ / "src"
-    DESTINO = RAIZ / "STM_RFC" / "sync"
-elif (RAIZ / "Sistema_Principal" / "PRY").is_dir():
-    ORIGEN = RAIZ / "Sistema_Principal" / "PRY"
-    DESTINO = RAIZ / "CONTRRF" / "RFC"
-else:
-    ORIGEN = RAIZ / "Construccion" / "CPRZ" / "PRY"
-    DESTINO = RAIZ / "Construccion" / "CONTRRF" / "RFC"
-
-try:
-    from STM_JSON.registro_json import ruta_de as _ruta_json_stm  # pyrefly: ignore[missing-import]
-    CONFIG_IA_LOCAL = _ruta_json_stm("ialocal")
-except Exception:
-    CONFIG_IA_LOCAL = SRC_DIR / "STM_JSON" / "IAlocal.json"
-
-#: Rutas oficiales del sistema (fijas): refactorizar mueve PRY/<actualizacion>/src -> RFC/src.
-RUTA_RFC_OFICIAL = Path(r"C:\Users\User\Desktop\WoldVirtualP2P3D_v0.0.01LCV1\VersionDe_sesion\CONTRRF\RFC")
-RUTA_PRY_OFICIAL = Path(r"C:\Users\User\Desktop\WoldVirtualP2P3D_v0.0.01LCV1\VersionDe_sesion\Sistema_Principal\PRY")
-#: Destino del comando ``enviar`` y origen principal del comando ``actualizar``.
-RFC_DIR = RUTA_RFC_OFICIAL if RUTA_RFC_OFICIAL.is_dir() else CONTRRF_DIR / "RFC"
-PRY_DIR = RUTA_PRY_OFICIAL if RUTA_PRY_OFICIAL.is_dir() else CONTRRF_DIR.parent / "Sistema_Principal" / "PRY"
-
 #: Rutas de carpetas creadas durante la sesión, relativas a la raíz.
 carpetas_creadas: list[str] = []
-
-

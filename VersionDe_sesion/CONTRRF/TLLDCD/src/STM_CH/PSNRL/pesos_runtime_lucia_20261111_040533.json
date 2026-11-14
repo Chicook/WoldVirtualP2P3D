@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-11T04:05:33.993682",
+  "pasos_entrenamiento": 31471,
+  "deriva_acumulada": 0.021143,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 31471,
+    "motivo": "LC_entrenar_reporte_entrenamiento_TestHttpResponse_20261111_035411_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.021143,
+    "norma_tensor": 0.60808,
+    "delta_aplicada": 0.007296,
+    "gsnr": 0.8609,
+    "entropia_shannon": 5.3493,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.78267,
+      "pasos_q": 2906
+    },
+    "timestamp": 1794366333.9921894
+  },
+  "resumen_pesos": {
+    "min": -0.07480999827384949,
+    "max": 0.4535999894142151,
+    "media": 0.01856919936835766
+  }
+}

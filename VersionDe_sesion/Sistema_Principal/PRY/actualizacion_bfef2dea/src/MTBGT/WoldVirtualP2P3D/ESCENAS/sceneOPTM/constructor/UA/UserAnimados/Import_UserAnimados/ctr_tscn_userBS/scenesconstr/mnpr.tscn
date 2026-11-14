@@ -1,0 +1,83 @@
+[gd_scene format=3 uid="uid://b88c5s2bb7rb"]
+
+[ext_resource type="PackedScene" uid="uid://7sujp7tvmdw4" path="res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/scenesconstr/userbaseh1.tscn" id="1_igl0u"]
+[ext_resource type="Script" path="res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/gdscrip/portal_csgbox5.gd" id="2_portal"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_igl0u"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_6ugap"]
+sky_material = SubResource("ProceduralSkyMaterial_igl0u")
+
+[sub_resource type="Environment" id="Environment_yq0p1"]
+background_mode = 2
+sky = SubResource("Sky_6ugap")
+glow_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_igl0u"]
+albedo_color = Color(0.33044937, 0.54290664, 0.5182023, 0.38039216)
+albedo_texture_force_srgb = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_suelo"]
+albedo_color = Color(0.35, 0.42, 0.38, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_suelo"]
+material = SubResource("StandardMaterial3D_suelo")
+size = Vector3(10.661755, 0.9510803, 15.838257)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_suelo"]
+size = Vector3(10.76944, 1, 15.637131)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_portal"]
+size = Vector3(1.7, 2.1, 1.0)
+
+[node name="mnpr" type="Node3D" unique_id=82441685]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1059554018]
+environment = SubResource("Environment_yq0p1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1836938216]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25000006, 0.2276958, 0.10360208, 0.9682052, -0.44514573, 0.89541423, 0.008873157, 0, 32.102257, 0)
+shadow_enabled = true
+
+[node name="userbaseh1" parent="." unique_id=32030498 instance=ExtResource("1_igl0u")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03424692, -0.6038103)
+
+[node name="SueloExterior" type="StaticBody3D" parent="." unique_id=1155646822]
+
+[node name="CSGBox3D" type="CSGBox3D" parent="SueloExterior" unique_id=682236018]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.23334002, 3.8402038, 4.7595854)
+size = Vector3(10.643173, 7.568016, 0.0078125)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="SueloExterior" unique_id=1325778904]
+transform = Transform3D(0.013261836, 0, -0.999912, 0, 1, 0, 0.999912, 0, 0.013261836, -5.049415, 4.0144706, -2.6166482)
+size = Vector3(14.904507, 7.9165497, 0.0078125)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="SueloExterior" unique_id=1447423580]
+transform = Transform3D(-0.00021236291, 0.99987197, 0.016011672, -0.013260136, -0.01601308, 0.999784, 0.99991214, 2.9091767e-11, 0.013261838, 0.21925302, 7.8141665, 3.1544263)
+size = Vector3(3.5994482, 10.573254, 0.0078125)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="SueloExterior" unique_id=557838439]
+transform = Transform3D(0.013261836, 0, -0.999912, 0, 1, 0, 0.999912, 0, 0.013261836, 5.398873, 3.9098907, -2.6356895)
+size = Vector3(14.942593, 7.70739, 0.0078125)
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="SueloExterior" unique_id=286728825]
+transform = Transform3D(-0.9998803, 0, 0.015469143, 0, 1, 0, -0.015469143, 0, -0.9998803, 0.0006849915, 1.090169, 0.4021248)
+size = Vector3(1.6999921, 2.0679464, 0.0078125)
+material = SubResource("StandardMaterial3D_igl0u")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="SueloExterior" unique_id=1640608651]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2569561, -0.421931, -2.2159138)
+mesh = SubResource("BoxMesh_suelo")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SueloExterior" unique_id=766202465]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.28321838, -0.5, -2.279808)
+shape = SubResource("BoxShape3D_suelo")
+
+[node name="PortalCSGBox5" type="Area3D" parent="."]
+transform = Transform3D(-0.9998803, 0, 0.015469143, 0, 1, 0, -0.015469143, 0, -0.9998803, 0.0006849915, 1.090169, 0.4021248)
+script = ExtResource("2_portal")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PortalCSGBox5"]
+shape = SubResource("BoxShape3D_portal")

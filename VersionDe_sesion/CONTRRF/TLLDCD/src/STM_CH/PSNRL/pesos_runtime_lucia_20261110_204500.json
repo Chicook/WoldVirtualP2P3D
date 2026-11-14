@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T20:45:00.993172",
+  "pasos_entrenamiento": 6929,
+  "deriva_acumulada": 0.494586,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 6929,
+    "motivo": "LC_entrenar_test_bkch_cuentas_b13",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.494586,
+    "norma_tensor": 3.05779,
+    "delta_aplicada": 0.024867,
+    "gsnr": 0.925,
+    "entropia_shannon": 5.3922,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.62251,
+      "pasos_q": 6929
+    },
+    "timestamp": 1794339900.9923189
+  },
+  "resumen_pesos": {
+    "min": -0.3128499984741211,
+    "max": 2.0,
+    "media": 0.08782300353050232
+  }
+}

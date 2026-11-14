@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T20:45:04.991942",
+  "pasos_entrenamiento": 8185,
+  "deriva_acumulada": 0.523,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 8185,
+    "motivo": "LC_entrenar_woldvirtual-wine_b9",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.523,
+    "norma_tensor": 3.02468,
+    "delta_aplicada": 0.021891,
+    "gsnr": 0.9018,
+    "entropia_shannon": 5.4493,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 2.20187,
+      "pasos_q": 8185
+    },
+    "timestamp": 1794339904.990997
+  },
+  "resumen_pesos": {
+    "min": -0.2916199862957001,
+    "max": 2.0,
+    "media": 0.0855121985077858
+  }
+}

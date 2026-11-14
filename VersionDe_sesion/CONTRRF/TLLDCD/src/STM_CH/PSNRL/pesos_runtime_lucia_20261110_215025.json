@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:50:25.993638",
+  "pasos_entrenamiento": 11763,
+  "deriva_acumulada": 0.586686,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 11763,
+    "motivo": "LC_entrenar_reporte_entrenamiento_reporte_entrenamiento_dynoption_20261110_214035_20261110_214606_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.586686,
+    "norma_tensor": 3.37396,
+    "delta_aplicada": 0.015877,
+    "gsnr": 0.9251,
+    "entropia_shannon": 5.511,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.06006,
+      "pasos_q": 11763
+    },
+    "timestamp": 1794343825.9923513
+  },
+  "resumen_pesos": {
+    "min": -0.7167199850082397,
+    "max": 2.0,
+    "media": 0.08986499905586243
+  }
+}

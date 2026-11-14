@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:27:35.990967",
+  "pasos_entrenamiento": 22651,
+  "deriva_acumulada": 0.702436,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 22651,
+    "motivo": "LC_entrenar_skeleton_3d_editor_plugin_b15",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.702436,
+    "norma_tensor": 2.9226,
+    "delta_aplicada": 0.007686,
+    "gsnr": 0.8977,
+    "entropia_shannon": 5.3123,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.09409,
+      "pasos_q": 22651
+    },
+    "timestamp": 1794346055.9898949
+  },
+  "resumen_pesos": {
+    "min": -0.24512000381946564,
+    "max": 2.0,
+    "media": 0.05051059648394585
+  }
+}

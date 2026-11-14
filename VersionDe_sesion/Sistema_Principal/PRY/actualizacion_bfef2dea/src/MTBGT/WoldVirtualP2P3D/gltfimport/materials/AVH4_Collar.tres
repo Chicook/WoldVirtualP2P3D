@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://6np4mjhicape"]
+
+[resource]
+resource_name = "AVH4_Collar"
+cull_mode = 2
+albedo_color = Color(0.935741, 0.9452769, 0.9546871, 1)
+roughness = 0.6
