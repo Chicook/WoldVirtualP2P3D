@@ -19,5 +19,11 @@
   "jestrunner.configPath": "jest.unit.config.cjs",
 
   "task.allowAutomaticTasks": true,
-  "compile-hero.disable-compile-files-on-did-save-code": true
+  "compile-hero.disable-compile-files-on-did-save-code": true,
+
+  "python.defaultInterpreterPath": "E:\\WoldVirtualP2P3D\\.python\\python.exe",
+  "python.terminal.activateEnvironment": false,
+  "terminal.integrated.env.windows": {
+    "PATH": "E:\\WoldVirtualP2P3D\\.python;E:\\WoldVirtualP2P3D\\.python\\Scripts;${env:PATH}"
+  }
 }
