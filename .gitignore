@@ -316,3 +316,6 @@ Thumbs.db
 
 # TLLDCD runtime: PSNRL (datos de sesion, no versionar)
 /VersionDe_sesion/CONTRRF/TLLDCD/src/STM_CH/PSNRL/
+
+# Entorno Python portable (instalado en la raiz del repo)
+/.python/
