@@ -23,10 +23,7 @@ Acciones disponibles:
 """
 from __future__ import annotations
 
-import json
 import os
-import re
-import shlex
 import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -40,11 +37,20 @@ if str(_DIR_MODULO) not in sys.path:
 
 import RFPRMN as _RFPRMN  # noqa: E402
 from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
+    COMANDO_CARPETA,
+    COMANDO_MTBGT,
+    COMANDO_RED,
+    COMANDO_TODO,
     DIM_ENTRADA,
     DIM_SALIDA,
-    RUTA_FUENTE_PREDETERMINADA as _RUTA_FUENTE_MD1,
+    NOMBRE_MTBGT_PREDETERMINADO,
+    NOMBRE_PREDETERMINADO,
+    NOMBRE_RED_PREDETERMINADO,
+    SUBCARPETAS_MTBGT,
+    SUBCARPETAS_RED,
     SUBCARPETAS_SRC,
     SUBCARPETAS_SRC_BASE,
+    InterpreteOrden,
     cargar_lcbs_neuronal,
     cargar_modulo_red,
     crear_jerarquia,
@@ -54,6 +60,12 @@ from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
     localizar_red_neuronal,
     obtener_clase_constructiva,
     silencio,
+)
+from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
+    RUTA_FUENTE_PREDETERMINADA as _RUTA_FUENTE_MD1,
+)
+from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
+    interpretar_orden as _interpretar_orden,
 )
 
 RFPRMN = _RFPRMN.RFPRMN
@@ -85,28 +97,15 @@ def _resolver_ruta_trabajo() -> Path:
 
 _RUTA_TRABAJO = _resolver_ruta_trabajo()
 
-#: Ruta y nombre que usa el comando cuando no se indican.
+#: Ruta que usa el comando cuando no se indica. El nombre y las subcarpetas
+#: viven en ``STM_MD2`` junto al resto de valores por comando.
 RUTA_PREDETERMINADA = str(_RUTA_TRABAJO)
-NOMBRE_PREDETERMINADO = "src"
 
 #: Segunda acción: ``LCtrabajando/src/LC_STM/RedNeuronal`` y sus familias.
 RUTA_RED_PREDETERMINADA = str(_RUTA_TRABAJO / "src" / "LC_STM")
-NOMBRE_RED_PREDETERMINADO = "RedNeuronal"
-SUBCARPETAS_RED: tuple[str, ...] = (
-    "CELEBRO", "ENRN", "RF_EN", "RF_SL", "RNP", "SLRN",
-)
-
-COMANDO_CARPETA = "crear carpeta"
-COMANDO_RED = "crear red neuronal"
-COMANDO_MTBGT = "crear mtbgt"
-COMANDO_TODO = "crear todo"
 
 #: Tercera acción: ``LCtrabajando/src/MTBGT`` solo con carpetas por ahora.
 RUTA_MTBGT_PREDETERMINADA = str(_RUTA_TRABAJO / "src" / "MTBGT")
-NOMBRE_MTBGT_PREDETERMINADO = "MTBGT"
-SUBCARPETAS_MTBGT: tuple[str, ...] = (
-    ".godot", "addons", "AreaDeTrabajo", "gdscrip", "gdshader", "scene",
-)
 #: Sin archivos de momento: el ``project.godot`` queda para una fase posterior.
 ARCHIVOS_MTBGT: tuple[str, ...] = ()
 
@@ -118,192 +117,23 @@ USAR_RED_NEURONAL = True
 RUTA_FUENTE_PREDETERMINADA = str(_RUTA_FUENTE_MD1)
 
 
-_PATRONES: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("ruta", re.compile(
-        r"(?i)(?:^|[\s,;])(?:ruta)\s*"
-        r"(?:donde\s+crear|de\s+creaci[oó]n)?\s*[:=]\s*")),
-    ("nombre", re.compile(
-        r"(?i)(?:^|[\s,;])(?:nombre)\s*"
-        r"(?:de\s+la\s+carpeta|de\s+carpeta)?\s*[:=]\s*")),
-    ("subcarpetas", re.compile(
-        r"(?i)(?:^|[\s,;])(?:subcarpetas?|jerarqu[ií]a)\s*[:=]\s*")),
-)
-
-
-def _dividir_subcarpetas(valor: str) -> tuple[str, ...]:
-    """Separa una lista de nombres por comas, punto y coma, barras o saltos."""
-    partes = re.split(r"[,;|\n]+", valor)
-    return tuple(parte.strip().strip("\"'") for parte in partes if parte.strip())
-
-
-def _normalizar_subcarpetas(valor: Any) -> tuple[str, ...] | None:
-    """Convierte el campo ``subcarpetas`` a una tupla de nombres limpios."""
-    if valor is None:
-        return None
-    if isinstance(valor, str):
-        return _dividir_subcarpetas(valor)
-    if isinstance(valor, Iterable):
-        return tuple(str(item).strip().strip("\"'")
-                     for item in valor if str(item).strip())
-    return None
-
-
-def _campos_de_texto(texto: str) -> dict[str, str]:
-    """Extrae los campos etiquetados aunque la orden venga en una sola línea."""
-    marcas: list[tuple[int, int, str]] = []
-    for campo, patron in _PATRONES:
-        for coincidencia in patron.finditer(texto):
-            marcas.append((coincidencia.start(), coincidencia.end(), campo))
-    marcas.sort(key=lambda marca: marca[0])
-    campos: dict[str, str] = {}
-    for indice, (_inicio, fin, campo) in enumerate(marcas):
-        siguiente = len(texto)
-        for inicio_siguiente, _fin, _campo in marcas[indice + 1:]:
-            if inicio_siguiente >= fin:
-                siguiente = inicio_siguiente
-                break
-        valor = texto[fin:siguiente].strip().strip("\"'").strip()
-        if valor and campo not in campos:
-            campos[campo] = valor
-    return campos
-
-
-_PREFIJO_COMANDO = re.compile(
-    r"(?is)^\s*(?:comando\s+)?"
-    r"(crear\s+mtbgt|mtbgt|crear\s+godot|godot"
-    r"|crear\s+todo|todo|crear\s+secuencia|secuencia"
-    r"|crear\s+red\s+neuronal|red\s+neuronal|red_neuronal|red"
-    r"|crear\s+carpeta|crear_carpeta)\b"
-)
-
-
-def _normalizar_comando(comando: Any) -> str:
-    """Unifica los alias (``red``, ``red_neuronal``, ...) a los dos comandos."""
-    limpio = re.sub(r"(?i)^\s*comando\s+", "", str(comando).strip().lower())
-    limpio = re.sub(r"\s+", " ", limpio.replace("_", " ")).strip()
-    if limpio in ("red", "red neuronal", "crear red", COMANDO_RED):
-        return COMANDO_RED
-    if limpio in ("mtbgt", "crear mtbgt", "godot", "crear godot",
-                  COMANDO_MTBGT):
-        return COMANDO_MTBGT
-    if limpio in ("todo", "crear todo", "secuencia", "crear secuencia",
-                  COMANDO_TODO):
-        return COMANDO_TODO
-    if limpio in ("src", "crear src", COMANDO_CARPETA):
-        return COMANDO_CARPETA
-    return limpio
-
-
-def _defaults_comando(comando: str) -> tuple[str, str, tuple[str, ...] | None]:
-    """Ruta, nombre y subcarpetas predeterminadas de cada acción."""
-    if comando == COMANDO_RED:
-        return RUTA_RED_PREDETERMINADA, NOMBRE_RED_PREDETERMINADO, SUBCARPETAS_RED
-    if comando == COMANDO_MTBGT:
-        return RUTA_MTBGT_PREDETERMINADA, NOMBRE_MTBGT_PREDETERMINADO, SUBCARPETAS_MTBGT
-    return RUTA_PREDETERMINADA, NOMBRE_PREDETERMINADO, None
-
-
-def _comando_de_texto(texto: str) -> str:
-    """Comando indicado al principio del texto (por defecto ``crear carpeta``)."""
-    coincidencia = _PREFIJO_COMANDO.match(texto)
-    if coincidencia is None:
-        return COMANDO_CARPETA
-    return _normalizar_comando(coincidencia.group(1))
-
-
-def _normalizar_orden(datos: Mapping[str, Any]) -> dict[str, Any]:
-    """Normaliza una orden recibida como diccionario."""
-    comando = _normalizar_comando(
-        datos.get("comando") or datos.get("accion")
-        or datos.get("orden") or COMANDO_CARPETA)
-    ruta_def, nombre_def, sub_def = _defaults_comando(comando)
-    ruta = (datos.get("ruta") or datos.get("ruta_donde_crear")
-            or datos.get("ruta_crear") or datos.get("path") or ruta_def)
-    nombre = (datos.get("nombre") or datos.get("nombre_carpeta")
-              or datos.get("nombre_de_la_carpeta") or datos.get("carpeta")
-              or nombre_def)
-    subcarpetas = _normalizar_subcarpetas(
-        datos.get("subcarpetas") or datos.get("jerarquia")
-        or datos.get("carpetas"))
-    if subcarpetas is None and sub_def is not None:
-        subcarpetas = sub_def
+def _rutas_predeterminadas() -> dict[str, str]:
+    """Rutas actuales de cada comando (respetan ``runtime.lc_trabajando``)."""
     return {
-        "comando": comando,
-        "ruta": str(ruta).strip().strip("\"'"),
-        "nombre": str(nombre).strip().strip("\"'"),
-        "subcarpetas": subcarpetas,
+        COMANDO_CARPETA: RUTA_PREDETERMINADA,
+        COMANDO_RED: RUTA_RED_PREDETERMINADA,
+        COMANDO_MTBGT: RUTA_MTBGT_PREDETERMINADA,
+        COMANDO_TODO: RUTA_PREDETERMINADA,
     }
-
-
-def _error_orden(mensaje: str) -> dict[str, Any]:
-    """Estructura de error común al interpretar una orden."""
-    return {"comando": "crear carpeta", "ruta": "", "nombre": "",
-            "subcarpetas": None, "error": mensaje}
 
 
 def interpretar_orden(orden: str | Mapping[str, Any]) -> dict[str, Any]:
     """Convierte texto, JSON o dict de la máquina en una orden normalizada.
 
-    Acepta ``Ruta donde crear:`` y ``Nombre de la carpeta:`` en una o varias
-    líneas, además de la forma corta ``crear carpeta <ruta> [nombre]``.
+    Delega en ``STM_MD2`` con las rutas actuales, de modo que respeta
+    ``runtime.lc_trabajando`` sin duplicar las reglas del parser.
     """
-    if isinstance(orden, Mapping):
-        return _normalizar_orden(orden)
-    texto = str(orden or "").strip()
-    if not texto:
-        return _error_orden("Orden vacía: no hay comando que ejecutar.")
-    if texto.startswith("{"):
-        try:
-            datos = json.loads(texto)
-        except json.JSONDecodeError as error:
-            return _error_orden(f"JSON no válido: {error}")
-        if not isinstance(datos, Mapping):
-            return _error_orden("El JSON de la orden debe ser un objeto.")
-        return _normalizar_orden(datos)
-
-    comando = _comando_de_texto(texto)
-    ruta_def, nombre_def, sub_def = _defaults_comando(comando)
-    campos = _campos_de_texto(texto)
-    if campos:
-        if (comando == COMANDO_CARPETA
-                and _PREFIJO_COMANDO.match(texto) is None):
-            nombre_clave = str(campos.get("nombre", "")).strip().lower()
-            ruta_clave = Path(str(campos.get("ruta", ""))).name.lower()
-            if nombre_clave == NOMBRE_RED_PREDETERMINADO.lower():
-                comando = COMANDO_RED
-            elif (nombre_clave == NOMBRE_MTBGT_PREDETERMINADO.lower()
-                  or ruta_clave == NOMBRE_MTBGT_PREDETERMINADO.lower()):
-                comando = COMANDO_MTBGT
-            if comando != COMANDO_CARPETA:
-                ruta_def, nombre_def, sub_def = _defaults_comando(comando)
-        return {
-            "comando": comando,
-            "ruta": (campos.get("ruta") or ruta_def).strip().strip("\"'"),
-            "nombre": (campos.get("nombre")
-                       or nombre_def).strip().strip("\"'"),
-            "subcarpetas": (_normalizar_subcarpetas(campos.get("subcarpetas"))
-                            or sub_def),
-        }
-
-    coincidencia = _PREFIJO_COMANDO.match(texto)
-    if coincidencia is None:
-        return _error_orden(
-            "No reconozco la orden. Usa 'crear carpeta' o "
-            "'crear red neuronal' con 'Ruta donde crear:' y "
-            "'Nombre de la carpeta:'.")
-    resto = texto[coincidencia.end():].strip()
-    if not resto:
-        return {"comando": comando, "ruta": ruta_def,
-                "nombre": nombre_def, "subcarpetas": sub_def}
-    try:
-        partes = shlex.split(resto, posix=False)
-    except ValueError:
-        partes = resto.split()
-    ruta = partes[0].strip().strip("\"'") if partes else ruta_def
-    nombre = (partes[1].strip().strip("\"'")
-              if len(partes) > 1 else nombre_def)
-    return {"comando": comando, "ruta": ruta, "nombre": nombre,
-            "subcarpetas": sub_def}
+    return _interpretar_orden(orden, _rutas_predeterminadas())
 
 
 class ConstructorLucIA:
@@ -418,7 +248,7 @@ class ConstructorLucIA:
                 descubrir_subcarpetas_src(RUTA_FUENTE_PREDETERMINADA)
                 if nombre.lower() == NOMBRE_PREDETERMINADO else ())
         elif isinstance(subcarpetas, str):
-            subcarpetas = _dividir_subcarpetas(subcarpetas)
+            subcarpetas = InterpreteOrden.Campos.dividir_subcarpetas(subcarpetas)
         else:
             subcarpetas = tuple(str(s).strip() for s in subcarpetas
                                 if str(s).strip())
@@ -728,21 +558,43 @@ if __name__ == "__main__":
 
 
 __all__ = [
-    "ConstructorLucIA", "interpretar_orden", "localizar_red_neuronal",
-    "cargar_modulo_red", "localizar_lcbs_neuronal", "cargar_lcbs_neuronal",
-    "formatear_resultado", "obtener_constructor", "ejecutar_orden",
-    "crear_carpeta", "comando_crear_carpeta",
-    "crear_red_neuronal", "comando_crear_red_neuronal",
-    "crear_mtbgt", "comando_crear_mtbgt",
-    "crear_todo", "comando_crear_todo",
-    "SUBCARPETAS_SRC", "SUBCARPETAS_RED", "SUBCARPETAS_MTBGT",
-    "SUBCARPETAS_SRC_BASE", "descubrir_subcarpetas_src",
-    "descubrir_jerarquia_src",
-    "RUTA_PREDETERMINADA", "NOMBRE_PREDETERMINADO",
+    "ARCHIVOS_MTBGT",
+    "COMANDO_CARPETA",
+    "COMANDO_MTBGT",
+    "COMANDO_RED",
+    "COMANDO_TODO",
+    "NOMBRE_MTBGT_PREDETERMINADO",
+    "NOMBRE_PREDETERMINADO",
+    "NOMBRE_RED_PREDETERMINADO",
+    "RFPRMN",
     "RUTA_FUENTE_PREDETERMINADA",
-    "RUTA_RED_PREDETERMINADA", "NOMBRE_RED_PREDETERMINADO",
-    "RUTA_MTBGT_PREDETERMINADA", "NOMBRE_MTBGT_PREDETERMINADO",
-    "ARCHIVOS_MTBGT", "USAR_RED_NEURONAL",
-    "COMANDO_CARPETA", "COMANDO_RED", "COMANDO_MTBGT", "COMANDO_TODO",
-    "RFPRMN", "main", "__version__",
+    "RUTA_MTBGT_PREDETERMINADA",
+    "RUTA_PREDETERMINADA",
+    "RUTA_RED_PREDETERMINADA",
+    "SUBCARPETAS_MTBGT",
+    "SUBCARPETAS_RED",
+    "SUBCARPETAS_SRC",
+    "SUBCARPETAS_SRC_BASE",
+    "USAR_RED_NEURONAL",
+    "ConstructorLucIA",
+    "__version__",
+    "cargar_lcbs_neuronal",
+    "cargar_modulo_red",
+    "comando_crear_carpeta",
+    "comando_crear_mtbgt",
+    "comando_crear_red_neuronal",
+    "comando_crear_todo",
+    "crear_carpeta",
+    "crear_mtbgt",
+    "crear_red_neuronal",
+    "crear_todo",
+    "descubrir_jerarquia_src",
+    "descubrir_subcarpetas_src",
+    "ejecutar_orden",
+    "formatear_resultado",
+    "interpretar_orden",
+    "localizar_lcbs_neuronal",
+    "localizar_red_neuronal",
+    "main",
+    "obtener_constructor",
 ]

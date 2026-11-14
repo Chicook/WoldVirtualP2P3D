@@ -430,7 +430,7 @@ class ConstructorJerarquia:
                 subcarpetas=self.subcarpetas,
             )
             return neurona.crear_carpetas()
-        except Exception as error:  # noqa: BLE001 - resultado degradado
+        except Exception:  # noqa: BLE001 - resultado degradado
             return self.Operaciones.asegurar_jerarquia(
                 base, self.nombre, self.subcarpetas)
 
@@ -440,20 +440,20 @@ class ConstructorJerarquia:
 
 
 __all__ = [
-    "ConstructorJerarquia",
-    "descubrir_subcarpetas_src",
-    "descubrir_jerarquia_src",
-    "cargar_modulo_red",
-    "cargar_lcbs_neuronal",
-    "localizar_red_neuronal",
-    "localizar_lcbs_neuronal",
-    "obtener_clase_constructiva",
-    "silencio",
-    "crear_jerarquia",
-    "SUBCARPETAS_SRC",
-    "SUBCARPETAS_SRC_BASE",
-    "RUTA_FUENTE_PREDETERMINADA",
-    "NOMBRE_PREDETERMINADO",
     "DIM_ENTRADA",
     "DIM_SALIDA",
+    "NOMBRE_PREDETERMINADO",
+    "RUTA_FUENTE_PREDETERMINADA",
+    "SUBCARPETAS_SRC",
+    "SUBCARPETAS_SRC_BASE",
+    "ConstructorJerarquia",
+    "cargar_lcbs_neuronal",
+    "cargar_modulo_red",
+    "crear_jerarquia",
+    "descubrir_jerarquia_src",
+    "descubrir_subcarpetas_src",
+    "localizar_lcbs_neuronal",
+    "localizar_red_neuronal",
+    "obtener_clase_constructiva",
+    "silencio",
 ]
