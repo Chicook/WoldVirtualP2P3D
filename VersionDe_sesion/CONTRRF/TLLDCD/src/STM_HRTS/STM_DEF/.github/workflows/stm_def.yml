@@ -1,0 +1,57 @@
+# Puerta de seguridad de STM_DEF — workflow reutilizable
+# =======================================================
+# Ubicacion: src/STM_HRTS/STM_DEF/.github/workflows/stm_def.yml
+#
+# Vive DENTRO del propio subsistema para que la defensa quede autocontenida y
+# modular: codigo, pruebas y el paso de CI que las exige, todo en STM_DEF.
+#
+# GitHub Actions solo ejecuta workflows desde .github/workflows/ en la raiz del
+# repositorio, por lo que este fichero es la plantilla canonica del taller. Para
+# activarlo, desde el workflow de la raiz (o del taller) basta UNA linea:
+#
+#   jobs:
+#     stm-def:
+#       uses: ./.github/workflows/stm_def.yml
+#
+# (copiando antes este fichero a .github/workflows/ de la raiz). El job invoca
+# `python -m STM_HRTS.STM_DEF puerta`, que en un solo punto verifica escaneo
+# estatico, integridad del sello y cuarentena, y falla (exit 1) si algo no
+# cuadra: un hallazgo ALTA, un sello manipulado o una cuarentena alterada.
+name: STM_DEF - Puerta de seguridad
+
+on:
+  workflow_call:
+
+jobs:
+  puerta:
+    name: Puerta (escaneo + integridad + cuarentena)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src/STM_HRTS/utils/add_utils
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]" || pip install numpy pytest pytest-timeout
+
+      - name: Pruebas del subsistema STM_DEF
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src
+        run: |
+          python -m pytest tests/test_stm_def.py -q \
+            --rootdir . \
+            --timeout=60 \
+            --tb=short \
+            -p no:cacheprovider \
+            -c STM_HRTS/utils/add_utils/pytest.ini
+
+      - name: Puerta de seguridad (bloqueante)
+        working-directory: VersionDe_sesion/CONTRRF/TLLDCD/src
+        run: python -m STM_HRTS.STM_DEF puerta

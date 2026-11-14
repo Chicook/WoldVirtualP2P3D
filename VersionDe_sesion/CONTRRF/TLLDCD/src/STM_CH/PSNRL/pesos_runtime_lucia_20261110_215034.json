@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:50:35.000108",
+  "pasos_entrenamiento": 12941,
+  "deriva_acumulada": 0.603588,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 12941,
+    "motivo": "LC_entrenar_reporte_entrenamiento_reporte_entrenamiento_johab_20261110_214031_20261110_214614_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.603588,
+    "norma_tensor": 3.38487,
+    "delta_aplicada": 0.013818,
+    "gsnr": 0.8841,
+    "entropia_shannon": 5.3916,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.05229,
+      "pasos_q": 12941
+    },
+    "timestamp": 1794343834.9987078
+  },
+  "resumen_pesos": {
+    "min": -0.7084699869155884,
+    "max": 2.0,
+    "media": 0.07592800259590149
+  }
+}

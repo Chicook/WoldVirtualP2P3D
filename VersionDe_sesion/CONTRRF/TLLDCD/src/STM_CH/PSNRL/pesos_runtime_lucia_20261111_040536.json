@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-11T04:05:36.355520",
+  "pasos_entrenamiento": 31817,
+  "deriva_acumulada": 0.023662,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 31817,
+    "motivo": "LC_entrenar_reporte_entrenamiento_ZeroMesher_20261111_035340_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.023662,
+    "norma_tensor": 0.68905,
+    "delta_aplicada": 0.007578,
+    "gsnr": 0.908,
+    "entropia_shannon": 5.4211,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 2.66545,
+      "pasos_q": 3252
+    },
+    "timestamp": 1794366336.354446
+  },
+  "resumen_pesos": {
+    "min": -0.08344999700784683,
+    "max": 0.5083699822425842,
+    "media": 0.020784800872206688
+  }
+}

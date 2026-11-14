@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:42:26.000466",
+  "pasos_entrenamiento": 56351,
+  "deriva_acumulada": 0.943584,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 56351,
+    "motivo": "LC_entrenar_test_dictviews_b20",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.943584,
+    "norma_tensor": 2.87865,
+    "delta_aplicada": 0.007471,
+    "gsnr": 0.8888,
+    "entropia_shannon": 5.4172,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.37429,
+      "pasos_q": 56351
+    },
+    "timestamp": 1794343345.9993343
+  },
+  "resumen_pesos": {
+    "min": -0.14374999701976776,
+    "max": 2.0,
+    "media": 0.0995544046163559
+  }
+}

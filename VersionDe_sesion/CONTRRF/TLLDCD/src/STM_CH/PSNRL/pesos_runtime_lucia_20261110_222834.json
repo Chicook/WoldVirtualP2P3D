@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:28:34.986664",
+  "pasos_entrenamiento": 41389,
+  "deriva_acumulada": 0.837585,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 41389,
+    "motivo": "LC_entrenar_godot_update_embree_b8",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.837585,
+    "norma_tensor": 2.90108,
+    "delta_aplicada": 0.007337,
+    "gsnr": 0.8777,
+    "entropia_shannon": 5.3619,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.3369,
+      "pasos_q": 41389
+    },
+    "timestamp": 1794346114.9852345
+  },
+  "resumen_pesos": {
+    "min": -0.2126300036907196,
+    "max": 2.0,
+    "media": 0.05600540339946747
+  }
+}

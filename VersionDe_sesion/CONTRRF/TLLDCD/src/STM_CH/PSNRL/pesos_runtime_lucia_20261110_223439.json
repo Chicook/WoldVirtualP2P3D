@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:34:40.000149",
+  "pasos_entrenamiento": 179547,
+  "deriva_acumulada": 1.828097,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 179547,
+    "motivo": "LC_entrenar_vulkan_handles_b741",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.828097,
+    "norma_tensor": 2.84883,
+    "delta_aplicada": 0.007093,
+    "gsnr": 0.8498,
+    "entropia_shannon": 5.3149,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.01571,
+      "pasos_q": 179547
+    },
+    "timestamp": 1794346479.999272
+  },
+  "resumen_pesos": {
+    "min": -0.08421000093221664,
+    "max": 2.0,
+    "media": 0.07279299944639206
+  }
+}

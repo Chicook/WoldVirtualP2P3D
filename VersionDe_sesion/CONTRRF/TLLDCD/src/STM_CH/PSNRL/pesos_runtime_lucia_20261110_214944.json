@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:49:44.999596",
+  "pasos_entrenamiento": 3577,
+  "deriva_acumulada": 0.384897,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 3577,
+    "motivo": "LC_entrenar_reporte_entrenamiento_AVH3_Sweater_20261110_214356_b2",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.384897,
+    "norma_tensor": 3.2123,
+    "delta_aplicada": 0.044634,
+    "gsnr": 0.8746,
+    "entropia_shannon": 5.354,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.65961,
+      "pasos_q": 3577
+    },
+    "timestamp": 1794343784.9987223
+  },
+  "resumen_pesos": {
+    "min": -0.5085399746894836,
+    "max": 2.0,
+    "media": 0.07317440211772919
+  }
+}

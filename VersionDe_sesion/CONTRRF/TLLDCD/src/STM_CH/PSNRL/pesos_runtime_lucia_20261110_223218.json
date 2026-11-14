@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:32:18.998150",
+  "pasos_entrenamiento": 124797,
+  "deriva_acumulada": 1.435459,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 124797,
+    "motivo": "LC_entrenar_MotorcycleController_b3",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.435459,
+    "norma_tensor": 2.85112,
+    "delta_aplicada": 0.007548,
+    "gsnr": 0.9039,
+    "entropia_shannon": 5.4191,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.06282,
+      "pasos_q": 124797
+    },
+    "timestamp": 1794346338.9965029
+  },
+  "resumen_pesos": {
+    "min": -0.1025099977850914,
+    "max": 2.0,
+    "media": 0.06875140219926834
+  }
+}

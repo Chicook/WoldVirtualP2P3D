@@ -1,0 +1,27 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T18:58:40.804813",
+  "pasos_entrenamiento": 1,
+  "deriva_acumulada": 0.000456,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 1,
+    "motivo": "dialogo_lucia",
+    "recompensa": 1.5,
+    "deriva_acumulada": 0.000456,
+    "norma_tensor": 0.07485,
+    "delta_aplicada": 0.455945,
+    "gsnr": 0.8772,
+    "entropia_shannon": 5.321,
+    "q_learning": {
+      "error": "'NeuronaRefuerzoQLearning' object has no attribute 'actualizar'"
+    },
+    "timestamp": 1794333520.8002121
+  },
+  "resumen_pesos": {
+    "min": -0.017179999500513077,
+    "max": 0.016909999772906303,
+    "media": -0.0019941998180001974
+  }
+}

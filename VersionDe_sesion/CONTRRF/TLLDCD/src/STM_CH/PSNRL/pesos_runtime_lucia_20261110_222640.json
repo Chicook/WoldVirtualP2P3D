@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:26:41.000135",
+  "pasos_entrenamiento": 2822,
+  "deriva_acumulada": 0.347184,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 2822,
+    "motivo": "LC_entrenar_marshalls_b72",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.347184,
+    "norma_tensor": 3.00732,
+    "delta_aplicada": 0.057275,
+    "gsnr": 0.9148,
+    "entropia_shannon": 5.4524,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.22179,
+      "pasos_q": 2822
+    },
+    "timestamp": 1794346000.999208
+  },
+  "resumen_pesos": {
+    "min": -0.31975001096725464,
+    "max": 2.0,
+    "media": 0.03933120146393776
+  }
+}
