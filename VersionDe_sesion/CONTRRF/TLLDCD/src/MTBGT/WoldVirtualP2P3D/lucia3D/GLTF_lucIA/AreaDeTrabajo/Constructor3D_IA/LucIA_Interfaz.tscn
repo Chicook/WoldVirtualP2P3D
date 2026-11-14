@@ -1,0 +1,186 @@
+[gd_scene format=3 uid="uid://bk231w1igx880"]
+
+[ext_resource type="PackedScene" uid="uid://dg5r1jy42iwlm" path="res://lucia3D/GLTF_lucIA/AreaDeTrabajo/Constructor3D_IA/LucIAbsIA.tscn" id="1_base"]
+[ext_resource type="Script" uid="uid://bf8xlssov2fpy" path="res://lucia3D/GLTF_lucIA/AreaDeTrabajo/Constructor3D_IA/gdscrip/lucia_cliente.gd" id="2_cliente"]
+
+[sub_resource type="Environment" id="Environment_lucia"]
+background_mode = 1
+background_color = Color(0.012, 0.016, 0.035, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.5, 0.58, 0.78, 1)
+ambient_light_energy = 0.65
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.35
+
+[sub_resource type="StyleBoxFlat" id="Estilo_panel"]
+content_margin_left = 18.0
+content_margin_top = 16.0
+content_margin_right = 18.0
+content_margin_bottom = 16.0
+bg_color = Color(0.035, 0.045, 0.085, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.34, 0.55, 0.95, 0.35)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="Estilo_entrada"]
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+bg_color = Color(0.08, 0.1, 0.16, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.45, 0.75, 0.5)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="MetaversoLucIA" type="Node3D" unique_id=1043482239]
+script = ExtResource("2_cliente")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=771301500]
+environment = SubResource("Environment_lucia")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1417701832]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 3.2)
+current = true
+fov = 38.0
+
+[node name="LuzFrontal" type="OmniLight3D" parent="." unique_id=174958277]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 1.95, 1.25)
+light_color = Color(1, 0.93, 0.86, 1)
+light_energy = 2.6
+omni_range = 5.0
+shadow_enabled = true
+
+[node name="LuzRelleno" type="OmniLight3D" parent="." unique_id=1434668455]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 1.7, 0.7)
+light_color = Color(0.45, 0.62, 1, 1)
+light_energy = 1.8
+omni_range = 4.0
+shadow_enabled = true
+
+[node name="LuzContorno" type="OmniLight3D" parent="." unique_id=965928461]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 2, -0.7)
+light_color = Color(0.55, 0.4, 1, 1)
+light_energy = 2.4
+omni_range = 4.5
+shadow_enabled = true
+
+[node name="LuzAmbiente" type="DirectionalLight3D" parent="." unique_id=1063898206]
+transform = Transform3D(-0.90407217, -0.29131868, 0.31270906, 0, 0.73168886, 0.6816388, -0.42737985, 0.61625063, -0.6614995, 0, 0, 0)
+light_energy = 0.55
+shadow_enabled = true
+
+[node name="lucIA_BASE" parent="." unique_id=757084558 instance=ExtResource("1_base")]
+
+[node name="Voz" type="AudioStreamPlayer" parent="." unique_id=361198962]
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=840969420]
+
+[node name="Raiz" type="Control" parent="UI" unique_id=340915772]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Titulo" type="Label" parent="UI/Raiz" unique_id=1096365961]
+layout_mode = 0
+offset_left = 28.0
+offset_top = 18.0
+offset_right = 220.0
+offset_bottom = 62.0
+theme_override_colors/font_color = Color(0.93, 0.96, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 34
+text = "LucIA"
+
+[node name="Estado" type="Label" parent="UI/Raiz" unique_id=301065090]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 62.0
+offset_right = 720.0
+offset_bottom = 88.0
+theme_override_colors/font_color = Color(1, 0.8, 0.4, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.75)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 16
+text = "Conectando con el cerebro de LucIA…"
+
+[node name="Marca" type="Label" parent="UI/Raiz" unique_id=814458126]
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -320.0
+offset_top = 26.0
+offset_right = -28.0
+offset_bottom = 50.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0.62, 0.72, 0.92, 0.7)
+theme_override_font_sizes/font_size = 15
+text = "WoldVirtualP2P3D"
+horizontal_alignment = 2
+
+[node name="Panel" type="PanelContainer" parent="UI/Raiz" unique_id=1265279510]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -100.0
+offset_right = -24.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("Estilo_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/Raiz/Panel" unique_id=569161354]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Salida" type="RichTextLabel" parent="UI/Raiz/Panel/VBox" unique_id=382552480]
+visible = false
+custom_minimum_size = Vector2(0, 210)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 18
+bbcode_enabled = true
+scroll_following = true
+
+[node name="Fila" type="HBoxContainer" parent="UI/Raiz/Panel/VBox" unique_id=1280233184]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Entrada" type="LineEdit" parent="UI/Raiz/Panel/VBox/Fila" unique_id=1146430167]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("Estilo_entrada")
+theme_override_styles/focus = SubResource("Estilo_entrada")
+placeholder_text = "Escribe a LucIA y pulsa Enter…"
+
+[node name="Enviar" type="Button" parent="UI/Raiz/Panel/VBox/Fila" unique_id=1685536874]
+custom_minimum_size = Vector2(110, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Enviar"

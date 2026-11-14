@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-11T03:53:38.000501",
+  "pasos_entrenamiento": 17697,
+  "deriva_acumulada": 0.310058,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 17697,
+    "motivo": "LC_entrenar_BSTerrainManager_b20",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.310058,
+    "norma_tensor": 3.77376,
+    "delta_aplicada": 0.010481,
+    "gsnr": 0.905,
+    "entropia_shannon": 5.4482,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.18886,
+      "pasos_q": 14849
+    },
+    "timestamp": 1794365617.9991403
+  },
+  "resumen_pesos": {
+    "min": -0.6519100069999695,
+    "max": 2.0,
+    "media": 0.0640324056148529
+  }
+}

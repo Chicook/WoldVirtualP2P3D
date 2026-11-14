@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T21:52:51.000870",
+  "pasos_entrenamiento": 54491,
+  "deriva_acumulada": 0.932992,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 54491,
+    "motivo": "LC_entrenar_hermite_b68",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.932992,
+    "norma_tensor": 3.11982,
+    "delta_aplicada": 0.007475,
+    "gsnr": 0.893,
+    "entropia_shannon": 5.4197,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.40979,
+      "pasos_q": 54491
+    },
+    "timestamp": 1794343970.9995787
+  },
+  "resumen_pesos": {
+    "min": -0.3683199882507324,
+    "max": 2.0,
+    "media": 0.08777879923582077
+  }
+}

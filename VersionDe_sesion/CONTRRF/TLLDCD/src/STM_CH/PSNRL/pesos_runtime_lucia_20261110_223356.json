@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:33:56.999030",
+  "pasos_entrenamiento": 162404,
+  "deriva_acumulada": 1.705345,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 162404,
+    "motivo": "LC_entrenar_SDL_joystick_b14",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.705345,
+    "norma_tensor": 2.85217,
+    "delta_aplicada": 0.007318,
+    "gsnr": 0.8704,
+    "entropia_shannon": 5.3718,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.00897,
+      "pasos_q": 162404
+    },
+    "timestamp": 1794346436.9976296
+  },
+  "resumen_pesos": {
+    "min": -0.09331999719142914,
+    "max": 2.0,
+    "media": 0.07132920622825623
+  }
+}

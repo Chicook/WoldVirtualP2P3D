@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-11T03:53:39.998504",
+  "pasos_entrenamiento": 18170,
+  "deriva_acumulada": 0.314778,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 18170,
+    "motivo": "LC_entrenar_PrimMesher_b54",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.314778,
+    "norma_tensor": 3.77613,
+    "delta_aplicada": 0.009516,
+    "gsnr": 0.8516,
+    "entropia_shannon": 5.3064,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.75432,
+      "pasos_q": 15322
+    },
+    "timestamp": 1794365619.9971986
+  },
+  "resumen_pesos": {
+    "min": -0.6508399844169617,
+    "max": 2.0,
+    "media": 0.06349120289087296
+  }
+}

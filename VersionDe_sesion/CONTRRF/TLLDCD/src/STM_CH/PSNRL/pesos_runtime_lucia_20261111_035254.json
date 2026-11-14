@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-11T03:52:55.000316",
+  "pasos_entrenamiento": 7258,
+  "deriva_acumulada": 0.154424,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 7258,
+    "motivo": "LC_entrenar_WebsocketServerHandler_b35",
+    "recompensa": 1.2,
+    "deriva_acumulada": 0.154424,
+    "norma_tensor": 3.29384,
+    "delta_aplicada": 0.024146,
+    "gsnr": 0.8872,
+    "entropia_shannon": 5.4311,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 1.01031,
+      "pasos_q": 4410
+    },
+    "timestamp": 1794365574.999015
+  },
+  "resumen_pesos": {
+    "min": -0.4318299889564514,
+    "max": 2.0,
+    "media": 0.0669260025024414
+  }
+}

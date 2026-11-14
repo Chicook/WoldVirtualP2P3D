@@ -1,0 +1,95 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://avatares/CarruselAvatares.gd" id="1_carrusel"]
+
+[sub_resource type="Environment" id="Environment_carrusel"]
+background_mode = 1
+background_color = Color(0.012, 0.018, 0.035, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.22, 0.3, 0.48, 1)
+ambient_light_energy = 0.85
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.7
+glow_bloom = 0.1
+
+[sub_resource type="StandardMaterial3D" id="Material_escenario"]
+albedo_color = Color(0.06, 0.08, 0.13, 1)
+metallic = 0.55
+roughness = 0.3
+emission_enabled = true
+emission = Color(0.04, 0.12, 0.22, 1)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="CylinderMesh" id="Cylinder_escenario"]
+top_radius = 3.3
+bottom_radius = 3.45
+height = 0.12
+radial_segments = 96
+material = SubResource("Material_escenario")
+
+[sub_resource type="StandardMaterial3D" id="Material_anillo"]
+albedo_color = Color(0.1, 0.5, 0.9, 1)
+emission_enabled = true
+emission = Color(0.15, 0.55, 1.0, 1)
+emission_energy_multiplier = 2.4
+shading_mode = 0
+
+[sub_resource type="TorusMesh" id="Torus_anillo"]
+inner_radius = 3.3
+outer_radius = 3.42
+rings = 96
+ring_segments = 12
+material = SubResource("Material_anillo")
+
+[sub_resource type="StandardMaterial3D" id="Material_suelo"]
+albedo_color = Color(0.02, 0.03, 0.06, 1)
+roughness = 0.9
+
+[sub_resource type="PlaneMesh" id="Plane_suelo"]
+size = Vector2(40, 40)
+material = SubResource("Material_suelo")
+
+[node name="CarruselAvatares" type="Node3D"]
+script = ExtResource("1_carrusel")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_carrusel")
+
+[node name="Camara" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.99939, 0.0349, 0, -0.0349, 0.99939, 0, 1.72, 6.8)
+fov = 38.0
+current = true
+
+[node name="Pivote" type="Node3D" parent="."]
+
+[node name="Suelo" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.14, 0)
+mesh = SubResource("Plane_suelo")
+
+[node name="Escenario" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.08, 0)
+mesh = SubResource("Cylinder_escenario")
+
+[node name="Anillo" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.01, 0)
+mesh = SubResource("Torus_anillo")
+
+[node name="LuzClave" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.6, 3.4, 3.2)
+light_color = Color(1, 0.95, 0.88, 1)
+light_energy = 4.2
+omni_range = 16.0
+shadow_enabled = true
+
+[node name="LuzRelleno" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0, 2.0, 2.4)
+light_color = Color(0.55, 0.72, 1, 1)
+light_energy = 3.0
+omni_range = 16.0
+
+[node name="LuzContorno" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, -4.2)
+light_color = Color(0.4, 0.8, 1, 1)
+light_energy = 3.4
+omni_range = 16.0

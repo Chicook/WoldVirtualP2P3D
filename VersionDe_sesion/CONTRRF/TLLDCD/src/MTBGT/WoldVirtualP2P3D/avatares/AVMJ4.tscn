@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://avatares/AvatarJugador.gd" id="1_avatar"]
+[ext_resource type="PackedScene" path="res://gltfimport/avatares/AVMJ4.gltf" id="2_modelo"]
+
+[node name="AVMJ4" type="CharacterBody3D"]
+script = ExtResource("1_avatar")
+avatar_id = "AVMJ4"
+
+[node name="Modelo" parent="." instance=ExtResource("2_modelo")]

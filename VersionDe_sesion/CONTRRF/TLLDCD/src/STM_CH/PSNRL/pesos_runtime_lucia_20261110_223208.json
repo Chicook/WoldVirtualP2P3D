@@ -1,0 +1,30 @@
+{
+  "version_lucia": "2026.5.0",
+  "fecha": "2026-11-10T22:32:08.991613",
+  "pasos_entrenamiento": 121692,
+  "deriva_acumulada": 1.413312,
+  "total_neuronas": 50,
+  "metadatos": {
+    "ok": true,
+    "pasos_totales": 121692,
+    "motivo": "LC_entrenar_ConvexHullBuilder2D_b6",
+    "recompensa": 1.2,
+    "deriva_acumulada": 1.413312,
+    "norma_tensor": 2.85124,
+    "delta_aplicada": 0.00743,
+    "gsnr": 0.8818,
+    "entropia_shannon": 5.4067,
+    "q_learning": {
+      "lr": 0.1,
+      "epsilon": 0.01,
+      "delta_q": 0.07009,
+      "pasos_q": 121692
+    },
+    "timestamp": 1794346328.9906986
+  },
+  "resumen_pesos": {
+    "min": -0.10369999706745148,
+    "max": 2.0,
+    "media": 0.06828060001134872
+  }
+}
