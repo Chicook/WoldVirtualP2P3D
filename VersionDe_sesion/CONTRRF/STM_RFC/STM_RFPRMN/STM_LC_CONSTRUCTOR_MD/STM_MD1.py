@@ -63,7 +63,12 @@ RUTA_FUENTE_PREDETERMINADA: Path = _resolver_fuente_predeterminada()
 #: Alias histórico.
 NOMBRE_PREDETERMINADO: str = _NOMBRE_PREDETERMINADO
 
-SUBCARPETAS_SRC_BASE: tuple[str, ...] = ()
+#: Jerarquía base de respaldo si la fuente no está disponible.
+SUBCARPETAS_SRC_BASE: tuple[str, ...] = (
+    "LC_STM", "MTBGT", "SBSTM", "STMGNRL", "STMIPFS", "STM_BKCH",
+    "STM_CH", "STM_DOC", "STM_HRTS", "STM_IA", "STM_JSON", "STM_SGR",
+    "tests", "VSC#",
+)
 
 _MODULO_RED: ModuleType | None = None
 _CLASE_CONSTRUCTIVA: type | None = None
@@ -217,6 +222,62 @@ def cargar_lcbs_neuronal(ruta: str | Path | None = None) -> ModuleType:
     return modulo
 
 
+def _asegurar_carpeta(base: str, nombre: str, maquina: Any) -> str:
+    """Devuelve ``base/nombre`` creándolo si falta.
+
+    Admite rutas anidadas (``STMGNRL/sub``) creando cada nivel con
+    ``maquina.crear_carpeta_en``, que valida los nombres y aplica el fallback
+    de PowerShell cuando el intérprete no puede crear la carpeta.
+    """
+    limpio = str(nombre).strip()
+    if not limpio:
+        return maquina.crear_carpeta_en(base, nombre)
+    partes = Path(limpio.replace("\\", "/")).parts
+    if (Path(limpio).is_absolute() or not partes
+            or any(parte in {".", ".."} for parte in partes)):
+        return maquina.crear_carpeta_en(base, nombre)
+    actual = str(base)
+    for parte in partes:
+        objetivo = Path(actual) / parte
+        try:
+            if (objetivo.is_dir()
+                    and objetivo.parent.resolve() == Path(actual).resolve()):
+                actual = str(objetivo)
+                continue
+        except OSError:
+            pass
+        actual = maquina.crear_carpeta_en(actual, parte)
+    return actual
+
+
+def crear_jerarquia(base: str | Path, nombre: str,
+                    subcarpetas: Iterable[str], maquina: Any) -> dict[str, Any]:
+    """Crea la raíz y cada subcarpeta; devuelve la traza de pasos.
+
+    ``maquina`` solo necesita el método ``crear_carpeta_en(base, nombre)``.
+    No carga la red neuronal: sirve para el modo de solo carpetas.
+    """
+    raiz = ""
+    creadas: list[str] = []
+    pasos: list[dict[str, Any]] = []
+    try:
+        raiz = _asegurar_carpeta(str(base), nombre, maquina)
+        pasos.append({"paso": 1, "carpeta": Path(raiz).name, "ruta": raiz})
+        for numero, subcarpeta in enumerate(subcarpetas, start=2):
+            if not str(subcarpeta).strip():
+                continue
+            ruta_sub = _asegurar_carpeta(raiz, subcarpeta, maquina)
+            creadas.append(ruta_sub)
+            pasos.append({"paso": numero, "carpeta": subcarpeta,
+                          "ruta": ruta_sub})
+    except Exception as error:  # noqa: BLE001 - resultado degradado
+        return {"ok": False, "error": f"{type(error).__name__}: {error}",
+                "raiz": raiz, "carpetas": creadas, "pasos": pasos,
+                "total": (1 if raiz else 0) + len(creadas)}
+    return {"ok": True, "raiz": raiz, "carpetas": creadas,
+            "total": 1 + len(creadas), "pasos": pasos}
+
+
 def _obtener_clase_constructiva() -> type:
     """Especializa la NeuronaConstructiva con la orden de la máquina."""
     global _CLASE_CONSTRUCTIVA
@@ -251,39 +312,13 @@ def _obtener_clase_constructiva() -> type:
             return texto
 
         def _crear_si_falta(self, base: str, nombre: str) -> str:
-            """Devuelve la carpeta existente o la crea validando el nombre."""
-            limpio = str(nombre).strip()
-            if not limpio or limpio in {".", ".."} or Path(limpio).name != limpio:
-                return self._maquina.crear_carpeta_en(base, nombre)
-            objetivo = Path(base) / limpio
-            try:
-                if (objetivo.is_dir()
-                        and objetivo.parent.resolve() == Path(base).resolve()):
-                    return str(objetivo)
-            except OSError:
-                pass
-            return self._maquina.crear_carpeta_en(base, nombre)
+            """Devuelve la carpeta existente o la crea (admite anidamiento)."""
+            return _asegurar_carpeta(base, nombre, self._maquina)
 
         def crear_carpetas(self) -> dict[str, Any]:
             """Crea la raíz y cada subcarpeta; devuelve la traza de pasos."""
-            raiz = ""
-            creadas: list[str] = []
-            pasos: list[dict[str, Any]] = []
-            try:
-                raiz = self._crear_si_falta(self.ruta_base, self.nombre)
-                pasos.append({"paso": 1, "carpeta": Path(raiz).name, "ruta": raiz})
-                for numero, subcarpeta in enumerate(self.subcarpetas, start=2):
-                    ruta_sub = self._crear_si_falta(raiz, subcarpeta)
-                    creadas.append(ruta_sub)
-                    pasos.append({"paso": numero, "carpeta": subcarpeta,
-                                  "ruta": ruta_sub})
-            except Exception as error:  # noqa: BLE001 - resultado degradado
-                return {"ok": False,
-                        "error": f"{type(error).__name__}: {error}",
-                        "raiz": raiz, "carpetas": creadas, "pasos": pasos,
-                        "total": (1 if raiz else 0) + len(creadas)}
-            return {"ok": True, "raiz": raiz, "carpetas": creadas,
-                    "total": 1 + len(creadas), "pasos": pasos}
+            return crear_jerarquia(self.ruta_base, self.nombre,
+                                   self.subcarpetas, self._maquina)
 
     _CLASE_CONSTRUCTIVA = NeuronaConstructivaLucIA
     return _CLASE_CONSTRUCTIVA
@@ -414,7 +449,9 @@ __all__ = [
     "localizar_lcbs_neuronal",
     "obtener_clase_constructiva",
     "silencio",
+    "crear_jerarquia",
     "SUBCARPETAS_SRC",
+    "SUBCARPETAS_SRC_BASE",
     "RUTA_FUENTE_PREDETERMINADA",
     "NOMBRE_PREDETERMINADO",
     "DIM_ENTRADA",

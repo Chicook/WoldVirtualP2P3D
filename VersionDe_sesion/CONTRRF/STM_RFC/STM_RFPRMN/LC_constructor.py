@@ -44,8 +44,10 @@ from STM_LC_CONSTRUCTOR_MD import (  # noqa: E402
     DIM_SALIDA,
     RUTA_FUENTE_PREDETERMINADA as _RUTA_FUENTE_MD1,
     SUBCARPETAS_SRC,
+    SUBCARPETAS_SRC_BASE,
     cargar_lcbs_neuronal,
     cargar_modulo_red,
+    crear_jerarquia,
     descubrir_jerarquia_src,
     descubrir_subcarpetas_src,
     localizar_lcbs_neuronal,
@@ -114,13 +116,6 @@ USAR_RED_NEURONAL = True
 
 #: Fuente oficial de la estructura de carpetas.
 RUTA_FUENTE_PREDETERMINADA = str(_RUTA_FUENTE_MD1)
-
-#: Jerarquía base de respaldo si la fuente no está disponible.
-SUBCARPETAS_SRC_BASE: tuple[str, ...] = (
-    "LC_STM", "MTBGT", "SBSTM", "STMGNRL", "STMIPFS", "STM_BKCH",
-    "STM_CH", "STM_DOC", "STM_HRTS", "STM_IA", "STM_JSON", "STM_SGR",
-    "tests", "VSC#",
-)
 
 
 _PATRONES: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -386,49 +381,21 @@ class ConstructorLucIA:
         })
         return datos
 
-    def _crear_si_falta(self, base: str, nombre: str) -> str:
-        """Devuelve la carpeta existente o la crea validando el nombre."""
-        limpio = str(nombre).strip()
-        if not limpio or limpio in {".", ".."} or Path(limpio).name != limpio:
-            return self.rfprmn.crear_carpeta_en(base, nombre)
-        objetivo = Path(base) / limpio
-        try:
-            if (objetivo.is_dir()
-                    and objetivo.parent.resolve() == Path(base).resolve()):
-                return str(objetivo)
-        except OSError:
-            pass
-        return self.rfprmn.crear_carpeta_en(base, nombre)
-
     def _crear_solo_carpetas(self, base: Path, nombre: str,
                              subcarpetas: tuple[str, ...]) -> dict[str, Any]:
-        """Crea la jerarquía sin red neuronal: solo carpetas."""
-        raiz = ""
-        creadas: list[str] = []
-        pasos: list[dict[str, Any]] = []
-        try:
-            raiz = self._crear_si_falta(str(base), nombre)
-            pasos.append({"paso": 1, "carpeta": Path(raiz).name, "ruta": raiz})
-            top_level: list[str] = []
-            for subcarpeta in subcarpetas:
-                partes = Path(subcarpeta).parts
-                if not partes:
-                    continue
-                if partes[0] not in top_level:
-                    top_level.append(partes[0])
-                actual = raiz
-                for parte in partes:
-                    actual = self._crear_si_falta(actual, parte)
-                creadas.append(actual)
-            for numero, nombre_top in enumerate(top_level, start=2):
-                pasos.append({"paso": numero, "carpeta": nombre_top,
-                              "ruta": str(Path(raiz) / nombre_top)})
-        except Exception as error:  # noqa: BLE001 - resultado degradado
-            return {"ok": False, "error": f"{type(error).__name__}: {error}",
-                    "raiz": raiz, "carpetas": creadas, "pasos": pasos,
-                    "total": (1 if raiz else 0) + len(creadas)}
-        return {"ok": True, "raiz": raiz, "carpetas": creadas,
-                "total": 1 + len(creadas), "pasos": pasos}
+        """Crea la jerarquía sin red neuronal y resume los pasos por nivel."""
+        resultado = crear_jerarquia(str(base), nombre, subcarpetas, self.rfprmn)
+        if resultado.get("ok"):
+            raiz = resultado["raiz"]
+            niveles = list(dict.fromkeys(
+                Path(sub).parts[0] for sub in subcarpetas if Path(sub).parts))
+            resultado["pasos"] = [
+                {"paso": 1, "carpeta": Path(raiz).name, "ruta": raiz},
+                *({"paso": numero, "carpeta": nivel,
+                   "ruta": str(Path(raiz) / nivel)}
+                  for numero, nivel in enumerate(niveles, start=2)),
+            ]
+        return resultado
 
     # -- API pública ------------------------------------------------------
     def crear_carpeta(self, ruta: str | Path = "",

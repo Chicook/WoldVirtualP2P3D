@@ -12,6 +12,7 @@ from typing import Any
 __all__ = [
     "ConstructorJerarquia",
     "SUBCARPETAS_SRC",
+    "SUBCARPETAS_SRC_BASE",
     "RUTA_FUENTE_PREDETERMINADA",
     "NOMBRE_PREDETERMINADO",
     "DIM_ENTRADA",
@@ -24,6 +25,7 @@ __all__ = [
     "localizar_lcbs_neuronal",
     "obtener_clase_constructiva",
     "silencio",
+    "crear_jerarquia",
 ]
 
 
