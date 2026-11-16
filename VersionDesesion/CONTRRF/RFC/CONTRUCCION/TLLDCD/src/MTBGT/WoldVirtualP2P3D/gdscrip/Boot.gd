@@ -530,7 +530,8 @@ func _mostrar_aviso(texto: String) -> void:
 	panel.add_child(etiqueta)
 	var tw := create_tween()
 	tw.tween_interval(7.0)
-	tw.tween_property(capa, "modulate:a", 0.0, 1.0)
+	# CanvasLayer no tiene modulate: se desvanece el panel, que sí es un Control.
+	tw.tween_property(panel, "modulate:a", 0.0, 1.0)
 	tw.tween_callback(capa.queue_free)
 
 

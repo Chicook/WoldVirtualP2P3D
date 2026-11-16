@@ -18,7 +18,7 @@ Responsabilidades centrales:
    - Particion de archivos grandes (> 450 lineas) y diagnostico AST.
 4. DESTINO UNIFICADO DE TRABAJO:
    - Todo artefacto generado para auto-refactorizarse se escribe estrictamente en:
-     VersionDesesion/CONTRRF/CONTRUCCION/LCtrabajando
+     VersionDesesion/CONTRRF/RFC/CONTRUCCION/LCtrabajando
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ CONTRRF_DIR: Final[Path] = TLLDCD_DIR.parent
 ROOT_DIR: Final[Path] = CONTRRF_DIR.parent
 
 # Directorio obligatorio donde LucIA deposita todo lo que genera para auto-refactorizarse:
-LCTRABAJANDO_DIR: Final[Path] = CONTRRF_DIR / "CONTRUCCION" / "LCtrabajando"
+LCTRABAJANDO_DIR: Final[Path] = ROOT_DIR / "LCtrabajando"
 if not LCTRABAJANDO_DIR.is_dir():
     try:
         LCTRABAJANDO_DIR.mkdir(parents=True, exist_ok=True)
@@ -478,7 +478,7 @@ class MotorAutoRefactorLucIA:
 
     REGLA INQUEBRANTABLE:
     Todo archivo, parche, modulo particionado o informe generado por LucIA
-    se deposita de forma estricta en VersionDesesion/CONTRRF/CONTRUCCION/LCtrabajando.
+    se deposita de forma estricta en VersionDesesion/CONTRRF/RFC/CONTRUCCION/LCtrabajando.
     """
 
     def __init__(self) -> None:
@@ -789,7 +789,7 @@ class SubsistemaNeuralLucIA:
     1. Canal Socket TCP + Importaciones bidireccionales con mainLCSTM.py
     2. Entrenador de pesos neuronales en runtime conectado a LC_STM/red_neuronal
     3. Motor de auto-refactorizacion de infraestructura y metaverso
-    4. Destino obligatorio de todo artefacto en CONTRUCCION/LCtrabajando.
+    4. Destino obligatorio de todo artefacto en CONTRRF/RFC/CONTRUCCION/LCtrabajando.
     """
 
     def __init__(self, arrancar_socket: bool = True, puerto_socket: int = CanalSocketLucIA.DEFAULT_PORT) -> None:

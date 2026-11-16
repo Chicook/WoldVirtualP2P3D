@@ -11,6 +11,15 @@ namespace Visor3D
         public static WebNodoService WebNodo { get; } = new WebNodoService();
         private void OnStartup(object sender, StartupEventArgs e)
         {
+            // Suite del subsistema Zero Trust (sesión única, sellos, ECDSA, TPM):
+            // valida lo que esta actualización lleva compilado, sin abrir ventana
+            // ni ejecutar el reset de cuenta.
+            if (Array.Exists(e.Args, a => a.Equals("--seguridad-selftest", StringComparison.OrdinalIgnoreCase)))
+            {
+                Environment.Exit(SeguridadSelfTest.Run());
+                return;
+            }
+
             // Prueba del arranque de cuenta sobre directorios temporales.
             if (Array.Exists(e.Args, a => a.Equals("--cuenta-selftest", StringComparison.OrdinalIgnoreCase)))
             {

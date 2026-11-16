@@ -210,6 +210,13 @@ desktop.ini
 # Versión de prueba antigua
 VersionDesesion/SistemaPrincipal/PRY/Archivo/VersionesDeRefuerzo/actualizacion_2069d33a/src/VSC#/version_prueba/
 
+# Copia autónoma de la versión 2.8.5: duplica fuentes del visor y lleva los
+# paquetes embebidos (zip/exe). Vive solo en local como versión de referencia
+# ya publicada en Releases; no debe engordar el repositorio.
+/VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/Actualizaciones/LCDMWoldVirtualP2P3Dv2.8.5/
+# Copia autónoma de la 2.8.6 (indicador Blockchain corregido): mismo criterio.
+/VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/Actualizaciones/LCDMWoldVirtualP2P3Dv2.8.6/
+
 # ──────────────────────────────────────────────────────────────────────────
 # 15. DATOS GENERADOS Y RECURSOS 3D LOCALES DUPLICADOS
 # ──────────────────────────────────────────────────────────────────────────
@@ -311,8 +318,6 @@ VersionDesesion/SistemaPrincipal/PRY/Archivo/VersionesDeRefuerzo/actualizacion_*
 /_tmp_*
 /_acl_reports/
 /_tmp_*/**
-/.vscode
-/.vscode/**
 !VersionDesesion/**/.dev/.vscode/
 !VersionDesesion/**/.dev/.vscode/**
 .idea/

@@ -75,6 +75,8 @@ namespace Visor3D
 
         // ── Servidor Oficial Blockchain & Cuentas (STM_BKCH puerto 8545) ─
         private readonly ServidorBlockchainOficial _servidorBlockchain = new();
+        private readonly object _candadoBlockchain = new();
+        private Task<bool>? _tareaBlockchain;
         private readonly ServidorLucIAOficial _servidorLucia = new();
         private System.Diagnostics.Process? _webNodoHelper;
         private GodotHwndHost? _constructorHost;
@@ -259,7 +261,7 @@ namespace Visor3D
                 : $"[WebNodo] No se pudo abrir: {App.WebNodo.StartError ?? "sin detalle"}");
 
             ActualizarEstadoCuentaUI();
-            _ = IniciarServidorBlockchainAsync();
+            _ = IniciarBlockchainUnaVezAsync();
             _ = IniciarServidorLuciaAsync();
 
             // Arranque directo en el despacho: no mostrar la antigua ventana
@@ -639,7 +641,22 @@ namespace Visor3D
 
         #region Actualización Oficial: Lucía 3D y Servidor Blockchain
 
-        private async Task IniciarServidorBlockchainAsync()
+        /// <summary>
+        /// Comparte una sola inicialización entre el arranque y la entrada al
+        /// mundo; si la anterior falló, el siguiente intento vuelve a probar.
+        /// </summary>
+        private Task<bool> IniciarBlockchainUnaVezAsync()
+        {
+            lock (_candadoBlockchain)
+            {
+                if (_tareaBlockchain is { IsCompleted: false }) return _tareaBlockchain;
+                if (_tareaBlockchain is { Status: TaskStatus.RanToCompletion } t && t.Result) return t;
+                _tareaBlockchain = IniciarServidorBlockchainAsync();
+                return _tareaBlockchain;
+            }
+        }
+
+        private async Task<bool> IniciarServidorBlockchainAsync()
         {
             try
             {
@@ -647,6 +664,10 @@ namespace Visor3D
                 IndicadorServidorLed.Fill = new SolidColorBrush(Color.FromRgb(245, 158, 11));
 
                 bool ok = await _servidorBlockchain.IniciarAsync();
+                // Segunda opinión antes de pintar: si el puerto responde, está en línea
+                // aunque la ruta del script no se haya podido resolver.
+                if (!ok)
+                    ok = await _servidorBlockchain.ConsultarSaludAsync();
                 if (ok)
                 {
                     TxtEstadoServidorBlockchain.Text = $"⚡ Servidor Blockchain Oficial: Puerto 8545 ACTIVO ({_servidorBlockchain.TotalBloques} bloques)";
@@ -662,10 +683,12 @@ namespace Visor3D
                     TxtEstadoBlockchainTop.Text = "⚠️ Blockchain: Offline";
                     BordeEstadoBlockchainTop.Background = new SolidColorBrush(Color.FromRgb(127, 29, 29));
                 }
+                return ok;
             }
             catch (Exception ex)
             {
                 Log($"[Blockchain] Error en IniciarServidorBlockchainAsync: {ex.Message}");
+                return false;
             }
         }
 
@@ -730,7 +753,7 @@ namespace Visor3D
                 if (!_servidorBlockchain.EstaEnLinea)
                 {
                     TxtEstadoP2P.Text = "⚡ Encendiendo servidor blockchain oficial...";
-                    await IniciarServidorBlockchainAsync();
+                    await IniciarBlockchainUnaVezAsync();
                 }
 
                 BarraInferiorLogin.Visibility = Visibility.Collapsed;

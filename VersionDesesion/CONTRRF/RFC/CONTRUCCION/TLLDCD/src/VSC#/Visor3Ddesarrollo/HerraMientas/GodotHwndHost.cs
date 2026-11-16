@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -241,6 +243,73 @@ namespace Visor3D
         // Godot process management
         // ──────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Termina motores Godot de ejecuciones anteriores que quedaron vivos al
+        /// morir el visor. Si uno sigue escuchando en el 8911, el mundo nuevo no
+        /// puede crear su servidor: no registra isla y el avatar cae al vacío.
+        /// Solo afecta al motor de este visor (mismo ejecutable, sin --editor).
+        /// </summary>
+        private void TerminarMotoresHuerfanos()
+        {
+            if (string.IsNullOrEmpty(_godotExePath)) return;
+
+            string nombre = Path.GetFileName(_godotExePath);
+            var huerfanos = new List<Process>();
+            try
+            {
+                string consulta = $"SELECT ProcessId, ExecutablePath, CommandLine FROM Win32_Process WHERE Name = '{nombre.Replace("'", "''")}'";
+                using var buscador = new ManagementObjectSearcher(consulta);
+                using var resultados = buscador.Get();
+                foreach (ManagementObject mo in resultados)
+                {
+                    string exe = (mo["ExecutablePath"] as string) ?? "";
+                    string cmd = (mo["CommandLine"] as string) ?? "";
+                    if (string.IsNullOrEmpty(exe) ||
+                        !string.Equals(Path.GetFullPath(exe), Path.GetFullPath(_godotExePath), StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    // El editor abierto a mano no se toca: solo el motor de juego.
+                    if (cmd.Contains("--editor", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    if (!cmd.Contains("--main-pack", StringComparison.OrdinalIgnoreCase) &&
+                        !cmd.Contains("--path", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    int pid = Convert.ToInt32(mo["ProcessId"]);
+                    try
+                    {
+                        var proceso = Process.GetProcessById(pid);
+                        proceso.Kill();
+                        huerfanos.Add(proceso);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[GodotHwndHost] No se pudo terminar el motor huérfano {pid}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[GodotHwndHost] Limpieza de motores huérfanos: {ex.Message}");
+            }
+
+            if (huerfanos.Count == 0) return;
+
+            Console.WriteLine($"[GodotHwndHost] {huerfanos.Count} motor(es) huérfano(s) terminado(s) antes de arrancar.");
+            Visor3D.Services.VisorLog.Info($"[GodotHwndHost] {huerfanos.Count} motor(es) huérfano(s) terminado(s) antes de arrancar.");
+            foreach (var proceso in huerfanos)
+            {
+                try
+                {
+                    if (!proceso.WaitForExit(2000))
+                        Console.WriteLine($"[GodotHwndHost] El motor {proceso.Id} no confirmó la salida en 2 s.");
+                }
+                catch { }
+                proceso.Dispose();
+            }
+            // Dejar que el sistema libere los puertos del motor terminado (8911).
+            Thread.Sleep(300);
+        }
+
         private void LaunchGodotAsync()
         {
             _cts = new CancellationTokenSource();
@@ -295,6 +364,9 @@ namespace Visor3D
                     Console.WriteLine($"[GodotHwndHost] Argumentos completos pasados al motor: {args}");
                     Console.WriteLine($"[GodotHwndHost] Args de red (tras '--'): {(string.IsNullOrEmpty(_userArgs) ? "(ninguno -> SERVIDOR_LOCAL por defecto)" : _userArgs)}");
                     Debug.WriteLine($"[GodotHwndHost] Lanzando proceso Godot: {_godotExePath} {args}");
+
+                    // Un motor de una ejecución anterior no debe seguir ocupando el 8911.
+                    TerminarMotoresHuerfanos();
 
                     _godotProcess = Process.Start(psi);
                     if (_godotProcess == null)

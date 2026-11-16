@@ -25,6 +25,7 @@
     "terminal.integrated.env.windows": {
         "PYTHONHOME": "E:\\WoldVirtualP2P3D\\VersionDesesion\\CONTRRF\\RFC\\CONTRUCCION\\.dev\\.python",
         "WVP_PYTHON": "E:\\WoldVirtualP2P3D\\VersionDesesion\\CONTRRF\\RFC\\CONTRUCCION\\.dev\\.python\\python.exe",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
         "PYTEST_CACHE_DIR": "E:\\WoldVirtualP2P3D\\VersionDesesion\\CONTRRF\\RFC\\CONTRUCCION\\.dev\\.pytest_cache",
         "RUFF_CACHE_DIR": "E:\\WoldVirtualP2P3D\\VersionDesesion\\CONTRRF\\RFC\\CONTRUCCION\\.dev\\.ruff_cache",
         "RFPRMN_RFC_DIR": "E:\\WoldVirtualP2P3D\\VersionDesesion\\CONTRRF\\RFC",

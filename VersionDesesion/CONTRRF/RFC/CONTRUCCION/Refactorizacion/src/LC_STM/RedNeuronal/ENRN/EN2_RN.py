@@ -70,7 +70,7 @@ class NeuronaEntradaXavier(_NeuronaEntradaXavierBase):
               - entropia(texto)    : entropia de Shannon de la proyeccion Xavier.
             """
 
-            RUTA_BASE = r"E:\WoldVirtualP2P3D\VersionDesesion\CONTRRF\CONTRUCCION\LCtrabajando"
+            RUTA_BASE = r"E:\WoldVirtualP2P3D\VersionDesesion\CONTRRF\RFC\CONTRUCCION\LCtrabajando"
             CARPETAS = [
                 "LC_STM", "MTBGT", "SBSTM", "STM_BKCH", "STM_CH",
                 "STM_DOC", "STM_JSON", "STM_SGR",

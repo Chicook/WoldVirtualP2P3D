@@ -22,6 +22,7 @@ namespace Visor3D.Services
         private Process? _proceso;
         private readonly int _puerto;
         private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(2) };
+        private readonly SemaphoreSlim _inicio = new(1, 1);
 
         public bool EstaEnLinea { get; private set; }
         public int TotalBloques { get; private set; }
@@ -38,90 +39,130 @@ namespace Visor3D.Services
         /// </summary>
         public async Task<bool> IniciarAsync(CancellationToken ct = default)
         {
-            // 1. Limpiar procesos huérfanos anteriores
-            LimpiarHuerfano();
+            if (EstaEnLinea) return true;
 
-            // 2. Comprobar si ya responde en el puerto
-            if (await ConsultarSaludAsync())
-            {
-                EstaEnLinea = true;
-                VisorLog.Info($"[Blockchain] Servidor oficial ya activo en {UrlServidor} (Bloques: {TotalBloques})");
-                return true;
-            }
-
-            // 3. Localizar python y script oficial
-            string? pyExe = BuscarPython();
-            if (string.IsNullOrEmpty(pyExe) || !File.Exists(pyExe))
-            {
-                UltimoError = "No se localizó el intérprete de Python para arrancar el servidor blockchain.";
-                VisorLog.Error($"[Blockchain] {UltimoError}");
-                return false;
-            }
-
-            string? scriptPath = BuscarScriptServidor();
-            if (string.IsNullOrEmpty(scriptPath) || !File.Exists(scriptPath))
-            {
-                UltimoError = $"No se encontró el script del servidor oficial ({scriptPath ?? "nulo"}).";
-                VisorLog.Error($"[Blockchain] {UltimoError}");
-                return false;
-            }
-
-            string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WoldVirtualP2P3D");
-            Directory.CreateDirectory(logDir);
-            string logFile = Path.Combine(logDir, "servidor_oficial.log");
-
+            // Varias llamadas del arranque (registro de eventos y entrada al mundo)
+            // pueden coincidir; solo una debe sondear y lanzar el proceso.
+            await _inicio.WaitAsync(ct);
             try
             {
-                var psi = new ProcessStartInfo
+                if (EstaEnLinea) return true;
+
+                // 1. Salud primero: si ya responde, no se toca ningún proceso.
+                if (await ConsultarSaludConEsperaAsync(ct))
                 {
-                    FileName = pyExe,
-                    Arguments = $"\"{scriptPath}\" --puerto {_puerto} --sin-cuota-ubicacion",
-                    WorkingDirectory = Path.GetDirectoryName(scriptPath) ?? "",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardOutput = false,
-                    RedirectStandardError = false
-                };
+                    UltimoError = null;
+                    VisorLog.Info($"[Blockchain] Servidor oficial ya activo en {UrlServidor} (Bloques: {TotalBloques})");
+                    return true;
+                }
 
-                VisorLog.Info($"[Blockchain] Arrancando servidor oficial: {psi.FileName} {psi.Arguments}");
-                _proceso = Process.Start(psi);
+                // 2. Solo sin respuesta se limpian huérfanos de ejecuciones previas
+                LimpiarHuerfano();
 
-                if (_proceso != null && !_proceso.HasExited)
+                // 3. Localizar python y script oficial
+                string? pyExe = BuscarPython();
+                if (string.IsNullOrEmpty(pyExe) || !File.Exists(pyExe))
                 {
-                    TunnelProcessRegistry.Persistir(SlotPid, _proceso.Id);
+                    UltimoError = "No se localizó el intérprete de Python para arrancar el servidor blockchain.";
+                    VisorLog.Error($"[Blockchain] {UltimoError}");
+                    return false;
+                }
 
-                    // Esperar hasta 10 segundos a que responda /status
-                    for (int i = 0; i < 20; i++)
+                string? scriptPath = BuscarScriptServidor();
+                if (string.IsNullOrEmpty(scriptPath) || !File.Exists(scriptPath))
+                {
+                    // Otra instancia pudo levantarlo mientras se buscaba el script:
+                    // el puerto manda sobre la ruta.
+                    if (await ConsultarSaludConEsperaAsync(ct))
                     {
-                        if (ct.IsCancellationRequested) break;
-                        await Task.Delay(500, ct);
+                        UltimoError = null;
+                        VisorLog.Info($"[Blockchain] Servidor oficial activo en {UrlServidor} (levantado por otra instancia).");
+                        return true;
+                    }
+                    UltimoError = $"No se encontró el script del servidor oficial ({scriptPath ?? "nulo"}).";
+                    VisorLog.Error($"[Blockchain] {UltimoError}");
+                    return false;
+                }
 
-                        if (await ConsultarSaludAsync())
-                        {
-                            EstaEnLinea = true;
-                            VisorLog.Info($"[Blockchain] Servidor oficial listo en {UrlServidor} (Bloques: {TotalBloques})");
-                            return true;
-                        }
+                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WoldVirtualP2P3D");
+                Directory.CreateDirectory(logDir);
+                string logFile = Path.Combine(logDir, "servidor_oficial.log");
 
-                        if (_proceso.HasExited)
+                try
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = pyExe,
+                        Arguments = $"\"{scriptPath}\" --puerto {_puerto} --sin-cuota-ubicacion",
+                        WorkingDirectory = Path.GetDirectoryName(scriptPath) ?? "",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        RedirectStandardOutput = false,
+                        RedirectStandardError = false
+                    };
+
+                    VisorLog.Info($"[Blockchain] Arrancando servidor oficial: {psi.FileName} {psi.Arguments}");
+                    _proceso = Process.Start(psi);
+
+                    if (_proceso != null && !_proceso.HasExited)
+                    {
+                        TunnelProcessRegistry.Persistir(SlotPid, _proceso.Id);
+
+                        // Esperar hasta 10 segundos a que responda /status
+                        for (int i = 0; i < 20; i++)
                         {
-                            UltimoError = $"El proceso de Python terminó prematuramente (código: {_proceso.ExitCode}).";
-                            VisorLog.Error($"[Blockchain] {UltimoError}");
-                            return false;
+                            if (ct.IsCancellationRequested) break;
+                            await Task.Delay(500, ct);
+
+                            if (await ConsultarSaludAsync())
+                            {
+                                EstaEnLinea = true;
+                                VisorLog.Info($"[Blockchain] Servidor oficial listo en {UrlServidor} (Bloques: {TotalBloques})");
+                                return true;
+                            }
+
+                            if (_proceso.HasExited)
+                            {
+                                UltimoError = $"El proceso de Python terminó prematuramente (código: {_proceso.ExitCode}).";
+                                VisorLog.Error($"[Blockchain] {UltimoError}");
+                                return false;
+                            }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                UltimoError = $"Error al lanzar el servidor oficial: {ex.Message}";
-                VisorLog.Error($"[Blockchain] {UltimoError}");
-                return false;
-            }
+                catch (Exception ex)
+                {
+                    UltimoError = $"Error al lanzar el servidor oficial: {ex.Message}";
+                    VisorLog.Error($"[Blockchain] {UltimoError}");
+                    return false;
+                }
 
-            EstaEnLinea = await ConsultarSaludAsync();
-            return EstaEnLinea;
+                EstaEnLinea = await ConsultarSaludConEsperaAsync(ct);
+                return EstaEnLinea;
+            }
+            finally
+            {
+                _inicio.Release();
+            }
+        }
+
+        /// <summary>
+        /// Sondea /status con reintentos cortos: el servidor puede estar ocupado
+        /// minando o atendiendo otra petición en el instante de la comprobación.
+        /// </summary>
+        private async Task<bool> ConsultarSaludConEsperaAsync(CancellationToken ct)
+        {
+            for (int intento = 0; intento < 3; intento++)
+            {
+                if (await ConsultarSaludAsync()) return true;
+                if (intento < 2)
+                {
+                    try { await Task.Delay(400, ct); }
+                    catch (OperationCanceledException) { return false; }
+                }
+            }
+            return false;
         }
 
         public async Task<bool> ConsultarSaludAsync()
@@ -286,6 +327,7 @@ namespace Visor3D.Services
         {
             Detener();
             _http.Dispose();
+            _inicio.Dispose();
         }
     }
 }

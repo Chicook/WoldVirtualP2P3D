@@ -33,6 +33,11 @@ from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+for _ancestro in Path(__file__).resolve().parents:
+    if (_ancestro / ".dev").is_dir():
+        sys.pycache_prefix = str(_ancestro / ".dev" / "pycache")
+        break
+
 from nucleo.orquestador_lucia import NucleoLucia
 from voz_lucia import precargar_voz, sintetizar_voz
 
@@ -371,6 +376,7 @@ def main() -> int:
     parser.add_argument("--modelo", default=os.getenv("LUCIA_MODELO", ""))
     parser.add_argument("--sin-precalentar", action="store_true")
     parser.add_argument("--sin-voz", action="store_true")
+    parser.add_argument("--sin-precarga-voz", action="store_true", help="Desactiva la precarga de voz al arrancar")
     args = parser.parse_args()
 
     try:
@@ -387,7 +393,7 @@ def main() -> int:
 
     if not args.sin_precalentar:
         threading.Thread(target=precalentar, args=(modelo,), daemon=True).start()
-    if not args.sin_voz:
+    if not args.sin_voz and not args.sin_precarga_voz:
         threading.Thread(target=precargar_voz, daemon=True).start()
 
     try:

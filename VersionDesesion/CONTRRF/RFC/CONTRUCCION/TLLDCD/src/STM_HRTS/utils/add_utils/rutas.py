@@ -100,7 +100,8 @@ PYTEST_CACHE: Path = PYTEST_CACHE_DEV if PYTEST_CACHE_DEV.is_dir() else ADD_UTIL
 
 HERRAMIENTAS_DIR: Path = UTILS_DIR
 STM_CH_DIR: Path = SRC_DIR / "STM_CH"
-PYCACHE_DIR: Path = STM_CH_DIR / "pycache"
+PYCACHE_DEV: Path = DEV_DIR / "pycache"
+PYCACHE_DIR: Path = PYCACHE_DEV if DEV_DIR.is_dir() else STM_CH_DIR / "pycache"
 PSNRL_DIR: Path = STM_CH_DIR / "PSNRL"
 LEDGER_PATH: Path = STM_CH_DIR / "blockchain_ledger.json"
 CACHE_IAFREE: Path = STM_CH_DIR / "openrouter_free_cache.json"

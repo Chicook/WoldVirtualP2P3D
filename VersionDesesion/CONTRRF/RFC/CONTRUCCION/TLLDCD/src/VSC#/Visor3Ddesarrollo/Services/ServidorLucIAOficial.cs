@@ -231,18 +231,28 @@ namespace Visor3D.Services
 
         private static string? BuscarPython()
         {
+            string? pyw = GodotConfig.GetPythonwExePath();
+            if (!string.IsNullOrWhiteSpace(pyw) && File.Exists(pyw)) return pyw;
+
+            string? py = GodotConfig.GetPythonExePath();
+            if (!string.IsNullOrWhiteSpace(py) && File.Exists(py)) return py;
+
+            string? envPython = Environment.GetEnvironmentVariable("WVP_PYTHON");
+            if (!string.IsNullOrWhiteSpace(envPython) && File.Exists(envPython)) return envPython;
+
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string projectDir = GodotConfig.GetProjectPath();
             string? srcDir = Directory.GetParent(Directory.GetParent(projectDir)?.FullName ?? "")?.FullName;
 
             string[] candidatos =
             {
-                GodotConfig.GetPythonExePath() ?? "",
+                srcDir != null ? Path.Combine(srcDir, "LC_STM", "python", "pythonw.exe") : "",
                 srcDir != null ? Path.Combine(srcDir, "LC_STM", "python", "python.exe") : "",
+                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "LC_STM", "python", "pythonw.exe")),
                 Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "LC_STM", "python", "python.exe")),
+                Path.Combine(baseDir, "LC_STM", "python", "pythonw.exe"),
                 Path.Combine(baseDir, "LC_STM", "python", "python.exe"),
                 Path.Combine(baseDir, "python", "python.exe"),
-                Environment.GetEnvironmentVariable("WVP_PYTHON") ?? "",
             };
 
             foreach (var candidato in candidatos)
