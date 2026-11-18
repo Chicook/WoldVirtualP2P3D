@@ -369,7 +369,7 @@ def test_allowlist_ignora_fixtures_y_documentacion():
     from STM_HRTS.STM_DEF import SRC_DIR, deteccion
 
     permitidas = {p.as_posix() for p in deteccion.rutas_ignoradas()}
-    assert (SRC_DIR / "tests" / "test_stm_def.py").as_posix() in permitidas
+    assert Path(__file__).resolve().as_posix() in permitidas
     assert (SRC_DIR / "STM_DOC" / "Desarrollo" / "README_DESARROLLO.md").as_posix() in permitidas
 
 
@@ -470,8 +470,9 @@ def test_historial_limpio(tmp_path):
     assert historial.escanear_historial(repo=repo) == []
 
 
-def test_historial_sin_repositorio(tmp_path):
+def test_historial_sin_repositorio(tmp_path, monkeypatch):
     """Sin repositorio Git degrada a lista vacia, sin fallar."""
+    monkeypatch.setattr(historial, "raiz_git", lambda inicio: None)
     assert historial.escanear_historial(repo=tmp_path) == []
 
 

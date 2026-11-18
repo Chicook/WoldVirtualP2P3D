@@ -226,11 +226,44 @@ func _reproducir(nombre: String, bucle: bool = true, rapidez: float = 1.0) -> vo
 	_anim_actual = nombre
 
 
+## Reproduce una animación desde una cinemática o un sistema externo.
+func reproducir_animacion(nombre: String, bucle: bool = true,
+		rapidez: float = 1.0) -> void:
+	_reproducir(nombre, bucle, rapidez)
+
+
 ## Coloca la cámara detrás del avatar sin transición (al entrar a la isla).
 func snap_camera() -> void:
+	if camara == null or not is_instance_valid(camara):
+		_crear_camara()
 	_yaw = rotation.y + PI
 	_pitch = -0.16
 	_actualizar_camara(1.0)
+	if camara != null:
+		camara.current = true
+
+
+## Habilita el avatar después de terminar el onboarding y cruzar el portal.
+func activar_control() -> void:
+	if es_clon_remoto:
+		return
+	es_selector = false
+	velocity = Vector3.ZERO
+	set_process_input(true)
+	set_physics_process(true)
+	_crear_camara()
+	if camara != null:
+		camara.current = true
+	snap_camera()
+
+
+## Pausa la entrada y el movimiento mientras se reproduce el cierre del portal.
+func desactivar_control() -> void:
+	set_process_input(false)
+	set_physics_process(false)
+	velocity = Vector3.ZERO
+	if camara != null and is_instance_valid(camara):
+		camara.current = false
 
 
 ## PlayerSync coloca y anima los clones remotos; aquí sólo se elige el clip.

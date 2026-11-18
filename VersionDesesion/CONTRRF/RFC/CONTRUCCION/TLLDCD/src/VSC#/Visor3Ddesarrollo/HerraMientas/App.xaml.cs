@@ -11,6 +11,18 @@ namespace Visor3D
         public static WebNodoService WebNodo { get; } = new WebNodoService();
         private void OnStartup(object sender, StartupEventArgs e)
         {
+            if (Array.Exists(e.Args, a => a.Equals("--seguridad-selftest", StringComparison.OrdinalIgnoreCase)))
+            {
+                Environment.Exit(SeguridadSelfTest.Run());
+                return;
+            }
+
+            if (Array.Exists(e.Args, a => a.Equals("--lucia-selftest", StringComparison.OrdinalIgnoreCase)))
+            {
+                Environment.Exit(StartupSelfTest.RunLucia());
+                return;
+            }
+
             // Prueba del arranque de cuenta sobre directorios temporales.
             if (Array.Exists(e.Args, a => a.Equals("--cuenta-selftest", StringComparison.OrdinalIgnoreCase)))
             {
@@ -193,15 +205,29 @@ namespace Visor3D
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
                 Visor3D.CargaVolatil.VolatilePackage.Liberar();
 
+            // Un motor Godot de una ejecución anterior mantiene ocupado el 8911 y
+            // bloquea el .exe del runtime: impide re-extraer el mundo y hace que el
+            // motor nuevo no registre la isla (el avatar cae al vacío). Se termina
+            // antes de tocar el runtime.
+            GodotHwndHost.TerminarMotoresHuerfanos(AppExtractor.GodotExePath);
+
             // Recolector de runtimes antiguos: sólo purga si el arranque anterior
             // terminó bien, y conserva la versión vigente y la última buena.
             RuntimeCleaner.EjecutarAlArrancar();
 
-            // Extraer Godot + proyecto 3D al LocalAppData si no esta ya
-            if (!AppExtractor.EnsureExtracted())
+            // Extraer Godot + mundo al LocalAppData si no está ya. La build que
+            // embebe el mundo completo no puede arrancar sin él: abrir un PCK de
+            // desarrollo o una base vieja deja al avatar sin suelo.
+            if (!AppExtractor.EnsureExtracted() && AppExtractor.EmbebeMundoCompleto)
             {
-                // Si falla la extraccion, abrimos igual la ventana principal
-                // (intentara buscar Godot por rutas alternativas)
+                MessageBox.Show(
+                    "No se pudo preparar el mundo 3D de esta versión.\n\n" +
+                    "Cierra cualquier visor o proceso Godot que siga abierto y " +
+                    "vuelve a iniciar WoldVirtualP2P3D.\n\n" +
+                    $"Directorio: {AppExtractor.RuntimeDir}",
+                    "WoldVirtualP2P3D — Mundo 3D", MessageBoxButton.OK, MessageBoxImage.Error);
+                Shutdown(1);
+                return;
             }
 
             // Montar el paquete volátil (mundo + Lucía + config) desde el .exe.

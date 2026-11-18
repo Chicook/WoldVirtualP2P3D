@@ -1,0 +1,111 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/INTERIOR/InteriorDAO.gd" id="1_interior"]
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/INTERIOR/CarruselDAO.gd" id="2_carrusel"]
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/INTERIOR/PortalDAO.gd" id="3_portal"]
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/INTERIOR/ZonaPersonalizacion.gd" id="4_zona"]
+
+[sub_resource type="BoxShape3D" id="BoxShapeRampa"]
+size = Vector3(7.2, 0.3, 5.6)
+
+[sub_resource type="BoxShape3D" id="BoxShapeRampaDais"]
+size = Vector3(3.6, 0.16, 1.9)
+
+[sub_resource type="BoxShape3D" id="BoxShapeBaranda"]
+size = Vector3(0.18, 0.26, 5.6)
+
+[node name="InteriorDAO" type="Node3D"]
+script = ExtResource("1_interior")
+
+[node name="RampaSur" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="ColisionRampa" type="StaticBody3D" parent="RampaSur"]
+transform = Transform3D(1, 0, 0, 0, 0.9578263, -0.28734788, 0, 0.28734788, 0.9578263, 0, 40.75, 33.45)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RampaSur/ColisionRampa"]
+shape = SubResource("BoxShapeRampa")
+
+[node name="ColisionBarandas" type="StaticBody3D" parent="RampaSur"]
+
+[node name="BarandaIzq" type="CollisionShape3D" parent="RampaSur/ColisionBarandas"]
+transform = Transform3D(1, 0, 0, 0, 0.9578263, -0.28734788, 0, 0.28734788, 0.9578263, -3.45, 41.05, 33.45)
+shape = SubResource("BoxShapeBaranda")
+
+[node name="BarandaDer" type="CollisionShape3D" parent="RampaSur/ColisionBarandas"]
+transform = Transform3D(1, 0, 0, 0, 0.9578263, -0.28734788, 0, 0.28734788, 0.9578263, 3.45, 41.05, 33.45)
+shape = SubResource("BoxShapeBaranda")
+
+[node name="RampaEste" type="Node3D" parent="."]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, 0)
+
+[node name="ColisionRampa" type="StaticBody3D" parent="RampaEste"]
+transform = Transform3D(1, 0, 0, 0, 0.9696131, -0.24464286, 0, 0.24464286, 0.9696131, 0, 40.869558, 33.45)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RampaEste/ColisionRampa"]
+shape = SubResource("BoxShapeRampa")
+
+[node name="ColisionBarandas" type="StaticBody3D" parent="RampaEste"]
+
+[node name="BarandaIzq" type="CollisionShape3D" parent="RampaEste/ColisionBarandas"]
+transform = Transform3D(1, 0, 0, 0, 0.9696131, -0.24464286, 0, 0.24464286, 0.9696131, -3.45, 41.169558, 33.45)
+shape = SubResource("BoxShapeBaranda")
+
+[node name="BarandaDer" type="CollisionShape3D" parent="RampaEste/ColisionBarandas"]
+transform = Transform3D(1, 0, 0, 0, 0.9696131, -0.24464286, 0, 0.24464286, 0.9696131, 3.45, 41.169558, 33.45)
+shape = SubResource("BoxShapeBaranda")
+
+[node name="RampaNorte" type="Node3D" parent="."]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
+
+[node name="ColisionRampa" type="StaticBody3D" parent="RampaNorte"]
+transform = Transform3D(1, 0, 0, 0, 0.9578263, -0.28734788, 0, 0.28734788, 0.9578263, 0, 40.75, 33.45)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RampaNorte/ColisionRampa"]
+shape = SubResource("BoxShapeRampa")
+
+[node name="ColisionBarandas" type="StaticBody3D" parent="RampaNorte"]
+
+[node name="BarandaIzq" type="CollisionShape3D" parent="RampaNorte/ColisionBarandas"]
+transform = Transform3D(1, 0, 0, 0, 0.9578263, -0.28734788, 0, 0.28734788, 0.9578263, -3.45, 41.05, 33.45)
+shape = SubResource("BoxShapeBaranda")
+
+[node name="BarandaDer" type="CollisionShape3D" parent="RampaNorte/ColisionBarandas"]
+transform = Transform3D(1, 0, 0, 0, 0.9578263, -0.28734788, 0, 0.28734788, 0.9578263, 3.45, 41.05, 33.45)
+shape = SubResource("BoxShapeBaranda")
+
+[node name="RampaOeste" type="Node3D" parent="."]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0, 0)
+
+[node name="ColisionRampa" type="StaticBody3D" parent="RampaOeste"]
+transform = Transform3D(1, 0, 0, 0, 0.9956792, -0.09285714, 0, 0.09285714, 0.9956792, 0, 41.290648, 33.45)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RampaOeste/ColisionRampa"]
+shape = SubResource("BoxShapeRampa")
+
+[node name="ColisionBarandas" type="StaticBody3D" parent="RampaOeste"]
+
+[node name="BarandaIzq" type="CollisionShape3D" parent="RampaOeste/ColisionBarandas"]
+transform = Transform3D(1, 0, 0, 0, 0.9956792, -0.09285714, 0, 0.09285714, 0.9956792, -3.45, 41.590648, 33.45)
+shape = SubResource("BoxShapeBaranda")
+
+[node name="BarandaDer" type="CollisionShape3D" parent="RampaOeste/ColisionBarandas"]
+transform = Transform3D(1, 0, 0, 0, 0.9956792, -0.09285714, 0, 0.09285714, 0.9956792, 3.45, 41.590648, 33.45)
+shape = SubResource("BoxShapeBaranda")
+
+[node name="ColisionRampaDais" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9670745, -0.2544933, 0, 0.2544933, 0.9670745, 0, 41.97, 7.8)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ColisionRampaDais"]
+shape = SubResource("BoxShapeRampaDais")
+
+[node name="CarruselDAO" type="Node3D" parent="."]
+script = ExtResource("2_carrusel")
+
+[node name="PortalDAO" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 41.7, 18.2)
+script = ExtResource("3_portal")
+
+[node name="ZonaPersonalizacion" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 41.7, 10.6)
+script = ExtResource("4_zona")

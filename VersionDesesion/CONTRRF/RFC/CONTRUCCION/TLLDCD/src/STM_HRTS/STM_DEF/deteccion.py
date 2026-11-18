@@ -40,7 +40,7 @@ ALLOWLIST_PATH: Path = Path(__file__).resolve().parent / "rutas_ignoradas.txt"
 
 #: Rutas que contienen los IOC de forma documental o de prueba (falsos positivos).
 IGNORADOS_POR_DEFECTO: Tuple[str, ...] = (
-    "tests/test_stm_def.py",
+    "tests/STM_test3/test_stm_def.py",
 )
 
 #: Extensiones de codigo ejecutable: nunca deberian silenciarse por allowlist.

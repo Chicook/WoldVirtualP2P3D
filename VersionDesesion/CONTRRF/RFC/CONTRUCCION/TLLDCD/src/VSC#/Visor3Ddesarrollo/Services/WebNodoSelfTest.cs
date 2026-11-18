@@ -114,7 +114,7 @@ namespace Visor3D.Services
 
             const string anunciado = "DMWoldVirtualP2P3Dv9.9.9.exe";
             WebNodoService.SembrarReleaseParaPrueba(
-                anunciado, "https://example.invalid/exe", "11.8", "9.9.9");
+                anunciado, "https://example.invalid/exe", "11.8", WebNodoService.VersionInstalada);
 
             var nodo = new WebNodoService();
             try
@@ -126,7 +126,8 @@ namespace Visor3D.Services
                 if (!nodo.IsRunning) return;
 
                 string baseUrl = $"http://127.0.0.1:{nodo.ActivePort}";
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                using var http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
+                    { Timeout = TimeSpan.FromSeconds(15) };
 
                 int sinToken = (int)http.GetAsync($"{baseUrl}/api/info").GetAwaiter().GetResult().StatusCode;
                 check("/api/info sigue exigiendo token", sinToken == 403, $"HTTP {sinToken}");
@@ -139,7 +140,7 @@ namespace Visor3D.Services
                       raiz.GetProperty("nombre").GetString() == anunciado,
                       raiz.GetProperty("nombre").GetString() ?? "");
                 check("/api/info anuncia la versión de la release",
-                      raiz.GetProperty("version").GetString() == "9.9.9",
+                      raiz.GetProperty("version").GetString() == WebNodoService.VersionInstalada,
                       raiz.GetProperty("version").GetString() ?? "");
                 check("/api/info distingue la versión instalada",
                       raiz.GetProperty("version_instalada").GetString() == WebNodoService.VersionInstalada,
@@ -163,6 +164,17 @@ namespace Visor3D.Services
                 check("/descargar anuncia el tamaño del binario local",
                       dl.Content.Headers.ContentLength == esperado,
                       $"{dl.Content.Headers.ContentLength} vs {esperado}");
+                // Consumir la respuesta libera el límite de descarga concurrente.
+                dl.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                string nuevaVersion = (Version.Parse(WebNodoService.VersionInstalada.TrimStart('v', 'V')).Major + 1) + ".0.0";
+                const string oficial = "https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v99.0.0/Visor.exe";
+                WebNodoService.SembrarReleaseParaPrueba("Visor.exe", oficial, "20", nuevaVersion);
+                using var nueva = http.GetAsync($"{baseUrl}/descargar").GetAwaiter().GetResult();
+                check("release nueva redirige sin descargar bytes remotos",
+                    (int)nueva.StatusCode == 302 && nueva.Headers.Location?.ToString() == oficial,
+                    $"HTTP {(int)nueva.StatusCode}, {nueva.Headers.Location}");
+                check("redirect no etiqueta bytes antiguos como nuevos",
+                    nueva.Content.Headers.ContentDisposition == null, "sin attachment local");
             }
             catch (Exception ex)
             {

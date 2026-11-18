@@ -277,7 +277,7 @@ def sintetizar_oficial_dsp(texto: str, emocion: float = 0.65) -> Optional[str]:
         from scipy import signal
         from pedalboard import Pedalboard, LowShelfFilter, PeakFilter, Compressor
 
-        tts = gTTS(text=texto, lang="es", tld="es", slow=False)
+        tts = gTTS(text=texto, lang="es", tld="es", slow=False, timeout=(5, 15))
         tts.save(temp_path_mp3)
         if not os.path.exists(temp_path_mp3) or os.path.getsize(temp_path_mp3) == 0:
             return None
