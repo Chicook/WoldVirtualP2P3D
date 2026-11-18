@@ -308,8 +308,231 @@
                         <Border x:Name="BordeEstadoLuciaTop" Background="#3B0764" CornerRadius="4" Padding="7,3" Margin="0,0,6,0">
                             <TextBlock x:Name="TxtEstadoLuciaTop" Text="🧠 LucIA: iniciando" Foreground="#F5D0FE" FontSize="11" FontWeight="SemiBold"/>
                         </Border>
+
+                        <!-- Botón desplegable Secciones -->
+                        <Button x:Name="BtnSecciones"
+                                Content="☰ Secciones ▾"
+                                Height="24" Padding="8,1"
+                                FontSize="10.5" FontWeight="SemiBold"
+                                Foreground="#C084FC" Background="#2D1B69"
+                                BorderBrush="#7C3AED" BorderThickness="1"
+                                Cursor="Hand" Margin="0,0,0,0"
+                                Click="BtnSecciones_Click"
+                                ToolTip="Abrir menú de secciones">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="4"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <!-- Popup menú Secciones -->
+                        <Popup x:Name="PopupSecciones"
+                               PlacementTarget="{Binding ElementName=BtnSecciones}"
+                               Placement="Bottom"
+                               StaysOpen="False"
+                               AllowsTransparency="True">
+                            <Border Background="#0D1424"
+                                    BorderBrush="#7C3AED"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="4">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="4" Opacity="0.7"/>
+                                </Border.Effect>
+                                <StackPanel MinWidth="200">
+
+                                    <!-- BtnSecciones_VolverLucia -->
+                                    <Button x:Name="BtnSecciones_VolverLucia"
+                                            Height="30" HorizontalAlignment="Stretch" Padding="12,0"
+                                            FontSize="11" FontWeight="SemiBold"
+                                            Foreground="#F5D0FE" BorderThickness="0"
+                                            Cursor="Hand"
+                                            Click="BtnSecciones_VolverLucia_Click"
+                                            ToolTip="Volver a la recepción de Lucía 3D">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="BordeBtnVL" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="BordeBtnVL" Property="Background" Value="#1A2340"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="✦ Lucía 3D"/>
+                                    </Button>
+
+                                    <!-- BtnSecciones_OficinaAvatar -->
+                                    <Button x:Name="BtnSecciones_OficinaAvatar"
+                                            Height="30" HorizontalAlignment="Stretch" Padding="12,0"
+                                            FontSize="11" FontWeight="SemiBold"
+                                            Foreground="#DDD6FE" BorderThickness="0"
+                                            Cursor="Hand"
+                                            Click="BtnSecciones_OficinaAvatar_Click"
+                                            ToolTip="Entrar en la oficina de LucIA con tu avatar visible">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="BordeBtnOA" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="BordeBtnOA" Property="Background" Value="#1A2340"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="✦ Oficina con avatar"/>
+                                    </Button>
+
+                                    <!-- BtnSecciones_InvitarLucia -->
+                                    <Button x:Name="BtnSecciones_InvitarLucia"
+                                            Height="30" HorizontalAlignment="Stretch" Padding="12,0"
+                                            FontSize="11" FontWeight="SemiBold"
+                                            Foreground="#FBCFE8" BorderThickness="0"
+                                            Cursor="Hand"
+                                            Click="BtnSecciones_InvitarLucia_Click"
+                                            ToolTip="Llevar a LucIA a tu isla para acompañarte">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="BordeBtnIL" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="BordeBtnIL" Property="Background" Value="#1A2340"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="✦ Invitar a LucIA"/>
+                                    </Button>
+
+                                    <!-- BtnSecciones_Construir -->
+                                    <Button x:Name="BtnSecciones_Construir"
+                                            Height="30" HorizontalAlignment="Stretch" Padding="12,0"
+                                            FontSize="11" FontWeight="SemiBold"
+                                            Foreground="#FDE68A" BorderThickness="0"
+                                            Cursor="Hand"
+                                            Click="BtnSecciones_Construir_Click"
+                                            ToolTip="Abrir Godot para construir y llevar la escena a tu isla">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="BordeBtnCo" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="BordeBtnCo" Property="Background" Value="#1A2340"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="🏗 Construcción"/>
+                                    </Button>
+
+                                    <!-- Separador visual -->
+                                    <Border Height="1" Background="#2A3A5C" Margin="8,4"/>
+
+                                    <!-- BtnSecciones_WebNodo -->
+                                    <Button x:Name="BtnSecciones_WebNodo"
+                                            Height="30" HorizontalAlignment="Stretch" Padding="12,0"
+                                            FontSize="11" FontWeight="SemiBold"
+                                            Foreground="#00D9FF" BorderThickness="0"
+                                            Cursor="Hand"
+                                            Click="BtnSecciones_WebNodo_Click"
+                                            ToolTip="Abre el portal de descarga del visor (WebNodo) para compartirlo con tus amigos">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="BordeBtnWN" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="BordeBtnWN" Property="Background" Value="#1A2340"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="🌐 WebNodo"/>
+                                    </Button>
+
+                                    <!-- BtnSecciones_Chat -->
+                                    <Button x:Name="BtnSecciones_Chat"
+                                            Height="30" HorizontalAlignment="Stretch" Padding="12,0"
+                                            FontSize="11" FontWeight="SemiBold"
+                                            Foreground="#7CE7C0" BorderThickness="0"
+                                            Cursor="Hand"
+                                            Click="BtnSecciones_Chat_Click"
+                                            ToolTip="Abrir el chat del metaverso (texto, voz y webcam)">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="BordeBtnCh" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="BordeBtnCh" Property="Background" Value="#1A2340"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="💬 Chat"/>
+                                    </Button>
+
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+
+                        <!-- Botones originales ocultos (preservados para el code-behind) -->
                         <Button x:Name="BtnVolverLucia"
                                 Content="✦ Lucía 3D"
+                                Visibility="Collapsed"
                                 Height="24" Padding="7,1"
                                 FontSize="10.5" FontWeight="SemiBold"
                                 Foreground="#F5D0FE" Background="#4A044E"
@@ -324,6 +547,7 @@
                         </Button>
                         <Button x:Name="BtnOficinaAvatar"
                                 Content="✦ Oficina con avatar"
+                                Visibility="Collapsed"
                                 Height="24" Padding="7,1"
                                 FontSize="10.5" FontWeight="SemiBold"
                                 Foreground="#DDD6FE" Background="#2E1065"
@@ -338,6 +562,7 @@
                         </Button>
                         <Button x:Name="BtnInvitarLucia"
                                 Content="✦ Invitar a LucIA"
+                                Visibility="Collapsed"
                                 Height="24" Padding="7,1"
                                 FontSize="10.5" FontWeight="SemiBold"
                                 Foreground="#FBCFE8" Background="#500724"
@@ -352,6 +577,7 @@
                         </Button>
                         <Button x:Name="BtnConstruir"
                                 Content="🏗 Construcción"
+                                Visibility="Collapsed"
                                 Height="24" Padding="7,1"
                                 FontSize="10.5" FontWeight="SemiBold"
                                 Foreground="#FDE68A" Background="#451A03"

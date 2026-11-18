@@ -218,18 +218,18 @@ namespace Visor3D.Services.P2PIPFS
             {
                 new {
                     Name = "serveo.net",
-                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{Port} serveo.net",
                     Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "serveo.net:443",
-                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{Port} serveo.net",
                     Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "localhost.run",
-                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} nokey@localhost.run",
-                    Pat  = @"https://[\w\-]+\.lhr\\.rocks"
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{Port} nokey@localhost.run",
+                    Pat  = @"https://[\w\-]+\.lhr\.life"
                 }
             };
 

@@ -1,25 +1,59 @@
 @echo off
 setlocal
 title Wold Virtual 3D - Vista previa del visor
-REM Arbol activo (..\..\.. desde HerraMientas = TLLDCD\src) y archivo de
-REM versiones anteriores, donde vive el Python embebido que no se versiona.
-set "SRC=%~dp0..\..\.."
-if not defined WVP_LEGACY_SRC set "WVP_LEGACY_SRC=%~dp0..\..\..\..\..\..\..\..\..\VersionDesesion\SistemaPrincipal\PRY\Archivo\VersionesDeRefuerzo\actualizacion_c5074e3b\src"
-if not exist "%WVP_LEGACY_SRC%" set "WVP_LEGACY_SRC=%~dp0..\..\..\..\..\..\..\..\..\VersionDesesion\SistemaPrincipal\PRY\Archivo\VersionesDeRefuerzo\actualizacion_c5074e3b\src"
+
+REM Detectar la raiz del repo buscando un marcador caracteristico (README.md o VersionDesesion)
+set "CURR=%~dp0"
+:buscar_raiz
+if exist "%CURR%VersionDesesion" (
+  set "ROOT_REPO=%CURR:~0,-1%"
+  goto raiz_hallada
+)
+for %%I in ("%CURR%..") do set "PARENT=%%~fI"
+if "%PARENT%"=="%CURR%" (
+  set "ROOT_REPO=E:\WoldVirtualP2P3D"
+  goto raiz_hallada
+)
+set "CURR=%PARENT%\"
+goto buscar_raiz
+
+:raiz_hallada
+set "SRC=%ROOT_REPO%\VersionDesesion\CONTRRF\RFC\CONTRUCCION\TLLDCD\src"
+set "WVP_LEGACY_SRC=%ROOT_REPO%\VersionDesesion\SistemaPrincipal\PRY\Archivo\VersionesDeRefuerzo\actualizacion_c5074e3b\src"
+set "DEV_DIR=%ROOT_REPO%\VersionDesesion\CONTRRF\RFC\CONTRUCCION\.dev"
 set "EXE=%~dp0bin\Debug\net8.0-windows\win-x64\LCDMWoldVirtualP2P3Dv2.8.4.exe"
-set "DEV_DIR=%~dp0..\..\..\..\..\.dev"
+
 set "PYW="
 if exist "%DEV_DIR%\.python\pythonw.exe" set "PYW=%DEV_DIR%\.python\pythonw.exe"
 if not defined PYW if exist "%DEV_DIR%\venv\Scripts\pythonw.exe" set "PYW=%DEV_DIR%\venv\Scripts\pythonw.exe"
-if not defined PYW set "PYW=%SRC%\LC_STM\python\pythonw.exe"
-if not exist "%PYW%" set "PYW=%WVP_LEGACY_SRC%\LC_STM\python\pythonw.exe"
-set "SRV=%SRC%\MTBGT\WoldVirtualP2P3D\lucia3D\GLTF_lucIA\celebro_3D\puente_3D\servidor_lucia.py"
-if not exist "%SRV%" set "SRV=%WVP_LEGACY_SRC%\MTBGT\WoldVirtualP2P3D\lucia3D\GLTF_lucIA\celebro_3D\puente_3D\servidor_lucia.py"
+if not defined PYW if exist "%SRC%\LC_STM\python\pythonw.exe" set "PYW=%SRC%\LC_STM\python\pythonw.exe"
+if not defined PYW if exist "%WVP_LEGACY_SRC%\LC_STM\python\pythonw.exe" set "PYW=%WVP_LEGACY_SRC%\LC_STM\python\pythonw.exe"
+
+set "SRV="
+if exist "%SRC%\MTBGT\WoldVirtualP2P3D\lucia3D\GLTF_lucIA\celebro_3D\puente_3D\servidor_lucia.py" (
+  set "SRV=%SRC%\MTBGT\WoldVirtualP2P3D\lucia3D\GLTF_lucIA\celebro_3D\puente_3D\servidor_lucia.py"
+) else if exist "%WVP_LEGACY_SRC%\MTBGT\WoldVirtualP2P3D\lucia3D\GLTF_lucIA\celebro_3D\puente_3D\servidor_lucia.py" (
+  set "SRV=%WVP_LEGACY_SRC%\MTBGT\WoldVirtualP2P3D\lucia3D\GLTF_lucIA\celebro_3D\puente_3D\servidor_lucia.py"
+)
 
 if not exist "%EXE%" (
   echo No se encuentra la vista previa compilada:
   echo %EXE%
-  echo Compila antes con Lanzar.bat o "dotnet build Visor3D.csproj".
+  echo Compila antes con "dotnet build Visor3D.csproj".
+  pause
+  exit /b 1
+)
+
+if not exist "%PYW%" (
+  echo No se encuentra el interprete de Python:
+  echo %PYW%
+  pause
+  exit /b 1
+)
+
+if not exist "%SRV%" (
+  echo No se encuentra servidor_lucia.py:
+  echo %SRV%
   pause
   exit /b 1
 )
