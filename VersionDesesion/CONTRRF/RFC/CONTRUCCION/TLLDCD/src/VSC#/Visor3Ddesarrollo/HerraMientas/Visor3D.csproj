@@ -21,16 +21,16 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DAOLCDMWoldVirtualP2P3Dv2.9.4</AssemblyName>
-    <Product>DAOLCDMWoldVirtualP2P3Dv2.9.4</Product>
+    <AssemblyName>DAOLCDMWoldVirtualP2P3Dv2.9.5</AssemblyName>
+    <Product>DAOLCDMWoldVirtualP2P3Dv2.9.5</Product>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>2.9.4</Version>
-    <AssemblyVersion>2.9.4.0</AssemblyVersion>
-    <FileVersion>2.9.4.0</FileVersion>
+    <Version>2.9.5</Version>
+    <AssemblyVersion>2.9.5.0</AssemblyVersion>
+    <FileVersion>2.9.5.0</FileVersion>
 
-    <Title>DAOLCDMWoldVirtualP2P3Dv2.9.4</Title>
-    <Description>Visor 3D — DAOLCDMWoldVirtualP2P3Dv2.9.4 (DAO 3D con runtime de LucIA integrado; túnel efímero y URL visible al arrancar; conexión DAO activa)</Description>
+    <Title>DAOLCDMWoldVirtualP2P3Dv2.9.5</Title>
+    <Description>Visor 3D — DAOLCDMWoldVirtualP2P3Dv2.9.5 (DAO 3D con runtime de LucIA integrado; túnel efímero y URL visible al arrancar; conexión DAO activa)</Description>
     <LuciaRuntimePath Condition="'$(LuciaRuntimePath)' == ''">$(MSBuildThisFileDirectory)..\..\..\..\..\.dev\rebuild287\lucia_runtime.zip</LuciaRuntimePath>
     <DefineConstants Condition="'$(GodotSourcePreview)' == 'true'">$(DefineConstants);GODOT_SOURCE_PREVIEW</DefineConstants>
   </PropertyGroup>
