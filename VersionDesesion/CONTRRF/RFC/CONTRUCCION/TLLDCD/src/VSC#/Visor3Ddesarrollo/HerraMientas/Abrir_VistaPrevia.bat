@@ -1,6 +1,20 @@
 @echo off
 setlocal
-title Wold Virtual 3D - Vista previa C# + Godot DAO
+title Wold Virtual 3D - Vista previa del visor
+REM Arbol activo (..\..\.. desde HerraMientas = TLLDCD\src) y archivo de
+REM versiones anteriores, donde vive el Python embebido que no se versiona.
+set "SRC=%~dp0..\..\.."
+if not defined WVP_LEGACY_SRC set "WVP_LEGACY_SRC=%~dp0..\..\..\..\..\..\..\..\..\VersionDesesion\SistemaPrincipal\PRY\Archivo\VersionesDeRefuerzo\actualizacion_c5074e3b\src"
+if not exist "%WVP_LEGACY_SRC%" set "WVP_LEGACY_SRC=%~dp0..\..\..\..\..\..\..\..\..\VersionDesesion\SistemaPrincipal\PRY\Archivo\VersionesDeRefuerzo\actualizacion_c5074e3b\src"
+set "EXE=%~dp0bin\Debug\net8.0-windows\win-x64\LCDMWoldVirtualP2P3Dv2.8.4.exe"
+set "DEV_DIR=%~dp0..\..\..\..\..\.dev"
+set "PYW="
+if exist "%DEV_DIR%\.python\pythonw.exe" set "PYW=%DEV_DIR%\.python\pythonw.exe"
+if not defined PYW if exist "%DEV_DIR%\venv\Scripts\pythonw.exe" set "PYW=%DEV_DIR%\venv\Scripts\pythonw.exe"
+if not defined PYW set "PYW=%SRC%\LC_STM\python\pythonw.exe"
+if not exist "%PYW%" set "PYW=%WVP_LEGACY_SRC%\LC_STM\python\pythonw.exe"
+set "SRV=%SRC%\MTBGT\WoldVirtualP2P3D\lucia3D\GLTF_lucIA\celebro_3D\puente_3D\servidor_lucia.py"
+if not exist "%SRV%" set "SRV=%WVP_LEGACY_SRC%\MTBGT\WoldVirtualP2P3D\lucia3D\GLTF_lucIA\celebro_3D\puente_3D\servidor_lucia.py"
 
 set "HERRAMIENTAS=%~dp0"
 set "SRC=%HERRAMIENTAS%..\..\.."

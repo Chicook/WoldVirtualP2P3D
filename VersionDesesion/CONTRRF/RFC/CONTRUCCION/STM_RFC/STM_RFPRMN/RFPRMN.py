@@ -1,6 +1,20 @@
 """CLI del ciclo de vida del código de WoldVirtualP2P3D (fachada).
 
 La lógica vive en ``STM_RFPRMN_stmDL/``; aquí se re-exporta y se expone la CLI.
+
+
+Purpose: this module acts as a compatibility facade for the project’s refactor lifecycle.
+It exposes the same public symbols and commands as the original RFPRMN.py while routing the actual implementation to the submodules under STM_RFPRMN_stmDL.
+It provides a command-line interface for operations such as:
+creating folders/files,
+copying or updating project content between PRY and RFC,
+sending code to the target location,
+running local AI analysis and refactoring workflows,
+checking module status and budget limits,
+managing model downloads and cleanup.
+It also preserves the legacy usage pattern by exposing a class named RFPRMN with methods that mirror the old commands.
+
+
 """
 from __future__ import annotations
 
