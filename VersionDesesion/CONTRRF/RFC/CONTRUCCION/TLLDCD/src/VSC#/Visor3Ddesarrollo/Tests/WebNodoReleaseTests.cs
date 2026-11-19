@@ -22,6 +22,38 @@ namespace Visor3D.Tests
             return ruta;
         }
 
+        [Theory]
+        [InlineData("v2.8.6", false)]
+        [InlineData(" V2.8.7 ", true)]
+        [InlineData("v2.9.0", true)]
+        [InlineData("desconocida", false)]
+        public void Remota_no_degrada_la_instalada(string version, bool aceptada)
+        {
+            var local = (Name: "DAO-preview.exe", Url: "", SizeMb: "—", Version: "2.8.7");
+            var remota = (Name: "DAO.exe", Url: "https://example.invalid/official", SizeMb: "20", Version: version);
+            Assert.Equal(aceptada ? remota : local,
+                WebNodoService.SeleccionarRelease(local, remota, "2.8.7"));
+            Assert.Equal(version.Trim().TrimStart('v', 'V') == "2.8.7",
+                WebNodoService.EsVersionInstalada(version, "2.8.7"));
+        }
+
+        [Fact]
+        public void Semilla_antigua_no_anuncia_version_inferior_al_runtime()
+        {
+            var r = WebNodoService.NormalizarReleaseLocal(("Antiguo.exe", "https://example.invalid/old", "1", "0.0.0"));
+            Assert.Equal(WebNodoService.VersionInstalada, r.Version);
+            Assert.Equal("", r.Url);
+            Assert.NotEqual("Antiguo.exe", r.Name);
+        }
+
+        [Fact]
+        public void No_retrocede_un_anuncio_remoto_mas_nuevo()
+        {
+            var actual = (Name: "Nuevo.exe", Url: "https://example.invalid/new", SizeMb: "20", Version: "3.1.0");
+            Assert.Equal(actual, WebNodoService.SeleccionarRelease(actual,
+                ("Anterior.exe", "https://example.invalid/old", "10", "3.0.0"), "2.8.7"));
+        }
+
         [Fact]
         public void Lee_el_esquema_publicado_con_assets()
         {
@@ -64,7 +96,8 @@ namespace Visor3D.Tests
 
             var r = WebNodoService.LeerReleaseParaPrueba(ruta);
 
-            Assert.Equal($"DMWoldVirtualP2P3Dv{WebNodoService.VersionInstalada}.exe", r.Name);
+            Assert.Equal((System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ??
+                typeof(WebNodoService).Assembly.GetName().Name ?? "Visor3D") + ".exe", r.Name);
             Assert.Equal(WebNodoService.VersionInstalada, r.Version);
         }
 
@@ -87,7 +120,8 @@ namespace Visor3D.Tests
 
             var r = WebNodoService.LeerReleaseParaPrueba(ruta);
 
-            Assert.Equal($"DMWoldVirtualP2P3Dv{WebNodoService.VersionInstalada}.exe", r.Name);
+            Assert.Equal((System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ??
+                typeof(WebNodoService).Assembly.GetName().Name ?? "Visor3D") + ".exe", r.Name);
         }
     }
 }

@@ -30,7 +30,7 @@ nick, aunque el visor no tuviera cuenta.
 |---|---|---|
 | Diagnóstico | `PerfilUsuario.Diagnosticar(out motivo, baseDir?)` clasifica el arranque en `SinIdentidad`, `Completa` (usuario + `passwordHash`, las dos credenciales que acepta el login) o `Incompleta` (restos sin acceso) (`Seguridad/PerfilUsuario.cs:9-121`) | Implementado |
 | Arranque | `ArranqueCuenta.AsegurarCicloRegistro()` se ejecuta tras `MigrarSiProcede()` en `App.xaml.cs:83`: cuenta completa intacta; restos → `ReinicioCuenta.EjecutarSiProcede("auto-incompleta-…")`; sin identidad → sólo se archiva el estado del motor | Implementado |
-| Archivo | `ReinicioCuenta` acepta `baseDir`/`godotDir` para pruebas y añade `LimpiarEstadoGodot(motivo, …)`, que archiva `registro.cfg`, sesión P2P, avatar y carrusel en `respaldo_cuenta\<fecha>-<motivo>` y escribe `reset_flag.txt` (`Seguridad/Seguridad_sesion_unica/ReinicioCuenta.cs:59-151`) | Implementado |
+| Archivo | `ReinicioCuenta` acepta `baseDir`/`godotDir` para pruebas y añade `LimpiarEstadoGodot(motivo, …)`, que archiva `registro.cfg`, sesión P2P, avatar y carrusel en `respaldo_cuenta\<fecha>-<motivo>` y escribe `reset_flag.txt` (`Seguridad/SeguridadSesionUnica/ReinicioCuenta.cs:59-151`) | Implementado |
 | Motor | `Boot.gd:46-54` ya borraba `registro.cfg` al ver `reset_flag.txt`; no se tocó el proyecto Godot | Sin cambios |
 | Autoprueba | `--cuenta-selftest` sobre directorios temporales: 7 diagnósticos, archivo de restos, cuenta completa intacta y limpieza del motor (`Services/CuentaSelfTest.cs`) | Implementado (12/12) |
 | Portal | El fallback empotrado anuncia `DMWoldVirtualP2P3Dv2.6.3.exe` y su URL (`Services/WebNodoService.cs:64-66`) | Implementado |

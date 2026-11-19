@@ -110,7 +110,7 @@ class NeuronaCodigo:
 
     RUTA_SRC: str = (
         r"E:\WoldVirtualP2P3D\VersionDesesion"
-        r"\CONTRRF\CONTRUCCION\LCtrabajando\src"
+        r"\CONTRRF\RFC\CONTRUCCION\LCtrabajando\src"
     )
 
     def __init__(self, neurona: Any) -> None:

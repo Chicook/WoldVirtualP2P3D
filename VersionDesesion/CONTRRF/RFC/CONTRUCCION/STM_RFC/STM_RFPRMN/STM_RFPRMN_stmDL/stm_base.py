@@ -163,11 +163,14 @@ def pedir_confirmacion(mensaje: str) -> bool:
 
 # --- Cachés de bytecode ------------------------------------------------------
 
-#: El bytecode de esta herramienta se guarda en su propio directorio, NUNCA
-#: dentro de los árboles sincronizados (RFC/PRY): antes se redirigía al
-#: pycache de STM_CH dentro de RFC/src, lo que ensuciaba el contenido
-#: sincronizado e impedía vaciar RFC (archivos .pyc bloqueados en Windows).
-PYCACHE_PROPIO = MODULO_DIR / ".pycache_rfprmn"
+#: Todo el bytecode se compila dentro de ``.dev/pycache``, NUNCA en los árboles
+#: sincronizados (RFC/TLLDCD): antes se escribía en ``.pycache_rfprmn`` junto al
+#: código y los .pyc bloqueados en Windows impedían vaciar RFC. Si el árbol no
+#: tiene ``.dev``, se conserva la caché local de la herramienta.
+PYCACHE_PROPIO = next(
+    (p / ".dev" / "pycache" for p in MODULO_DIR.parents if (p / ".dev").is_dir()),
+    MODULO_DIR / ".pycache_rfprmn",
+)
 try:
     PYCACHE_PROPIO.mkdir(parents=True, exist_ok=True)
     sys.pycache_prefix = str(PYCACHE_PROPIO)
@@ -184,15 +187,14 @@ def _ruta_larga(ruta: Path) -> str:
 
 
 def limpiar_caches_arranque() -> None:
-    """Borra las cachés de bytecode de la herramienta (silencioso).
+    """Borra los ``__pycache__`` de la herramienta al salir (silencioso).
 
-    Se ejecuta al salir del proceso (atexit): cada ejecución deja el
-    directorio limpio aunque después se lancen más comandos que
-    recompilen e importen de nuevo.
+    El bytecode vive en ``.dev/pycache``, que es compartido con el resto del
+    ecosistema y no se borra desde aquí; sólo se retiran los ``__pycache__``
+    que los importadores antiguos dejen junto al código.
     """
     for objetivo in (MODULO_DIR / "__pycache__",
-                     MODULO_DIR / "STM_RFPRMN_stmDL" / "__pycache__",
-                     PYCACHE_PROPIO):
+                     MODULO_DIR / "STM_RFPRMN_stmDL" / "__pycache__"):
         try:
             if objetivo.is_dir() and not objetivo.is_symlink():
                 shutil.rmtree(_ruta_larga(objetivo), ignore_errors=True)

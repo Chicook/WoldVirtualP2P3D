@@ -273,7 +273,7 @@ La pantalla de bienvenida muestra, antes del registro o del login, si el metaver
 | [`GodotHwndHost.cs`](VSC%23/GodotHwndHost.cs) | Modificado | Reenvío de teclado y foco con `WM_PARENTNOTIFY`. |
 | [`Services/WebNodoService.cs`](VSC%23/Services/WebNodoService.cs) | Modificado | Ruta `/chat` hacia el relay. |
 | [`Visor3D.csproj`](VSC%23/Visor3D.csproj) | Modificado | NAudio 2.3.0, AForge.Video 2.2.5 y AForge.Video.DirectShow 2.2.5. |
-| [`Seguridad/Seguridad_sesion_unica/ReinicioCuenta.cs`](VSC%23/Seguridad/Seguridad_sesion_unica/ReinicioCuenta.cs) | Nuevo | Reinicio único por versión de la base de usuarios local, con archivo en `respaldo_cuenta\`. |
+| [`Seguridad/SeguridadSesionUnica/ReinicioCuenta.cs`](VSC%23/Seguridad/SeguridadSesionUnica/ReinicioCuenta.cs) | Nuevo | Reinicio único por versión de la base de usuarios local, con archivo en `respaldo_cuenta\`. |
 | [`App.xaml.cs`](VSC%23/App.xaml.cs) | Modificado | Llama a `ReinicioCuenta` antes de WebNodo y del extractor; modo `--red-selftest`. |
 | [`Services/DescubrimientoP2P.cs`](VSC%23/Services/DescubrimientoP2P.cs) | Nuevo | Baliza UDP 8912, presencia `/api/p2p-status` y sondeo TCP 8911 sin handshake. |
 | [`Services/RedSelfTest.cs`](VSC%23/Services/RedSelfTest.cs) | Nuevo | Autoprueba de descubrimiento y presencia (6 comprobaciones). |

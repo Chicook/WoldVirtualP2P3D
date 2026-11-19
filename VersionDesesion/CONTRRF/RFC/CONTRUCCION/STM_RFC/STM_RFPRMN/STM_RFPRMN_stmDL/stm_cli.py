@@ -55,7 +55,7 @@ def comando_lc_entrenar(ruta_o_texto: str = "") -> Dict[str, Any]:
     que adjunte LucIA, lo divide en fragmentos semánticos, genera tensores de 50 dimensiones
     y actualiza los pesos de las 50 neuronas en tiempo de ejecución.
     
-    Todo artefacto resultante se escribe estrictamente en CONTRUCCION/LCtrabajando.
+    Todo artefacto resultante se escribe estrictamente en CONTRRF/RFC/CONTRUCCION/LCtrabajando.
     """
     ruta_candidata = (ruta_o_texto or "").strip().strip("\"'")
     archivo_objetivo: Optional[Path] = None
@@ -161,7 +161,7 @@ def comando_lc_entrenar(ruta_o_texto: str = "") -> Dict[str, Any]:
         ("Deriva Muon", f"{ultimo.get('deriva_acumulada', 0.0):.6f}"),
         ("Q-Learning Delta", f"{ultimo.get('q_learning', {}).get('delta_q', 'OK')}"),
         ("Snapshot Pesos", f"{Path(archivos_pesos.get('json_trabajando', '')).name}"),
-        ("Destino", "CONTRUCCION/LCtrabajando"),
+        ("Destino", "CONTRRF/RFC/CONTRUCCION/LCtrabajando"),
     ]
     _imprimir_seguro(_caja("LC Entrenar · Red Neuronal Actualizada", filas, color="verde"))
     exito(f"Pesos actualizados en caliente. Reporte: {reporte_md.name}")

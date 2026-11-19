@@ -1,16 +1,17 @@
 extends Node3D
 ## Arranque del metaverso (demo local, discusión #86):
-## 0. RECEPCIÓN LUCIA: crea la cuenta (un bloque = un hash) o saluda al que ya la
-##    tiene en este PC. No hay contraseña, ni semilla, ni validación de túnel.
-## 1. CARRUSEL: se elige el avatar (24 avatares en 3 turnos de 8).   [solo primera vez]
-## 2. REGISTRO con ese avatar (el nick ya viene fijado por la cuenta).
-## 3. ZONA DEL PORTAL: el avatar camina y lo atraviesa.      [solo primera vez]
-## 4. Ventana de carga hasta que aparece MI isla.
-## 5. Se cierra la carga y queda el mundo jugable en su isla.
+## 0. RECEPCIÓN EN LA DAO: LucIA recibe en su despacho. Allí se crea la cuenta
+##    (un bloque = un hash) o se saluda al que ya la tiene en este PC. No hay
+##    contraseña, ni semilla, ni validación de túnel.
+## 1. ALTA EN LA DAO: el ciudadano recorre el despacho de LucIA, la plaza
+##    de registro, el carrusel, el espejo del avatar y el portal.      [solo alta]
+## 2. Ventana de carga hasta que aparece MI isla, ya registrada por el portal.
+## 3. Se cierra la carga y queda el mundo jugable en su isla.
 ##
 ## Si ya hay cuenta (user://cuenta.json) y avatar (user://registro.cfg),
-## se entra directamente a la isla sin pasar por recepción, carrusel ni registro.
+## se entra directamente a la isla sin pasar por recepción ni alta.
 
+const ONBOARDING_SCENE: PackedScene = preload("res://lucia3D/IslaUnicaLucIA/ONBOARDING/OnboardingDAO.tscn")
 const CARRUSEL_SCENE: PackedScene = preload("res://avatares/CarruselAvatares.tscn")
 const EDITOR_ASPECTO_SCENE: PackedScene = preload("res://avatares/EditorAspecto.tscn")
 const REGISTRO_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/scenesconstr/registro.tscn")
@@ -18,7 +19,6 @@ const PORTAL_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor/U
 const MUNDO_SCENE: PackedScene = preload("res://ESCENAS/sceneOPTM/constructor/chunk3DBLOCK/ISLA3Dblock.tscn")
 const Sonda = preload("res://gdscrip/Sonda.gd")
 const Turnos = preload("res://gdscrip/Turnos.gd")
-const LuciaRecepcion = preload("res://gdscrip/LuciaRecepcion.gd")
 const Firma = preload("res://gdscrip/AvatarFirma.gd")
 const Pers = preload("res://gdscrip/Personalizacion.gd")
 const Catalogo = preload("res://avatares/CatalogoAvatares.gd")
@@ -30,7 +30,7 @@ var _editor_aspecto: Node3D
 var _registro: Control
 var _zona_portal: Node3D
 var _mundo: Node3D
-var _recepcion: Node3D
+var _onboarding: Node3D
 var _carga: CanvasLayer
 var _carga_label: Label
 var _carga_texto := "Conectando a la red P2P"
@@ -40,6 +40,7 @@ var _cargando := false
 var _espera_isla: Timer
 var _sonda
 var _invitar_lucia := false
+var _iniciar_en_dao := false
 
 
 func _ready() -> void:
@@ -57,22 +58,30 @@ func _ready() -> void:
 	print("[Boot.gd] El rol de red (Servidor/Cliente) y la IP objetivo los resuelve ChunkManager.gd.")
 	print("================================================================")
 
+	var onboarding_dao_completado := "user://onboarding_dao_completado.flag"
+	_iniciar_en_dao = _dao_lobby_solicitado()
+	var modo_preview_dao := _dao_preview_solicitado()
+	if _iniciar_en_dao:
+		_desactivar_carrusel_automatico_dao()
 	# ── RESET DE SESIÓN (flag escrito por el visor C# al arrancar) ──────────────
 	# Si el visor detectó un reset limpio, borramos el registro para que
 	# Godot arranque siempre como primera vez (carrusel + registro de nick).
 	var reset_flag_path := OS.get_user_data_dir().path_join("reset_flag.txt")
-	if FileAccess.file_exists(reset_flag_path):
-		if FileAccess.file_exists("user://registro.cfg"):
+	if FileAccess.file_exists(reset_flag_path) and not modo_preview_dao:
+		if not FileAccess.file_exists(onboarding_dao_completado) \
+				and FileAccess.file_exists("user://registro.cfg"):
 			DirAccess.remove_absolute(
 				OS.get_user_data_dir().path_join("registro.cfg"))
 		DirAccess.remove_absolute(reset_flag_path)
 
-	# «Actualización de cuenta» desde el visor: este arranque ya entra en la
-	# recepción de LucIA, así que solo se consume la marca y se deja constancia.
+	# «Oficina de Lucía 3D» desde el visor: el botón pide reabrir el alta para
+	# actualizar cuenta/avatar. La marca abre la recepción de la DAO de forma
+	# determinista, sin pasar por la antigua ventana de recepción.
 	var marca_cuenta := OS.get_user_data_dir().path_join("abrir_recepcion.flag")
-	if FileAccess.file_exists(marca_cuenta):
+	var recepcion_solicitada := FileAccess.file_exists(marca_cuenta)
+	if recepcion_solicitada:
 		DirAccess.remove_absolute(marca_cuenta)
-		print("[Boot] Actualización de cuenta solicitada desde el visor")
+		print("[Boot] Oficina de Lucía solicitada desde el visor: alta en la DAO")
 
 	# La sonda existe en todos los peers: el anfitrion responde consultas de
 	# plazas y el invitado pregunta antes del carrusel.
@@ -80,8 +89,48 @@ func _ready() -> void:
 	_sonda.name = "Sonda"
 	add_child(_sonda)
 
-	# LucIA recibe SIEMPRE primero (anfitriona): saluda al registrado y le dice
-	# cómo iniciar sesión en esta versión, o guía el registro del nuevo.
+	# Vista previa técnica del visor: usa un avatar de catálogo para mostrar la
+	# DAO aunque este perfil de prueba no tenga cuenta local. No guarda ni altera
+	# la cuenta/registro del usuario.
+	if modo_preview_dao and not recepcion_solicitada:
+		_cargar_nick_guardado()
+		if _nick.is_empty():
+			_nick = "Vecino DAO"
+		var cfg := ConfigFile.new()
+		if cfg.load("user://registro.cfg") == OK:
+			var av: String = str(cfg.get_value("jugador", "avatar_scene", "")).strip_edges()
+			if not av.is_empty():
+				_avatar_scene = av
+		if _avatar_scene.is_empty():
+			_avatar_scene = "res://avatares/AVMJ1.tscn"
+		print("[Boot] Vista previa del visor: recepción de LucIA en la DAO con avatar (", _avatar_scene, ") nick=", _nick)
+		_iniciar_en_dao = true
+		_mostrar_onboarding()
+		return
+
+	# El botón «Oficina de Lucía 3D» reabre el alta nueva dentro de la DAO.
+	# Ignora la marca de alta completada para que el ciudadano pueda volver a
+	# pasar por el carrusel y actualizar su avatar o su cuenta.
+	if recepcion_solicitada:
+		if FileAccess.file_exists(onboarding_dao_completado):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(onboarding_dao_completado))
+		_iniciar_en_dao = true
+		_cargar_nick_guardado()
+		_mostrar_onboarding()
+		return
+
+	# El onboarding de la DAO ya guardó nick y avatar antes de cargar este mundo.
+	# Consumir la marca evita volver a pedir recepción y continúa con el reparto
+	# normal del ChunkManager.
+	if FileAccess.file_exists(onboarding_dao_completado):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(onboarding_dao_completado))
+		_iniciar_en_dao = false
+		print("[Boot] Onboarding DAO completado; cargando directamente la isla personal")
+		_continuar_registrado()
+		return
+
+	# LucIA recibe SIEMPRE primero (anfitriona), pero la recepción vive en su
+	# despacho de la DAO: saludar o crear la cuenta es el arranque del alta.
 	#
 	# Excepción de autoprueba: el visor ejecuta el motor sin nadie delante y
 	# necesita que la isla y el 8911 arranquen. Solo `--startup-selftest` pasa
@@ -91,7 +140,9 @@ func _ready() -> void:
 		_continuar_registrado()
 		return
 
-	_mostrar_lucia_recepcion()
+	print("[Boot] Recepción de LucIA en la DAO: alta en su despacho")
+	_cargar_nick_guardado()
+	_mostrar_onboarding()
 
 
 ## ¿Arranca para la autoprueba del visor (sin recepción)?
@@ -99,6 +150,29 @@ func _sin_recepcion() -> bool:
 	var args: Array = OS.get_cmdline_args()
 	args.append_array(OS.get_cmdline_user_args())
 	return args.has("--sin-recepcion")
+
+
+func _dao_lobby_solicitado() -> bool:
+	var args: Array = OS.get_cmdline_args()
+	args.append_array(OS.get_cmdline_user_args())
+	return args.has("--dao-lobby")
+
+
+func _dao_preview_solicitado() -> bool:
+	var args: Array = OS.get_cmdline_args()
+	args.append_array(OS.get_cmdline_user_args())
+	return args.has("--dao-preview")
+
+
+## El carrusel de registro sigue disponible en la consola del atrio, pero no se
+## abre al pasar por allí durante una sesión de un ciudadano ya registrado.
+func _desactivar_carrusel_automatico_dao() -> void:
+	var sede := get_tree().root.find_child("IslaUnicaLucIA", true, false)
+	if sede == null:
+		return
+	var carrusel := sede.find_child("CarruselDAO", true, false)
+	if carrusel != null and carrusel.has_method("set_auto_abrir"):
+		carrusel.call("set_auto_abrir", false)
 
 
 ## El registro del jugador (user://avatar_hash.json) guarda la escena que eligió
@@ -143,27 +217,59 @@ func _process(delta: float) -> void:
 	_carga_label.text = _carga_texto + ".".repeat(puntos)
 
 
-func _mostrar_lucia_recepcion() -> void:
-	_recepcion = LuciaRecepcion.new()
-	_recepcion.name = "LuciaRecepcion"
-	add_child(_recepcion)
-	_recepcion.recepcion_completada.connect(_on_recepcion_completada)
-
-
-func _on_recepcion_completada(modo: String) -> void:
-	# El nick sale de la cuenta (hash del bloque), no de un segundo formulario.
-	if _recepcion and _recepcion.has_method("nick_cuenta"):
-		var nick := str(_recepcion.call("nick_cuenta")).strip_edges()
-		if not nick.is_empty():
-			_nick = nick
-	if _recepcion:
-		_recepcion.queue_free()
-		_recepcion = null
-	if modo == "existente":
-		_continuar_registrado()
-	else:
+## El alta completa se vive dentro de la DAO (despacho, plaza, carrusel, espejo
+## y portal). Antes de montar el mundo se libera la DAO del alta: la del mundo
+## es la única copia viva de la isla.
+func _mostrar_onboarding() -> void:
+	if _nick.strip_edges().is_empty():
+		_nick = "Invitado"
+	if ONBOARDING_SCENE == null:
 		_mostrar_carrusel()
+		return
+	_mostrar_carga("Preparando la Sede de la DAO")
+	var ocupados: Array = await _sonda.consultar()
+	_ocultar_carga()
+	_onboarding = ONBOARDING_SCENE.instantiate() as Node3D
+	if _onboarding == null:
+		_mostrar_carrusel()
+		return
+	if _onboarding.has_method("set_nick"):
+		_onboarding.call("set_nick", _nick)
+	if _onboarding.has_method("set_ocupados"):
+		_onboarding.call("set_ocupados", ocupados)
+	add_child(_onboarding)
+	_onboarding.connect("onboarding_completado", _on_onboarding_completado)
 
+
+func _on_onboarding_completado(avatar_scene: String) -> void:
+	if is_instance_valid(_onboarding):
+		_nick = str(_onboarding.get("_nick")).strip_edges()
+	_iniciar_en_dao = false
+	_avatar_scene = avatar_scene
+	var id := Catalogo.id_de_ruta(avatar_scene)
+	if not id.is_empty():
+		Avatares.guardar(id)
+		Avatares.sincronizar_registro(id, _nick)
+	if _onboarding != null and is_instance_valid(_onboarding):
+		_onboarding.queue_free()
+		_onboarding = null
+	# La DAO del alta debe salir del grupo `isla_unica_lucia` antes de montar el
+	# mundo, o la DAO real se descartaría a sí misma como copia duplicada.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_entrar_a_isla()
+
+
+
+## Nick del perfil local para reabrir el alta sin volver a pedirlo.
+func _cargar_nick_guardado() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load("user://registro.cfg") == OK:
+		_nick = str(cfg.get_value("jugador", "nick", "")).strip_edges()
+	if _nick.is_empty() and FileAccess.file_exists("user://cuenta.json"):
+		var datos = JSON.parse_string(FileAccess.get_file_as_string("user://cuenta.json"))
+		if typeof(datos) == TYPE_DICTIONARY:
+			_nick = str(datos.get("nick", "")).strip_edges()
 
 
 ## Un jugador ya registrado entra a su isla con el avatar guardado.
@@ -374,6 +480,14 @@ func _on_portal_cruzado() -> void:
 
 func _entrar_a_isla() -> void:
 	_mostrar_carga()
+	if preload("res://gdscrip/Red.gd").sesion_validada():
+		_carga_texto = "Esperando el mundo compartido del anfitrión"
+		var resultado: Dictionary = await _sonda.esperar_mundo()
+		if not bool(resultado.get("ok", false)):
+			_ocultar_carga()
+			_mostrar_aviso(str(resultado.get("error", "Mundo no disponible")))
+			return
+	_sonda.liberar_eco()
 	var mundo: Node3D = MUNDO_SCENE.instantiate() as Node3D
 	mundo.name = "ISLA3Dblock"
 	_mundo = mundo
@@ -441,10 +555,38 @@ func _on_mi_isla_lista() -> void:
 	if _espera_isla and is_instance_valid(_espera_isla):
 		_espera_isla.stop()
 	_ocultar_carga()
+	if _iniciar_en_dao:
+		_colocar_jugador_en_dao()
 	_mostrar_bienvenida()
 	if _invitar_lucia:
 		_invitar_lucia = false
 		_spawn_lucia_invitada()
+
+
+## Reubica solo al jugador local en la DAO compartida; no altera el índice ni la
+## posición de su isla personal, que sigue siendo vecina y se asigna por sesión.
+func _colocar_jugador_en_dao() -> void:
+	if _mundo == null or not is_instance_valid(_mundo):
+		return
+	var jugador := _mundo.get_node_or_null("USERBASE") as CharacterBody3D
+	if jugador == null:
+		return
+	var dao: Node3D = get_node_or_null("IslaUnicaLucIA") as Node3D
+	if dao == null:
+		dao = get_tree().get_first_node_in_group("isla_unica_lucia") as Node3D
+	if dao == null and _mundo != null and is_instance_valid(_mundo):
+		dao = _mundo.get_tree().root.find_child("IslaUnicaLucIA", true, false) as Node3D
+	if dao == null:
+		return
+	var spawn := dao.to_global(Vector3(0.0, 42.2, 5.2))
+	jugador.global_position = spawn
+	jugador.velocity = Vector3.ZERO
+	# Desde el punto de recepción, LucIA está al otro lado del eje Z local.
+	jugador.global_rotation.y = dao.global_rotation.y + PI
+	if jugador.has_method("snap_camera"):
+		jugador.call("snap_camera")
+	if dao.has_method("conectar_dao_al_metaverso"):
+		dao.call("conectar_dao_al_metaverso")
 
 
 ## LucIA acompaña al jugador en su isla cuando se pide desde el visor.
@@ -528,9 +670,10 @@ func _mostrar_aviso(texto: String) -> void:
 	etiqueta.add_theme_font_size_override("font_size", 18)
 	etiqueta.add_theme_color_override("font_color", Color(0.82, 0.94, 1.0, 1.0))
 	panel.add_child(etiqueta)
+	# CanvasLayer no tiene modulate: se desvanece el panel y después se libera la capa.
 	var tw := create_tween()
 	tw.tween_interval(7.0)
-	tw.tween_property(capa, "modulate:a", 0.0, 1.0)
+	tw.tween_property(panel, "modulate:a", 0.0, 1.0)
 	tw.tween_callback(capa.queue_free)
 
 

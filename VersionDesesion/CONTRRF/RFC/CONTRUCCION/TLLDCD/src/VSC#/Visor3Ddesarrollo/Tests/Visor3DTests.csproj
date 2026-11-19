@@ -25,7 +25,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Visor3D.csproj" />
+    <!-- El proyecto principal vive en HerraMientas, no en la raíz del visor. -->
+    <ProjectReference Include="..\HerraMientas\Visor3D.csproj" />
   </ItemGroup>
 
 </Project>

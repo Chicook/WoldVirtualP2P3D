@@ -25,9 +25,6 @@ namespace Visor3D.Seguridad
         /// <summary>Ruta relativa del subsistema defensivo dentro de la raíz <c>src</c>.</summary>
         private static readonly string[] Marca = { "STM_HRTS", "STM_DEF", "arranque.py" };
 
-        /// <summary>Intérpretes Python a probar, en orden de preferencia.</summary>
-        private static readonly string[] Interpretes = { "python", "py", "python3" };
-
         /// <summary>Milisegundos máximos que se espera el hook antes de permitir el arranque.</summary>
         private const int EsperaMs = 60_000;
 
@@ -74,8 +71,8 @@ namespace Visor3D.Seguridad
                     return Veredicto.Permitir;
                 }
 
-                string salida = proceso.StandardOutput.ReadToEnd();
-                string error = proceso.StandardError.ReadToEnd();
+                var salidaPendiente = proceso.StandardOutput.ReadToEndAsync();
+                var errorPendiente = proceso.StandardError.ReadToEndAsync();
                 if (!proceso.WaitForExit(EsperaMs))
                 {
                     try { proceso.Kill(entireProcessTree: true); } catch { }
@@ -83,11 +80,20 @@ namespace Visor3D.Seguridad
                     return Veredicto.Permitir;
                 }
 
+                string salida = salidaPendiente.GetAwaiter().GetResult();
+                string error = errorPendiente.GetAwaiter().GetResult();
+
                 // Códigos de salida de STM_DEF: 0 limpio, 1 bloqueo, 2 uso incorrecto.
                 if (proceso.ExitCode == 1)
                 {
                     VisorLog.Error($"[STM_DEF] ARRANQUE DETENIDO (fail-closed). {salida.Trim()} {error.Trim()}".Trim());
                     return Veredicto.Detener;
+                }
+
+                if (proceso.ExitCode != 0)
+                {
+                    VisorLog.Warn($"[STM_DEF] Hook no completado (codigo {proceso.ExitCode}): {salida.Trim()} {error.Trim()}. Se permite el arranque.");
+                    return Veredicto.Permitir;
                 }
 
                 VisorLog.Info("[STM_DEF] Arranque permitido: escaneo e integridad sin bloqueos.");
@@ -129,8 +135,20 @@ namespace Visor3D.Seguridad
         /// <summary>Primer intérprete Python que responde a <c>--version</c>, o null.</summary>
         private static string? LocalizarPython(string raiz)
         {
-            foreach (string candidato in Interpretes)
+            DirectoryInfo? directorio = new DirectoryInfo(raiz);
+            while (directorio is not null && !Directory.Exists(Path.Combine(directorio.FullName, ".dev")))
+                directorio = directorio.Parent;
+            if (directorio is null)
+                return null;
+
+            string dev = Path.Combine(directorio.FullName, ".dev");
+            foreach (string candidato in new[]
             {
+                Path.Combine(dev, ".python", "python.exe"),
+                Path.Combine(dev, "venv", "Scripts", "python.exe")
+            })
+            {
+                if (!File.Exists(candidato)) continue;
                 try
                 {
                     var ps = new ProcessStartInfo

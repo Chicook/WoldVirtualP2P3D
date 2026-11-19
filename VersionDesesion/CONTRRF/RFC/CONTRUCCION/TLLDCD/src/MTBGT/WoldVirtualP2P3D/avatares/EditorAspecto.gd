@@ -4,11 +4,16 @@ extends Node3D
 ## Reutiliza `Personalizacion.gd` (tintes por prenda, proporciones, cara y
 ## expresiones) sobre la escena nueva `res://avatares/<ID>.tscn`. El resultado
 ## se guarda en `registro.cfg` y `ChunkManager` lo aplica al entrar a la isla.
+##
+## Con `set_modo_dao(true)` no monta sala propia: edita el avatar real del
+## jugador dentro de la DAO, frente al espejo, con la cámara de la cinemática.
 
 signal aspecto_confirmado
 
 const Pers = preload("res://gdscrip/Personalizacion.gd")
 const Catalogo = preload("res://avatares/CatalogoAvatares.gd")
+
+const UMBRAL_VARIACION_BLOQUE5 := 18.0  # 18% de variación para sellar el 5º bloque
 
 const GRUPOS := [
 	{"titulo": "Color", "tipo": "color", "claves": Pers.ORDEN},
@@ -20,12 +25,19 @@ const GRUPOS := [
 var avatar_id: String = ""
 var _nick: String = ""
 var _avatar: Node3D
+var _avatar_dao: Node3D = null
+var _modo_dao := false
 var _pers: Dictionary = {}
 var _sliders: Dictionary = {}
 var _valores: Dictionary = {}
 var _timer: Timer
 var _nombre: Label
 var _subtitulo: Label
+var _etiqueta_bloque5: Label = null
+var _barra_bloque5: ProgressBar = null
+var _bloque5_hash := ""
+var _bloque5_sellado := false
+var _boton_guardar_ref: Button = null
 
 
 func set_avatar(id: String) -> void:
@@ -34,13 +46,22 @@ func set_avatar(id: String) -> void:
 		_montar()
 
 
+func set_avatar_dao(nodo: Node3D) -> void:
+	_avatar_dao = nodo
+
+
+func set_modo_dao(activo: bool) -> void:
+	_modo_dao = activo
+
+
 func set_nick(nick: String) -> void:
 	_nick = nick.strip_edges()
 	_actualizar_textos()
 
 
 func _ready() -> void:
-	_construir_escena()
+	if not _modo_dao:
+		_construir_escena()
 	_construir_ui()
 	_timer = Timer.new()
 	_timer.one_shot = true
@@ -52,6 +73,8 @@ func _ready() -> void:
 
 
 func _construir_escena() -> void:
+	if _modo_dao:
+		return
 	var entorno := WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
@@ -98,17 +121,25 @@ func _construir_escena() -> void:
 
 
 func _montar() -> void:
+	_pers = Pers.leer()
+	if _modo_dao and _avatar_dao != null and is_instance_valid(_avatar_dao):
+		# El espejo edita al jugador real: lo que se ve es lo que se lleva.
+		_avatar = _avatar_dao
+		Pers.aplicar(_avatar, _pers)
+		_sincronizar_controles()
+		_actualizar_textos()
+		return
 	if _avatar != null and is_instance_valid(_avatar):
 		_avatar.queue_free()
-	_pers = Pers.leer()
 	_avatar = Catalogo.crear(avatar_id)
 	if _avatar == null:
-		push_error("[EditorAspecto] no se pudo crear ", avatar_id)
+		push_error("[EditorAspecto] no se encontró el avatar para editar: ", avatar_id)
 		return
-	_avatar.name = "AvatarAspecto"
-	_avatar.position = Vector3.ZERO
-	_avatar.set("es_selector", true)
-	add_child(_avatar)
+	if not _modo_dao:
+		_avatar.name = "AvatarAspecto"
+		_avatar.position = Vector3.ZERO
+		_avatar.set("es_selector", true)
+		add_child(_avatar)
 	Pers.aplicar(_avatar, _pers)
 	_sincronizar_controles()
 	_actualizar_textos()
@@ -123,7 +154,8 @@ func _construir_ui() -> void:
 	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
 	capa.add_child(raiz)
 
-	var titulo := _etiqueta("SEGUNDA VALIDACIÓN · TU AVATAR", 28, Color(0.78, 0.94, 1.0, 1.0))
+	var titulo := _etiqueta("EL ESPEJO DE LA DAO · TU AVATAR" if _modo_dao
+			else "SEGUNDA VALIDACIÓN · TU AVATAR", 28, Color(0.78, 0.94, 1.0, 1.0))
 	titulo.position = Vector2(34, 22)
 	titulo.size = Vector2(760, 40)
 	raiz.add_child(titulo)
@@ -178,11 +210,12 @@ func _construir_ui() -> void:
 	botones.offset_bottom = -24
 
 	var guardar := Button.new()
-	guardar.text = "GUARDAR Y ENTRAR"
+	guardar.text = "GUARDAR Y SEGUIR" if _modo_dao else "GUARDAR Y ENTRAR"
 	guardar.custom_minimum_size = Vector2(210, 44)
 	guardar.add_theme_font_size_override("font_size", 16)
 	guardar.pressed.connect(_guardar)
 	botones.add_child(guardar)
+	_boton_guardar_ref = guardar
 
 	var reset := Button.new()
 	reset.text = "RESTABLECER"
@@ -191,18 +224,52 @@ func _construir_ui() -> void:
 	botones.add_child(reset)
 
 	var saltar := Button.new()
-	saltar.text = "ENTRAR SIN CAMBIOS"
+	saltar.text = "SEGUIR SIN CAMBIOS" if _modo_dao else "ENTRAR SIN CAMBIOS"
 	saltar.custom_minimum_size = Vector2(190, 44)
 	saltar.pressed.connect(func(): aspecto_confirmado.emit())
 	botones.add_child(saltar)
 
-	var pista := _etiqueta("Los cambios se aplican al avatar de la isla y se guardan en tu perfil.",
-		13, Color(0.55, 0.68, 0.85, 0.9))
+	# Panel de validación del Bloque 5 (Personalización del Avatar)
+	var panel_bloque5 := PanelContainer.new()
+	panel_bloque5.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	panel_bloque5.offset_left = 34
+	panel_bloque5.offset_top = -175
+	panel_bloque5.offset_right = 620
+	panel_bloque5.offset_bottom = -88
+	var estilo_b5 := StyleBoxFlat.new()
+	estilo_b5.bg_color = Color(0.02, 0.05, 0.10, 0.92)
+	estilo_b5.border_color = Color(0.2, 0.7, 0.9, 0.8)
+	estilo_b5.set_border_width_all(2)
+	estilo_b5.set_corner_radius_all(8)
+	estilo_b5.content_margin_left = 12
+	estilo_b5.content_margin_right = 12
+	estilo_b5.content_margin_top = 8
+	estilo_b5.content_margin_bottom = 8
+	panel_bloque5.add_theme_stylebox_override("panel", estilo_b5)
+	raiz.add_child(panel_bloque5)
+
+	var caja_b5 := VBoxContainer.new()
+	caja_b5.add_theme_constant_override("separation", 4)
+	panel_bloque5.add_child(caja_b5)
+
+	_etiqueta_bloque5 = _etiqueta("Bloque #5 de Validación: Variación de Avatar: 0.0% / 18% requerido", 13, Color(0.7, 0.9, 1.0))
+	caja_b5.add_child(_etiqueta_bloque5)
+
+	_barra_bloque5 = ProgressBar.new()
+	_barra_bloque5.min_value = 0.0
+	_barra_bloque5.max_value = 100.0
+	_barra_bloque5.value = 0.0
+	_barra_bloque5.custom_minimum_size = Vector2(0, 16)
+	caja_b5.add_child(_barra_bloque5)
+
+	var pista := _etiqueta("El espejo de la DAO aplica el aspecto a tu avatar y sella el 5º bloque."
+			if _modo_dao else "Los cambios se aplican al avatar de la isla y se guardan en tu perfil.",
+		12, Color(0.55, 0.68, 0.85, 0.9))
 	pista.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	pista.offset_left = 34
-	pista.offset_top = -104
+	pista.offset_top = -205
 	pista.offset_right = 900
-	pista.offset_bottom = -82
+	pista.offset_bottom = -182
 	raiz.add_child(pista)
 
 
@@ -268,6 +335,7 @@ func _sincronizar_controles() -> void:
 			continue
 		slider.set_value_no_signal(float(_pers.get(clave, Pers.POR_DEFECTO[clave])))
 		_valores[clave].text = _formato(clave, slider.value)
+	_actualizar_bloque5()
 
 
 func _programar() -> void:
@@ -280,6 +348,67 @@ func _aplicar() -> void:
 	if _avatar == null or not is_instance_valid(_avatar):
 		return
 	Pers.aplicar(_avatar, _pers)
+	_actualizar_bloque5()
+
+
+func calcular_variacion_respecto_defecto() -> float:
+	var total_elementos := 0
+	var suma_deltas := 0.0
+
+	# 1. Variación en colores (prendas y piel)
+	for col_key in Pers.ORDEN:
+		var c_actual: Color = _pers.get(col_key, Pers.POR_DEFECTO.get(col_key, Color.WHITE))
+		var c_def: Color = Pers.POR_DEFECTO.get(col_key, Color.WHITE)
+		var delta_r := absf(c_actual.r - c_def.r)
+		var delta_g := absf(c_actual.g - c_def.g)
+		var delta_b := absf(c_actual.b - c_def.b)
+		var delta_col := (delta_r + delta_g + delta_b) / 3.0
+		suma_deltas += delta_col
+		total_elementos += 1
+
+	# 2. Variación en sliders numéricos (cuerpo, cara, expresiones)
+	for campo in Pers.CAMPOS:
+		if not Pers.RANGOS.has(campo):
+			continue
+		var val_actual := float(_pers.get(campo, Pers.POR_DEFECTO.get(campo, 0.0)))
+		var val_def := float(Pers.POR_DEFECTO.get(campo, 0.0))
+		var rango: Vector2 = Pers.RANGOS[campo]
+		var span := maxf(rango.y - rango.x, 0.001)
+		var delta_norm := absf(val_actual - val_def) / span
+		suma_deltas += clampf(delta_norm, 0.0, 1.0)
+		total_elementos += 1
+
+	if total_elementos == 0:
+		return 0.0
+
+	var porcentaje := (suma_deltas / float(total_elementos)) * 100.0
+	# Factor de escala sensorial: cambios notables en 2 o 3 partes deben reflejar el % de impacto
+	porcentaje = clampf(porcentaje * 2.8, 0.0, 100.0)
+	return porcentaje
+
+
+func _actualizar_bloque5() -> void:
+	var variacion := calcular_variacion_respecto_defecto()
+	if _barra_bloque5 != null:
+		_barra_bloque5.value = variacion
+
+	if variacion >= UMBRAL_VARIACION_BLOQUE5:
+		if not _bloque5_sellado:
+			_bloque5_sellado = true
+			var crypto_source := "%s:%s:bloque5_avatar:%.2f:%d" % [_nick, avatar_id, variacion, Time.get_unix_time_from_system()]
+			_bloque5_hash = crypto_source.sha256_text()
+		if _etiqueta_bloque5 != null:
+			_etiqueta_bloque5.text = "✅ Bloque #5 SELLADO (%.1f%% / 18%%)\nHash: %s…" % [
+				variacion, _bloque5_hash.substr(0, 16)
+			]
+			_etiqueta_bloque5.add_theme_color_override("font_color", Color(0.4, 1.0, 0.6))
+		if _boton_guardar_ref != null:
+			_boton_guardar_ref.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	else:
+		_bloque5_sellado = false
+		if _etiqueta_bloque5 != null:
+			_etiqueta_bloque5.text = "Bloque #5 de Validación: Variación: %.1f%% / 18%% requerido" % variacion
+			_etiqueta_bloque5.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 
 
 func _restablecer() -> void:
@@ -292,13 +421,50 @@ func _guardar() -> void:
 	Pers.guardar(_pers)
 	if not avatar_id.is_empty():
 		Avatares.sincronizar_registro(avatar_id, _nick)
+	# Si se selló el bloque 5, lo anexamos a la cuenta local
+	if _bloque5_sellado and not _bloque5_hash.is_empty():
+		_guardar_bloque5_en_cuenta()
 	aspecto_confirmado.emit()
+
+
+func _guardar_bloque5_en_cuenta() -> void:
+	var ruta_cuenta := "user://cuenta.json"
+	var datos: Dictionary = {}
+	if FileAccess.file_exists(ruta_cuenta):
+		var crudo := FileAccess.get_file_as_string(ruta_cuenta)
+		var parseado = JSON.parse_string(crudo)
+		if typeof(parseado) == TYPE_DICTIONARY:
+			datos = parseado
+	var bloques: Array = datos.get("bloques_dao", [])
+	bloques.append({
+		"bloque": 5,
+		"tipo": "personalizacion_avatar",
+		"avatar_id": avatar_id,
+		"hash": _bloque5_hash,
+		"variacion": calcular_variacion_respecto_defecto(),
+		"timestamp": Time.get_datetime_string_from_system(true, true)
+	})
+	datos["bloques_dao"] = bloques
+	datos["bloque5_hash"] = _bloque5_hash
+	var f := FileAccess.open(ruta_cuenta, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(datos, "\t"))
+		f.close()
+
+
+## Confirma y guarda sin depender del botón (onboarding/pruebas).
+func confirmar_actual() -> void:
+	_guardar()
 
 
 func _actualizar_textos() -> void:
 	if _subtitulo == null:
 		return
 	var nombre := Catalogo.nombre_de(avatar_id)
+	if _modo_dao:
+		var quien := "Tu avatar" if _nick.is_empty() else "%s, tu avatar" % _nick
+		_subtitulo.text = "%s está de pie frente al espejo de la DAO. Lo que ajustes aquí es lo que entras llevando a tu isla." % quien
+		return
 	if _nick.is_empty():
 		_subtitulo.text = "Ajusta el aspecto de %s antes de entrar a tu isla." % nombre
 	else:
