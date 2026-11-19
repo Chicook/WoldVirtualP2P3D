@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,10 +18,12 @@ namespace Visor3D.Services.P2PIPFS
             string args,
             string urlPattern,
             int timeoutMs,
-            CancellationToken token)
+            CancellationToken token,
+            Action<string>? onDiagnostic = null)
         {
             Process? process = null;
             string? found = null;
+            var diagnostics = new ConcurrentQueue<string>();
 
             try
             {
@@ -47,6 +51,9 @@ namespace Visor3D.Services.P2PIPFS
                             if (line == null) break;
 
                             Debug.WriteLine($"[{label}] {line}");
+                            diagnostics.Enqueue(line.Trim());
+                            while (diagnostics.Count > 12) diagnostics.TryDequeue(out _);
+                            try { onDiagnostic?.Invoke(line.Trim()); } catch { }
                             var match = Regex.Match(line, urlPattern);
                             if (match.Success)
                             {
@@ -67,9 +74,11 @@ namespace Visor3D.Services.P2PIPFS
                     }
                 }
 
+                Task scanOut = Scan(process.StandardOutput, exe);
+                Task scanErr = Scan(process.StandardError, exe);
                 await Task.WhenAny(
-                    Scan(process.StandardOutput, exe),
-                    Scan(process.StandardError, exe),
+                    scanOut,
+                    scanErr,
                     Task.Delay(timeoutMs + 1000, scanCts.Token).ContinueWith(_ => { })
                 );
 
@@ -105,11 +114,23 @@ namespace Visor3D.Services.P2PIPFS
                     return new EphemeralTunnelResult(found, process);
                 }
 
-                StopProcess(process);
+                bool exited = process.HasExited;
+                int exitCode = exited ? process.ExitCode : -1;
+                if (!exited) StopProcess(process);
+                try { await Task.WhenAll(scanOut, scanErr); } catch { }
+
+                string detail = string.Join(" | ", diagnostics.ToArray().TakeLast(5));
+                if (string.IsNullOrWhiteSpace(detail))
+                    detail = exited
+                        ? $"El proceso terminó sin publicar una URL (código {exitCode})."
+                        : $"No publicó una URL en {timeoutMs / 1000} s.";
+                try { onDiagnostic?.Invoke(detail); } catch { }
+                if (exited) StopProcess(process);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[EphemeralTunnelRunner] {exe}: {ex.Message}");
+                try { onDiagnostic?.Invoke($"{Path.GetFileName(exe)}: {ex.Message}"); } catch { }
                 StopProcess(process);
             }
 

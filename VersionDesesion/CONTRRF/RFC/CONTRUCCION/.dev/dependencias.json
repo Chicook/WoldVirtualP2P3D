@@ -1,0 +1,51 @@
+{
+  "proyecto": "WoldVirtualP2P3D",
+  "version": "2.8.4",
+  "descripcion": "Ecosistema canónico de dependencias para desarrollo modular",
+  "raiz_permitida": "E:\\WoldVirtualP2P3D",
+  "dependencias": {
+    "dotnet": {
+      "nombre": ".NET SDK 8.0+",
+      "tipo": "compilador_sistema",
+      "version_minima": "8.0.0",
+      "workloads": ["net8.0-windows", "WPF"],
+      "paquetes_nuget": [
+        { "nombre": "System.Management", "version": "8.0.0", "uso": "WMI hardware fingerprinting" },
+        { "nombre": "NAudio", "version": "2.3.0", "uso": "Audio PCM de baja latencia" },
+        { "nombre": "AForge.Video", "version": "2.2.5", "uso": "Captura de vídeo" },
+        { "nombre": "AForge.Video.DirectShow", "version": "2.2.5", "uso": "Webcam DirectShow" }
+      ]
+    },
+    "python": {
+      "nombre": "Python Runtime Local",
+      "tipo": "interprete_local",
+      "ruta_preferente": ".dev/.python/python.exe",
+      "ruta_venv": ".dev/venv/Scripts/python.exe",
+      "modulos_requeridos": [
+        { "nombre": "websockets", "uso": "Comunicación WebSocket LucIA y Visor 3D" },
+        { "nombre": "requests", "uso": "Cliente HTTP y consultas a Ollama" },
+        { "nombre": "pytest", "uso": "Suite de pruebas automatizadas" }
+      ]
+    },
+    "seguridad_nativa": {
+      "nombre": "Bibliotecas Criptográficas Nativas Windows",
+      "tipo": "librerias_sistema",
+      "dlls": [
+        { "nombre": "Crypt32.dll", "funciones": ["CryptProtectData", "CryptUnprotectData"], "uso": "DPAPI para anclaje en registro HKCU" },
+        { "nombre": "ncrypt.dll", "funciones": ["NCryptOpenStorageProvider", "NCryptCreatePersistedKey", "NCryptSignHash"], "uso": "CNG / TPM 2.0 Provider" },
+        { "nombre": "bcrypt.dll", "funciones": ["BCryptOpenAlgorithmProvider", "BCryptCreateHash"], "uso": "Criptografía primitiva de alta velocidad" },
+        { "nombre": "tbs.dll", "funciones": ["Tbsi_Context_Create", "Tbsi_Submit_Command"], "uso": "Acceso a TPM Base Services (NV Counters)" },
+        { "nombre": "kernel32.dll", "funciones": ["IsDebuggerPresent", "CheckRemoteDebuggerPresent"], "uso": "Detección de manipulación de procesos" }
+      ]
+    },
+    "motor_3d": {
+      "nombre": "Godot 3D Engine",
+      "tipo": "motor_render",
+      "proyecto": "TLLDCD/src/MTBGT/WoldVirtualP2P3D/project.godot",
+      "paquetes_volatiles": [
+        "HerraMientas/CopiaDeSeguridad/constructor_godot.zip",
+        "HerraMientas/CopiaDeSeguridad/actualizacion_v2.8.4.zip"
+      ]
+    }
+  }
+}

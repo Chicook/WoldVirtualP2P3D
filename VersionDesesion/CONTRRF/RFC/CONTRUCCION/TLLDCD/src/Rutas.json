@@ -52,8 +52,7 @@
       "seccion": "STM_CH/STM_herramientas",
       "secciones": {
         "STM_herramientas": "STM_CH/STM_herramientas",
-        "PSNRL": "STM_CH/PSNRL",
-        "pycache": "STM_CH/pycache"
+        "PSNRL": "STM_CH/PSNRL"
       }
     },
     "STM_DOC": {
@@ -121,7 +120,10 @@
       "raiz": "VSC#",
       "secciones": {
         "Visor3Ddesarrollo": "VSC#/Visor3Ddesarrollo",
-        "webnodo": "VSC#/Visor3Ddesarrollo/webnodo"
+        "webnodo": "VSC#/Visor3Ddesarrollo/webnodo",
+        "Seguridad": "VSC#/Visor3Ddesarrollo/Seguridad",
+        "SeguridadSesionUnica": "VSC#/Visor3Ddesarrollo/Seguridad/SeguridadSesionUnica",
+        "SMTPLC": "VSC#/Visor3Ddesarrollo/Seguridad/SMTPLC"
       }
     },
     "MTBGT": {
@@ -165,9 +167,10 @@
     "LC_constructor": "../../STM_RFC/STM_RFPRMN/LC_constructor.py"
   },
   "runtime": {
+    "python": "../../.dev/.python/python.exe",
     "lc_trabajando": "../../CONTRUCCION/LCtrabajando",
     "psnrl": "STM_CH/PSNRL",
-    "pycache": "STM_CH/pycache",
+    "pycache": "../../.dev/pycache",
     "ledger": "STM_CH/blockchain_ledger.json",
     "cache_iafree": "STM_CH/openrouter_free_cache.json",
     "stm_rfc": "../../STM_RFC",

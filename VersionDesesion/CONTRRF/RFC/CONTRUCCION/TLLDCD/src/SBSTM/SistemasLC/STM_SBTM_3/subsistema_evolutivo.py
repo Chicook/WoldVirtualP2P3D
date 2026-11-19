@@ -33,7 +33,7 @@ PAQUETE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
 SRC_DIR: Final[Path] = PAQUETE_DIR.parent
 ROOT_DIR: Final[Path] = SRC_DIR.parent
 CONTRRF_DIR: Final[Path] = ROOT_DIR.parent
-LCTRABAJANDO_DIR: Final[Path] = CONTRRF_DIR / "CONTRUCCION" / "LCtrabajando"
+LCTRABAJANDO_DIR: Final[Path] = CONTRRF_DIR.parent / "LCtrabajando"
 
 if not LCTRABAJANDO_DIR.exists():
     try:
@@ -554,7 +554,7 @@ class SubsistemaEvolutivoLucIA:
             f"│ Fase 3 [ACTIVA]      Auto-diagnóstico: Salud {f3.get('estado_salud')}                     │",
             f"│                      Discrepancias detectadas: {f3.get('total_discrepancias', 0)} ({f3.get('resumen_severidad', {}).get('criticas', 0)} críticas, {f3.get('resumen_severidad', {}).get('moderadas', 0)} moderadas)   │",
             f"│ Fase 4 [EVOLUCIÓN]   Auto-reparación: {len(f4.get('reparaciones', [])) if f4 else 0} acciones aplicadas                │",
-            f"│                      Destino artefactos: CONTRUCCION/LCtrabajando           │",
+            f"│                      Destino artefactos: CONTRRF/RFC/CONTRUCCION/LCtrabajando│",
             "╰─────────────────────────────────────────────────────────────────────────────╯",
         ]
 

@@ -42,7 +42,7 @@ namespace Visor3D.Services
 
         public static bool EsPrimeraInstancia()
         {
-            string nombre = @"Local\WoldVirtualP2P3D." + NombreProceso();
+            string nombre = NombreMutex();
             var mutex = new Mutex(initiallyOwned: false, nombre);
             try
             {
@@ -109,5 +109,22 @@ namespace Visor3D.Services
 
         private static string NombreProceso()
             => Process.GetCurrentProcess().ProcessName;
+
+        private static string NombreMutex()
+        {
+            string nombre = @"Local\WoldVirtualP2P3D." + NombreProceso();
+            string? perfil = Environment.GetEnvironmentVariable("WVP_INSTANCE_ID")?.Trim();
+            if (string.IsNullOrEmpty(perfil)) return nombre;
+
+            // La vista previa puede abrir perfiles aislados en paralelo en el
+            // mismo PC. El visor publicado no define esta variable y mantiene
+            // exactamente su bloqueo de una sola instancia por proceso.
+            foreach (char c in perfil)
+            {
+                if (!char.IsLetterOrDigit(c) && c != '.' && c != '_' && c != '-')
+                    return nombre;
+            }
+            return nombre + "." + perfil;
+        }
     }
 }

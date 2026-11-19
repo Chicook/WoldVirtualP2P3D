@@ -5,11 +5,25 @@ extends RefCounted
 
 const PUERTO_WS := 8911
 
+# Solo memoria del proceso; incluye la invitación privada, nunca se publica.
+static var _objetivo_validado: Dictionary = {}
+
+static func guardar_validacion(objetivo: Dictionary) -> void:
+	_objetivo_validado = objetivo.duplicate(true)
+
+static func sesion_validada() -> bool:
+	return not _objetivo_validado.is_empty()
+
+static func limpiar_validacion() -> void:
+	_objetivo_validado.clear()
+
 
 ## Devuelve {host, port, force_host, is_client, invitacion, source}.
 ## `invitacion` es la credencial de la sesión que el proxy del anfitrión exige
 ## en el handshake WebSocket (`?invitacion=`); sin ella no se entra al mundo.
 static func resolver_objetivo() -> Dictionary:
+	if sesion_validada():
+		return _objetivo_validado.duplicate(true)
 	var res := {
 		"host": "127.0.0.1",
 		"port": PUERTO_WS,
@@ -141,6 +155,14 @@ static func resolver_objetivo() -> Dictionary:
 							res["source"] = "p2p_session.json (peerUrl: " + ruta + ")"
 							return res
 
+					if es_cliente:
+						res["host"] = remote_ip if not remote_ip.is_empty() else "127.0.0.1"
+						res["port"] = remote_port if remote_port > 0 else PUERTO_WS
+						res["is_client"] = true
+						res["invitacion"] = p_invitacion
+						res["source"] = "p2p_session.json (cliente explícito)"
+						return res
+
 					if es_primero:
 						res["force_host"] = true
 						res["source"] = "p2p_session.json (esPrimerUsuario=true)"
@@ -174,9 +196,9 @@ static func resolver_url_ws(host: String, port: int, invitacion: String = "") ->
 	else:
 		url = "ws://%s:%d" % [h, final_port]
 
-	if invitacion.is_empty() or not url.begins_with("wss://"):
+	if invitacion.is_empty() or not token_de_url(url).is_empty():
 		return url
-	var sep := "&" if url.contains("?") else "/?"
+	var sep := "&" if url.contains("?") else ("?" if url.ends_with("/") else "/?")
 	return "%s%sinvitacion=%s" % [url, sep, invitacion.uri_encode()]
 
 
@@ -208,7 +230,8 @@ static func parece_dominio_publico(h: String) -> bool:
 
 static func parsear_url_host_puerto(url_str: String) -> Dictionary:
 	var clean := url_str.strip_edges().replace("\"", "").replace("'", "")
-	clean = clean.replace("https://", "").replace("http://", "").replace("woldvirtual://", "").strip_edges()
+	clean = clean.replace("wss://", "").replace("ws://", "").replace("https://", "").replace("http://", "").replace("woldvirtual://", "").strip_edges()
+	clean = clean.get_slice("?", 0)
 	if clean.contains("/"):
 		clean = clean.split("/")[0]
 	var host := clean

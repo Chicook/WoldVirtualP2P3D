@@ -41,7 +41,7 @@ La carpeta `src/VSC#` implementa la capa de escritorio del cliente-visor del met
 - Incrustar la ventana gráfica de **Godot 4** (`WoldVirtual3DP2P.tscn`) dentro del marco WPF mediante manipulación de ventanas nativas Win32.
 - Iniciar un micro-servidor HTTP local y un túnel inverso SSH para compartir la sesión P2P con amigos sin requerir apertura manual de puertos (NAT traversal).
 - Exponer un portal web de descarga (`WebNodo`) para que otros usuarios descarguen el visor directamente desde la máquina anfitriona.
-- Al arrancar (2.6.3), comprobar si el PC tiene una cuenta local utilizable: si sólo quedan restos a medias, archivarlos en `respaldo_cuenta` y arrancar el ciclo de registro completo (`Seguridad/Seguridad_sesion_unica/ArranqueCuenta.cs`).
+- Al arrancar (2.6.3), comprobar si el PC tiene una cuenta local utilizable: si sólo quedan restos a medias, archivarlos en `respaldo_cuenta` y arrancar el ciclo de registro completo (`Seguridad/SeguridadSesionUnica/ArranqueCuenta.cs`).
 - Al primer arranque de la (2.6.4), archivar **una sola vez** toda la base local en `respaldo_cuenta\reset-total-<fecha>` y dejar el equipo sin identidad; después anotar el estado global en `estado.json` (`Seguridad/EstadoGlobal.cs`) y, si no hay nada de lo necesario, abrir el ciclo de registro completo sin pasar por la bienvenida (`MainWindow.AbrirRegistroInicial`).
 
 ---

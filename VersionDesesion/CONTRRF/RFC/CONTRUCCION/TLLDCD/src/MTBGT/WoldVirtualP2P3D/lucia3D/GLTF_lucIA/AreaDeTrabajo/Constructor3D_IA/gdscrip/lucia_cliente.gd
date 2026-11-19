@@ -4,6 +4,12 @@ extends Node3D
 ## ya tiene su propio panel 2D y el holograma taparía el formulario.
 @export var usar_holograma := true
 
+signal conversacion_abierta
+signal conversacion_cerrada
+
+var modo_dao := false
+var personaje_dao: LuciaPersonaje
+
 const HOST := "127.0.0.1"
 const PUERTO := 8765
 const RECONEXION_SEG := 2.0
@@ -17,7 +23,7 @@ const COLOR_OK := Color(0.45, 1.0, 0.65)
 const COLOR_ESPERA := Color(1.0, 0.8, 0.4)
 const COLOR_ERROR := Color(1.0, 0.45, 0.45)
 
-@onready var personaje: LuciaPersonaje = $lucIA_BASE
+@onready var personaje: LuciaPersonaje = personaje_dao if modo_dao else $lucIA_BASE
 @onready var reproductor: AudioStreamPlayer = $Voz
 @onready var salida: RichTextLabel = $UI/Raiz/Panel/VBox/Salida
 @onready var entrada: LineEdit = $UI/Raiz/Panel/VBox/Fila/Entrada
@@ -54,20 +60,46 @@ var _boca_objetivo := 0.0
 var _t_boca := 0.0
 
 # Holograma 3D con el texto del turno (sustituye al panel grande de chat).
-var _holograma: Sprite3D
-var _holo_vp: SubViewport
+var _holograma: PanelContainer
 var _holo_texto: RichTextLabel
 var _holo_usuario := ""
 var _holo_respuesta := ""
 var _holo_alfa := 0.0
 
+func set_modo_dao(actor: LuciaPersonaje) -> void:
+	modo_dao = true
+	personaje_dao = actor
+	usar_holograma = false
+	for hijo in get_children():
+		if hijo.name not in ["UI", "Voz"]:
+			remove_child(hijo)
+			hijo.free()
+
 func _ready() -> void:
-	var oficina := LuciaOficina.new()
-	oficina.name = "Oficina"
-	add_child(oficina)
-	if usar_holograma:
+	if modo_dao:
+		$UI.layer = 50
+		$UI.hide()
+		salida.hide()
+		$UI/Raiz/Titulo.hide()
+		$UI/Raiz/Marca.hide()
+		estado.hide()
+		$UI/Raiz/Panel.offset_top = -86.0
+		$UI/Raiz/Panel.offset_left = 80.0
+		$UI/Raiz/Panel.offset_right = -80.0
+		var cerrar := Button.new()
+		cerrar.name = "CerrarConversacion"
+		cerrar.text = "Cerrar · Esc"
+		cerrar.pressed.connect(cerrar_chat)
+		$UI/Raiz/Panel/VBox/Fila.add_child(cerrar)
 		_crear_holograma()
-	_encuadrar_camara()
+		_holograma.hide()
+	else:
+		var oficina := LuciaOficina.new()
+		oficina.name = "Oficina"
+		add_child(oficina)
+		if usar_holograma:
+			_crear_holograma()
+		_encuadrar_camara()
 	reproductor.finished.connect(_al_terminar_voz)
 	entrada.text_submitted.connect(_al_enviar_texto)
 	boton.pressed.connect(_al_pulsar_enviar)
@@ -77,61 +109,38 @@ func _ready() -> void:
 	_conectar()
 
 func _crear_holograma() -> void:
-	## Panel flotante en 3D (SubViewport -> Sprite3D con billboard) que muestra
-	## el turno actual. Va anclado al personaje para que le acompañe al andar.
-	_holo_vp = SubViewport.new()
-	_holo_vp.size = Vector2i(440, 330)
-	_holo_vp.transparent_bg = true
-	_holo_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	_holo_vp.disable_3d = true
-	add_child(_holo_vp)
-
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_holograma = PanelContainer.new()
+	_holograma.name = "BocadilloLucIA"
+	_holograma.custom_minimum_size = Vector2(300, 190)
+	_holograma.size = Vector2(300, 190)
+	_holograma.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var estilo := StyleBoxFlat.new()
-	estilo.bg_color = Color(0.02, 0.05, 0.10, 0.55)
-	estilo.set_corner_radius_all(20)
+	estilo.bg_color = Color(0.015, 0.035, 0.075, 0.88)
+	estilo.border_color = Color(0.25, 0.8, 1.0, 0.75)
 	estilo.set_border_width_all(2)
-	estilo.border_color = Color(0.35, 0.65, 1.0, 0.38)
-	estilo.set_content_margin_all(16)
-	panel.add_theme_stylebox_override("panel", estilo)
-	_holo_vp.add_child(panel)
-
+	estilo.set_corner_radius_all(14)
+	estilo.set_content_margin_all(14)
+	_holograma.add_theme_stylebox_override("panel", estilo)
 	_holo_texto = RichTextLabel.new()
+	_holo_texto.custom_minimum_size = Vector2(272, 162)
 	_holo_texto.fit_content = false
 	_holo_texto.scroll_active = true
 	_holo_texto.scroll_following = true
 	_holo_texto.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_holo_texto.add_theme_font_size_override("normal_font_size", 22)
-	_holo_texto.add_theme_color_override("default_color", Color(0.92, 0.96, 1.0))
-	panel.add_child(_holo_texto)
-
-	_holograma = Sprite3D.new()
-	_holograma.name = "Holograma"
-	_holograma.texture = _holo_vp.get_texture()
-	_holograma.pixel_size = 0.0028
-	_holograma.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_holograma.transparent = true
-	_holograma.shaded = false
-	_holograma.position = Vector3(1.12, 1.32, 0.0)
-	_holograma.modulate = Color(1, 1, 1, 0)
-	personaje.add_child(_holograma)
+	_holo_texto.add_theme_font_size_override("normal_font_size", 14)
+	_holo_texto.add_theme_color_override("default_color", Color(0.92, 0.97, 1.0))
+	_holograma.add_child(_holo_texto)
+	$UI/Raiz.add_child(_holograma)
 
 func _holo_actualizar() -> void:
 	if _holo_texto == null:
 		return
-	_holo_texto.clear()
+	var lineas := "LucIA · conversación\n" + estado.text
 	if not _holo_usuario.is_empty():
-		_holo_texto.push_color(COLOR_TU)
-		_holo_texto.add_text("Tú: ")
-		_holo_texto.pop()
-		_holo_texto.add_text(_holo_usuario + "\n")
+		lineas += "\n\nTú: " + _holo_usuario
 	if not _holo_respuesta.is_empty():
-		_holo_texto.push_color(COLOR_LUCIA)
-		_holo_texto.add_text("LucIA: ")
-		_holo_texto.pop()
-		_holo_texto.add_text(_holo_respuesta)
-	_holo_alfa = 1.0 if (not _holo_usuario.is_empty() or not _holo_respuesta.is_empty()) else 0.0
+		lineas += "\n\nLucIA: " + _holo_respuesta
+	_holo_texto.text = lineas
 
 func _encuadrar_camara() -> void:
 	var aabb: AABB = personaje.obtener_aabb_mundo()
@@ -158,10 +167,16 @@ func _process(delta: float) -> void:
 			reproductor.stop()
 			_audio_sonando = false
 
-	_animar_boca(delta)
+	if not modo_dao or $UI.visible:
+		_animar_boca(delta)
 
-	if _holograma != null:
-		_holograma.modulate.a = move_toward(_holograma.modulate.a, _holo_alfa, delta * 4.0)
+	if _holograma != null and modo_dao and $UI.visible:
+		var camara := get_viewport().get_camera_3d()
+		if camara != null:
+			var caja := personaje.obtener_aabb_mundo()
+			var punto := camara.unproject_position(caja.get_center() + Vector3.UP * caja.size.y * 0.35)
+			var limite := get_viewport().get_visible_rect().size
+			_holograma.position = Vector2(clampf(punto.x + 48.0, 16.0, limite.x - 316.0), clampf(punto.y - 220.0, 16.0, limite.y - 206.0))
 
 	# Nota: antes se cerraba la boca mientras se preparaba la voz
 	# (_voz_preparando). Eso dejaba los brazos gesticulando y los labios mudos
@@ -177,8 +192,25 @@ func _process(delta: float) -> void:
 		_espera_cola = 0.0
 
 func enfocar_chat() -> void:
+	if modo_dao:
+		$UI.show()
+		_holograma.show()
+		_holo_actualizar()
+		_holo_alfa = 1.0
+		conversacion_abierta.emit()
 	if entrada != null and entrada.visible:
 		entrada.grab_focus()
+
+func cerrar_chat() -> void:
+	entrada.release_focus()
+	if modo_dao:
+		$UI.hide()
+		_holograma.hide()
+		_tcp.disconnect_from_host()
+		_al_desconectar()
+		personaje.detener_gesticulacion()
+		personaje.fijar_apertura_boca(0.0)
+		conversacion_cerrada.emit()
 
 func _actualizar_socket(delta: float) -> void:
 	_tcp.poll()
@@ -534,6 +566,8 @@ func _cerrar_boca() -> void:
 func _mostrar_estado(texto: String, color: Color) -> void:
 	estado.text = texto
 	estado.add_theme_color_override("font_color", color)
+	if modo_dao:
+		_holo_actualizar()
 
 func _texto(texto: String) -> void:
 	salida.add_text(texto)
@@ -547,6 +581,14 @@ func _input(event: InputEvent) -> void:
 	## Atajos de demostración del cuerpo (F1 sentarse/levantarse, F2 andar,
 	## F3 volver). No interfieren con el campo de texto.
 	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if modo_dao:
+		if event.keycode == KEY_T and not entrada.has_focus():
+			enfocar_chat()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_ESCAPE and $UI.visible:
+			cerrar_chat()
+			get_viewport().set_input_as_handled()
 		return
 	match (event as InputEventKey).keycode:
 		KEY_T:

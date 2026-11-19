@@ -28,7 +28,7 @@ CURRENT_FILE = Path(__file__).resolve()
 CMFG_DIR = CURRENT_FILE.parent.parent   # .../SBSTM/SistemasLC
 CELEBRO_DIR = CMFG_DIR.parent           # .../SBSTM
 LC_DIR = CELEBRO_DIR.parent             # .../TLLDCD/src
-CONSTRUCCION_DIR = LC_DIR.parent.parent / "CONTRUCCION" / "LCtrabajando"
+CONSTRUCCION_DIR = LC_DIR.parent.parent / "LCtrabajando"
 MODELOS_DIR = LC_DIR / "STM_IA" / "modelosIAlocal"
 ESTADO_FILE = CONSTRUCCION_DIR / "_ialocal_estado.json"
 

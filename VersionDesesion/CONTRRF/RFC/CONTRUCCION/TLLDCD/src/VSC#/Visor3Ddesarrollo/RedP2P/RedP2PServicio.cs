@@ -15,6 +15,7 @@ namespace Visor3D.RedP2P
         public P2PTunnelManager Tunel { get; }
 
         public string? UrlPublicaPropia  => Tunel.UrlPublica;
+        public string? UltimoFalloTunel => Tunel.UltimoFallo;
         public bool    TunnelActivo      => UrlPublicaPropia != null;
 
         /// <summary>Disparado cuando el túnel ya tiene URL pública lista.</summary>
@@ -25,6 +26,9 @@ namespace Visor3D.RedP2P
 
         /// <summary>Disparado cuando el túnel se ha caído y va a reconectarse (host afectado).</summary>
         public event Action<string>? TunelCaido;
+
+        /// <summary>Disparado cuando un proveedor de túnel falla y se registra el motivo.</summary>
+        public event Action<string>? FalloTunel;
 
         /// <summary>Disparado antes de cada reintento de reconexión (intento, segundos de espera).</summary>
         public event Action<int, int>? TunelReintentando;
@@ -41,6 +45,7 @@ namespace Visor3D.RedP2P
 
             Tunel.TunnelMuerto += host => TunelCaido?.Invoke(host);
             Tunel.Reintentando += (intento, espera) => TunelReintentando?.Invoke(intento, espera);
+            Tunel.FalloConexion += detalle => FalloTunel?.Invoke(detalle);
 
             Nodo.NuevoPar += url => NuevoPar?.Invoke(url);
         }

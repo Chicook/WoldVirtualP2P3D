@@ -336,3 +336,33 @@ def precargar_voz() -> None:
             print("[voz] Hilo de voz precargado")
     except Exception as error:
         print(f"[voz] No se pudo precargar el hilo de voz: {error}")
+
+
+def _cli() -> int:
+    """Sintetiza una frase a WAV para el reproductor de Godot del alta."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Voz oficial de LucIA a WAV")
+    parser.add_argument("--texto", required=True)
+    parser.add_argument("--salida", required=True)
+    args = parser.parse_args()
+
+    resultado = sintetizar_voz(args.texto)
+    if not resultado:
+        return 2
+    pcm = base64.b64decode(resultado["pcm"])
+    salida = Path(args.salida)
+    salida.parent.mkdir(parents=True, exist_ok=True)
+    # Se escribe a .part y se renombra al final: Godot solo ve el WAV completo.
+    parte = salida.with_suffix(salida.suffix + ".part")
+    with wave.open(str(parte), "wb") as wav:
+        wav.setnchannels(int(resultado["canales"]))
+        wav.setsampwidth(2)
+        wav.setframerate(int(resultado["rate"]))
+        wav.writeframes(pcm)
+    os.replace(parte, salida)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_cli())

@@ -19,7 +19,7 @@ ciclo de registro completo** en lugar de mostrar una bienvenida que no lleva a n
 
 | Área | Cambio | Estado |
 |---|---|---|
-| Reset total | `ReinicioCuenta.EjecutarResetTotal(version, baseDir?, godotDir?)` archiva **todo** el perfil local salvo `runtime`, `logs`, `respaldo_cuenta` y `cloudflared.exe`, y **todo** el `user://` del motor salvo las cachés (`logs`, `shader_cache`, `vulkan`, `objectdb_snapshots`) (`Seguridad/Seguridad_sesion_unica/ReinicioCuenta.cs`) | Implementado |
+| Reset total | `ReinicioCuenta.EjecutarResetTotal(version, baseDir?, godotDir?)` archiva **todo** el perfil local salvo `runtime`, `logs`, `respaldo_cuenta` y `cloudflared.exe`, y **todo** el `user://` del motor salvo las cachés (`logs`, `shader_cache`, `vulkan`, `objectdb_snapshots`) (`Seguridad/SeguridadSesionUnica/ReinicioCuenta.cs`) | Implementado |
 | Marcador permanente | `reset_total.txt` (además de `reset_cuenta.txt`) impide repetir el reset en esta ni en futuras versiones; sin él se reintentaría en el siguiente arranque | Implementado |
 | Migración | `PerfilUsuario.MigrarSiProcede()` sólo se ejecuta si no se hizo el reset total, así que una cuenta antigua no vuelve a entrar por la puerta de atrás (`App.xaml.cs:83-86`) | Implementado |
 | Estado global | `Seguridad/EstadoGlobal.cs` escribe `%LOCALAPPDATA%\WoldVirtualP2P3D\estado.json` en cada arranque con las cinco piezas necesarias (`credenciales`, `perfil`, `llave`, `sello`, `motor`), el estado del equipo (`vacio`/`incompleto`/`completo`) y la acción (`registro-completo`/`reparar`/`acceso`) | Implementado |

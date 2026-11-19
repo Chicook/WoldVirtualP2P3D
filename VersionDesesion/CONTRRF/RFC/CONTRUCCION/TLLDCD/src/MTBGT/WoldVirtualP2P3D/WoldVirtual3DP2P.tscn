@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dpfqoxsjo1hji" path="res://gdscrip/Boot.gd" id="1_boot"]
 [ext_resource type="Environment" uid="uid://cvncieloislaenv" path="res://gdshader/cielo_isla_env.tres" id="2_cielo"]
+[ext_resource type="PackedScene" path="res://lucia3D/IslaUnicaLucIA/ESCENAS/IslaUnicaLucIA.tscn" id="3_dao"]
 
 [node name="WoldVirtual3DP2P" type="Node3D" unique_id=1218821308]
 script = ExtResource("1_boot")
@@ -14,3 +15,5 @@ transform = Transform3D(-0.92646414, -0.37636435, 0.003762588, 0.0036788213, 0.0
 light_color = Color(1, 0.98, 0.93, 1)
 light_energy = 1.15
 shadow_enabled = true
+
+[node name="IslaUnicaLucIA" parent="." instance=ExtResource("3_dao")]

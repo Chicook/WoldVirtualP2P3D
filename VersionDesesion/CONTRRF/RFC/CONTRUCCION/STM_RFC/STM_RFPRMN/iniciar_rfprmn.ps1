@@ -22,6 +22,7 @@ if (-not (Test-Path $PyExe)) {
 $env:VIRTUAL_ENV = $VenvDir
 $env:PYTHONHOME = $PythonDir
 $env:WVP_PYTHON = $PyExe
+$env:PYTHONPYCACHEPREFIX = Join-Path $DevDir "pycache"
 $env:PYTEST_CACHE_DIR = Join-Path $DevDir ".pytest_cache"
 $env:RUFF_CACHE_DIR = Join-Path $DevDir ".ruff_cache"
 

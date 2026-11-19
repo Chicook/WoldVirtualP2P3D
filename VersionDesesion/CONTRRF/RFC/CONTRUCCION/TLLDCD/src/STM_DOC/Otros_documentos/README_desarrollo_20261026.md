@@ -31,7 +31,7 @@ Impedir que un mismo PC pueda crear más de una cuenta en Wold Virtual P2P 3D.
 
 ### Archivos creados
 
-#### `VSC#/Seguridad/Seguridad_sesion_unica/MaquinaHuellaDigital.cs`
+#### `VSC#/Seguridad/SeguridadSesionUnica/MaquinaHuellaDigital.cs`
 Genera un identificador de máquina estable y anónimo usando **HKDF-SHA256 (RFC 5869)** sobre 7 atributos WMI:
 
 | Fuente WMI | Atributo | Estabilidad |
@@ -47,7 +47,7 @@ Genera un identificador de máquina estable y anónimo usando **HKDF-SHA256 (RFC
 El salt de dominio `"WoldVirtualP2P3D::SesionUnica::v1"` aísla el espacio de derivación.  
 **El identificador nunca se guarda en texto plano en disco.**
 
-#### `VSC#/Seguridad/Seguridad_sesion_unica/RegistroPcUnico.cs`
+#### `VSC#/Seguridad/SeguridadSesionUnica/RegistroPcUnico.cs`
 Almacena y verifica el **sello de cuenta única** en `%LocalAppData%\WoldVirtualP2P3D\Seguridad\pc_sello.json`.
 
 - El sello es un JSON firmado con **HMAC-SHA256**.
@@ -55,7 +55,7 @@ Almacena y verifica el **sello de cuenta única** en `%LocalAppData%\WoldVirtual
 - Copiar `pc_sello.json` a otro PC → clave distinta → firma inválida → bloqueado.
 - Usa **comparación de tiempo constante** para evitar ataques de timing.
 
-#### `VSC#/Seguridad/Seguridad_sesion_unica/SesionUnicaGuarda.cs`
+#### `VSC#/Seguridad/SeguridadSesionUnica/SesionUnicaGuarda.cs`
 Fachada pública que actúa en **3 puntos del flujo**:
 
 ```
