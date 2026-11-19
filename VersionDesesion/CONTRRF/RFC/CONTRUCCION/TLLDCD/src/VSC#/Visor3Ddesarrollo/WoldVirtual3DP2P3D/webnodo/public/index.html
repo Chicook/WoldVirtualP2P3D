@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wold Virtual P2P 3D — WebNodo · DAO LucIA</title>
+  <meta name="description" content="Comparte tu WebNodo mientras estás conectado. Descarga el visor vigente y entra en la DAO con LucIA: escribe tu nick y valida la conexión antes de elegir tu avatar."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #070913;
+      --surface: #0d1224;
+      --surface-card: rgba(13, 21, 42, 0.75);
+      --border: rgba(0, 217, 255, 0.22);
+      --border-purple: rgba(168, 85, 247, 0.3);
+      --accent: #00d9ff;
+      --accent-glow: rgba(0, 217, 255, 0.35);
+      --purple: #a855f7;
+      --purple-glow: rgba(168, 85, 247, 0.35);
+      --green: #10b981;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Fondo animado Cyber Grid */
+    .cyber-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0, 217, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 217, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridDrift 28s linear infinite;
+    }
+    @keyframes gridDrift {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(50px); }
+    }
+
+    .ambient-glow-1 {
+      position: fixed; top: -160px; left: 15%;
+      width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 217, 255, 0.12) 0%, transparent 65%);
+      pointer-events: none; z-index: 0;
+    }
+    .ambient-glow-2 {
+      position: fixed; bottom: -100px; right: 10%;
+      width: 650px; height: 650px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.13) 0%, transparent 65%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .container {
+      position: relative; z-index: 1;
+      max-width: 860px; width: 100%;
+      padding: 40px 24px 80px;
+      display: flex; flex-direction: column; align-items: center; gap: 28px;
+    }
+
+    /* Insignias de Sesión */
+    .badge-bar {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+      margin-bottom: 8px;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 600; letter-spacing: 0.5px;
+      backdrop-filter: blur(8px);
+    }
+    .pill-cyan {
+      background: rgba(0, 217, 255, 0.08);
+      border: 1px solid rgba(0, 217, 255, 0.35);
+      color: var(--accent);
+    }
+    .pill-purple {
+      background: rgba(168, 85, 247, 0.08);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      color: #c084fc;
+    }
+    .pill-green {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+    .dot-pulse {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: currentColor; box-shadow: 0 0 10px currentColor;
+      animation: pulseAnim 2s infinite ease-in-out;
+    }
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Encabezado */
+    header { text-align: center; }
+    h1 {
+      font-size: clamp(30px, 5.5vw, 54px);
+      font-weight: 900;
+      line-height: 1.12;
+      background: linear-gradient(135deg, #ffffff 10%, var(--accent) 55%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+    .hero-subtitle {
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 620px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* Marco de la Imagen Futurista del Metaverso */
+    .portal-frame {
+      width: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      background: #0d1224;
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 217, 255, 0.15);
+      transition: border-color 0.4s, box-shadow 0.4s;
+    }
+    .portal-frame:hover {
+      border-color: rgba(168, 85, 247, 0.5);
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.7), 0 0 40px rgba(168, 85, 247, 0.25);
+    }
+    .portal-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      max-height: 440px;
+      object-fit: cover;
+      transition: transform 0.8s ease;
+    }
+    .portal-frame:hover .portal-img {
+      transform: scale(1.02);
+    }
+    .portal-overlay-badge {
+      position: absolute; bottom: 16px; left: 16px;
+      background: rgba(7, 11, 22, 0.85);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      padding: 8px 18px; border-radius: 12px;
+      font-size: 12px; font-weight: 700;
+      color: var(--accent); letter-spacing: 0.8px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Tarjeta Principal de Descarga */
+    .download-card {
+      width: 100%;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 34px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+      display: flex; flex-direction: column; gap: 24px;
+    }
+
+    .dl-header {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .dl-title-box h2 {
+      font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px;
+    }
+    .dl-title-box p {
+      font-size: 13.5px; color: var(--muted);
+    }
+
+    .btn-download-hero {
+      width: 100%;
+      padding: 18px 30px;
+      background: linear-gradient(135deg, #00d9ff 0%, #0284c7 50%, #9333ea 100%);
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      text-decoration: none;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      box-shadow: 0 6px 30px rgba(0, 217, 255, 0.4);
+      transition: transform 0.15s, box-shadow 0.25s, opacity 0.2s;
+    }
+    .btn-download-hero:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 40px rgba(0, 217, 255, 0.6);
+      opacity: 0.95;
+    }
+    .btn-download-hero:active {
+      transform: translateY(0);
+    }
+
+    /* Grid de Información de Sesión */
+    .session-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;
+      width: 100%;
+    }
+    .info-box {
+      background: rgba(13, 21, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 14px 18px;
+    }
+    .info-box .label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); font-weight: 600; margin-bottom: 4px;
+    }
+    .info-box .val {
+      font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 600; color: #fff; word-break: break-all;
+    }
+
+    /* Pasos para Invitados */
+    .steps-section {
+      width: 100%;
+      background: rgba(13, 21, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 28px;
+    }
+    .steps-title {
+      font-size: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 20px;
+    }
+    .step-item {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 14px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .step-item:last-child { border-bottom: none; }
+    .step-badge {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, rgba(0,217,255,0.2), rgba(168,85,247,0.2));
+      border: 1px solid var(--accent);
+      color: var(--accent); font-weight: 800; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-content strong { display: block; font-size: 14.5px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+    .step-content p { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+    /* Botón Copiar */
+    .copy-btn {
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: background 0.2s;
+    }
+    .copy-btn:hover {
+      background: rgba(0, 217, 255, 0.2);
+    }
+
+    .copy-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .portal-note { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .share-feedback { font-size: 13px; color: var(--accent); min-height: 1.5em; }
+    @media (max-width: 480px) {
+      .download-card, .steps-section { padding: 22px; }
+      .btn-download-hero { padding: 16px; font-size: 16px; }
+    }
+
+    footer {
+      font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.6;
+    }
+    footer span { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="cyber-grid"></div>
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <div class="container">
+    <!-- Barra de Insignias -->
+    <div class="badge-bar">
+      <div class="pill pill-cyan">&#127760; METAVERSO P2P OFICIAL</div>
+      <div class="pill pill-purple">DAO 3D · LUCIA IA 3D</div>
+      <div class="pill pill-cyan" id="estado-nodo" role="status">
+        <span class="dot-pulse"></span>
+        <span id="txt-status-pill">COMPROBANDO WEBNODO</span>
+      </div>
+    </div>
+
+    <!-- Título y Subtítulo -->
+    <header>
+      <h1>Wold Virtual P2P 3D</h1>
+      <p class="hero-subtitle">Tu puerta al metaverso compartido. Descarga el visor vigente y conoce a <strong style="color:#a855f7">LucIA en la DAO</strong>: escribe tu nick, valida la conexión y comienza tu recorrido hacia tu propia isla.</p>
+    </header>
+
+    <!-- Visual Futurista del Metaverso -->
+    <div class="portal-frame">
+      <img src="/metaverso.jpg" alt="Capturas reales de la sede de asambleas DAO 3D y LucIA, la IA 3D que recibe al usuario" class="portal-img"/>
+      <div class="portal-overlay-badge">DAO 3D · ASAMBLEAS · LUCIA IA 3D</div>
+    </div>
+
+    <!-- Tarjeta de Descarga Principal -->
+    <div class="download-card">
+      <div class="dl-header">
+        <div class="dl-title-box">
+          <h2>Descargar Visor 3D</h2>
+          <p>Ejecutable portable Windows 64-bit &bull; Sin instalación requerida</p>
+        </div>
+      </div>
+
+      <a href="/descargar" class="btn-download-hero" id="btn-descarga">
+        <span>&#11015;</span>
+        <span id="lbl-descarga">Descargando datos de la &uacute;ltima versi&oacute;n&hellip;</span>
+      </a>
+      <div class="session-grid">
+        <div class="info-box">
+          <div class="label">Versión del visor</div>
+          <div class="val" id="version-visor">Consultando versión…</div>
+        </div>
+        <div class="info-box">
+          <div class="label">WebNodo para tus contactos</div>
+          <div class="val" id="link-p2p">Comprobando enlace público…</div>
+        </div>
+      </div>
+      <button type="button" class="copy-btn" id="btn-copy-link" disabled>Compartir WebNodo</button>
+      <p class="share-feedback" id="share-feedback" role="status" aria-live="polite"></p>
+      <p class="portal-note">Comparte esta web mientras tu visor y su túnel efímero estén activos. El enlace puede cambiar al iniciar otra sesión. La conexión al mundo se valida dentro de la DAO; no necesitas pegar una invitación.</p>
+    </div>
+
+    <!-- Pasos para Invitados -->
+    <div class="steps-section">
+      <div class="steps-title">&#128640; Guía de Entrada al Mundo 3D</div>
+      
+      <div class="step-item">
+        <div class="step-badge">1</div>
+        <div class="step-content">
+          <strong>Descarga el Visor</strong>
+          <p>Pulsa el botón de descarga superior para obtener el ejecutable directamente desde este nodo.</p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-badge">2</div>
+        <div class="step-content">
+          <strong>Ejecuta sin Instalación</strong>
+          <p>Abre el visor en tu equipo. Al ser portable, almacena tus credenciales en tu propia carpeta local controlada.</p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-badge">3</div>
+        <div class="step-content">
+          <strong>Valida tu nick y conexión con LucIA</strong>
+          <p>En la sede de la DAO, escribe tu nick y pulsa «Validar nick y conexión». Solo después de confirmar la conexión comienza la selección de avatar.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">4</div>
+        <div class="step-content">
+          <strong>Tu avatar, tu identidad y tu isla</strong>
+          <p>LucIA te acompaña por el registro y el espejo de personalización. Guarda tus palabras semilla en privado. Al cruzar el portal se carga tu isla, sin repetir la selección de avatar.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">5</div>
+        <div class="step-content">
+          <strong>Regresa a la DAO</strong>
+          <p>Consulta las islas de los usuarios conectados y vuelve a la sede para hablar con LucIA o reunirte en el espacio de asambleas DAO y DeFi.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Wold Virtual P2P 3D &mdash; Red Descentralizada Peer-to-Peer &mdash; <span>Sin Intermediarios</span>
+    </footer>
+  </div>
+
+  <script>
+    const WT = '{{API_TOKEN}}';
+    const botonCompartir = document.getElementById('btn-copy-link');
+    const enlaceNodo = document.getElementById('link-p2p');
+    const estadoNodo = document.getElementById('estado-nodo');
+    const textoEstado = document.getElementById('txt-status-pill');
+    const respuestaCompartir = document.getElementById('share-feedback');
+    let enlacePublico = '';
+
+    botonCompartir.addEventListener('click', async () => {
+      if (!enlacePublico) return;
+      try {
+        await navigator.clipboard.writeText(enlacePublico);
+        respuestaCompartir.textContent = 'WebNodo copiado. Puedes enviarlo a tus contactos.';
+      } catch {
+        respuestaCompartir.textContent = 'Selecciona y copia el enlace público que aparece arriba.';
+      }
+    });
+
+    async function consultar(ruta) {
+      const respuesta = await fetch(ruta + '?token=' + encodeURIComponent(WT), { cache: 'no-store' });
+      if (!respuesta.ok) throw new Error('WebNodo no disponible');
+      return respuesta.json();
+    }
+
+    async function actualizarVersion() {
+      try {
+        const datos = await consultar('/api/info');
+        if (!datos.disponible) throw new Error('Descarga no disponible');
+        document.getElementById('lbl-descarga').textContent = `Descargar ${datos.nombre} (${datos.tamano_mb} MB)`;
+        document.getElementById('version-visor').textContent = `v${datos.version}`;
+      } catch {
+        document.getElementById('lbl-descarga').textContent = 'Consultar descarga del visor';
+        document.getElementById('version-visor').textContent = 'No se pudo consultar la versión';
+      }
+    }
+
+    async function actualizarEstado() {
+      try {
+        const datos = await consultar('/api/p2p-status');
+        if (!datos.online || !datos.tunnel_url) throw new Error('Sin túnel público');
+        const destino = new URL(datos.tunnel_url);
+        if (!['http:', 'https:'].includes(destino.protocol)) throw new Error('Enlace no válido');
+        enlacePublico = destino.origin + '/';
+        enlaceNodo.textContent = enlacePublico;
+        botonCompartir.disabled = false;
+        estadoNodo.className = 'pill pill-green';
+        textoEstado.textContent = 'WEBNODO PÚBLICO ACTIVO';
+      } catch {
+        enlacePublico = '';
+        botonCompartir.disabled = true;
+        enlaceNodo.textContent = 'Sin enlace público disponible';
+        estadoNodo.className = 'pill pill-cyan';
+        textoEstado.textContent = 'SIN TÚNEL PÚBLICO CONFIRMADO';
+        respuestaCompartir.textContent = '';
+      }
+    }
+
+    actualizarVersion();
+    actualizarEstado();
+    setInterval(actualizarVersion, 60000);
+    setInterval(actualizarEstado, 15000);
+  </script>
+</body>
+</html>

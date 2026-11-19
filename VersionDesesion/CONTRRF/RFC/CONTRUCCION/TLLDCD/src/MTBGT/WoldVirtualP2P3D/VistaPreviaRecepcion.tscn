@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://VistaPreviaRecepcion.gd" id="1_previa"]
+
+[node name="VistaPrevia" type="Node3D"]
+script = ExtResource("1_previa")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.984808, 0.173648, 0, -0.173648, 0.984808, 0, 1.4, 2.2)
+current = true

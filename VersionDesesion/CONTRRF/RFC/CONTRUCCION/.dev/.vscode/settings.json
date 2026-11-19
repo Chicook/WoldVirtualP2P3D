@@ -1,0 +1,34 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.python/python.exe",
+    "python.pythonPath": "${workspaceFolder}/.python/python.exe",
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/../TLLDCD/src",
+        "${workspaceFolder}/../STM_RFC/STM_RFPRMN",
+        "${workspaceFolder}",
+        "${workspaceFolder}/../../../../.."
+    ],
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/../TLLDCD/src",
+        "${workspaceFolder}/../STM_RFC/STM_RFPRMN",
+        "${workspaceFolder}",
+        "${workspaceFolder}/../../../../.."
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+        "-c",
+        "${workspaceFolder}/pytest.ini",
+        "-o",
+        "cache_dir=${workspaceFolder}/.pytest_cache"
+    ],
+    "terminal.integrated.env.windows": {
+        "PYTHONHOME": "${workspaceFolder}/.python",
+        "WVP_PYTHON": "${workspaceFolder}/.python/python.exe",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+        "PYTEST_CACHE_DIR": "${workspaceFolder}/.pytest_cache",
+        "RUFF_CACHE_DIR": "${workspaceFolder}/.ruff_cache",
+        "RFPRMN_RFC_DIR": "${workspaceFolder}/..",
+        "RFPRMN_PRY_DIR": "${workspaceFolder}/../../../../SistemaPrincipal/PRY"
+    }
+}

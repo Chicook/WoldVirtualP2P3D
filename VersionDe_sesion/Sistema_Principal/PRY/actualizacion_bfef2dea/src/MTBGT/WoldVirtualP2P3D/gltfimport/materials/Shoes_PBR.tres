@@ -1,7 +1,0 @@
-[gd_resource type="StandardMaterial3D" format=3 uid="uid://bu26yxclmc6m8"]
-
-[resource]
-resource_name = "Shoes_PBR"
-cull_mode = 2
-albedo_color = Color(0.2716998, 0.2716998, 0.29337206, 1)
-roughness = 0.55
