@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Vista Previa — Menú Secciones (Wold Virtual P2P 3D)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+  body { background: #07090e; color: #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .visor-window { width: 1060px; height: 580px; background: #050811; border-radius: 8px; border: 1px solid #1e293b; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  
+  /* Topbar */
+  .titlebar { height: 30px; background: #090d16; border-bottom: 1px solid #162032; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 11px; color: #94a3b8; }
+  .titlebar .window-title { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .titlebar .dots { display: flex; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #334155; }
+
+  /* Session Bar */
+  .session-bar { height: 42px; background: #0A0F1D; border-bottom: 1px solid #163B67; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; position: relative; z-index: 50; }
+  .bar-left { display: flex; align-items: center; gap: 6px; }
+  .logo-tag { color: #00D9FF; font-size: 12.5px; font-weight: bold; margin-right: 4px; }
+  
+  .badge { border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+  .badge-user { background: #162238; color: #E2E8F0; }
+  .badge-p2p { background: #064E3B; color: #6EE7B7; }
+  .badge-blockchain { background: #064E3B; color: #6EE7B7; }
+  .badge-lucia { background: #3B0764; color: #F5D0FE; }
+  
+  /* Botón Secciones */
+  .btn-secciones-container { position: relative; display: inline-block; }
+  .btn-secciones {
+    background: #2D1B69;
+    color: #C084FC;
+    border: 1px solid #7C3AED;
+    border-radius: 4px;
+    height: 25px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+  }
+  .btn-secciones:hover, .btn-secciones.active {
+    background: #4C1D95;
+    border-color: #A855F7;
+    color: #FFFFFF;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+  }
+
+  /* Popup Dropdown */
+  .popup-dropdown {
+    position: absolute;
+    top: 32px;
+    left: 0;
+    width: 220px;
+    background: #0D1424;
+    border: 1px solid #7C3AED;
+    border-radius: 6px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.8), 0 0 15px rgba(124, 58, 237, 0.25);
+    padding: 5px;
+    display: none;
+    flex-direction: column;
+    z-index: 100;
+    animation: fadeIn 0.15s ease-out forwards;
+  }
+  .popup-dropdown.show { display: flex; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .menu-item {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #E2E8F0;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    width: 100%;
+  }
+  .menu-item:hover {
+    background: #1A2340;
+    color: #38BDF8;
+  }
+  .menu-divider {
+    height: 1px;
+    background: #2A3A5C;
+    margin: 4px 6px;
+  }
+
+  .bar-right { display: flex; align-items: center; gap: 10px; font-size: 11px; }
+  .btn-update { background: #0F2744; border: 1px solid #1D3A5C; color: #7ECFFF; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+  .btn-logout { background: #2A1215; border: 1px solid #7F1D1D; color: #F87171; padding: 4px 12px; border-radius: 4px; font-weight: 600; }
+
+  /* 3D Viewport simulation */
+  .viewport-3d {
+    flex: 1;
+    background: radial-gradient(circle at 50% 40%, #1e293b 0%, #090d16 80%);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .island-terrain {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 190px;
+    background: linear-gradient(180deg, #4d603a 0%, #2e3c23 100%);
+    border-radius: 50% 50% 0 0 / 25% 25% 0 0;
+    box-shadow: inset 0 15px 30px rgba(0,0,0,0.5);
+  }
+  .avatar-model {
+    position: absolute;
+    bottom: 90px;
+    width: 70px;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .avatar-head { width: 26px; height: 30px; background: #e0ac69; border-radius: 12px; }
+  .avatar-body { width: 44px; height: 60px; background: #b45309; border-radius: 6px; margin-top: 3px; }
+  .avatar-legs { width: 36px; height: 70px; background: #1e3a8a; border-radius: 3px; margin-top: 2px; }
+
+  /* HUD overlay */
+  .hud-dao {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 250px;
+    background: rgba(13, 20, 36, 0.88);
+    border: 1px solid #1E3A8A;
+    border-radius: 6px;
+    padding: 10px 12px;
+    backdrop-filter: blur(8px);
+    font-size: 11px;
+  }
+  .hud-dao-title { font-weight: bold; color: #38BDF8; margin-bottom: 6px; }
+  .hud-dao-island { color: #94A3B8; padding: 4px 0; }
+
+  /* Notification Toast */
+  .toast {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    background: #0D1B2A;
+    border: 1px solid #38BDF8;
+    color: #E2E8F0;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+    z-index: 200;
+  }
+</style>
+</head>
+<body>
+
+<div style="margin-bottom: 15px; text-align: center;">
+  <h2 style="color: #38BDF8; font-size: 18px; margin-bottom: 4px;">Vista Previa Interactiva — Barra Superior con Menú «Secciones»</h2>
+  <p style="color: #94a3b8; font-size: 12px;">Haz clic en el botón <b style="color: #C084FC;">☰ Secciones ▾</b> para desplegar el nuevo menú lateral integrado.</p>
+</div>
+
+<div class="visor-window">
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="window-title">
+      <span style="color: #00d9ff;">🌐</span> Wold Virtual P2P 3D Oficial — con Lucía 3D
+    </div>
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot" style="background: #ef4444;"></div>
+    </div>
+  </div>
+
+  <!-- Session bar -->
+  <div class="session-bar">
+    <div class="bar-left">
+      <span class="logo-tag">WOLD VIRTUAL OFICIAL</span>
+      <div class="badge badge-user">Usuario: ChicookFarrior</div>
+      <div class="badge badge-p2p">🟢 Red P2P Online</div>
+      <div class="badge badge-blockchain">⚡ Blockchain: 8545</div>
+      <div class="badge badge-lucia">🧠 LucIA conectada</div>
+
+      <!-- BOTÓN SECCIONES Y POPUP -->
+      <div class="btn-secciones-container">
+        <button id="btnSecciones" class="btn-secciones" onclick="toggleMenu()">
+          <span>☰ Secciones</span>
+          <span style="font-size: 9px; opacity: 0.8;">▾</span>
+        </button>
+
+        <div id="popupSecciones" class="popup-dropdown">
+          <button class="menu-item" onclick="selectAction('✦ Lucía 3D (Recepción)')">✦ Lucía 3D</button>
+          <button class="menu-item" onclick="selectAction('✦ Oficina con avatar')">✦ Oficina con avatar</button>
+          <button class="menu-item" onclick="selectAction('✦ Invitar a LucIA a tu isla')">✦ Invitar a LucIA</button>
+          <button class="menu-item" onclick="selectAction('🏗 Modo Construcción (Godot)')">🏗 Construcción</button>
+          <div class="menu-divider"></div>
+          <button class="menu-item" onclick="selectAction('🌐 WebNodo (Descarga para amigos)')">🌐 WebNodo</button>
+          <button class="menu-item" onclick="selectAction('💬 Chat del Metaverso')">💬 Chat</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar-right">
+      <div class="btn-update">✓ Al día</div>
+      <span style="color: #64748b; font-family: Consolas;">Llave: 09798...</span>
+      <div class="btn-logout">Cerrar Sesión</div>
+    </div>
+  </div>
+
+  <!-- Viewport 3D -->
+  <div class="viewport-3d" onclick="closeMenuOnClickOutside(event)">
+    <div class="hud-dao">
+      <div class="hud-dao-title">DAO · Isla Única LucIA (sede)</div>
+      <div class="hud-dao-island">&gt; Isla 0 · ChicookFarrior (P3AVYD) · TU ISLA</div>
+    </div>
+
+    <div class="island-terrain"></div>
+    <div class="avatar-model">
+      <div class="avatar-head"></div>
+      <div class="avatar-body"></div>
+      <div class="avatar-legs"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+  </div>
+</div>
+
+<script>
+  function toggleMenu() {
+    const popup = document.getElementById('popupSecciones');
+    const btn = document.getElementById('btnSecciones');
+    popup.classList.toggle('show');
+    btn.classList.toggle('active');
+  }
+
+  function selectAction(name) {
+    const popup = document.getElementById('popupSecciones');
+    const btn = document.getElementById('btnSecciones');
+    popup.classList.remove('show');
+    btn.classList.remove('active');
+
+    const toast = document.getElementById('toast');
+    toast.innerHTML = 'Acción ejecutada: <b style="color: #38BDF8;">' + name + '</b>';
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  }
+
+  function closeMenuOnClickOutside(e) {
+    const popup = document.getElementById('popupSecciones');
+    const btn = document.getElementById('btnSecciones');
+    if (popup.classList.contains('show')) {
+      popup.classList.remove('show');
+      btn.classList.remove('active');
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+<Project>
+  <!--
+    Fuente única de versión (U5.1): src/VERSION.json. Este fichero vive en
+    VSC#/ para que todos los proyectos C# del visor lo hereden subiendo por el
+    árbol. Lee la tabla con ReadAllText y extrae 'version' y 'motor' con una
+    expresión regular. No hay valor por defecto: si la tabla falta o no entrega
+    los dos campos, los guardas de abajo cortan la compilación (fail-closed,
+    DT-08: evita que «lo que compila» se desfase de «lo que anuncia el portal»).
+  -->
+  <PropertyGroup>
+    <_WoldVersionJson Condition="Exists('$(MSBuildThisFileDirectory)..\VERSION.json')">$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\VERSION.json'))</_WoldVersionJson>
+    <WoldVersion>$([System.Text.RegularExpressions.Regex]::Match($(_WoldVersionJson), '&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;').Groups[1].Value.Trim())</WoldVersion>
+    <WoldMotor>$([System.Text.RegularExpressions.Regex]::Match($(_WoldVersionJson), '&quot;motor&quot;\s*:\s*&quot;([^&quot;]+)&quot;').Groups[1].Value.Trim())</WoldMotor>
+    <WoldVersionFull>$(WoldVersion).0</WoldVersionFull>
+  </PropertyGroup>
+
+  <Target Name="WoldGuardarFuenteVersion" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(WoldVersion)' == ''"
+           Text="VERSION.json no entrega 'version' (src/VERSION.json). Regenera la tabla con version_unica.py --fijar X.Y.Z." />
+    <Error Condition="'$(WoldMotor)' == ''"
+           Text="VERSION.json no entrega 'motor' (src/VERSION.json). Regenera la tabla con version_unica.py." />
+  </Target>
+</Project>

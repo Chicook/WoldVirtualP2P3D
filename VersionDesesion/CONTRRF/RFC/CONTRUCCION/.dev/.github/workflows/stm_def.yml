@@ -1,0 +1,50 @@
+# Puerta de seguridad de STM_DEF — workflow reutilizable
+# =======================================================
+# Copia a la raíz (.github/workflows/stm_def.yml) para que GitHub Actions lo
+# encuentre. Se invoca desde ci.yml con una línea:
+#
+#   jobs:
+#     stm-def:
+#       uses: ./.github/workflows/stm_def.yml
+#
+# Ejecuta `python -m STM_HRTS.STM_DEF puerta`: en un solo punto verifica
+# escaneo estático, integridad del sello y cuarentena, y falla (exit 1) si hay
+# un hallazgo ALTA, un sello manipulado o una cuarentena alterada.
+name: STM_DEF - Puerta de seguridad
+
+on:
+  workflow_call:
+
+jobs:
+  puerta:
+    name: Puerta (escaneo + integridad + cuarentena)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/STM_HRTS/utils/add_utils
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]" || pip install numpy pytest pytest-timeout
+
+      - name: Pruebas del subsistema STM_DEF
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src
+        run: |
+          python -m pytest tests/STM_test3/test_stm_def.py -q \
+            --rootdir . \
+            --timeout=60 \
+            --tb=short \
+            -p no:cacheprovider \
+            -c STM_HRTS/utils/add_utils/pytest.ini
+
+      - name: Puerta de seguridad (bloqueante)
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src
+        run: python -m STM_HRTS.STM_DEF puerta
