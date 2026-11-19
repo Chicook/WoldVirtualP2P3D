@@ -13,6 +13,8 @@ from typing import Dict, List, Optional
 
 from .rutas import (
     DEV_DIR,
+    DEV_GITHUB_DIR,
+    DEV_GITHUB_WORKFLOWS_DIR,
     DEV_PYTEST_INI,
     PRY_DIR,
     PYCACHE_DIR,
@@ -20,6 +22,8 @@ from .rutas import (
     PYTHON_DIR,
     PYTHON_EXE,
     PYTHONW_EXE,
+    REPO_GITHUB_DIR,
+    REPO_GITHUB_WORKFLOWS_DIR,
     REPO_ROOT,
     RFC_DIR,
     RUFF_CACHE_DIR,
@@ -88,6 +92,7 @@ def configurar_variables_entorno() -> Dict[str, str]:
         "WVP_PYTHON": str(py_activo),
         "DOTNET_CLI_TELEMETRY_OPTOUT": "1",  # Evita errores de registro/seguridad en Windows
         "PYTEST_CACHE_DIR": str(PYTEST_CACHE_DIR),
+        "PYTEST_ADDOPTS": f"-o cache_dir={PYTEST_CACHE_DIR} -c {DEV_PYTEST_INI}",
         "RUFF_CACHE_DIR": str(RUFF_CACHE_DIR),
         # Todo bytecode compilado del ecosistema se escribe en .dev/pycache
         "PYTHONPYCACHEPREFIX": str(PYCACHE_DIR),
@@ -160,6 +165,94 @@ def traer_pytest_ini() -> bool:
         print(f"[OK] pytest.ini inicializado en: {ini_dev}")
 
     return movido
+
+
+def sincronizar_github_workflows(eliminar_de_raiz: bool = True, exportar_a_raiz: bool = False) -> Dict[str, Any]:
+    """Centraliza los workflows de CI/CD en .dev/.github y elimina la carpeta suelta de la raíz.
+
+    Salvaguarda la filosofía del proyecto: toda configuración de desarrollo,
+    archivos .yml y dependencias se alojan estrictamente en .dev (.dev/.github).
+    Si exportar_a_raiz=True, permite desplegarlos temporalmente en la raíz para CI remoto.
+    Por defecto, asegura que todo esté guardado en .dev y elimina la carpeta .github de la raíz.
+    """
+    DEV_GITHUB_WORKFLOWS_DIR.mkdir(parents=True, exist_ok=True)
+
+    resultado: Dict[str, Any] = {
+        "canonicos": [],
+        "eliminados_de_raiz": False,
+        "exportados_a_raiz": False,
+        "errores": [],
+    }
+
+    # 1. Absorber y asegurar cualquier workflow de la raíz hacia .dev/.github
+    if REPO_GITHUB_WORKFLOWS_DIR.is_dir():
+        for ruta_raiz in REPO_GITHUB_WORKFLOWS_DIR.glob("*.yml"):
+            destino_dev = DEV_GITHUB_WORKFLOWS_DIR / ruta_raiz.name
+            if not destino_dev.exists() or ruta_raiz.stat().st_mtime > destino_dev.stat().st_mtime:
+                try:
+                    shutil.copy2(ruta_raiz, destino_dev)
+                    resultado["canonicos"].append(destino_dev.name)
+                except Exception as err:
+                    resultado["errores"].append(f"Error al absorber {ruta_raiz.name} hacia .dev: {err}")
+            else:
+                resultado["canonicos"].append(destino_dev.name)
+
+    # Registrar todos los workflows canónicos presentes en .dev
+    for ruta_dev in DEV_GITHUB_WORKFLOWS_DIR.glob("*.yml"):
+        resultado["canonicos"].append(ruta_dev.name)
+
+    # 2. Manejo de la carpeta en la raíz del repositorio
+    if exportar_a_raiz:
+        REPO_GITHUB_WORKFLOWS_DIR.mkdir(parents=True, exist_ok=True)
+        for ruta_dev in DEV_GITHUB_WORKFLOWS_DIR.glob("*.yml"):
+            destino_raiz = REPO_GITHUB_WORKFLOWS_DIR / ruta_dev.name
+            try:
+                shutil.copy2(ruta_dev, destino_raiz)
+            except Exception as err:
+                resultado["errores"].append(f"Error al exportar {ruta_dev.name} a raíz: {err}")
+        resultado["exportados_a_raiz"] = True
+    elif eliminar_de_raiz and REPO_GITHUB_DIR.is_dir():
+        # Verificar que todos los workflows de raíz estén respaldados en .dev antes de borrar
+        archivos_raiz = list(REPO_GITHUB_WORKFLOWS_DIR.glob("*.yml")) if REPO_GITHUB_WORKFLOWS_DIR.is_dir() else []
+        seguro_para_borrar = True
+        for arch in archivos_raiz:
+            if not (DEV_GITHUB_WORKFLOWS_DIR / arch.name).is_file():
+                seguro_para_borrar = False
+                resultado["errores"].append(f"No se borra .github de raíz: {arch.name} no está en .dev")
+                break
+        if seguro_para_borrar:
+            try:
+                shutil.rmtree(REPO_GITHUB_DIR)
+                resultado["eliminados_de_raiz"] = True
+            except Exception as err:
+                resultado["errores"].append(f"Error al eliminar .github de la raíz: {err}")
+
+    # Deduplicar
+    resultado["canonicos"] = sorted(list(set(resultado["canonicos"])))
+    return resultado
+
+
+def buscar_archivos_dev_desperdigados() -> List[Dict[str, str]]:
+    """Detecta archivos .yml, configuraciones o artefactos de desarrollo fuera de .dev."""
+    desperdigados = []
+    patrones_sospechosos = ["*.yml", "*.yaml", "pytest.ini", "tox.ini", ".ruff.toml"]
+
+    dirs_a_revisar = [
+        REPO_ROOT / "VersionDesesion" / "CONTRRF" / "RFC" / "CONTRUCCION" / "TLLDCD" / "src",
+        REPO_ROOT / "VersionDesesion" / "CONTRRF" / "RFC" / "CONTRUCCION" / "STM_RFC",
+    ]
+    for d in dirs_a_revisar:
+        if not d.is_dir():
+            continue
+        for patron in patrones_sospechosos:
+            for arch in d.rglob(patron):
+                rel = str(arch.relative_to(REPO_ROOT))
+                desperdigados.append({
+                    "archivo": rel,
+                    "tipo": patron,
+                    "sugerencia": "Reubicar en .dev o gestionar desde gestor_entorno.py",
+                })
+    return desperdigados
 
 
 def actualizar_vscode_config() -> Path:
@@ -297,7 +390,18 @@ def ejecutar_pytest(args: Optional[List[str]] = None) -> int:
         f"cache_dir={PYTEST_CACHE_DIR}",
     ]
     if args:
-        args_completos.extend(args)
+        for a in args:
+            if not a.startswith("-"):
+                p_dev = DEV_DIR / a
+                p_root = REPO_ROOT / a
+                if p_dev.exists():
+                    args_completos.append(str(p_dev))
+                elif p_root.exists():
+                    args_completos.append(str(p_root))
+                else:
+                    args_completos.append(a)
+            else:
+                args_completos.append(a)
     else:
         args_completos.append(str(DEV_DIR / "tests"))
 

@@ -1680,9 +1680,9 @@ namespace Visor3D
                         projectDir = srcProjectDir;
                         mainPack   = "";   // nunca cargar el PCK empaquetado en versiones anteriores
                         // Buscar el Godot del árbol de desarrollo (si está disponible)
-                        string? godotSrc = System.IO.Path.Combine(srcActivo!, "..", "Servidor3D", "Godot_v4.7.2-stable_win64.exe");
+                        string? godotSrc = System.IO.Path.Combine(srcActivo!, "..", "Servidor3D", $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe");
                         if (!System.IO.File.Exists(godotSrc))
-                            godotSrc = System.IO.Path.Combine(srcActivo!, "VSC#", "Servidor3D", "Godot_v4.7.2-stable_win64.exe");
+                            godotSrc = System.IO.Path.Combine(srcActivo!, "VSC#", "Servidor3D", $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe");
                         if (System.IO.File.Exists(godotSrc ?? ""))
                             godotExe = godotSrc!;
                         string? envGodot = System.Environment.GetEnvironmentVariable("WVP_GODOT_EXE");
@@ -1704,7 +1704,7 @@ namespace Visor3D
                     {
                         string godotFuente = Path.Combine(
                             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                            "Desktop", "AreaDeTrabajo", "Godot_v4.7.2-stable_win64.exe");
+                            "Desktop", "AreaDeTrabajo", $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe");
                         if (File.Exists(godotFuente)) godotExe = godotFuente;
                     }
 #endif
@@ -4397,8 +4397,8 @@ namespace Visor3D
 
                 var candidates = new[]
                 {
-                    new { Name = "localhost.run", Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{webPort} nokey@localhost.run", Pat = @"https://[\w\-]+\.lhr\.life" },
-                    new { Name = "serveo.net", Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{webPort} serveo.net", Pat = @"https://[\w\-]+\.serveo\.net" }
+                    new { Name = "localhost.run", Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{webPort} nokey@localhost.run", Pat = @"https://[\w\-]+\.lhr\.life" },
+                    new { Name = "serveo.net", Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{webPort} serveo.net", Pat = @"https://[\w\-]+\.serveo\.net" }
                 };
 
                 foreach (var c in candidates)
@@ -4863,11 +4863,12 @@ namespace Visor3D
 
                 if (_p2pServicio.TunnelActivo)
                 {
-                    // Escribir resultado exitoso
-                    EscribirResultadoValidacion(true, "Túnel SSH iniciado correctamente");
+                    // Escribir resultado exitoso (T2-06: reportar modo degradado SSH vs Cloudflare)
+                    string modoDesc = _p2pServicio.Tunel.EsModoDegradado ? "Modo degradado (SSH gratuito)" : "Cloudflare Túnel";
+                    EscribirResultadoValidacion(true, $"Túnel activo ({modoDesc})");
                     Dispatcher.Invoke(() =>
                     {
-                        TxtEstadoP2P.Text = $"🟢 Túnel SSH activo: {_p2pServicio.UrlPublicaPropia}";
+                        TxtEstadoP2P.Text = $"🟢 {modoDesc}: {_p2pServicio.UrlPublicaPropia}";
                     });
                 }
                 else
@@ -4903,12 +4904,17 @@ namespace Visor3D
                     ? _enlaceCompartible
                     : (!string.IsNullOrWhiteSpace(urlFinal) ? EnlaceInvitacion(urlFinal) : "");
 
+                bool esDegradado = (_p2pServicio != null && _p2pServicio.Tunel.EsModoDegradado) || (App.WebNodo != null && App.WebNodo.IsDegradedMode);
+                string modoGlobal = esDegradado ? "Modo degradado (SSH gratuito)" : "Cloudflare Túnel";
+
                 var datos = new
                 {
                     exito = exito,
                     mensaje = mensaje,
                     url = urlFinal,
                     enlace = enlaceFinal,
+                    modo = modoGlobal,
+                    degradado = esDegradado,
                     timestamp = DateTime.UtcNow.ToString("o")
                 };
 

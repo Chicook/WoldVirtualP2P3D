@@ -14,6 +14,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .entorno import configurar_variables_entorno
 from .rutas import (
+    ESCENA_CANONICA_RES,
+    ESCENA_CANONICA_UID,
+    ESCENA_CANONICA_VISOR,
     GODOT_PROJECT_FILE,
     GODOT_PROY_DIR,
     LANZAR_BAT,
@@ -49,6 +52,66 @@ def comprobar_dotnet() -> Tuple[bool, str]:
         return False, str(e)
 
 
+def verificar_fijacion_escena() -> Dict[str, Any]:
+    """Verifica que la escena principal res://WoldVirtual3DP2P.tscn permanezca fijada
+    y sin acoplamiento a versiones o árboles anteriores.
+    """
+    existe = ESCENA_CANONICA_VISOR.is_file()
+    uid_ok = False
+    sin_acoplamiento_legado = True
+    main_scene_ok = False
+    detalles = []
+
+    if existe:
+        try:
+            contenido = ESCENA_CANONICA_VISOR.read_text(encoding="utf-8")
+            if ESCENA_CANONICA_UID in contenido:
+                uid_ok = True
+            else:
+                detalles.append(f"UID canónico {ESCENA_CANONICA_UID} no encontrado en la escena")
+
+            # Verificar que no contenga referencias a carpetas de versiones de sesión archivadas
+            marcadores_legados = [
+                "actualizacion_",
+                "VersionDesesion/SistemaPrincipal/PRY/Archivo",
+                "LCDMWoldVirtualP2P3Dv2.8",
+            ]
+            for m in marcadores_legados:
+                if m in contenido:
+                    sin_acoplamiento_legado = False
+                    detalles.append(f"Detectado marcador de versión anterior: '{m}'")
+        except Exception as ex:
+            detalles.append(f"Error al leer la escena: {ex}")
+    else:
+        detalles.append(f"No existe el archivo de escena: {ESCENA_CANONICA_VISOR}")
+
+    if GODOT_PROJECT_FILE.is_file():
+        try:
+            proj_text = GODOT_PROJECT_FILE.read_text(encoding="utf-8")
+            if (f'run/main_scene="{ESCENA_CANONICA_UID}"' in proj_text or
+                f'run/main_scene="{ESCENA_CANONICA_RES}"' in proj_text):
+                main_scene_ok = True
+            else:
+                detalles.append("project.godot no apunta a res://WoldVirtual3DP2P.tscn ni a su UID")
+        except Exception as ex:
+            detalles.append(f"Error al leer project.godot: {ex}")
+    else:
+        detalles.append("project.godot no existe")
+
+    fijada = existe and uid_ok and sin_acoplamiento_legado and main_scene_ok
+    return {
+        "fijada": fijada,
+        "ruta_escena": str(ESCENA_CANONICA_VISOR),
+        "res_path": ESCENA_CANONICA_RES,
+        "uid": ESCENA_CANONICA_UID,
+        "existe": existe,
+        "uid_ok": uid_ok,
+        "sin_acoplamiento_legado": sin_acoplamiento_legado,
+        "main_scene_ok": main_scene_ok,
+        "detalles": detalles,
+    }
+
+
 def estado_visor() -> Dict[str, Any]:
     """Devuelve un informe del estado del proyecto Visor3D."""
     dotnet_ok, version_dotnet = comprobar_dotnet()
@@ -71,6 +134,7 @@ def estado_visor() -> Dict[str, Any]:
         "dll_fecha_mod": dll_mod_time,
         "godot_proy_existe": GODOT_PROJECT_FILE.is_file(),
         "ruta_godot_proy": str(GODOT_PROY_DIR),
+        "escena_fijada": verificar_fijacion_escena(),
         "lanzar_bat_existe": LANZAR_BAT.is_file(),
     }
 

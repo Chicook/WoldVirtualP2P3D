@@ -68,6 +68,9 @@ namespace Visor3D.Services
             set => _publicTunnelUrl = value;
         }
 
+        /// <summary>True si el túnel del portal corre en modo degradado (SSH gratuito) vs Cloudflare (T2-06).</summary>
+        public bool IsDegradedMode { get; set; }
+
         /// <summary>Puerto local del relay de chat; /chat se proxya aquí.</summary>
         public int ChatLocalPort { get; set; } = 8920;
 

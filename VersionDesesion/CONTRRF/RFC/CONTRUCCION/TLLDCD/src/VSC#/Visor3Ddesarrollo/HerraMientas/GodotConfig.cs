@@ -201,7 +201,7 @@ namespace Visor3D
 
         public static string GetGodotExePath()
         {
-            const string godotName = "Godot_v4.7.2-stable_win64.exe";
+            string godotName = $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe";
 
             // 1. Recursos extraidos al LocalAppData (exe standalone)
             if (File.Exists(AppExtractor.GodotExePath)) return AppExtractor.GodotExePath;

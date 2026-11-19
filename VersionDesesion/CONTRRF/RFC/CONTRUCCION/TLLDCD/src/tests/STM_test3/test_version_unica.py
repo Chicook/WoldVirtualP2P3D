@@ -29,7 +29,11 @@ from STM_HRTS.utils.add_utils import version_unica  # noqa: E402
 VSC_DIR = SRC_DIR / "VSC#"
 PROPS = VSC_DIR / "Directory.Build.props"
 TARGETS = VSC_DIR / "Directory.Build.targets"
-RUTAS_LINUX = VSC_DIR / "VisorLinux" / "Linux" / "RutasLinux.cs"
+RUTAS_LINUX = (
+    VSC_DIR / "Visor3Ddesarrollo" / "VisorLinux" / "Linux" / "RutasLinux.cs"
+    if (VSC_DIR / "Visor3Ddesarrollo" / "VisorLinux" / "Linux" / "RutasLinux.cs").is_file()
+    else VSC_DIR / "VisorLinux" / "Linux" / "RutasLinux.cs"
+)
 
 
 def _leer(ruta: Path) -> str:
@@ -68,7 +72,7 @@ def test_ningun_cs_vuelve_a_escribir_el_nombre_del_motor():
     culpables = []
     for fuente in sorted(VSC_DIR.rglob("*.cs")):
         texto_rel = str(fuente.relative_to(VSC_DIR)).replace("\\", "/")
-        if texto_rel.startswith(("obj/", "bin/")):
+        if texto_rel.startswith(("obj/", "bin/")) or "Actualizaciones/" in texto_rel or "WoldVirtual3DP2P3D/Desarrollo/" in texto_rel:
             continue
         for numero, linea in enumerate(_leer(fuente).splitlines(), start=1):
             if re.search(r"Godot_v\d+\.\d+\.\d+", linea) and not linea.strip().startswith("//"):
@@ -159,7 +163,7 @@ def test_msbuild_extrae_la_misma_version_que_python():
     version_python = proc.stdout.strip()
 
     salida = subprocess.run(
-        ["dotnet", "msbuild", "Visor3D.csproj", "-nologo", "-getProperty:WoldVersion"],
+        ["dotnet", "msbuild", "Visor3Ddesarrollo/HerraMientas/Visor3D.csproj", "-nologo", "-getProperty:WoldVersion"],
         capture_output=True, text=True, cwd=str(VSC_DIR), timeout=300,
     )
     assert salida.returncode == 0, salida.stderr

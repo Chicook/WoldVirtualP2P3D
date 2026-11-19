@@ -62,6 +62,9 @@ namespace Visor3D.RedP2P
         /// <summary>Puerto local al que se reenvía el tráfico entrante del túnel.</summary>
         public int PuertoLocal { get; }
 
+        public bool EsModoDegradado => ProveedorActivo != null && ProveedorActivo != "Cloudflare Quick Tunnel";
+        public string? ProveedorActivo { get; private set; }
+
         public string? UltimoFallo
         {
             get { lock (_sync) return _ultimoFallo; }
@@ -222,8 +225,14 @@ namespace Visor3D.RedP2P
                 if (ganador == tcsUrl.Task && tcsUrl.Task.Status == TaskStatus.RanToCompletion)
                 {
                     string url = tcsUrl.Task.Result;
-                    lock (_sync) _urlPublica = url;
-                    Debug.WriteLine($"[P2PTunnel] Túnel activo ({nombre}): {url}");
+                    lock (_sync)
+                    {
+                        _urlPublica = url;
+                        ProveedorActivo = nombre;
+                    }
+                    string modo = EsModoDegradado ? "Modo degradado (SSH gratuito)" : "Cloudflare Túnel";
+                    Debug.WriteLine($"[P2PTunnel] Túnel activo ({nombre}): {url} [{modo}]");
+                    TunnelLogger.Escribir("p2p", $"Túnel activo ({nombre}): {url} [{modo}]");
                     UrlObtenida?.Invoke(url);
 
                     // Mantener el proceso vivo hasta que muera o se solicite detener.
@@ -283,9 +292,11 @@ namespace Visor3D.RedP2P
         private static string? EncontrarCloudflared()
         {
             string? configurado = Environment.GetEnvironmentVariable("CLOUDFLARED_EXE");
+            string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string[] candidatos =
             [
                 configurado ?? "",
+                Path.Combine(localApp, "WoldVirtualP2P3D", "bin", "cloudflared.exe"),
                 Path.Combine(AppContext.BaseDirectory, "cloudflared.exe"),
                 "cloudflared"
             ];

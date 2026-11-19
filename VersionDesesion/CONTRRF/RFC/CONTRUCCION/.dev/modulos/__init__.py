@@ -20,11 +20,13 @@ from .blockchain_mgr import (
 )
 from .entorno import (
     actualizar_vscode_config,
+    buscar_archivos_dev_desperdigados,
     configurar_variables_entorno,
     ejecutar_pytest,
     limpiar_cache_raiz,
     obtener_python_activo,
     obtener_pythonw_activo,
+    sincronizar_github_workflows,
     traer_pytest_ini,
 )
 from .lucia_mgr import (
@@ -80,12 +82,21 @@ from .rutas import (
     REINICIO_CUENTA_CS,
     SESION_UNICA_GUARDA_CS,
     VSCODE_DIR,
+    DEV_GITHUB_DIR,
+    DEV_GITHUB_WORKFLOWS_DIR,
+    REPO_GITHUB_DIR,
+    REPO_GITHUB_WORKFLOWS_DIR,
+    ESCENA_CANONICA_VISOR,
+    ESCENA_CANONICA_RES,
+    ESCENA_CANONICA_UID,
     asegurar_ruta_en_repositorio,
     validar_frontera_carpetas,
 )
 from .dependencias import (
     comprobar_todas_dependencias,
     formatear_informe_dependencias,
+    obtener_version_python_dev,
+    verificar_centralizacion_dev,
 )
 from .seguridad_entorno import (
     ARCHIVO_AUDITORIA_ENTORNO,
@@ -100,6 +111,7 @@ from .visor_mgr import (
     estado_visor,
     lanzar_visor,
     reconstruir_visor,
+    verificar_fijacion_escena,
 )
 from .temporales import (
     DIR_BUNDLE,

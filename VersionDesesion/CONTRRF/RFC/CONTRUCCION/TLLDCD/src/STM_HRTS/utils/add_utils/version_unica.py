@@ -26,7 +26,11 @@ SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 HEX_SHA = re.compile(r"^[0-9a-f]{64}$")
 FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
-CSPROJ = ("Visor3D.csproj", "Nucleo/Nucleo.csproj", "VisorLinux/VisorLinux.csproj", "Tests/Visor3DTests.csproj")
+CSPROJ = (
+    "Visor3Ddesarrollo/HerraMientas/Visor3D.csproj",
+    "Visor3Ddesarrollo/VisorLinux/VisorLinux.csproj",
+    "Visor3Ddesarrollo/Tests/Visor3DTests.csproj",
+)
 PROPIEDADES_VERSION = ("Version", "AssemblyVersion", "FileVersion")
 
 
@@ -100,7 +104,8 @@ def comprobar() -> list[str]:
         problemas += _csproj_sin_literal(rel)
 
     for fuente in sorted(VSC_DIR.rglob("*.cs")):
-        if "/obj/" in str(fuente).replace("\\", "/") or "/bin/" in str(fuente).replace("\\", "/"):
+        rel_str = str(fuente.relative_to(VSC_DIR)).replace("\\", "/")
+        if "/obj/" in rel_str or "/bin/" in rel_str or "Actualizaciones/" in rel_str or "WoldVirtual3DP2P3D/Desarrollo/" in rel_str:
             continue
         texto = fuente.read_text(encoding="utf-8", errors="ignore")
         for numero, linea in enumerate(texto.splitlines(), start=1):

@@ -43,8 +43,17 @@ namespace Visor3D.Services.P2PIPFS
         /// <summary>URL del gateway local en puerto 8082 para acceder a cualquier CID IPFS.</summary>
         public string LocalIpfsGatewayUrl => $"http://127.0.0.1:{Port}/ipfs/";
 
-        /// <summary>True si hay un t├║mel SSH reverso activo hacia internet.</summary>
+        /// <summary>True si hay un túnel SSH reverso activo hacia internet.</summary>
         public bool IsTunnelActive => _tunnelProcess != null && !_tunnelProcess.HasExited;
+
+        /// <summary>True si el túnel activo corre en modo degradado (SSH gratuito) vs Cloudflare.</summary>
+        public bool IsDegradedMode { get; private set; }
+
+        /// <summary>Disparado cuando el watchdog detecta que el túnel cayó (T2-03).</summary>
+        public event Action? OnTunnelDied;
+
+        /// <summary>Disparado cuando el watchdog reestablece exitosamente el túnel (T2-03).</summary>
+        public event Action<string>? OnTunnelReconnected;
 
         // ÔöÇÔöÇ Campos privados ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
         private HttpListener             _listener;
@@ -122,11 +131,10 @@ namespace Visor3D.Services.P2PIPFS
                 _proxyListener = null;
             }
 
-            // Matar t├║mel SSH ÔÇö cuando muere, la URL p├║blica deja de funcionar (dise├▒o intencional)
+            // Matar túnel SSH — cuando muere, la URL pública deja de funcionar y se limpia el PID
             if (_tunnelProcess != null)
             {
-                try { _tunnelProcess.Kill(entireProcessTree: true); } catch { }
-                try { _tunnelProcess.Dispose(); }                    catch { }
+                Visor3D.RedP2P.TunnelProcessRegistry.MatarYOlvidar("webnodo", _tunnelProcess);
                 _tunnelProcess = null;
             }
 
@@ -167,10 +175,13 @@ namespace Visor3D.Services.P2PIPFS
                 ZipPublicUrl = $"{tunnelUrl}/visor.zip";
                 GatewayUrl   = tunnelUrl;
                 IsOnIpfs     = false;
-                LogStatus("­ƒîì ┬íNodo visible! URL activa mientras est├®s conectado.");
+                LogStatus("🌐 ¡Nodo visible! URL activa mientras estés conectado.");
 
                 // IPFS en paralelo para seeding DHT adicional (no bloquea)
                 _ = Task.Run(() => RunIpfsBackgroundAsync(_cts?.Token ?? default));
+
+                // Watchdog del túnel WebNodo: monitorizar proceso y relanzar automáticamente si cae (T2-03)
+                _ = Task.Run(() => RunWebNodeTunnelWatchdogAsync(_cts?.Token ?? default));
                 return;
             }
 
@@ -203,10 +214,12 @@ namespace Visor3D.Services.P2PIPFS
                     35000, token);
                 if (!string.IsNullOrEmpty(cfUrl))
                 {
-                    LogStatus($"­ƒîì T├║nel activo ÔÇö Cloudflare: {cfUrl}");
+                    IsDegradedMode = false;
+                    LogStatus($"🌐 Túnel activo — Cloudflare: {cfUrl}");
+                    Visor3D.RedP2P.TunnelLogger.Escribir("webnodo", $"Túnel Cloudflare activo: {cfUrl} [Cloudflare Túnel]");
                     return cfUrl;
                 }
-                LogStatus("   Ôå│ cloudflared sin respuesta. Probando SSH...");
+                LogStatus("   │ cloudflared sin respuesta. Probando SSH...");
             }
 
 
@@ -218,18 +231,18 @@ namespace Visor3D.Services.P2PIPFS
             {
                 new {
                     Name = "serveo.net",
-                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{Port} serveo.net",
                     Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "serveo.net:443",
-                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} serveo.net",
+                    Args = $"-p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{Port} serveo.net",
                     Pat  = @"https://(?!console\b)[\w\-]+\.serveo\.net|https://[\w\-]+\.serveousercontent\.com"
                 },
                 new {
                     Name = "localhost.run",
-                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ConnectTimeout=15 -R 80:127.0.0.1:{Port} nokey@localhost.run",
-                    Pat  = @"https://[\w\-]+\.lhr\\.rocks"
+                    Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{Port} nokey@localhost.run",
+                    Pat  = @"https://[\w\-]+\.lhr\.life"
                 }
             };
 
@@ -241,7 +254,9 @@ namespace Visor3D.Services.P2PIPFS
                 string? url = await TryRunProcessTunnelAsync(sshExe, c.Args, c.Pat, 23000, token);
                 if (!string.IsNullOrEmpty(url))
                 {
-                    LogStatus($"­ƒîì T├║nel activo ÔÇö {c.Name}: {url}");
+                    IsDegradedMode = true;
+                    LogStatus($"🌐 Túnel activo (Modo degradado SSH) — {c.Name}: {url}");
+                    Visor3D.RedP2P.TunnelLogger.Escribir("webnodo", $"Túnel SSH activo ({c.Name}): {url} [Modo degradado (SSH gratuito)]", "WARN");
                     return url;
                 }
             }
@@ -255,10 +270,11 @@ namespace Visor3D.Services.P2PIPFS
         {
             string localApp  = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            string appBase   = AppDomain.CurrentDomain.BaseDirectory;
+            string binDir    = Path.Combine(localApp, "WoldVirtualP2P3D", "bin");
+            try { Directory.CreateDirectory(binDir); } catch { }
 
-            // Ruta local donde lo descargamos si no est├í instalado
-            string localCf = Path.Combine(appBase, "cloudflared.exe");
+            // Ruta canónica en LocalAppData (T2-01: nunca escribir en la carpeta del repositorio)
+            string localCf = Path.Combine(binDir, "cloudflared.exe");
 
             string[] locations =
             {
@@ -330,11 +346,59 @@ namespace Visor3D.Services.P2PIPFS
         private async Task<string?> TryRunProcessTunnelAsync(
             string exe, string args, string urlPattern, int timeoutMs, CancellationToken token)
         {
+            Visor3D.RedP2P.TunnelProcessRegistry.BarrerHuerfano("webnodo");
             var result = await EphemeralTunnelRunner.StartAsync(exe, args, urlPattern, timeoutMs, token);
             if (result == null) return null;
 
             _tunnelProcess = result.Process;
+            Visor3D.RedP2P.TunnelProcessRegistry.Persistir("webnodo", result.Process.Id);
+            Visor3D.RedP2P.TunnelLogger.Escribir("webnodo", $"Proceso de túnel iniciado (PID {result.Process.Id}): {result.Url}");
             return result.Url;
+        }
+
+        // ── Watchdog del túnel WebNodo (T2-03) ──────────────────────
+        private async Task RunWebNodeTunnelWatchdogAsync(CancellationToken token)
+        {
+            int intento = 0;
+            while (!token.IsCancellationRequested)
+            {
+                var proc = _tunnelProcess;
+                if (proc != null && !proc.HasExited)
+                {
+                    try
+                    {
+                        await proc.WaitForExitAsync(token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) { break; }
+                }
+
+                if (token.IsCancellationRequested) break;
+
+                Visor3D.RedP2P.TunnelLogger.Escribir("webnodo", "Túnel WebNodo caído. Iniciando reconexión automática...", "WARN");
+                LogStatus("⚠️ Túnel WebNodo caído. Reconectando...");
+                OnTunnelDied?.Invoke();
+
+                intento++;
+                int espera = Math.Min(30, 5 * (int)Math.Pow(2, Math.Min(intento - 1, 3)));
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(espera), token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { break; }
+
+                if (token.IsCancellationRequested) break;
+
+                string? nuevaUrl = await TryEstablishTunnelAsync(token).ConfigureAwait(false);
+                if (!string.IsNullOrEmpty(nuevaUrl))
+                {
+                    intento = 0;
+                    ZipPublicUrl = $"{nuevaUrl}/visor.zip";
+                    GatewayUrl = nuevaUrl;
+                    Visor3D.RedP2P.TunnelLogger.Escribir("webnodo", $"Túnel WebNodo reestablecido: {nuevaUrl}");
+                    LogStatus($"🌐 Túnel reconectado: {nuevaUrl}");
+                    OnTunnelReconnected?.Invoke(nuevaUrl);
+                }
+            }
         }
 
 

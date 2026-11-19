@@ -57,7 +57,7 @@ namespace Visor3D
         private static readonly string VersionFile = Path.Combine(RuntimeDir, ".extracted");
 
         public static string GodotExePath =>
-            Path.Combine(RuntimeDir, "Servidor3D", "Godot_v4.7.2-stable_win64.exe");
+            Path.Combine(RuntimeDir, "Servidor3D", $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe");
 
         /// <summary>Mundo empaquetado que se pasa a Godot con <c>--main-pack</c>.</summary>
         public static string PckPath => Path.Combine(RuntimeDir, "wvp3d.pck");
@@ -170,7 +170,7 @@ namespace Visor3D
                 string godotEnServidor = GodotExePath;
                 if (!File.Exists(godotEnServidor))
                 {
-                    var found = Directory.GetFiles(servidorDir, "Godot_v4.7.2-stable_win64.exe", SearchOption.AllDirectories);
+                    var found = Directory.GetFiles(servidorDir, $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe", SearchOption.AllDirectories);
                     if (found.Length > 0 && found[0] != godotEnServidor)
                         File.Copy(found[0], godotEnServidor, overwrite: true);
                 }

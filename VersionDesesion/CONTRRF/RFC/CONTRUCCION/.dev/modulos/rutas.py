@@ -37,6 +37,10 @@ PYCACHE_DIR: Path = DEV_DIR / "pycache"
 IPFS_DIR: Path = DEV_DIR / ".ipfs"
 VSCODE_DIR: Path = DEV_DIR / ".vscode"
 DEV_PYTEST_INI: Path = DEV_DIR / "pytest.ini"
+DEV_GITHUB_DIR: Path = DEV_DIR / ".github"
+DEV_GITHUB_WORKFLOWS_DIR: Path = DEV_GITHUB_DIR / "workflows"
+REPO_GITHUB_DIR: Path = REPO_ROOT / ".github"
+REPO_GITHUB_WORKFLOWS_DIR: Path = REPO_GITHUB_DIR / "workflows"
 
 # --- Taller y Código Fuente (TLLDCD) ---
 TLLDCD_DIR: Path = CONTRUCCION_DIR / "TLLDCD"
@@ -86,6 +90,9 @@ LANZAR_BAT: Path = VISOR_HERRAMIENTAS_DIR / "Lanzar.bat"
 # Motor y Proyecto Godot
 GODOT_PROY_DIR: Path = TLLDCD_SRC / "MTBGT" / "WoldVirtualP2P3D"
 GODOT_PROJECT_FILE: Path = GODOT_PROY_DIR / "project.godot"
+ESCENA_CANONICA_VISOR: Path = GODOT_PROY_DIR / "WoldVirtual3DP2P.tscn"
+ESCENA_CANONICA_RES: str = "res://WoldVirtual3DP2P.tscn"
+ESCENA_CANONICA_UID: str = "uid://5bh8su08n101"
 
 
 # --- Localización de Herramientas del Sistema ---
