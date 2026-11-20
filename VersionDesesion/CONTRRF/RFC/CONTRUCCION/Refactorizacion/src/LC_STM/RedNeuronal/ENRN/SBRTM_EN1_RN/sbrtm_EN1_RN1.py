@@ -257,25 +257,70 @@ class _Basica(NeuronaEntradaBase):
         self._emit("forward", {"forma": tuple(a.shape)})
         return a
 
-    def backward(self, g, e):
-        inicio = _now()
-        if self.pesos is None or self.sesgo is None:
-            self.inicializar_pesos()
-        g = np.asarray(g, dtype=_dtype())
-        if g.ndim == 1:
-            g = g.reshape(1, -1)
+def backward(self, g, e):
+    """Validate gradients and perform a safe backward pass."""
+
+    inicio = _now()
+
+    if self.pesos is None or self.sesgo is None:
+        self.inicializar_pesos()
+
+    # Prepare input or reuse the cached forward input.
+    if self.usar_cache_forward and self._cache_entrada is not None:
         x = self._cache_entrada
-        if x is None:
-            x = self._preparar_entrada(e)
-        grad_pesos = g.T @ x
-        grad_sesgo = g.sum(axis=0)
-        grad_entrada = (g @ self.pesos) * self.factor_escala
-        self._actualizar(grad_pesos, grad_sesgo)
-        self.historial_gradientes.append(grad_entrada)
-        self.contador_backward += 1
-        self.tiempo_backward_acum += _now() - inicio
-        self._emit("backward", {"forma": tuple(grad_entrada.shape)})
-        return grad_entrada
+    else:
+        if e is None:
+            raise ValueError(
+                "Input data is required when no forward cache is available"
+            )
+        x = self._preparar_entrada(e)
+
+    # Normalize gradient dimensions.
+    g = np.asarray(g, dtype=_dtype())
+
+    if g.ndim == 1:
+        g = g.reshape(1, -1)
+
+    # Validate gradient dimensions.
+    if g.ndim != 2:
+        raise ValueError(
+            f"Gradient must be a 2D array, got {g.ndim} dimensions"
+        )
+
+    expected_shape = (x.shape[0], self.output_size)
+
+    if g.shape != expected_shape:
+        raise ValueError(
+            f"Invalid gradient shape: expected {expected_shape}, "
+            f"got {g.shape}"
+        )
+
+    # Reject invalid numerical values before updating parameters.
+    if not np.all(np.isfinite(g)):
+        raise ValueError(
+            "Gradient contains NaN or infinite values"
+        )
+
+    # Calculate gradients.
+    grad_pesos = g.T @ x
+    grad_sesgo = g.sum(axis=0)
+    grad_entrada = (g @ self.pesos) * self.factor_escala
+
+    # Update model parameters.
+    self._actualizar(grad_pesos, grad_sesgo)
+
+    # Record training metrics.
+    self.historial_gradientes.append(grad_entrada)
+    self.contador_backward += 1
+    self.tiempo_backward_acum += _now() - inicio
+
+    self._emit(
+        "backward",
+        {"forma": tuple(grad_entrada.shape)}
+    )
+
+    return grad_entrada
+
 
     def _actualizar(self, grad_pesos: np.ndarray, grad_sesgo: np.ndarray) -> None:
         self._aplicar_decaimiento_lr()
