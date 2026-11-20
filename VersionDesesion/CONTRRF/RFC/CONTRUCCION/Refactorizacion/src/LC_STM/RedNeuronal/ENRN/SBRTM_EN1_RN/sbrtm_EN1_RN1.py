@@ -6,7 +6,7 @@ de módulo NeuronaEntradaBasica.
 """
 
 import time
-
+from collections import deque
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional
 
@@ -33,26 +33,49 @@ class NeuronaEntradaBase:
     Contiene el buffer de historiales y la neurona densa concreta Basica.
     """
 
-    class RingBuffer:
-        """Buffer circular eficiente para historiales (evita crecimiento infinito)."""
+   
+class RingBuffer:
+    """Bounded circular buffer with efficient append operations."""
 
-        def __init__(self, capacidad: int = 256):
-            self.capacidad = int(capacidad)
-            self._datos: List[Any] = []
+    def __init__(self, capacidad: int = 256):
+        if isinstance(capacidad, bool) or not isinstance(capacidad, int):
+            raise TypeError("capacidad must be a positive integer")
 
-        def append(self, item: Any) -> None:
-            self._datos.append(item)
-            if len(self._datos) > self.capacidad:
-                del self._datos[0:len(self._datos) - self.capacidad]
+        if capacidad <= 0:
+            raise ValueError("capacidad must be greater than zero")
 
-        def __len__(self) -> int:
-            return len(self._datos)
+        self.capacidad = capacidad
+        self._datos = deque(maxlen=capacidad)
 
-        def to_list(self) -> List[Any]:
-            return list(self._datos)
+    def append(self, item: Any) -> None:
+        self._datos.append(item)
 
-        def clear(self) -> None:
-            self._datos.clear()
+    def __len__(self) -> int:
+        return len(self._datos)
+
+    def to_list(self) -> List[Any]:
+        return list(self._datos)
+
+    def clear(self) -> None:
+        self._datos.clear()
+# ----------------------------------------------------
+# Expected behavior:
+"""
+buffer = NeuronaEntradaBase.RingBuffer(capacidad=3)
+
+buffer.append(10)
+buffer.append(20)
+buffer.append(30)
+buffer.append(40)
+
+assert buffer.to_list() == [20, 30, 40]
+assert len(buffer) == 3
+
+buffer.clear()
+
+assert len(buffer) == 0
+"""
+# ------------------------------------------------------
 
     def __init__(self, input_size: int, output_size: int, nombre: str = "NeuronaEntrada"):
         self.input_size = int(input_size)
@@ -234,25 +257,70 @@ class _Basica(NeuronaEntradaBase):
         self._emit("forward", {"forma": tuple(a.shape)})
         return a
 
-    def backward(self, g, e):
-        inicio = _now()
-        if self.pesos is None or self.sesgo is None:
-            self.inicializar_pesos()
-        g = np.asarray(g, dtype=_dtype())
-        if g.ndim == 1:
-            g = g.reshape(1, -1)
+def backward(self, g, e):
+    """Validate gradients and perform a safe backward pass."""
+
+    inicio = _now()
+
+    if self.pesos is None or self.sesgo is None:
+        self.inicializar_pesos()
+
+    # Prepare input or reuse the cached forward input.
+    if self.usar_cache_forward and self._cache_entrada is not None:
         x = self._cache_entrada
-        if x is None:
-            x = self._preparar_entrada(e)
-        grad_pesos = g.T @ x
-        grad_sesgo = g.sum(axis=0)
-        grad_entrada = (g @ self.pesos) * self.factor_escala
-        self._actualizar(grad_pesos, grad_sesgo)
-        self.historial_gradientes.append(grad_entrada)
-        self.contador_backward += 1
-        self.tiempo_backward_acum += _now() - inicio
-        self._emit("backward", {"forma": tuple(grad_entrada.shape)})
-        return grad_entrada
+    else:
+        if e is None:
+            raise ValueError(
+                "Input data is required when no forward cache is available"
+            )
+        x = self._preparar_entrada(e)
+
+    # Normalize gradient dimensions.
+    g = np.asarray(g, dtype=_dtype())
+
+    if g.ndim == 1:
+        g = g.reshape(1, -1)
+
+    # Validate gradient dimensions.
+    if g.ndim != 2:
+        raise ValueError(
+            f"Gradient must be a 2D array, got {g.ndim} dimensions"
+        )
+
+    expected_shape = (x.shape[0], self.output_size)
+
+    if g.shape != expected_shape:
+        raise ValueError(
+            f"Invalid gradient shape: expected {expected_shape}, "
+            f"got {g.shape}"
+        )
+
+    # Reject invalid numerical values before updating parameters.
+    if not np.all(np.isfinite(g)):
+        raise ValueError(
+            "Gradient contains NaN or infinite values"
+        )
+
+    # Calculate gradients.
+    grad_pesos = g.T @ x
+    grad_sesgo = g.sum(axis=0)
+    grad_entrada = (g @ self.pesos) * self.factor_escala
+
+    # Update model parameters.
+    self._actualizar(grad_pesos, grad_sesgo)
+
+    # Record training metrics.
+    self.historial_gradientes.append(grad_entrada)
+    self.contador_backward += 1
+    self.tiempo_backward_acum += _now() - inicio
+
+    self._emit(
+        "backward",
+        {"forma": tuple(grad_entrada.shape)}
+    )
+
+    return grad_entrada
+
 
     def _actualizar(self, grad_pesos: np.ndarray, grad_sesgo: np.ndarray) -> None:
         self._aplicar_decaimiento_lr()
