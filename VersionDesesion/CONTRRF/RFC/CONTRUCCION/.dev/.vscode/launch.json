@@ -1,0 +1,44 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "RFPRMN (Fachada .dev)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/STM_RFC/STM_RFPRMN/RFPRMN.py",
+            "python": "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/.python/python.exe",
+            "args": [
+                "--arranque"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/STM_RFC/STM_RFPRMN"
+        },
+        {
+            "name": "Gestor Entorno (.dev)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/gestor_entorno.py",
+            "python": "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/.python/python.exe",
+            "args": [
+                "sincronizar"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev"
+        },
+        {
+            "name": "Pytest (.dev)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "python": "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/.python/python.exe",
+            "args": [
+                "-c",
+                "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/pytest.ini",
+                "-o",
+                "cache_dir=E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/.pytest_cache"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "E:/WoldVirtualP2P3D/VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev"
+        }
+    ]
+}

@@ -1,0 +1,163 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <Platforms>x64</Platforms>
+
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+
+    <PublishTrimmed>false</PublishTrimmed>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+
+    <AssemblyName>LCDMWoldVirtualP2P3Dv2.8.4</AssemblyName>
+    <RootNamespace>Visor3D</RootNamespace>
+
+    <Version>2.8.4</Version>
+    <AssemblyVersion>2.8.4.0</AssemblyVersion>
+    <FileVersion>2.8.4.0</FileVersion>
+
+    <Title>Wold Virtual p2p 3D</Title>
+    <Description>Visor 3D — LCDMWoldVirtualP2P3D v2.8.4 (Metaverso oficial con Lucía 3D como anfitriona, registro inmutable por bloques y servidor blockchain oficial integrado)</Description>
+  </PropertyGroup>
+
+  <!--
+    Sin esto, .NET 8 carga el ICU del sistema al arrancar. Bajo Wine el icu.dll
+    reenvía a un icuuc68 que no existe y el proceso muere con código 127 antes
+    de ejecutar código propio. Con System.Globalization.UseNls .NET usa las API
+    de locale de kernel32 (que Wine sí implementa) y en Windows conserva la
+    cultura es-ES: fechas 29/10/2026, decimales con coma y orden alfabético.
+    No se usa InvariantGlobalization: en modo invariante `new CultureInfo("es-ES")`
+    lanza CultureNotFoundException y las fechas pasan a formato MM/dd/yyyy.
+  -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Globalization.UseNls" Value="true" />
+  </ItemGroup>
+
+  <!--
+    El .csproj vive en HerraMientas; el resto de módulos del visor están un
+    nivel arriba (Chat, Services, Seguridad...). Se incluyen explícitamente
+    para que la configuración actual de VSC#/Visor3Ddesarrollo compile como
+    un único ensamblado.
+  -->
+  <ItemGroup>
+    <Compile Include="..\CargaVolatil\**\*.cs" Link="CargaVolatil\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Chat\**\*.cs" Link="Chat\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\p2pipfsCS\**\*.cs" Link="p2pipfsCS\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\RedP2P\**\*.cs" Link="RedP2P\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Seguridad\**\*.cs" Link="Seguridad\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Services\**\*.cs" Link="Services\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\STM_actualizar\**\*.cs" Link="STM_actualizar\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Remove="..\**\bin\**\*.cs" />
+    <Compile Remove="..\**\obj\**\*.cs" />
+  </ItemGroup>
+
+  <!-- Excluir subcarpetas que son proyectos hermanos o carpetas de descargas -->
+  <ItemGroup>
+    <Compile Remove="version_prueba\**" />
+    <EmbeddedResource Remove="version_prueba\**" />
+    <None Remove="version_prueba\**" />
+    <Page Remove="version_prueba\**" />
+    <Compile Remove="webnodo\descargas\**" />
+    <EmbeddedResource Remove="webnodo\descargas\**" />
+    <None Remove="webnodo\descargas\**" />
+    <Compile Remove="webnodo\node_modules\**" />
+    <EmbeddedResource Remove="webnodo\node_modules\**" />
+    <None Remove="webnodo\node_modules\**" />
+    <!-- VisorLinux es un proyecto hermano (Avalonia + net8.0): no forma parte del .exe WPF -->
+    <Compile Remove="VisorLinux\**" />
+    <EmbeddedResource Remove="VisorLinux\**" />
+    <None Remove="VisorLinux\**" />
+    <Page Remove="VisorLinux\**" />
+    <!-- Tests es un proyecto hermano (xUnit) que referencia a éste: no forma parte del .exe -->
+    <Compile Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <Page Remove="Tests\**" />
+  </ItemGroup>
+
+  <!-- Los tests unitarios necesitan ver los puntos de sutura internos (W-01/DT-11) -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Visor3DTests" />
+  </ItemGroup>
+
+  <!-- Dependencias -->
+  <ItemGroup>
+    <!-- WMI: lectura de hardware (CPU, placa base, SO) -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <!-- Chat de voz: captura/reproducción PCM de baja latencia -->
+    <PackageReference Include="NAudio" Version="2.3.0" />
+    <!-- Chat de webcam: captura DirectShow y compresión JPEG -->
+    <PackageReference Include="AForge.Video" Version="2.2.5" />
+    <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
+  </ItemGroup>
+
+  <!-- Recursos web (para fases posteriores y WebNodo) -->
+  <ItemGroup>
+    <None Include="..\webnodo\public\**\*">
+      <Link>webnodo\public\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\webnodo\fallback.py">
+      <Link>webnodo\fallback.py</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="www\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Recursos embebidos para distribución standalone en un único .exe -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\Seguridad\bip39-english.txt"
+                      LogicalName="Visor3D.Seguridad.bip39-english.txt" />
+    <EmbeddedResource Include="..\webnodo\public\index.html"
+                      LogicalName="Visor3D.webnodo.public.index.html" />
+    <EmbeddedResource Include="..\webnodo\public\metaverso.jpg"
+                      LogicalName="Visor3D.webnodo.public.metaverso.jpg" />
+    <!-- Interruptor de desarrollo: -p:SkipGodotAssets=true compila la UI sin el motor ni el mundo.
+         La build de distribución NO define la propiedad, así que los incluye si el fichero existe.
+         Los paquetes viven en CopiaDeSeguridad, junto al proyecto; la raíz del
+         proyecto se acepta como alternativa si alguien los deja ahí. -->
+    <EmbeddedResource Include="..\CopiaDeSeguridad\godot_exe.zip"
+                      Condition="Exists('..\CopiaDeSeguridad\godot_exe.zip') and '$(SkipGodotAssets)' != 'true'"
+                      LogicalName="Visor3D.godot_exe.zip" />
+    <EmbeddedResource Include="..\godot_exe.zip"
+                      Condition="!Exists('..\CopiaDeSeguridad\godot_exe.zip') and Exists('..\godot_exe.zip') and '$(SkipGodotAssets)' != 'true'"
+                      LogicalName="Visor3D.godot_exe.zip" />
+    <!-- El PCK ya no se embebe suelto: viaja dentro de actualizacion_v2.8.4.zip
+         (mundo/wvp3d.pck) y se monta en RAM vía VolatilePackage, evitando la
+         escritura permanente en LocalAppData y la duplicación del mundo. -->
+    <!-- Paquete volátil: mundo + Lucía + config. El LogicalName fija el nombre
+         del recurso en memoria (Visor3D.actualizacion_volatil.zip) sea cual sea
+         el nombre del fichero versionado en disco. Solo el paquete de la versión
+         actual: incrustar un zip de otra versión sería un error silencioso. -->
+    <EmbeddedResource Include="..\CopiaDeSeguridad\constructor_godot.zip"
+                      Condition="Exists('..\CopiaDeSeguridad\constructor_godot.zip')"
+                      LogicalName="Visor3D.constructor_godot.zip" />
+    <EmbeddedResource Include="..\constructor_godot.zip"
+                      Condition="!Exists('..\CopiaDeSeguridad\constructor_godot.zip') and Exists('..\constructor_godot.zip')"
+                      LogicalName="Visor3D.constructor_godot.zip" />
+    <EmbeddedResource Include="..\CopiaDeSeguridad\actualizacion_v2.8.4.zip"
+                      Condition="Exists('..\CopiaDeSeguridad\actualizacion_v2.8.4.zip')"
+                      LogicalName="Visor3D.actualizacion_volatil.zip" />
+    <EmbeddedResource Include="..\actualizacion_v2.8.4.zip"
+                      Condition="!Exists('..\CopiaDeSeguridad\actualizacion_v2.8.4.zip') and Exists('..\actualizacion_v2.8.4.zip')"
+                      LogicalName="Visor3D.actualizacion_volatil.zip" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,15 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/INTERIOR/InteriorDAO.gd" id="1_interior"]
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/INTERIOR/CarruselDAO.gd" id="2_carrusel"]
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/INTERIOR/PortalDAO.gd" id="3_portal"]
+
+[node name="InteriorDAO" type="Node3D"]
+script = ExtResource("1_interior")
+
+[node name="CarruselDAO" type="Node3D" parent="."]
+script = ExtResource("2_carrusel")
+
+[node name="PortalDAO" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 41.7, 18.2)
+script = ExtResource("3_portal")

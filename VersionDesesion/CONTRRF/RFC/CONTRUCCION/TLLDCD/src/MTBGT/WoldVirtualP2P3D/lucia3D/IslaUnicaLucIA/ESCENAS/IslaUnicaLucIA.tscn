@@ -1,0 +1,97 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/IslaUnicaLucIA.gd" id="1_dao"]
+[ext_resource type="Script" path="res://lucia3D/IslaUnicaLucIA/PlazaRegistroDAO.gd" id="2_plaza"]
+[ext_resource type="PackedScene" path="res://lucia3D/IslaUnicaLucIA/INTERIOR/InteriorDAO.tscn" id="3_interior"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_estacion"]
+top_radius = 5.0
+bottom_radius = 5.0
+height = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Material_estacion"]
+albedo_color = Color(0.12, 0.38, 0.46, 1)
+metallic = 0.4
+roughness = 0.4
+
+[node name="IslaUnicaLucIA" type="Node3D"]
+script = ExtResource("1_dao")
+
+[node name="SedeLucIA" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 42, 0)
+
+[node name="InteriorDAO" parent="." instance=ExtResource("3_interior")]
+
+[node name="PlazaRegistroDAO" type="Node3D" parent="."]
+script = ExtResource("2_plaza")
+
+[node name="RegistroNorte" type="Marker3D" parent="PlazaRegistroDAO"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 40.2, -36)
+
+[node name="Piso" type="MeshInstance3D" parent="PlazaRegistroDAO/RegistroNorte"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("CylinderMesh_estacion")
+material_override = SubResource("Material_estacion")
+
+[node name="Etiqueta" type="Label3D" parent="PlazaRegistroDAO/RegistroNorte"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+billboard = 1
+modulate = Color(0.75, 0.95, 1, 1)
+text = "1 · Identidad"
+font_size = 56
+outline_size = 8
+
+[node name="RegistroEste" type="Marker3D" parent="PlazaRegistroDAO"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 41.25, 0)
+
+[node name="Piso" type="MeshInstance3D" parent="PlazaRegistroDAO/RegistroEste"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("CylinderMesh_estacion")
+material_override = SubResource("Material_estacion")
+
+[node name="Etiqueta" type="Label3D" parent="PlazaRegistroDAO/RegistroEste"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+billboard = 1
+modulate = Color(0.75, 0.95, 1, 1)
+text = "2 · Cuenta única"
+font_size = 56
+outline_size = 8
+
+[node name="RegistroOeste" type="Marker3D" parent="PlazaRegistroDAO"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36, 40.38, 0)
+
+[node name="Piso" type="MeshInstance3D" parent="PlazaRegistroDAO/RegistroOeste"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("CylinderMesh_estacion")
+material_override = SubResource("Material_estacion")
+
+[node name="Etiqueta" type="Label3D" parent="PlazaRegistroDAO/RegistroOeste"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+billboard = 1
+modulate = Color(0.75, 0.95, 1, 1)
+text = "3 · Huella del equipo"
+font_size = 56
+outline_size = 8
+
+[node name="RegistroSur" type="Marker3D" parent="PlazaRegistroDAO"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 40.2, 36)
+
+[node name="Piso" type="MeshInstance3D" parent="PlazaRegistroDAO/RegistroSur"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("CylinderMesh_estacion")
+material_override = SubResource("Material_estacion")
+
+[node name="Etiqueta" type="Label3D" parent="PlazaRegistroDAO/RegistroSur"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+billboard = 1
+modulate = Color(0.75, 0.95, 1, 1)
+text = "4 · Firma de sesión"
+font_size = 56
+outline_size = 8
+
+[node name="TituloDAO" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 64, 0)
+billboard = 1
+text = "DAO · Isla Única LucIA"
+font_size = 96
+outline_size = 12

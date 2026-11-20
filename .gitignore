@@ -72,7 +72,7 @@ wvp3d.pck
 *.dae.import
 
 # Ruta específica que ya había hardcodeada
-VersionDe_sesion/Sistema_Principal/PRY/actualizacion_b5592aff/src/MTBGT/WoldVirtualP2P3D/ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/importblend/hm1.blend.import
+VersionDesesion/SistemaPrincipal/PRY/Archivo/VersionesDeRefuerzo/actualizacion_b5592aff/src/MTBGT/WoldVirtualP2P3D/ESCENAS/sceneOPTM/constructor/UA/UserAnimados/Import_UserAnimados/ctr_tscn_userBS/importblend/hm1.blend.import
 
 # ──────────────────────────────────────────────────────────────────────────
 # 4. TEXTURAS Y MEDIA GRANDES
@@ -185,9 +185,9 @@ venv/
 *.egg-info/
 
 # TLLDCD: se versiona el código del visor; solo se excluyen runtimes generados.
-/VersionDe_sesion/CONTRRF/TLLDCD/src/LC_STM/python/
-/VersionDe_sesion/CONTRRF/TLLDCD/src/VSC#/Servidor3D/
-/VersionDe_sesion/CONTRRF/TLLDCD/src/MTBGT/WoldVirtualP2P3D/AreaDeTrabajo/
+/VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/LC_STM/python/
+/VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Servidor3D/
+/VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/MTBGT/WoldVirtualP2P3D/AreaDeTrabajo/
 
 # ──────────────────────────────────────────────────────────────────────────
 # 12. NODE / WEB
@@ -208,7 +208,14 @@ desktop.ini
 # 14. VERSIONES/CARPETAS ESPECÍFICAS YA IDENTIFICADAS
 # ──────────────────────────────────────────────────────────────────────────
 # Versión de prueba antigua
-VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_prueba/
+VersionDesesion/SistemaPrincipal/PRY/Archivo/VersionesDeRefuerzo/actualizacion_2069d33a/src/VSC#/version_prueba/
+
+# Copia autónoma de la versión 2.8.5: duplica fuentes del visor y lleva los
+# paquetes embebidos (zip/exe). Vive solo en local como versión de referencia
+# ya publicada en Releases; no debe engordar el repositorio.
+/VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/Actualizaciones/LCDMWoldVirtualP2P3Dv2.8.5/
+# Copia autónoma de la 2.8.6 (indicador Blockchain corregido): mismo criterio.
+/VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/Actualizaciones/LCDMWoldVirtualP2P3Dv2.8.6/
 
 # ──────────────────────────────────────────────────────────────────────────
 # 15. DATOS GENERADOS Y RECURSOS 3D LOCALES DUPLICADOS
@@ -259,8 +266,6 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 # Restos de herramientas de despliegue externas
 .vercel/
 
-<<<<<<< HEAD
-=======
 # ──────────────────────────────────────────────────────────────────────────
 # 18. R-01 — EVIDENCIA DE LA CUARENTENA (bytes plantados: locales, nunca en Git)
 #     El MANIFIESTO.md y los informes de STM_DOC sí se versionan; las cargas no.
@@ -277,8 +282,6 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_2069d33a/src/VSC#/version_p
 **/rescate_zona_*/duplicados_utils_flat/transport.py
 **/STM_HRTS/utils/transport.py
 **/STM_HRTS/opencode/init
-
->>>>>>> c408a1727e2307f6ab250ccefe56ac294c179b00
 config.bat
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -289,8 +292,15 @@ config.bat
 _tmp_*/
 _tmp_*
 _acl_reports/
-VersionDe_sesion/.python/
-VersionDe_sesion/Sistema_Principal/PRY/actualizacion_*/
+VersionDesesion/.python/
+VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/.python/
+VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/venv/
+VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/.pytest_cache/
+VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/.ruff_cache/
+VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/.ipfs/
+VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/_backup_renombrado/
+VersionDesesion/CONTRRF/RFC/CONTRUCCION/.dev/_tmp_*/
+VersionDesesion/SistemaPrincipal/PRY/Archivo/VersionesDeRefuerzo/actualizacion_*/
 **/__pycache__/
 *.py[cod]
 *.log
@@ -308,7 +318,8 @@ VersionDe_sesion/Sistema_Principal/PRY/actualizacion_*/
 /_tmp_*
 /_acl_reports/
 /_tmp_*/**
-.vscode/
+!VersionDesesion/**/.dev/.vscode/
+!VersionDesesion/**/.dev/.vscode/**
 .idea/
 .DS_Store
 Thumbs.db

@@ -1,7 +1,0 @@
-[gd_resource type="StandardMaterial3D" format=3 uid="uid://bm4lqxxhslmao"]
-
-[resource]
-resource_name = "Pants_PBR"
-cull_mode = 2
-albedo_color = Color(0.42358288, 0.4492039, 0.49560964, 1)
-roughness = 0.88
