@@ -87,6 +87,17 @@ namespace Visor3D.Services
                 string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WoldVirtualP2P3D");
                 Directory.CreateDirectory(logDir);
                 string logFile = Path.Combine(logDir, "servidor_oficial.log");
+                var logLock = new object();
+                void RegistrarSalida(string? linea)
+                {
+                    if (string.IsNullOrWhiteSpace(linea)) return;
+                    try
+                    {
+                        lock (logLock)
+                            File.AppendAllText(logFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {linea}{Environment.NewLine}");
+                    }
+                    catch { }
+                }
 
                 try
                 {
@@ -98,8 +109,10 @@ namespace Visor3D.Services
                         UseShellExecute = false,
                         CreateNoWindow = true,
                         WindowStyle = ProcessWindowStyle.Hidden,
-                        RedirectStandardOutput = false,
-                        RedirectStandardError = false
+                        // Capturar la salida para que los fallos de importación,
+                        // permisos o puerto ocupado no queden invisibles.
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
                     };
 
                     VisorLog.Info($"[Blockchain] Arrancando servidor oficial: {psi.FileName} {psi.Arguments}");
@@ -107,6 +120,10 @@ namespace Visor3D.Services
 
                     if (_proceso != null && !_proceso.HasExited)
                     {
+                        _proceso.OutputDataReceived += (_, e) => RegistrarSalida(e.Data);
+                        _proceso.ErrorDataReceived += (_, e) => RegistrarSalida(e.Data);
+                        _proceso.BeginOutputReadLine();
+                        _proceso.BeginErrorReadLine();
                         TunnelProcessRegistry.Persistir(SlotPid, _proceso.Id);
 
                         // Esperar hasta 10 segundos a que responda /status
@@ -124,7 +141,7 @@ namespace Visor3D.Services
 
                             if (_proceso.HasExited)
                             {
-                                UltimoError = $"El proceso de Python terminó prematuramente (código: {_proceso.ExitCode}).";
+                                UltimoError = $"Python terminó prematuramente (código: {_proceso.ExitCode}). Registro: {logFile}";
                                 VisorLog.Error($"[Blockchain] {UltimoError}");
                                 return false;
                             }
@@ -139,6 +156,11 @@ namespace Visor3D.Services
                 }
 
                 EstaEnLinea = await ConsultarSaludConEsperaAsync(ct);
+                if (!EstaEnLinea)
+                {
+                    UltimoError = $"El servidor no respondió en {UrlServidor}. Registro: {logFile}";
+                    VisorLog.Error($"[Blockchain] {UltimoError}");
+                }
                 return EstaEnLinea;
             }
             finally
@@ -296,28 +318,70 @@ namespace Visor3D.Services
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string projectDir = GodotConfig.GetProjectPath();
-            string? srcDir = Directory.GetParent(Directory.GetParent(projectDir)?.FullName ?? "")?.FullName;
+            var raicesSrc = new List<string>();
+            void AgregarSrc(string? ruta)
+            {
+                if (string.IsNullOrWhiteSpace(ruta)) return;
+                string? actual = ruta;
+                if (File.Exists(actual)) actual = Path.GetDirectoryName(actual);
+                if (actual == null || !Directory.Exists(actual)) return;
+                actual = Path.GetFullPath(actual);
+                if (!raicesSrc.Contains(actual, StringComparer.OrdinalIgnoreCase)) raicesSrc.Add(actual);
+            }
+
+            // El proyecto Godot activo vive bajo src/MTBGT/WoldVirtualP2P3D.
+            // Subir hasta encontrar src permite funcionar tanto en checkout como
+            // si projectDir apunta a recursos extraídos bajo LocalAppData.
+            DirectoryInfo? dir = new(projectDir);
+            while (dir != null)
+            {
+                if (string.Equals(dir.Name, "src", StringComparison.OrdinalIgnoreCase))
+                {
+                    AgregarSrc(dir.FullName);
+                    break;
+                }
+                dir = dir.Parent;
+            }
+
+            foreach (string src in GodotConfig.SrcCandidatos()) AgregarSrc(src);
+
+            // También cubre desarrollo cuando el exe se inicia desde una salida
+            // de build situada dentro del repositorio, independientemente del CWD.
+            foreach (string inicio in new[] { baseDir, GodotConfig.RepoRoot() ?? "" })
+            {
+                if (string.IsNullOrWhiteSpace(inicio)) continue;
+                dir = new DirectoryInfo(inicio);
+                while (dir != null)
+                {
+                    if (string.Equals(dir.Name, "src", StringComparison.OrdinalIgnoreCase))
+                    {
+                        AgregarSrc(dir.FullName);
+                        break;
+                    }
+                    dir = dir.Parent;
+                }
+            }
 
             var candidatos = new List<string>
             {
-                // Rutas.json fija el servidor en STM_BKCH\stm_bkch1 desde la reorganización
-                srcDir != null ? Path.Combine(srcDir, "STM_BKCH", "stm_bkch1", "servidor_oficial.py") : "",
-                srcDir != null ? Path.Combine(srcDir, "STM_BKCH", "servidor_oficial.py") : "",
-                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "STM_BKCH", "servidor_oficial.py")),
-                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "STM_BKCH", "servidor_oficial.py")),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "STM_BKCH", "servidor_oficial.py"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "servidor_oficial.py")
+                // En la publicación el script se copia junto al exe bajo STM_BKCH.
+                Path.Combine(baseDir, "STM_BKCH", "stm_bkch1", "servidor_oficial.py"),
+                Path.Combine(baseDir, "STM_BKCH", "servidor_oficial.py"),
+                Path.Combine(baseDir, "servidor_oficial.py")
             };
-            foreach (string src in GodotConfig.SrcCandidatos())
+            foreach (string src in raicesSrc)
             {
                 candidatos.Add(Path.Combine(src, "STM_BKCH", "stm_bkch1", "servidor_oficial.py"));
                 candidatos.Add(Path.Combine(src, "STM_BKCH", "servidor_oficial.py"));
             }
 
-            foreach (var c in candidatos)
+            foreach (string candidato in candidatos)
             {
-                if (!string.IsNullOrWhiteSpace(c) && File.Exists(c))
-                    return c;
+                if (File.Exists(candidato))
+                {
+                    VisorLog.Info($"[Blockchain] Script Python localizado: {candidato}");
+                    return candidato;
+                }
             }
 
             return null;

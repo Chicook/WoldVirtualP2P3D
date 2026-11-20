@@ -1,7 +1,11 @@
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Pipes;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Visor3D.Services
 {
@@ -60,6 +64,55 @@ namespace Visor3D.Services
             }
 
             mutex.Dispose();
+            return false;
+        }
+
+        public static void EscucharInvitaciones(Action<string> recibir)
+        {
+            _ = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        using var pipe = new NamedPipeServerStream(
+                            NombreCanal(), PipeDirection.In, 1, PipeTransmissionMode.Byte,
+                            PipeOptions.Asynchronous);
+                        await pipe.WaitForConnectionAsync().ConfigureAwait(false);
+                        using var reader = new StreamReader(pipe, Encoding.UTF8,
+                            detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true);
+                        string? enlace = await reader.ReadLineAsync().ConfigureAwait(false);
+                        if (!string.IsNullOrWhiteSpace(enlace) && enlace.Length <= 4096)
+                            recibir(enlace.Trim());
+                    }
+                    catch
+                    {
+                        await Task.Delay(250).ConfigureAwait(false);
+                    }
+                }
+            });
+        }
+
+        public static bool EnviarInvitacionAInstanciaExistente(string enlace)
+        {
+            if (string.IsNullOrWhiteSpace(enlace) || enlace.Length > 4096) return false;
+            for (int intento = 0; intento < 10; intento++)
+            {
+                try
+                {
+                    using var pipe = new NamedPipeClientStream(
+                        ".", NombreCanal(), PipeDirection.Out, PipeOptions.Asynchronous);
+                    pipe.Connect(300);
+                    using var writer = new StreamWriter(pipe, Encoding.UTF8,
+                        bufferSize: 1024, leaveOpen: true) { AutoFlush = true };
+                    writer.WriteLine(enlace);
+                    return true;
+                }
+                catch
+                {
+                    Thread.Sleep(100);
+                }
+            }
             return false;
         }
 
@@ -126,5 +179,9 @@ namespace Visor3D.Services
             }
             return nombre + "." + perfil;
         }
+
+        private static string NombreCanal()
+            => NombreMutex().Replace(@"Local\", "", StringComparison.OrdinalIgnoreCase)
+                .Replace('\\', '_').Replace('.', '_');
     }
 }
