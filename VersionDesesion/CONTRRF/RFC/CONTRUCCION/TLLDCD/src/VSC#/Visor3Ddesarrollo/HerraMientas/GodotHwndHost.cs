@@ -396,7 +396,11 @@ namespace Visor3D
                         FileName         = _godotExePath,
                         Arguments        = args,
                         UseShellExecute  = false,
-                        CreateNoWindow   = false
+                        // Godot se integra dentro del visor; no debe abrir otra
+                        // ventana de consola encima del mundo 3D.
+                        CreateNoWindow   = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
                     };
 
                     bool esParcheDao = !_editorMode &&
@@ -452,6 +456,13 @@ namespace Visor3D
                         return;
                     }
 
+                    // Mantener los diagnósticos de Godot en el log persistente
+                    // del visor, aunque su consola no se muestre al usuario.
+                    _godotProcess.OutputDataReceived += (_, e) => RegistrarLogGodot(e.Data, esError: false);
+                    _godotProcess.ErrorDataReceived += (_, e) => RegistrarLogGodot(e.Data, esError: true);
+                    _godotProcess.BeginOutputReadLine();
+                    _godotProcess.BeginErrorReadLine();
+
                     try
                     {
                         _godotProcess.EnableRaisingEvents = true;
@@ -500,6 +511,21 @@ namespace Visor3D
                     Debug.WriteLine($"[GodotHwndHost] Error: {ex.Message}");
                 }
             }, token);
+        }
+
+        private static void RegistrarLogGodot(string? linea, bool esError)
+        {
+            if (string.IsNullOrWhiteSpace(linea)) return;
+            string texto = linea.Trim();
+            if (esError || texto.Contains("ERROR", StringComparison.OrdinalIgnoreCase))
+                Visor3D.Services.VisorLog.Error($"[Godot] {texto}");
+            else if (texto.Contains("WARNING", StringComparison.OrdinalIgnoreCase) || texto.Contains("WARN", StringComparison.OrdinalIgnoreCase))
+                Visor3D.Services.VisorLog.Warn($"[Godot] {texto}");
+            else if (texto.Contains("tunel", StringComparison.OrdinalIgnoreCase) ||
+                     texto.Contains("cloudflare", StringComparison.OrdinalIgnoreCase) ||
+                     texto.Contains("websocket", StringComparison.OrdinalIgnoreCase) ||
+                     texto.Contains("[DAO modular]", StringComparison.OrdinalIgnoreCase))
+                Visor3D.Services.VisorLog.Info($"[Godot] {texto}");
         }
 
         private static IntPtr FindGodotWindow(int pid)

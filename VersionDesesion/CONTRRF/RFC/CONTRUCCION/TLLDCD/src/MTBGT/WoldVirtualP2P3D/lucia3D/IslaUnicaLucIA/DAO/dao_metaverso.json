@@ -1,68 +1,68 @@
 {
-    "id": "woldvirtual.dao.metaverso",
-    "nombre": "Isla Única LucIA",
-    "version": "0.1.0",
-    "proposito": "DAO del metaverso WoldVirtual P2P 3D y sede de LucIA.",
-    "unicidad": {
-        "unica": true,
-        "origen": { "x": 0.0, "y": 0.0, "z": 0.0 },
-        "regla": "La isla vive en el origen y queda fuera del reparto de islas personales: no se asigna a ningún jugador, no se duplica y no se retira. Cualquier copia en el grupo isla_unica_lucia se descarta."
-    },
-    "sede_lucia": {
-        "marcador": "SedeLucIA",
-        "descripcion": "Punto donde se instala el núcleo de LucIA para atender a los miembros de la DAO."
-    },
-    "registro": {
-        "plaza": "PlazaRegistroDAO",
-        "orden": ["identidad", "cuenta_unica", "huella_equipo", "firma_sesion"],
-        "estaciones": [
-            {
-                "id": "identidad",
-                "marcador": "RegistroNorte",
-                "direccion": "norte",
-                "descripcion": "Alta de identidad del miembro.",
-                "modulo": "Identidad"
-            },
-            {
-                "id": "cuenta_unica",
-                "marcador": "RegistroEste",
-                "direccion": "este",
-                "descripcion": "Activación de la cuenta única del miembro.",
-                "modulo": "SesionUnicaGuarda"
-            },
-            {
-                "id": "huella_equipo",
-                "marcador": "RegistroOeste",
-                "direccion": "oeste",
-                "descripcion": "Registro de la huella digital del equipo.",
-                "modulo": "MaquinaHuellaDigital"
-            },
-            {
-                "id": "firma_sesion",
-                "marcador": "RegistroSur",
-                "direccion": "sur",
-                "descripcion": "Firma de sesión y sello de acceso.",
-                "modulo": "ArranqueCuenta"
-            }
-        ]
-    },
-    "gobernanza": {
-        "modelo": "DAO",
-        "unidad_voto": "1 miembro = 1 voto",
-        "quorum": 0.51,
-        "propuestas": {
-            "creacion": "Cualquier miembro registrado puede proponer.",
-            "debate": "El debate ocurre en la plaza de la isla.",
-            "votacion": "Votación registrada en el ledger oficial."
-        },
-        "tesoreria": {
-            "multifirma": true,
-            "umbral": "2 de 3",
-            "transparencia": "Movimientos públicos en el ledger (STM_CH)."
-        },
-        "miembros": {
-            "requisito": "Registro completo en las cuatro estaciones.",
-            "revocacion": "Decisión de la DAO por votación."
-        }
-    }
+	"id": "woldvirtual.dao.metaverso",
+	"nombre": "Isla Única LucIA",
+	"version": "0.1.0",
+	"proposito": "DAO del metaverso WoldVirtual P2P 3D y sede de LucIA.",
+	"unicidad": {
+		"unica": true,
+		"origen": { "x": 0.0, "y": 0.0, "z": 0.0 },
+		"regla": "La isla vive en el origen y queda fuera del reparto de islas personales: no se asigna a ningún jugador, no se duplica y no se retira. Cualquier copia en el grupo isla_unica_lucia se descarta."
+	},
+	"sede_lucia": {
+		"marcador": "SedeLucIA",
+		"descripcion": "Punto donde se instala el núcleo de LucIA para atender a los miembros de la DAO."
+	},
+	"registro": {
+		"plaza": "PlazaRegistroDAO",
+		"orden": ["identidad", "cuenta_unica", "huella_equipo", "firma_sesion"],
+		"estaciones": [
+			{
+				"id": "identidad",
+				"marcador": "RegistroNorte",
+				"direccion": "norte",
+				"descripcion": "Alta de identidad del miembro.",
+				"modulo": "Identidad"
+			},
+			{
+				"id": "cuenta_unica",
+				"marcador": "RegistroEste",
+				"direccion": "este",
+				"descripcion": "Activación de la cuenta única del miembro.",
+				"modulo": "SesionUnicaGuarda"
+			},
+			{
+				"id": "huella_equipo",
+				"marcador": "RegistroOeste",
+				"direccion": "oeste",
+				"descripcion": "Registro de la huella digital del equipo.",
+				"modulo": "MaquinaHuellaDigital"
+			},
+			{
+				"id": "firma_sesion",
+				"marcador": "RegistroSur",
+				"direccion": "sur",
+				"descripcion": "Firma de sesión y sello de acceso.",
+				"modulo": "ArranqueCuenta"
+			}
+		]
+	},
+	"gobernanza": {
+		"modelo": "DAO",
+		"unidad_voto": "1 miembro = 1 voto",
+		"quorum": 0.51,
+		"propuestas": {
+			"creacion": "Cualquier miembro registrado puede proponer.",
+			"debate": "El debate ocurre en la plaza de la isla.",
+			"votacion": "Votación registrada en el ledger oficial."
+		},
+		"tesoreria": {
+			"multifirma": true,
+			"umbral": "2 de 3",
+			"transparencia": "Movimientos públicos en el ledger (STM_CH)."
+		},
+		"miembros": {
+			"requisito": "Registro completo en las cuatro estaciones.",
+			"revocacion": "Decisión de la DAO por votación."
+		}
+	}
 }

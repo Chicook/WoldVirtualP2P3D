@@ -253,8 +253,22 @@ func _on_onboarding_completado(avatar_scene: String) -> void:
 	if _onboarding != null and is_instance_valid(_onboarding):
 		_onboarding.queue_free()
 		_onboarding = null
-	# La DAO del alta debe salir del grupo `isla_unica_lucia` antes de montar el
-	# mundo, o la DAO real se descartaría a sí misma como copia duplicada.
+	# Solo el anfitrión de desarrollo integra la recepción en la escena raíz.
+	# El invitado debe pasar a la escena P2P para ver la DAO del anfitrión, no
+	# conservar una DAO local duplicada en su recepción.
+	var red := preload("res://gdscrip/Red.gd")
+	if bool(red.resolver_objetivo().get("is_client", false)):
+		var marca := FileAccess.open("user://onboarding_dao_completado.flag", FileAccess.WRITE)
+		if marca != null:
+			marca.store_string("1")
+			marca.close()
+		get_tree().call_deferred("change_scene_to_file", "res://WoldVirtual3DP2P.tscn")
+		return
+	# Mantener la única DAO del anfitrión actual y añadir el mundo común.
+	var cfg := ConfigFile.new()
+	cfg.load("user://registro.cfg")
+	cfg.set_value("jugador", "nick", _nick)
+	cfg.save("user://registro.cfg")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_entrar_a_isla()
@@ -560,7 +574,7 @@ func _on_mi_isla_lista() -> void:
 	_mostrar_bienvenida()
 	if _invitar_lucia:
 		_invitar_lucia = false
-		_spawn_lucia_invitada()
+		_mostrar_aviso("LucIA ya está en la DAO única. Tu isla está conectada al mismo mundo.")
 
 
 ## Reubica solo al jugador local en la DAO compartida; no altera el índice ni la

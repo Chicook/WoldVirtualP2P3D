@@ -10,6 +10,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -50,6 +51,8 @@ namespace Visor3D
         private Process? _tunnelProcess;
         private readonly SemaphoreSlim _semaforoTunelWebNodo = new(1, 1);
         private string _ultimoErrorTunelPublico = "";
+        private bool _reiniciandoConexion;
+        private bool _cerrandoVentana;
         private const string TunelWebNodoSlot = "webnodo";   // slot del PID persistido para el túnel del portal
         private string _urlAmigoPendiente = "";
         private string _ipsLanFallback = "";
@@ -140,6 +143,7 @@ namespace Visor3D
             this.SizeChanged += (s, e) => AjustarBarraResponsive();
             this.Closing += (s, e) =>
             {
+                _cerrandoVentana = true;
                 DetenerChatSesion();
                 _servidorBlockchain.Detener();
                 _servidorLucia.Detener();
@@ -186,7 +190,6 @@ namespace Visor3D
             BtnWebNodo.Click += OnWebNodoClicked;
 
             // Chat del metaverso (texto, voz y webcam)
-            BtnChat.Click += (s, e) => AlternarPanelChat();
             BtnChatCerrar.Click += (s, e) => CerrarPanelChat();
             BtnChatEnviar.Click += (s, e) => EnviarMensajeChat();
             BtnChatMic.Click += (s, e) => AlternarMicrofonoChat();
@@ -199,9 +202,6 @@ namespace Visor3D
 
             // Si Godot se cae, se puede reincrustar sin cerrar el visor
             BtnReiniciar3D.Click += (s, e) => ReiniciarMotor3D();
-
-            // Copiar diagnóstico al portapapeles
-            BtnDiagnostico.Click += OnDiagnosticoClicked;
 
             // Determinar ruta de datos de Godot (user://) PRIMERO para que esté lista
 #if GODOT_SOURCE_PREVIEW
@@ -254,6 +254,43 @@ namespace Visor3D
                 finally { _iniciandoLucia = false; }
             };
             _timerLucia.Start();
+        }
+
+        public void AbrirInvitacion(string enlace)
+        {
+            string destino = NormalizarUrlSesion(enlace, out string? raiz, out string? token);
+            if (!EsTokenInvitacion(token) || string.IsNullOrWhiteSpace(destino))
+            {
+                MessageBox.Show(
+                    "El enlace no contiene una invitación válida de Wold Virtual.",
+                    "Invitación no válida", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string hostSesion = !string.IsNullOrWhiteSpace(raiz) ? raiz : destino;
+            if (!Uri.TryCreate(hostSesion, UriKind.Absolute, out var uriHost) ||
+                (uriHost.Scheme != Uri.UriSchemeHttp && uriHost.Scheme != Uri.UriSchemeHttps))
+            {
+                MessageBox.Show(
+                    "La invitación no contiene una dirección web válida para el anfitrión Lucía.",
+                    "Invitación no válida", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            DetenerChatSesion();
+            _chatActivo = false;
+            _hostSesionUrl = hostSesion.TrimEnd('/');
+            _hostInicial = _hostSesionUrl;
+            _urlAmigoPendiente = _hostSesionUrl;
+            AdoptarTokenInvitacion(token);
+            TxtUrlAmigo.Text = _urlAmigoPendiente;
+            TxtEstadoP2P.Text = "🔗 Invitación recibida. Conectando con Lucía anfitriona…";
+            TxtSesionUsuario.Text = "Sesión invitada de Lucía";
+
+            if (_godotHostMain != null)
+                ReiniciarMotor3D();
+            else
+                EntrarAlMetaverso();
         }
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -2072,8 +2109,8 @@ namespace Visor3D
                 ? "El enlace público efímero se está generando…"
                 : $"Enlace público en preparación…\n(Alternativa en la misma red local: {_ipsLanFallback})";
             BtnCopiarUrlP2P.Content = "📋 Copiar enlace";
-            // ── v2.9.4: el banner siempre es visible para que el usuario vea el estado del túnel ──
-            BannerP2P.Visibility = Visibility.Visible;
+            // La invitación ya no se muestra en la barra superior; queda disponible
+            // al regenerarla desde el menú de opciones.
 
             Console.WriteLine(string.IsNullOrEmpty(_ipsLanFallback)
                 ? "[Visor3D] ANFITRIÓN: generando túnel público (sin IPs LAN alternativas)."
@@ -2100,8 +2137,6 @@ namespace Visor3D
                 $"Enlace de la sesión:\n{_enlaceCompartible}\n\n" +
                 $"Tu portal: {url}\nAnfitrión raíz: {_hostSesionUrl}";
             BtnCopiarUrlP2P.Content = "📋 Copiar enlace";
-            // ── v2.9.4: mostrar el banner con la URL activa del túnel ──
-            BannerP2P.Visibility = Visibility.Visible;
         }
 
         /// <summary>
@@ -2189,11 +2224,15 @@ namespace Visor3D
             try
             {
                 GuardarWebNodoRelay();
-                bool hasTarget = TryParseConnectionTarget(_urlAmigoPendiente, out string targetHost, out int targetPort);
+                // Persistir el destino raíz resuelto, no el portal del invitado que
+                // pudo reenviar la invitación. Todos los clientes vuelven a Lucía.
+                string peerUrl = !string.IsNullOrWhiteSpace(_hostSesionUrl)
+                    ? _hostSesionUrl
+                    : (_urlAmigoPendiente ?? "");
+                bool hasTarget = TryParseConnectionTarget(peerUrl, out string targetHost, out int targetPort);
                 bool esClienteRemoto = hasTarget && targetHost != "127.0.0.1" && targetHost != "localhost" && !string.IsNullOrEmpty(targetHost);
                 // misma raíz que la línea de órdenes del motor, para que el fichero de
                 // sesión no vuelva a apuntar al portal del invitado que compartió el enlace
-                string peerUrl = !string.IsNullOrWhiteSpace(_hostSesionUrl) ? _hostSesionUrl : (_urlAmigoPendiente ?? "");
                 var sessionData = new
                 {
                     peerUrl,
@@ -2309,6 +2348,10 @@ namespace Visor3D
                 {
                     Dispatcher.Invoke(() =>
                     {
+                        // Este túnel auxiliar publica la API P2P (7890). El enlace
+                        // para entrar al mundo viaja por WebNodo; no reemplazar su
+                        // estado cuando el proveedor auxiliar SSH falla.
+                        if (!string.IsNullOrWhiteSpace(App.WebNodo?.PublicTunnelUrl)) return;
                         TxtEstadoP2P.Text = $"🔄 Túnel ({host}) caído; probando el siguiente proveedor…";
                         BordeEstadoP2P.Background = new System.Windows.Media.SolidColorBrush(
                             System.Windows.Media.Color.FromRgb(120, 53, 15));
@@ -2319,6 +2362,7 @@ namespace Visor3D
                 {
                     Dispatcher.Invoke(() =>
                     {
+                        if (!string.IsNullOrWhiteSpace(App.WebNodo?.PublicTunnelUrl)) return;
                         TxtEstadoP2P.Text = $"⚠ {detalle}";
                         BordeEstadoP2P.Background = new System.Windows.Media.SolidColorBrush(
                             System.Windows.Media.Color.FromRgb(120, 53, 15));
@@ -2329,6 +2373,7 @@ namespace Visor3D
                 {
                     Dispatcher.Invoke(() =>
                     {
+                        if (!string.IsNullOrWhiteSpace(App.WebNodo?.PublicTunnelUrl)) return;
                         string? fallo = _p2pServicio.UltimoFalloTunel;
                         TxtEstadoP2P.Text = string.IsNullOrWhiteSpace(fallo)
                             ? $"🔄 Reconectando túnel… (intento {intento}, en {espera}s)"
@@ -2948,7 +2993,8 @@ namespace Visor3D
 
         private void ActualizarBotonChat()
         {
-            BtnChat.Content = _chatNoLeidos > 0 ? $"💬 Chat ({_chatNoLeidos})" : "💬 Chat";
+            if (BtnSecciones_Chat.Content is TextBlock etiquetaChat)
+                etiquetaChat.Text = _chatNoLeidos > 0 ? $"💬 Chat ({_chatNoLeidos})" : "💬 Chat";
         }
 
         // ═══════════════════════════════════════════════════════════
@@ -3890,6 +3936,16 @@ namespace Visor3D
                 : (!string.IsNullOrWhiteSpace(_urlPublica) ? _urlPublica : TxtUrlP2P.Text.Trim());
             if (string.IsNullOrWhiteSpace(enlace)) return;
 
+            if (string.IsNullOrWhiteSpace(_urlAmigoPendiente))
+            {
+                MessageBox.Show(
+                    "La conexión de Lucía se gestiona dentro de la sesión. No hace falta copiar un enlace de invitación.",
+                    "Sesión interna activa",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
             // Evitar copiar el texto de estado mientras el túnel aún no está listo.
             if (!enlace.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
@@ -4168,17 +4224,21 @@ namespace Visor3D
 
                 string exe = Environment.ProcessPath ?? "";
                 if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe))
+                {
+                    VisorLog.Warn("[WebNodo] No se puede preparar el portal auxiliar: no se localizó el ejecutable anfitrión.");
                     return false;
+                }
 
                 string script = Path.Combine(AppContext.BaseDirectory, "webnodo", "fallback.py");
                 string? srcActivo = GodotConfig.SrcActivo();
                 if (!File.Exists(script) && srcActivo != null)
                     script = Path.Combine(srcActivo, "VSC#", "Visor3Ddesarrollo", "webnodo", "fallback.py");
                 string python = GodotConfig.GetPythonExePath() ?? "";
-                string pythonw = Path.Combine(Path.GetDirectoryName(python) ?? "", "pythonw.exe");
-                if (File.Exists(pythonw)) python = pythonw;
                 if (!File.Exists(python) || !File.Exists(script))
+                {
+                    VisorLog.Warn($"[WebNodo] Portal auxiliar no iniciado: Python='{python}', script='{script}'.");
                     return false;
+                }
 
                 string dirUsuario = Path.Combine(TestUserDataDir, "user");
                 Directory.CreateDirectory(dirUsuario);
@@ -4187,13 +4247,31 @@ namespace Visor3D
                 WebNodoService.GuardarReleasePortal(releasePortal);
                 string relay = GuardarWebNodoRelay();
 
-                _webNodoHelper = Process.Start(new ProcessStartInfo
+                var inicio = new ProcessStartInfo
                 {
                     FileName = python,
                     Arguments = $"\"{script}\" --puerto 3030 --exe \"{exe}\" --release \"{releasePortal}\" --sesion \"{sesion}\" --relay \"{relay}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                });
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
+                _webNodoHelper = new Process { StartInfo = inicio, EnableRaisingEvents = true };
+                _webNodoHelper.OutputDataReceived += (_, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data)) VisorLog.Info($"[WebNodo/Python] {e.Data}");
+                };
+                _webNodoHelper.ErrorDataReceived += (_, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data)) VisorLog.Warn($"[WebNodo/Python] {e.Data}");
+                };
+                if (!_webNodoHelper.Start())
+                {
+                    VisorLog.Warn("[WebNodo] Python no pudo iniciar el portal auxiliar.");
+                    return false;
+                }
+                _webNodoHelper.BeginOutputReadLine();
+                _webNodoHelper.BeginErrorReadLine();
 
                 for (int i = 0; i < 20; i++)
                 {
@@ -4210,7 +4288,11 @@ namespace Visor3D
                         }
                     }
                     catch { }
-                    if (_webNodoHelper != null && _webNodoHelper.HasExited) break;
+                    if (_webNodoHelper.HasExited)
+                    {
+                        VisorLog.Warn($"[WebNodo] El portal auxiliar terminó al arrancar (código {_webNodoHelper.ExitCode}).");
+                        break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -4327,14 +4409,14 @@ namespace Visor3D
                         System.Windows.Media.Color.FromRgb(6, 78, 59));
                     BtnWebNodo.BorderBrush = new System.Windows.Media.SolidColorBrush(
                         System.Windows.Media.Color.FromRgb(34, 197, 94));
-                    try { Clipboard.SetText(pubUrl); } catch { }
                 });
-                EscribirResultadoValidacion(true, $"Túnel WebNodo activo: {pubUrl}");
                 return;
             }
 
             try
             {
+                VisorLog.Info("[Tunel/Cloudflare] Iniciando publicación del WebNodo; proveedores SSH desactivados.");
+                Console.WriteLine("[Tunel/Cloudflare] Iniciando publicación del WebNodo.");
                 // Barrido defensivo: si una ejecución anterior murió sin limpiar (p. ej. el
                 // usuario "finalizó la tarea" desde el Administrador de tareas), aquí matamos
                 // el cloudflared/ssh huérfano antes de crear uno nuevo.
@@ -4347,14 +4429,11 @@ namespace Visor3D
                 }
 
                 int webPort = App.WebNodo.ActivePort;
-                string proveedorDeseado = Environment.GetEnvironmentVariable("WVP_TUNNEL_PROVIDER") ?? "";
-
-                // Opción 1: cloudflared (si no se forzó "ssh")
-                string? cfExe = proveedorDeseado.Equals("ssh", StringComparison.OrdinalIgnoreCase)
-                    ? null
-                    : await BuscarODescargarCloudflaredAsync(CancellationToken.None);
+                // Cloudflare es el único proveedor habilitado para publicar el WebNodo.
+                string? cfExe = await BuscarODescargarCloudflaredAsync(CancellationToken.None);
                 if (cfExe != null)
                 {
+                    VisorLog.Info($"[Tunel/Cloudflare] Ejecutando '{cfExe}' para el puerto local {webPort}.");
                     System.Diagnostics.Debug.WriteLine($"[Tunel] Probando cloudflared en puerto {webPort}...");
                     var res = await TryRunProcessTunnelAsync(
                         cfExe,
@@ -4362,12 +4441,20 @@ namespace Visor3D
                         @"https://[\w\-]+\.trycloudflare\.com",
                         12000,
                         CancellationToken.None,
-                        detalle => fallosProveedor["Cloudflare"] = detalle);
+                        detalle =>
+                        {
+                            fallosProveedor["Cloudflare"] = detalle;
+                            VisorLog.Warn($"[Tunel/Cloudflare] {detalle}");
+                            Console.WriteLine($"[Tunel/Cloudflare] {detalle}");
+                        });
                     if (res != null && !string.IsNullOrEmpty(res.Url))
                     {
                         _tunnelProcess = res.Process;
+                        VigilarCaidaTunel(res.Process);
                         TunnelProcessRegistry.Persistir(TunelWebNodoSlot, res.Process.Id);
                         string pubUrl = res.Url;
+                        VisorLog.Info($"[Tunel/Cloudflare] URL pública lista: {pubUrl}");
+                        Console.WriteLine($"[Tunel/Cloudflare] URL pública lista: {pubUrl}");
                         Dispatcher.Invoke(() =>
                         {
                             TxtEstadoP2P.Text = "🌍 Túnel público activo";
@@ -4380,71 +4467,63 @@ namespace Visor3D
                                 System.Windows.Media.Color.FromRgb(6, 78, 59));
                             BtnWebNodo.BorderBrush = new System.Windows.Media.SolidColorBrush(
                                 System.Windows.Media.Color.FromRgb(34, 197, 94));
-                            try { Clipboard.SetText(pubUrl); } catch { }
                         });
-                        EscribirResultadoValidacion(true, $"Túnel WebNodo activo: {pubUrl}");
                         return;
                     }
                 }
                 else
                 {
                     fallosProveedor["Cloudflare"] = "No se pudo localizar o ejecutar cloudflared.exe.";
-                }
-
-                // Opción 2: SSH reverso (serveo.net / localhost.run)
-                string sshExe = @"C:\Windows\System32\OpenSSH\ssh.exe";
-                if (!File.Exists(sshExe)) sshExe = "ssh";
-
-                var candidates = new[]
-                {
-                    new { Name = "localhost.run", Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{webPort} nokey@localhost.run", Pat = @"https://[\w\-]+\.lhr\.life" },
-                    new { Name = "serveo.net", Args = $"-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:{webPort} serveo.net", Pat = @"https://[\w\-]+\.serveo\.net" }
-                };
-
-                foreach (var c in candidates)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Tunel] Probando {c.Name} en puerto {webPort}...");
-                    var res = await TryRunProcessTunnelAsync(
-                        sshExe, c.Args, c.Pat, 23000, CancellationToken.None,
-                        detalle => fallosProveedor[c.Name] = detalle);
-                    if (res != null && !string.IsNullOrEmpty(res.Url))
-                    {
-                        _tunnelProcess = res.Process;
-                        TunnelProcessRegistry.Persistir(TunelWebNodoSlot, res.Process.Id);
-                        string pubUrl = res.Url;
-                        Dispatcher.Invoke(() =>
-                        {
-                            TxtEstadoP2P.Text = $"🌍 Túnel público ({c.Name})";
-                            App.WebNodo.PublicTunnelUrl = pubUrl;
-                            GuardarP2PSessionConfig(); // Refrescar config con la URL del túnel
-                            MostrarEnlacePublico(pubUrl);
-                            BtnWebNodo.Content = "🌐 WebNodo (Online)";
-                            BtnWebNodo.ToolTip = $"WebNodo público ({c.Name}):\n{pubUrl}\nHaz clic para abrir en el navegador y copiar.";
-                            BtnWebNodo.Background = new System.Windows.Media.SolidColorBrush(
-                                System.Windows.Media.Color.FromRgb(6, 78, 59));
-                            BtnWebNodo.BorderBrush = new System.Windows.Media.SolidColorBrush(
-                                System.Windows.Media.Color.FromRgb(34, 197, 94));
-                            try { Clipboard.SetText(pubUrl); } catch { }
-                        });
-                        EscribirResultadoValidacion(true, $"Túnel WebNodo activo: {pubUrl}");
-                        return;
-                    }
+                    VisorLog.Warn("[Tunel/Cloudflare] No se pudo localizar o ejecutar cloudflared.exe.");
                 }
 
                 Dispatcher.Invoke(() =>
                 {
-                    string detalle = fallosProveedor.IsEmpty
-                        ? "No se recibió respuesta de cloudflared ni de los proveedores SSH."
+                    string detalleCompleto = fallosProveedor.IsEmpty
+                        ? "Cloudflare Quick Tunnel no publicó una URL."
                         : string.Join(" · ", fallosProveedor.Select(kv => $"{kv.Key}: {kv.Value}"));
-                    _ultimoErrorTunelPublico = detalle;
-                    TxtEstadoP2P.Text = $"🔴 Túnel no disponible: {detalle}";
+                    string detalleBreve = ResumirErrorTunel(detalleCompleto);
+                    _ultimoErrorTunelPublico = detalleBreve;
+                    TxtEstadoP2P.Text = $"🔴 Túnel no disponible: {detalleBreve}";
+                    VisorLog.Error($"[Tunel/Cloudflare] No se pudo publicar la URL: {detalleCompleto}");
+                    Console.WriteLine($"[Tunel/Cloudflare] No se pudo publicar la URL: {detalleCompleto}");
                 });
             }
             catch (Exception ex)
             {
                 _ultimoErrorTunelPublico = ex.Message;
+                VisorLog.Error("[Tunel/Cloudflare] Excepción al iniciar el túnel.", ex);
+                Console.WriteLine($"[Tunel/Cloudflare] Error: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"[Tunel] Error: {ex.Message}");
             }
+        }
+
+        private static string ResumirErrorTunel(string detalle)
+        {
+            if (string.IsNullOrWhiteSpace(detalle)) return "Cloudflare no publicó una URL.";
+
+            var dns = Regex.Match(detalle,
+                @"lookup\s+([^:\s]+):\s*no such host|no such host.*?lookup\s+([^:\s]+)",
+                RegexOptions.IgnoreCase);
+            if (dns.Success)
+            {
+                string host = !string.IsNullOrWhiteSpace(dns.Groups[1].Value)
+                    ? dns.Groups[1].Value : dns.Groups[2].Value;
+                return $"DNS no resuelve {host}; revisa Internet/DNS y vuelve a intentarlo.";
+            }
+
+            if (detalle.Contains("cloudflared.exe", StringComparison.OrdinalIgnoreCase) &&
+                detalle.Contains("no se pudo localizar", StringComparison.OrdinalIgnoreCase))
+                return "No se encuentra cloudflared.exe en la vista previa.";
+
+            // La salida de cloudflared incluye avisos legales de varias líneas.
+            // El detalle completo queda en el log; la interfaz solo enseña el error.
+            string[] lineas = detalle.Split(new[] { " | ", Environment.NewLine, "\n" }, StringSplitOptions.RemoveEmptyEntries);
+            string relevante = lineas.LastOrDefault(l =>
+                l.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+                l.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
+                l.Contains("no se pudo", StringComparison.OrdinalIgnoreCase)) ?? detalle;
+            return relevante.Length > 180 ? relevante[..177] + "…" : relevante.Trim();
         }
 
         /// <summary>
@@ -4455,6 +4534,128 @@ namespace Visor3D
         {
             TunnelProcessRegistry.MatarYOlvidar(TunelWebNodoSlot, _tunnelProcess);
             _tunnelProcess = null;
+        }
+
+        /// <summary>
+        /// El Quick Tunnel puede morir después de publicar una URL. Detecta esa
+        /// caída, limpia el enlace viejo y vuelve a publicar WebNodo automáticamente.
+        /// </summary>
+        private void VigilarCaidaTunel(Process proceso)
+        {
+            proceso.EnableRaisingEvents = true;
+            proceso.Exited += (_, _) =>
+            {
+                try
+                {
+                    Dispatcher.BeginInvoke(new Action(async () =>
+                    {
+                        if (!ReferenceEquals(_tunnelProcess, proceso)) return;
+
+                        _tunnelProcess = null;
+                        TunnelProcessRegistry.Olvidar(TunelWebNodoSlot);
+                        App.WebNodo.PublicTunnelUrl = null;
+                        _urlPublica = "";
+                        _enlaceCompartible = "";
+                        if (string.IsNullOrWhiteSpace(_urlAmigoPendiente)) _hostSesionUrl = "";
+                        BtnWebNodo.Content = "🌐 WebNodo";
+                        BtnWebNodo.ToolTip = "El túnel se desconectó; se está intentando reconectar.";
+                        BtnWebNodo.ClearValue(System.Windows.Controls.Button.BackgroundProperty);
+                        BtnWebNodo.ClearValue(System.Windows.Controls.Button.BorderBrushProperty);
+                        TxtEstadoP2P.Text = "🔴 Túnel caído · reintentando conexión…";
+                        VisorLog.Warn("[Tunel/Cloudflare] El proceso del túnel terminó; se invalida la invitación y se reintentará.");
+
+                        if (_cerrandoVentana || _reiniciandoConexion) return;
+                        await Task.Delay(TimeSpan.FromSeconds(2));
+                        if (!_cerrandoVentana && !_reiniciandoConexion)
+                            await EstablecerTunelEfimeroAsync();
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    VisorLog.Error("[Tunel/Cloudflare] No se pudo procesar la caída del túnel.", ex);
+                }
+            };
+        }
+
+        private async Task ReiniciarConexionAsync()
+        {
+            if (_reiniciandoConexion) return;
+
+            _reiniciandoConexion = true;
+            BtnSecciones_ReiniciarConexion.IsEnabled = false;
+            BtnSecciones_ReiniciarConexion.Content = "⟳ Reiniciando…";
+            TxtEstadoP2P.Text = "🔄 Reiniciando conexión pública…";
+            VisorLog.Info("[Tunel/Cloudflare] Reinicio solicitado desde el menú Secciones.");
+
+            try
+            {
+                Process? anterior = _tunnelProcess;
+                if (anterior is { HasExited: false })
+                {
+                    try
+                    {
+                        anterior.Kill(entireProcessTree: true);
+                        await anterior.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(3));
+                    }
+                    catch { }
+                }
+
+                DetenerTunelWebNodo();
+                App.WebNodo.PublicTunnelUrl = null;
+                _urlPublica = "";
+                _enlaceCompartible = "";
+                _ultimoErrorTunelPublico = "";
+                if (string.IsNullOrWhiteSpace(_urlAmigoPendiente))
+                    _hostSesionUrl = "";
+
+                // El indicador «Reconectando túnel…» pertenece al túnel P2P
+                // (puerto 7890), mientras que el enlace WebNodo es otro proceso.
+                // Reiniciar ambos evita que el botón solo renueve media conexión.
+                if (_p2pServicio != null)
+                {
+                    TxtEstadoP2P.Text = "🔄 Reiniciando túnel P2P y WebNodo…";
+                    await _p2pServicio.ReiniciarTunelAsync();
+                }
+
+                await EstablecerTunelEfimeroAsync();
+
+                if (!string.IsNullOrWhiteSpace(App.WebNodo.PublicTunnelUrl) &&
+                    !string.IsNullOrWhiteSpace(_enlaceCompartible))
+                {
+                    bool copiado = CopiarAlPortapapeles(_enlaceCompartible);
+                    TxtEstadoP2P.Text = copiado
+                        ? "🌍 Conexión renovada · invitación copiada"
+                        : "🌍 Conexión renovada";
+                    BtnSecciones_ReiniciarConexion.ToolTip = copiado
+                        ? "Conexión renovada. El nuevo enlace de invitación está en el portapapeles."
+                        : "Conexión renovada. No se pudo copiar la invitación al portapapeles.";
+                    VisorLog.Info("[Tunel/Cloudflare] Conexión reiniciada correctamente.");
+                }
+                else if (!string.IsNullOrWhiteSpace(_ultimoErrorTunelPublico))
+                {
+                    TxtEstadoP2P.Text = $"🔴 No se pudo reiniciar: {_ultimoErrorTunelPublico}";
+                    BtnSecciones_ReiniciarConexion.ToolTip = $"No se pudo renovar la conexión: {_ultimoErrorTunelPublico}";
+                    VisorLog.Warn($"[Tunel/Cloudflare] El reinicio no generó invitación: {_ultimoErrorTunelPublico}");
+                }
+                else
+                {
+                    TxtEstadoP2P.Text = "🔴 No se obtuvo una URL pública; revisa cloudflared y WebNodo.";
+                    BtnSecciones_ReiniciarConexion.ToolTip = _ultimoErrorTunelPublico;
+                    VisorLog.Warn("[Tunel/Cloudflare] Reinicio completado sin URL pública ni detalle del proveedor.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _ultimoErrorTunelPublico = ex.Message;
+                TxtEstadoP2P.Text = $"🔴 Error al reiniciar conexión: {ex.Message}";
+                VisorLog.Error("[Tunel/Cloudflare] Error al reiniciar conexión.", ex);
+            }
+            finally
+            {
+                BtnSecciones_ReiniciarConexion.IsEnabled = true;
+                BtnSecciones_ReiniciarConexion.Content = "⟳ Reiniciar conexión";
+                _reiniciandoConexion = false;
+            }
         }
 
         private async Task<Visor3D.Services.P2PIPFS.EphemeralTunnelResult?> TryRunProcessTunnelAsync(
@@ -4557,17 +4758,28 @@ namespace Visor3D
                     _validacionTunelEnCurso = true;
                     File.Delete(rutaSolicitud);  // Eliminar solicitud procesada
 
+                    if (string.Equals(Environment.GetEnvironmentVariable("WVP_TUNNEL_PROVIDER"), "cloudflare", StringComparison.OrdinalIgnoreCase))
+                    {
+                        EscribirResultadoValidacion(false, "La validación SSH está desactivada; solo Cloudflare está habilitado.");
+                        _validacionTunelEnCurso = false;
+                        return;
+                    }
+
                     // Mostrar diálogo de confirmación manual
                     Dispatcher.Invoke(() => MostrarDialogoConfirmacionTunel());
                 }
                 else if (accion == "conectar")
                 {
-                    // Botón «CONECTAR» de la oficina de LucIA: valida la conexión
-                    // y levanta el túnel sin diálogo adicional.
+                    // Botón Conectar valida el estado interno de la DAO única.
                     _validacionTunelEnCurso = true;
                     File.Delete(rutaSolicitud);
-                    Dispatcher.Invoke(() => TxtEstadoP2P.Text = "🔗 Validando conexión con LucIA…");
-                    Dispatcher.BeginInvoke(new Action(() => { _ = ConectarOficinaAsync(); }));
+                    bool usoInterno = datos.RootElement.TryGetProperty("uso_interno", out var interno) && interno.ValueKind == System.Text.Json.JsonValueKind.True;
+                    Dispatcher.Invoke(() => TxtEstadoP2P.Text = "Validando conexión interna con LucIA…");
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (usoInterno) _ = ValidarSesionInternaAsync();
+                        else _ = ConectarOficinaAsync();
+                    }));
                 }
             }
             catch (Exception ex)
@@ -4619,6 +4831,13 @@ namespace Visor3D
         {
             try
             {
+                // Cuando el servicio modular está activo, su FileBridgeModule es
+                // el único consumidor del buzón. Si WPF lee las mismas peticiones,
+                // puede separar /connect de /register y dejar tokens huérfanos.
+                if (Environment.GetEnvironmentVariable("WVP_MODULAR_DAO") == "1" &&
+                    Environment.GetEnvironmentVariable("WVP_LAUNCH_SERVER") == "1")
+                    return;
+
                 // Calcular raíz IPC del mismo modo que el GDScript:
                 // $WVP_IPC_DIR o <godot_userdata>/wvp-ipc
                 string ipcDir = Environment.GetEnvironmentVariable("WVP_IPC_DIR") ?? "";
@@ -4630,6 +4849,16 @@ namespace Visor3D
                 }
                 if (string.IsNullOrWhiteSpace(ipcDir)) return;
 
+                // El resultado de Conectar es de un solo uso; descarta cualquier
+                // éxito previo para que Godot espere la respuesta de este intento.
+                string dirResultado = !string.IsNullOrEmpty(_rutaDatosGodot)
+                    ? _rutaDatosGodot
+                    : PerfilUsuario.GodotUserDataDir;
+                string rutaResultadoInterno = Path.Combine(dirResultado, "validacion_resultado.json");
+                if (File.Exists(rutaResultadoInterno))
+                {
+                    try { File.Delete(rutaResultadoInterno); } catch { }
+                }
                 string reqDir = Path.Combine(ipcDir, "requests");
                 string resDir = Path.Combine(ipcDir, "responses");
                 if (!Directory.Exists(reqDir)) return;
@@ -4821,7 +5050,9 @@ namespace Visor3D
                 string mensaje = ok
                     ? $"Túnel WebNodo activo: {url}"
                     : $"No se pudo activar el túnel WebNodo. {_ultimoErrorTunelPublico}".Trim();
-                EscribirResultadoValidacion(ok, mensaje);
+                // El acceso interno no depende del URL compartible antiguo; basta
+                // devolver el estado del transporte para que la recepción valide.
+                EscribirResultadoValidacion(ok, mensaje, tunnelOnly: true);
                 Dispatcher.Invoke(() =>
                 {
                     TxtEstadoP2P.Text = ok ? $"🟢 Conectado · {url}" : $"🔴 {mensaje}";
@@ -4838,6 +5069,52 @@ namespace Visor3D
             }
         }
 
+        /// <summary>
+        /// Comprueba el transporte del mundo anfitrión existente para la recepción.
+        /// No inicia otro túnel, otra Lucía ni otra DAO.
+        /// </summary>
+        private async Task ValidarSesionInternaAsync()
+        {
+            try
+            {
+                var limite = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+                bool mundoDisponible = false;
+                while (DateTime.UtcNow < limite)
+                {
+                    if (_cerrandoVentana) break;
+                    if (ComprobarPuertoLocalActivo(8911))
+                    {
+                        mundoDisponible = true;
+                        break;
+                    }
+                    await Task.Delay(250);
+                }
+
+                if (!mundoDisponible)
+                {
+                    EscribirResultadoValidacion(false,
+                        "Lucía y la DAO siguen abiertas, pero el mundo P2P anfitrión aún no escucha en 8911.");
+                    Dispatcher.Invoke(() => TxtEstadoP2P.Text = "DAO lista; mundo P2P aún iniciando");
+                    return;
+                }
+
+                string url = !string.IsNullOrWhiteSpace(App.WebNodo.PublicTunnelUrl)
+                    ? App.WebNodo.PublicTunnelUrl
+                    : (_urlPublica ?? "");
+                _urlPublica = url;
+                EscribirResultadoValidacion(true, "Sesión interna de la DAO anfitriona disponible.");
+                Dispatcher.Invoke(() => TxtEstadoP2P.Text = "Lucía y DAO únicas listas; mundo P2P activo");
+            }
+            catch (Exception ex)
+            {
+                EscribirResultadoValidacion(false, $"No se pudo validar la sesión interna: {ex.Message}");
+                Dispatcher.Invoke(() => TxtEstadoP2P.Text = "No se pudo validar el mundo P2P");
+            }
+            finally
+            {
+                _validacionTunelEnCurso = false;
+            }
+        }
         /// <summary>
         /// Inicia el túnel SSH efímero usando P2PTunnelManager.
         /// </summary>
@@ -4889,7 +5166,7 @@ namespace Visor3D
         /// <summary>
         /// Escribe el resultado de la validación en validacion_resultado.json para que Godot lo lea.
         /// </summary>
-        private void EscribirResultadoValidacion(bool exito, string mensaje)
+        private void EscribirResultadoValidacion(bool exito, string mensaje, bool tunnelOnly = false)
         {
             try
             {
@@ -4912,7 +5189,19 @@ namespace Visor3D
                     exito = exito,
                     mensaje = mensaje,
                     url = urlFinal,
-                    enlace = enlaceFinal,
+                    // El enlace no se muestra ni se copia; peerUrl y token viajan
+                    // al proceso Godot local por este IPC para su recepción.
+                    enlace = "",
+                    tunnel_only = tunnelOnly,
+                    transporte = new
+                    {
+                        webNodoOnline = !string.IsNullOrWhiteSpace(urlFinal),
+                        invitacionInterna = true,
+                        peerUrl = !string.IsNullOrWhiteSpace(_hostSesionUrl) ? _hostSesionUrl : urlFinal,
+                        invitacion = TokenSesionP2P,
+                        p2pTunnelOnline = _p2pServicio?.TunnelActivo ?? false,
+                        mundoWebSocketLocal = ComprobarPuertoLocalActivo(8911)
+                    },
                     modo = modoGlobal,
                     degradado = esDegradado,
                     timestamp = DateTime.UtcNow.ToString("o")
@@ -4923,7 +5212,14 @@ namespace Visor3D
                     WriteIndented = true
                 });
 
-                File.WriteAllText(rutaResultado, json);
+                string temporalResultado = rutaResultado + ".tmp";
+                File.WriteAllText(temporalResultado, json);
+                try { File.Move(temporalResultado, rutaResultado, overwrite: true); }
+                catch
+                {
+                    File.Copy(temporalResultado, rutaResultado, overwrite: true);
+                    try { File.Delete(temporalResultado); } catch { }
+                }
 
                 // Compatibilidad v2.9.3: escribir también user://tunel_lucia_url.json
                 // para que LuciaRecepcion.gd reciba la URL del túnel en vivo
@@ -4955,6 +5251,20 @@ namespace Visor3D
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[EscribirResultado] Error: {ex.Message}");
+            }
+        }
+
+        private static bool ComprobarPuertoLocalActivo(int puerto)
+        {
+            try
+            {
+                using var cliente = new System.Net.Sockets.TcpClient();
+                var conexion = cliente.ConnectAsync("127.0.0.1", puerto);
+                return conexion.Wait(TimeSpan.FromMilliseconds(350)) && cliente.Connected;
+            }
+            catch
+            {
+                return false;
             }
         }
     }
