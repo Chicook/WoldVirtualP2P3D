@@ -6,7 +6,7 @@ de módulo NeuronaEntradaBasica.
 """
 
 import time
-
+from collections import deque
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional
 
@@ -33,26 +33,49 @@ class NeuronaEntradaBase:
     Contiene el buffer de historiales y la neurona densa concreta Basica.
     """
 
-    class RingBuffer:
-        """Buffer circular eficiente para historiales (evita crecimiento infinito)."""
+   
+class RingBuffer:
+    """Bounded circular buffer with efficient append operations."""
 
-        def __init__(self, capacidad: int = 256):
-            self.capacidad = int(capacidad)
-            self._datos: List[Any] = []
+    def __init__(self, capacidad: int = 256):
+        if isinstance(capacidad, bool) or not isinstance(capacidad, int):
+            raise TypeError("capacidad must be a positive integer")
 
-        def append(self, item: Any) -> None:
-            self._datos.append(item)
-            if len(self._datos) > self.capacidad:
-                del self._datos[0:len(self._datos) - self.capacidad]
+        if capacidad <= 0:
+            raise ValueError("capacidad must be greater than zero")
 
-        def __len__(self) -> int:
-            return len(self._datos)
+        self.capacidad = capacidad
+        self._datos = deque(maxlen=capacidad)
 
-        def to_list(self) -> List[Any]:
-            return list(self._datos)
+    def append(self, item: Any) -> None:
+        self._datos.append(item)
 
-        def clear(self) -> None:
-            self._datos.clear()
+    def __len__(self) -> int:
+        return len(self._datos)
+
+    def to_list(self) -> List[Any]:
+        return list(self._datos)
+
+    def clear(self) -> None:
+        self._datos.clear()
+# ----------------------------------------------------
+# Expected behavior:
+"""
+buffer = NeuronaEntradaBase.RingBuffer(capacidad=3)
+
+buffer.append(10)
+buffer.append(20)
+buffer.append(30)
+buffer.append(40)
+
+assert buffer.to_list() == [20, 30, 40]
+assert len(buffer) == 3
+
+buffer.clear()
+
+assert len(buffer) == 0
+"""
+# ------------------------------------------------------
 
     def __init__(self, input_size: int, output_size: int, nombre: str = "NeuronaEntrada"):
         self.input_size = int(input_size)
