@@ -9,6 +9,8 @@ Centraliza la resolución de rutas de todo el ecosistema:
 """
 from __future__ import annotations
 
+import os
+import shutil
 from pathlib import Path
 
 # --- Directorios Principales de la Jerarquía ---
@@ -31,9 +33,14 @@ VENV_PYTHONW: Path = VENV_DIR / "Scripts" / "pythonw.exe"
 
 PYTEST_CACHE_DIR: Path = DEV_DIR / ".pytest_cache"
 RUFF_CACHE_DIR: Path = DEV_DIR / ".ruff_cache"
+PYCACHE_DIR: Path = DEV_DIR / "pycache"
 IPFS_DIR: Path = DEV_DIR / ".ipfs"
 VSCODE_DIR: Path = DEV_DIR / ".vscode"
 DEV_PYTEST_INI: Path = DEV_DIR / "pytest.ini"
+DEV_GITHUB_DIR: Path = DEV_DIR / ".github"
+DEV_GITHUB_WORKFLOWS_DIR: Path = DEV_GITHUB_DIR / "workflows"
+REPO_GITHUB_DIR: Path = REPO_ROOT / ".github"
+REPO_GITHUB_WORKFLOWS_DIR: Path = REPO_GITHUB_DIR / "workflows"
 
 # --- Taller y Código Fuente (TLLDCD) ---
 TLLDCD_DIR: Path = CONTRUCCION_DIR / "TLLDCD"
@@ -83,6 +90,39 @@ LANZAR_BAT: Path = VISOR_HERRAMIENTAS_DIR / "Lanzar.bat"
 # Motor y Proyecto Godot
 GODOT_PROY_DIR: Path = TLLDCD_SRC / "MTBGT" / "WoldVirtualP2P3D"
 GODOT_PROJECT_FILE: Path = GODOT_PROY_DIR / "project.godot"
+ESCENA_CANONICA_VISOR: Path = GODOT_PROY_DIR / "WoldVirtual3DP2P.tscn"
+ESCENA_CANONICA_RES: str = "res://WoldVirtual3DP2P.tscn"
+ESCENA_CANONICA_UID: str = "uid://5bh8su08n101"
+
+
+# --- Localización de Herramientas del Sistema ---
+def localizar_dotnet() -> Path | None:
+    """Devuelve la ruta al ejecutable de dotnet aunque no esté en PATH.
+
+    Solo consulta ubicaciones de instalación ya existentes; no crea ni mueve nada.
+    """
+    en_path = shutil.which("dotnet")
+    if en_path:
+        return Path(en_path)
+
+    candidatos: list[Path] = []
+    for var in ("ProgramFiles", "ProgramFiles(x86)"):
+        base = os.environ.get(var)
+        if base:
+            candidatos.append(Path(base) / "dotnet" / "dotnet.exe")
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        candidatos.append(Path(local) / "Microsoft" / "dotnet" / "dotnet.exe")
+
+    # dotnet puede estar instalado en una unidad distinta a la del sistema
+    # (p. ej. E:\\Program Files\\dotnet en este equipo).
+    for unidad in ("C", "D", "E", "F", "G", "H"):
+        candidatos.append(Path(f"{unidad}:/Program Files/dotnet/dotnet.exe"))
+
+    for candidato in candidatos:
+        if candidato.is_file():
+            return candidato
+    return None
 
 
 # --- Control de Fronteras y Contención de Rutas ---

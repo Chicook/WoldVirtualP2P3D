@@ -83,6 +83,11 @@ def _configurar_entorno_arranque() -> None:
 
 _configurar_entorno_arranque()
 
+# Todo bytecode compilado por la herramienta vive en .dev/pycache; el árbol de
+# fuentes no genera __pycache__.
+if _DEV_DIR.is_dir():
+    sys.pycache_prefix = str(_DEV_DIR / "pycache")
+
 for _ruta in (str(_MODULO_DIR), str(_PAQUETE_DIR), str(_RAIZ_REPO), str(_TLLDCD_SRC), str(_DEV_DIR)):
     if _ruta and _ruta not in sys.path:
         sys.path.insert(0, _ruta)

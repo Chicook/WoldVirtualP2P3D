@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,8 +27,8 @@ namespace Visor3D.RedP2P
         private const int BackoffMaxSeg = 30;      // tope del backoff entre reconexiones
         private const string Slot = "p2p";         // identificador del PID persistido en disco
 
-        /// <summary>Hosts públicos de túnel SSH, en orden de preferencia.</summary>
-        private static readonly (string Nombre, string Args, string Patron)[] Candidatos =
+        /// <summary>Proveedores SSH de respaldo si Cloudflare no está disponible.</summary>
+        private static readonly (string Nombre, string Args, string Patron)[] CandidatosSsh =
         {
             ("localhost.run",
              "-o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ConnectTimeout=15 -o ExitOnForwardFailure=yes -R 80:localhost:{0} nokey@localhost.run",
@@ -44,6 +45,7 @@ namespace Visor3D.RedP2P
         private bool _disposeado;
         private bool _deseaActivo;
         private string? _urlPublica;
+        private string? _ultimoFallo;
 
         /// <summary>Disparado cuando el túnel publica una (nueva) URL accesible desde Internet.</summary>
         public event Action<string>? UrlObtenida;
@@ -54,8 +56,19 @@ namespace Visor3D.RedP2P
         /// <summary>Disparado cuando el túnel deja de estar activo (caída detectada).</summary>
         public event Action<string>? TunnelMuerto;
 
+        /// <summary>Motivo del último fallo de conexión, útil para diagnóstico en la vista previa.</summary>
+        public event Action<string>? FalloConexion;
+
         /// <summary>Puerto local al que se reenvía el tráfico entrante del túnel.</summary>
         public int PuertoLocal { get; }
+
+        public bool EsModoDegradado => ProveedorActivo != null && ProveedorActivo != "Cloudflare Quick Tunnel";
+        public string? ProveedorActivo { get; private set; }
+
+        public string? UltimoFallo
+        {
+            get { lock (_sync) return _ultimoFallo; }
+        }
 
         /// <summary>Última URL pública conocida, o <c>null</c> si aún no está lista.</summary>
         public string? UrlPublica
@@ -109,7 +122,8 @@ namespace Visor3D.RedP2P
 
             while (!token.IsCancellationRequested && QuiereActivo())
             {
-                var cand = Candidatos[idx % Candidatos.Length];
+                var candidatos = ObtenerCandidatos();
+                var cand = candidatos[idx % candidatos.Length];
                 idx++;
 
                 bool establecido = false;
@@ -122,6 +136,7 @@ namespace Visor3D.RedP2P
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[P2PTunnel] Error en intento '{cand.Nombre}': {ex.Message}");
+                    RegistrarFallo($"{cand.Nombre}: {ex.Message}");
                 }
 
                 if (token.IsCancellationRequested || !QuiereActivo()) break;
@@ -149,12 +164,19 @@ namespace Visor3D.RedP2P
         /// </summary>
         private async Task<bool> EjecutarIntentoAsync(string nombre, string argsPlantilla, string patron, CancellationToken token)
         {
-            string sshExe = @"C:\Windows\System32\OpenSSH\ssh.exe";
-            if (!File.Exists(sshExe)) sshExe = "ssh";
+            var proveedor = ObtenerProveedor(nombre);
+            if (proveedor is null)
+            {
+                string error = nombre == "Cloudflare Quick Tunnel"
+                    ? "No encuentro cloudflared.exe. Revisa CLOUDFLARED_EXE en el lanzador de vista previa."
+                    : "No encuentro el cliente OpenSSH (ssh.exe).";
+                RegistrarFallo(error);
+                return false;
+            }
 
             var psi = new ProcessStartInfo
             {
-                FileName = sshExe,
+                FileName = proveedor,
                 Arguments = string.Format(argsPlantilla, PuertoLocal),
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -165,6 +187,7 @@ namespace Visor3D.RedP2P
             Process? proc = null;
             var tcsUrl = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             var regex = new Regex(patron, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var ultimasLineas = new System.Collections.Concurrent.ConcurrentQueue<string>();
 
             try
             {
@@ -172,7 +195,10 @@ namespace Visor3D.RedP2P
 
                 void Escanear(string? linea)
                 {
-                    if (string.IsNullOrWhiteSpace(linea) || tcsUrl.Task.IsCompleted) return;
+                    if (string.IsNullOrWhiteSpace(linea)) return;
+                    ultimasLineas.Enqueue(linea.Trim());
+                    while (ultimasLineas.Count > 8) ultimasLineas.TryDequeue(out _);
+                    if (tcsUrl.Task.IsCompleted) return;
                     var m = regex.Match(linea);
                     if (!m.Success) return;
                     tcsUrl.TrySetResult(m.Value.Trim().TrimEnd('/'));
@@ -199,14 +225,27 @@ namespace Visor3D.RedP2P
                 if (ganador == tcsUrl.Task && tcsUrl.Task.Status == TaskStatus.RanToCompletion)
                 {
                     string url = tcsUrl.Task.Result;
-                    lock (_sync) _urlPublica = url;
-                    Debug.WriteLine($"[P2PTunnel] Túnel activo ({nombre}): {url}");
+                    lock (_sync)
+                    {
+                        _urlPublica = url;
+                        ProveedorActivo = nombre;
+                    }
+                    string modo = EsModoDegradado ? "Modo degradado (SSH gratuito)" : "Cloudflare Túnel";
+                    Debug.WriteLine($"[P2PTunnel] Túnel activo ({nombre}): {url} [{modo}]");
+                    TunnelLogger.Escribir("p2p", $"Túnel activo ({nombre}): {url} [{modo}]");
                     UrlObtenida?.Invoke(url);
 
                     // Mantener el proceso vivo hasta que muera o se solicite detener.
                     await esperaExit.ConfigureAwait(false);
                     return true;
                 }
+
+                string detalle = string.Join(" | ", ultimasLineas.ToArray().TakeLast(4));
+                if (string.IsNullOrWhiteSpace(detalle))
+                    detalle = ganador == esperaExit
+                        ? $"El proceso terminó sin publicar una URL (código {(proc.HasExited ? proc.ExitCode.ToString() : "desconocido")})."
+                        : $"No publicó URL en {TimeoutUrlMs / 1000} s.";
+                RegistrarFallo($"{nombre}: {detalle}");
 
                 return false;
             }
@@ -219,6 +258,49 @@ namespace Visor3D.RedP2P
                 }
                 TunnelProcessRegistry.Olvidar(Slot);
             }
+        }
+
+        private static (string Nombre, string Args, string Patron)[] ObtenerCandidatos()
+        {
+            string preferencia = Environment.GetEnvironmentVariable("WVP_TUNNEL_PROVIDER") ?? "";
+            var cloudflare = ("Cloudflare Quick Tunnel",
+                "tunnel --no-autoupdate --url http://127.0.0.1:{0}",
+                @"https://[a-z0-9-]+\.trycloudflare\.com");
+            var ssh = CandidatosSsh;
+
+            if (preferencia.Equals("cloudflare", StringComparison.OrdinalIgnoreCase))
+                return new[] { cloudflare }.Concat(ssh).ToArray();
+            if (preferencia.Equals("ssh", StringComparison.OrdinalIgnoreCase))
+                return ssh;
+            return (EncontrarCloudflared() is not null ? new[] { cloudflare } : Array.Empty<(string, string, string)>())
+                .Concat(ssh).ToArray();
+        }
+
+        private void RegistrarFallo(string detalle)
+        {
+            lock (_sync) _ultimoFallo = detalle;
+            FalloConexion?.Invoke(detalle);
+        }
+
+        private static string? ObtenerProveedor(string nombre)
+        {
+            if (nombre == "Cloudflare Quick Tunnel") return EncontrarCloudflared();
+            string ssh = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "OpenSSH", "ssh.exe");
+            return File.Exists(ssh) ? ssh : "ssh";
+        }
+
+        private static string? EncontrarCloudflared()
+        {
+            string? configurado = Environment.GetEnvironmentVariable("CLOUDFLARED_EXE");
+            string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string[] candidatos =
+            [
+                configurado ?? "",
+                Path.Combine(localApp, "WoldVirtualP2P3D", "bin", "cloudflared.exe"),
+                Path.Combine(AppContext.BaseDirectory, "cloudflared.exe"),
+                "cloudflared"
+            ];
+            return candidatos.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p) && (p == "cloudflared" || File.Exists(p)));
         }
 
         /// <summary>Mata y libera un proceso de túnel de forma defensiva.</summary>

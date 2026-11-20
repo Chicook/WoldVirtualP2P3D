@@ -347,7 +347,141 @@ namespace Visor3D.Seguridad.SesionUnica
                 Check("Rendimiento_Huella_Cache", false, ex.Message);
             }
 
-            string resumen = fallos == 0 ? "RESULTADO SEGURIDAD: OK (14/14 superadas)" : $"RESULTADO SEGURIDAD: {fallos} FALLO(S)";
+            // ── Test 15: Zero-Trust Path Traversal y Prevención de Escape ──────
+            try
+            {
+                bool rechazoRelativo = false;
+                try
+                {
+                    FronteraSeguraZeroTrust.ExigirFrontera(@"../../Windows/System32/cmd.exe", "TestRelativo");
+                }
+                catch (SecurityBoundaryException)
+                {
+                    rechazoRelativo = true;
+                }
+
+                bool rechazoAbsoluto = false;
+                try
+                {
+                    FronteraSeguraZeroTrust.ExigirFrontera(@"C:\Windows\System32\drivers\etc\hosts", "TestAbsoluto");
+                }
+                catch (SecurityBoundaryException)
+                {
+                    rechazoAbsoluto = true;
+                }
+
+                bool rechazoStream = !FronteraSeguraZeroTrust.EsRutaPermitida(@"archivo.txt:stream_oculto", out _);
+                bool rechazoDispositivo = !FronteraSeguraZeroTrust.EsRutaPermitida(@"CON", out _);
+
+                bool todoRechazado = rechazoRelativo && rechazoAbsoluto && rechazoStream && rechazoDispositivo;
+                Check("ZeroTrust_PathTraversal_Rechazo", todoRechazado,
+                    "Rechazo estricto de traversal relativo, escape absoluto, streams y dispositivos reservados");
+            }
+            catch (Exception ex)
+            {
+                Check("ZeroTrust_PathTraversal_Rechazo", false, ex.Message);
+            }
+
+            // ── Test 16: Zero-Trust Validación de Rutas Canónicas Permitidas ────
+            try
+            {
+                string rutaRepo = Path.Combine(FronteraSeguraZeroTrust.RaizRepositorio, "VersionDesesion");
+                string rutaAppData = Path.Combine(FronteraSeguraZeroTrust.AppDataSeguro, "Seguridad");
+
+                bool repoPermitido = FronteraSeguraZeroTrust.EsRutaPermitida(rutaRepo, out string canRepo) &&
+                                     !string.IsNullOrEmpty(canRepo);
+                bool appDataPermitido = FronteraSeguraZeroTrust.EsRutaPermitida(rutaAppData, out string canAppData) &&
+                                        !string.IsNullOrEmpty(canAppData);
+
+                Check("ZeroTrust_Frontera_Permitida", repoPermitido && appDataPermitido,
+                    "Aceptación verificada de rutas legítimas en REPO_ROOT y AppData");
+            }
+            catch (Exception ex)
+            {
+                Check("ZeroTrust_Frontera_Permitida", false, ex.Message);
+            }
+
+            // ── Test 17: Zero-Trust Validación de Argumentos Nombrados y Posicionales 
+            try
+            {
+                bool excepcionPropagada = false;
+                try
+                {
+                    FronteraSeguraZeroTrust.ValidarArgumentos(
+                        ("posicional_0", "VersionDesesion"),
+                        ("posicional_1", 12345),
+                        ("kwarg_peligroso", @"..\..\..\..\..\..\Windows\System32")
+                    );
+                }
+                catch (SecurityBoundaryException)
+                {
+                    excepcionPropagada = true; // Comprobación clave: la excepción NO fue suprimida
+                }
+
+                Check("ZeroTrust_Argumentos_SinSupresion", excepcionPropagada,
+                    "Validación integral de argumentos y garantía de no-supresión de excepciones de frontera");
+            }
+            catch (Exception ex)
+            {
+                Check("ZeroTrust_Argumentos_SinSupresion", false, ex.Message);
+            }
+
+            // ── Test 18: Zero-Trust Gestión Segura de Procesos y Verificación PID 
+            try
+            {
+                const string servicioPrueba = "test_servicio_seguridad";
+                int pidActual = Process.GetCurrentProcess().Id;
+
+                FronteraSeguraZeroTrust.RegistrarPidServicio(servicioPrueba, pidActual);
+                int? leido = FronteraSeguraZeroTrust.ObtenerPidRegistrado(servicioPrueba);
+                bool pidCoincide = leido.HasValue && leido.Value == pidActual;
+
+                // Verificar proceso con script inexistente (debe rechazar sin wildcard ni matar nada)
+                bool rechazaScriptAjeno = !FronteraSeguraZeroTrust.EsProcesoValidoYSeguro(pidActual, "script_inexistente_malicioso.py", out _);
+
+                // Probar rechazo con PID inválido
+                bool rechazaPidInvalido = !FronteraSeguraZeroTrust.EsProcesoValidoYSeguro(99999999, "servidor.py", out _);
+
+                FronteraSeguraZeroTrust.LimpiarPidRegistrado(servicioPrueba);
+                bool limpiado = FronteraSeguraZeroTrust.ObtenerPidRegistrado(servicioPrueba) == null;
+
+                bool gestionOk = pidCoincide && rechazaScriptAjeno && rechazaPidInvalido && limpiado;
+                Check("ZeroTrust_GestionProcesos_PID", gestionOk,
+                    "Ciclo de vida de PID atómico, validación estricta y eliminación de comodines PowerShell");
+            }
+            catch (Exception ex)
+            {
+                Check("ZeroTrust_GestionProcesos_PID", false, ex.Message);
+            }
+
+            // ── Test 19: Salvaguardas Críticas en Operaciones de Archivos ────────
+            try
+            {
+                bool borradoRaizImpedido = false;
+                try
+                {
+                    FronteraSeguraZeroTrust.LimpiarDirectorioSeguro(FronteraSeguraZeroTrust.RaizRepositorio, permitirRecursivo: true);
+                }
+                catch (SecurityBoundaryException)
+                {
+                    borradoRaizImpedido = true;
+                }
+
+                string tmpFile = Path.Combine(FronteraSeguraZeroTrust.AppDataSeguro, "test_seguro_zero_trust.tmp");
+                File.WriteAllText(tmpFile, "zero_trust_verification_token");
+                bool archivoEliminado = FronteraSeguraZeroTrust.EliminarArchivoSeguro(tmpFile);
+                bool yaNoExiste = !File.Exists(tmpFile);
+
+                bool salvaguardasOk = borradoRaizImpedido && archivoEliminado && yaNoExiste;
+                Check("ZeroTrust_OperacionesArchivos_Safeguards", salvaguardasOk,
+                    "Protección de raíz contra borrado recursivo y eliminación contenida con salvaguardas");
+            }
+            catch (Exception ex)
+            {
+                Check("ZeroTrust_OperacionesArchivos_Safeguards", false, ex.Message);
+            }
+
+            string resumen = fallos == 0 ? "RESULTADO SEGURIDAD: OK (19/19 superadas)" : $"RESULTADO SEGURIDAD: {fallos} FALLO(S)";
             salida.AppendLine(resumen);
             Console.WriteLine(salida.ToString());
             VisorLog.Info($"[seguridad-selftest] {resumen}");

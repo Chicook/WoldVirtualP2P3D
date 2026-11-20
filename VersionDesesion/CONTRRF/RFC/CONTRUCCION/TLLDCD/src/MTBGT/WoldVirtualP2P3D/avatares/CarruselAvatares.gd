@@ -226,6 +226,11 @@ func _confirmar() -> void:
 	avatar_confirmed.emit(str(modelo["escena"]))
 
 
+## Confirma el avatar enfocado sin depender del teclado (onboarding/pruebas).
+func confirmar_actual() -> void:
+	_confirmar()
+
+
 func _actualizar_ui() -> void:
 	if _nombre == null:
 		return

@@ -7,6 +7,7 @@ Submódulos:
 - blockchain_mgr: Servidor oficial de blockchain y ledger (puerto 8545).
 - lucia_mgr: Servidor de LucIA 3D y conexión neuronal (puerto 8765).
 - visor_mgr: Reconstrucción, compilación y lanzamiento del visor 3D (Visor3D.csproj).
+- temporales: Espacios temporales _tmp_* y extracción single-file contenida en .dev.
 """
 from __future__ import annotations
 
@@ -19,11 +20,13 @@ from .blockchain_mgr import (
 )
 from .entorno import (
     actualizar_vscode_config,
+    buscar_archivos_dev_desperdigados,
     configurar_variables_entorno,
     ejecutar_pytest,
     limpiar_cache_raiz,
     obtener_python_activo,
     obtener_pythonw_activo,
+    sincronizar_github_workflows,
     traer_pytest_ini,
 )
 from .lucia_mgr import (
@@ -54,6 +57,7 @@ from .rutas import (
     PYTHON_DIR,
     PYTHON_EXE,
     PYTHONW_EXE,
+    PYCACHE_DIR,
     REPO_ROOT,
     RFC_DIR,
     RUFF_CACHE_DIR,
@@ -78,12 +82,21 @@ from .rutas import (
     REINICIO_CUENTA_CS,
     SESION_UNICA_GUARDA_CS,
     VSCODE_DIR,
+    DEV_GITHUB_DIR,
+    DEV_GITHUB_WORKFLOWS_DIR,
+    REPO_GITHUB_DIR,
+    REPO_GITHUB_WORKFLOWS_DIR,
+    ESCENA_CANONICA_VISOR,
+    ESCENA_CANONICA_RES,
+    ESCENA_CANONICA_UID,
     asegurar_ruta_en_repositorio,
     validar_frontera_carpetas,
 )
 from .dependencias import (
     comprobar_todas_dependencias,
     formatear_informe_dependencias,
+    obtener_version_python_dev,
+    verificar_centralizacion_dev,
 )
 from .seguridad_entorno import (
     ARCHIVO_AUDITORIA_ENTORNO,
@@ -98,6 +111,17 @@ from .visor_mgr import (
     estado_visor,
     lanzar_visor,
     reconstruir_visor,
+    verificar_fijacion_escena,
+)
+from .temporales import (
+    DIR_BUNDLE,
+    PREFIJO_TEMPORAL,
+    carpeta_temporal,
+    entorno_bundle_visor,
+    formatear_informe_temporales,
+    lanzar_vista_previa,
+    limpiar_temporales,
+    listar_temporales,
 )
 
 __all__ = [
@@ -116,6 +140,7 @@ __all__ = [
     "VENV_PYTHONW",
     "PYTEST_CACHE_DIR",
     "RUFF_CACHE_DIR",
+    "PYCACHE_DIR",
     "IPFS_DIR",
     "VSCODE_DIR",
     "DEV_PYTEST_INI",
@@ -182,4 +207,13 @@ __all__ = [
     "estado_visor",
     "reconstruir_visor",
     "lanzar_visor",
+    # Temporales
+    "PREFIJO_TEMPORAL",
+    "DIR_BUNDLE",
+    "carpeta_temporal",
+    "listar_temporales",
+    "limpiar_temporales",
+    "entorno_bundle_visor",
+    "lanzar_vista_previa",
+    "formatear_informe_temporales",
 ]

@@ -31,7 +31,13 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+for _ancestro in Path(__file__).resolve().parents:
+    if (_ancestro / ".dev").is_dir():
+        sys.pycache_prefix = str(_ancestro / ".dev" / "pycache")
+        break
 
 from nucleo.orquestador_lucia import NucleoLucia
 from voz_lucia import precargar_voz, sintetizar_voz

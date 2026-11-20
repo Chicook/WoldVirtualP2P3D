@@ -18,6 +18,7 @@ if not exist "%PY_EXE%" set "PY_EXE=%PYTHON_DIR%\python.exe"
 set "VIRTUAL_ENV=%VENV_DIR%"
 set "PYTHONHOME=%PYTHON_DIR%"
 set "WVP_PYTHON=%PY_EXE%"
+set "PYTHONPYCACHEPREFIX=%DEV_DIR%\pycache"
 set "PYTEST_CACHE_DIR=%DEV_DIR%\.pytest_cache"
 set "RUFF_CACHE_DIR=%DEV_DIR%\.ruff_cache"
 

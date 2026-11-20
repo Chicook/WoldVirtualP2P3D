@@ -1,162 +1,203 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Management;
+using System.Linq;
+using System.Net.Http;
 using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Visor3D.Services
 {
-    /// <summary>
-    /// Arranca el cerebro de LucIA (TCP 8765) junto al visor. Si ya hay un
-    /// servidor escuchando, no lanza otro. La voz usa System.Speech cuando
-    /// gTTS/comtypes no están instalados.
-    /// </summary>
     public class ServidorLucIAOficial : IDisposable
     {
         public const int PuertoPorDefecto = 8765;
-
         private Process? _proceso;
+        private Process? _ollama;
         private readonly int _puerto;
+        private readonly SemaphoreSlim _inicio = new(1, 1);
+        private readonly StringBuilder _salida = new();
+        private bool _detenido;
 
         public bool EstaEnLinea { get; private set; }
         public string? UltimoError { get; private set; }
-
         public bool EstaEscuchando() => PuertoAbierto();
 
-        /// <summary>
-        /// Comprueba que el puerto no sólo esté abierto, sino que LucIA
-        /// conteste el saludo inicial. Un pythonw zombi puede tener el puerto
-        /// abierto y no atender el chat; entonces hay que reemplazarlo.
-        /// </summary>
         public bool EstaListo()
         {
             try
             {
                 using var cliente = new TcpClient();
-                var conexion = cliente.ConnectAsync("127.0.0.1", _puerto);
-                if (!conexion.Wait(900)) return false;
+                if (!cliente.ConnectAsync("127.0.0.1", _puerto).Wait(900)) return false;
                 using var flujo = cliente.GetStream();
                 flujo.ReadTimeout = 1500;
                 using var lector = new StreamReader(flujo);
-                string? linea = lector.ReadLine();
-                return !string.IsNullOrWhiteSpace(linea) &&
-                       (linea.Contains("\"hola\"") || linea.Contains("\"listo\"") ||
-                        linea.Contains("hola") || linea.Contains("listo"));
+                using var saludo = JsonDocument.Parse(lector.ReadLine() ?? "{}");
+                return saludo.RootElement.TryGetProperty("tipo", out var tipo) &&
+                    tipo.GetString() == "hola" &&
+                    saludo.RootElement.TryGetProperty("protocolo", out var protocolo) &&
+                    protocolo.GetInt32() == 1;
             }
-            catch
-            {
-                return false;
-            }
+            catch { return false; }
         }
 
-        public ServidorLucIAOficial(int puerto = PuertoPorDefecto)
-        {
-            _puerto = puerto;
-        }
+        public ServidorLucIAOficial(int puerto = PuertoPorDefecto) => _puerto = puerto;
 
         public async Task<bool> IniciarAsync(CancellationToken ct = default)
         {
-            if (PuertoAbierto())
-            {
-                if (EstaListo())
-                {
-                    EstaEnLinea = true;
-                    VisorLog.Info($"[LucIA] Cerebro ya activo en 127.0.0.1:{_puerto}");
-                    return true;
-                }
-
-                // Puerto abierto pero sin saludo: puede estar ocupado sintetizando
-                // voz. No matarlo (eso cortaba el chat tras la primera consulta);
-                // el vigilante reintentará.
-                UltimoError = "El puerto 8765 está ocupado pero LucIA no respondió al saludo.";
-                VisorLog.Info("[LucIA] " + UltimoError);
-                return false;
-            }
-
-            string? python = BuscarPython();
-            string? script = BuscarScript();
-            if (string.IsNullOrEmpty(python) || !File.Exists(python))
-            {
-                UltimoError = "No se localizó el Python de LucIA.";
-                VisorLog.Error($"[LucIA] {UltimoError}");
-                return false;
-            }
-            if (string.IsNullOrEmpty(script) || !File.Exists(script))
-            {
-                UltimoError = $"No se encontró servidor_lucia.py ({script ?? "nulo"}).";
-                VisorLog.Error($"[LucIA] {UltimoError}");
-                return false;
-            }
-
+            await _inicio.WaitAsync(ct);
             try
             {
-                // pythonw evita la consola y, en Windows, permite que COM/SAPI
-                // inicialice la voz correctamente.
-                string ejecutable = python;
-                string? pythonw = Path.Combine(Path.GetDirectoryName(python) ?? "", "pythonw.exe");
-                if (File.Exists(pythonw)) ejecutable = pythonw;
-
-                string bat = Path.Combine(AppContext.BaseDirectory, "Iniciar_Lucia_Visor.bat");
-                if (!File.Exists(bat))
-                    bat = RutaEnArbol("Iniciar_Lucia_Visor.bat");
-
-                string ps1 = Path.Combine(AppContext.BaseDirectory, "Iniciar_Lucia_Visor.ps1");
-                if (!File.Exists(ps1))
-                    ps1 = RutaEnArbol("Iniciar_Lucia_Visor.ps1");
-
-                var psi = new ProcessStartInfo
+                if (_detenido) return false;
+                EstaEnLinea = false;
+                UltimoError = null;
+                if (PuertoAbierto())
                 {
-                    FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{ps1}\"",
-                    WorkingDirectory = Path.GetDirectoryName(ps1) ?? "",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-
-                string logHijo = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "WoldVirtualP2P3D", "logs", "lucia_child.log");
-                try { Directory.CreateDirectory(Path.GetDirectoryName(logHijo)!); } catch { }
-                try
-                {
-                    File.AppendAllText(logHijo,
-                        $"\n=== {DateTime.Now:HH:mm:ss} python={python} script={script} exe={ejecutable}\n");
+                    if (EstaListo())
+                    {
+                        EstaEnLinea = true;
+                        return true;
+                    }
+                    return Fallar($"El puerto {_puerto} está ocupado pero no responde el protocolo de LucIA.");
                 }
-                catch { }
 
-                VisorLog.Info($"[LucIA] Arrancando cerebro: {psi.FileName} {psi.Arguments}");
-                VisorLog.Info($"[LucIA] Servidor de LucIA del visor: {script}");
-                _proceso = Process.Start(psi);
+                string? python = GodotConfig.GetPythonExePath();
+                string? script = BuscarScript();
+                if (string.IsNullOrWhiteSpace(python) || !File.Exists(python))
+                    return Fallar("Falta el Python privado de LucIA. Vuelve a extraer el runtime del visor.");
+                if (string.IsNullOrWhiteSpace(script) || !File.Exists(script))
+                    return Fallar("Falta servidor_lucia.py en el runtime de LucIA.");
+                if (!await PrepararOllamaAsync(ct)) return false;
+                if (_detenido) return false;
 
-                for (int i = 0; i < 40; i++)
+                if (_proceso == null || _proceso.HasExited)
                 {
-                    if (ct.IsCancellationRequested) break;
+                    _proceso?.Dispose();
+                    var psi = new ProcessStartInfo(python)
+                    {
+                        WorkingDirectory = Path.GetDirectoryName(script)!,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        StandardOutputEncoding = Encoding.UTF8,
+                        StandardErrorEncoding = Encoding.UTF8,
+                    };
+                    psi.ArgumentList.Add("-I");
+                    psi.ArgumentList.Add("-u");
+                    psi.ArgumentList.Add("-B");
+                    psi.ArgumentList.Add("-X");
+                    psi.ArgumentList.Add("utf8");
+                    psi.ArgumentList.Add(script);
+                    psi.ArgumentList.Add("--puerto");
+                    psi.ArgumentList.Add(_puerto.ToString());
+                    psi.ArgumentList.Add("--sin-precalentar");
+                    psi.ArgumentList.Add("--sin-precarga-voz");
+                    psi.Environment["PYTHONIOENCODING"] = "utf-8";
+                    psi.Environment["PYTHONUTF8"] = "1";
+                    psi.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
+                    lock (_salida) _salida.Clear();
+                    _proceso = new Process { StartInfo = psi };
+                    _proceso.OutputDataReceived += (_, e) => RegistrarSalida(e.Data);
+                    _proceso.ErrorDataReceived += (_, e) => RegistrarSalida(e.Data);
+                    VisorLog.Info($"[LucIA] Python: {python}; servidor: {script}");
+                    _proceso.Start();
+                    _proceso.BeginOutputReadLine();
+                    _proceso.BeginErrorReadLine();
+                }
+
+                for (int i = 0; i < 60 && !_detenido; i++)
+                {
                     await Task.Delay(500, ct);
-                    if (PuertoAbierto())
+                    if (EstaListo())
                     {
-                        if (EstaListo())
-                        {
-                            EstaEnLinea = true;
-                            VisorLog.Info($"[LucIA] Cerebro listo en 127.0.0.1:{_puerto}");
-                            return true;
-                        }
+                        EstaEnLinea = true;
+                        VisorLog.Info($"[LucIA] Cerebro listo en 127.0.0.1:{_puerto}");
+                        return true;
                     }
-                    if (_proceso != null && _proceso.HasExited)
+                    if (_proceso.HasExited)
                     {
-                        UltimoError = $"El proceso de LucIA terminó (código {_proceso.ExitCode}).";
-                        VisorLog.Error($"[LucIA] {UltimoError}");
-                        return false;
+                        _proceso.WaitForExit();
+                        string detalle;
+                        lock (_salida) detalle = _salida.ToString().Trim();
+                        return Fallar($"LucIA terminó (código {_proceso.ExitCode}). {detalle}");
+                    }
+                }
+                return Fallar("LucIA no respondió al saludo dentro de 30 segundos. Revisa el registro del visor.");
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex) { return Fallar($"Error al iniciar LucIA: {ex.Message}"); }
+            finally { _inicio.Release(); }
+        }
+
+        private async Task<bool> PrepararOllamaAsync(CancellationToken ct)
+        {
+            string url = (Environment.GetEnvironmentVariable("LUCIA_OLLAMA_URL") ?? "http://127.0.0.1:11434").TrimEnd('/');
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+            string? datos = null;
+            try { datos = await http.GetStringAsync(url + "/api/tags", ct); }
+            catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !ct.IsCancellationRequested)) { }
+            if (datos == null && url == "http://127.0.0.1:11434")
+            {
+                string? ejecutable = new[]
+                {
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Ollama", "ollama.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Ollama", "ollama.exe"),
+                }.FirstOrDefault(File.Exists);
+                if (ejecutable != null && (_ollama == null || _ollama.HasExited))
+                {
+                    _ollama?.Dispose();
+                    var inicio = new ProcessStartInfo(ejecutable)
+                    {
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Path.GetDirectoryName(ejecutable)!,
+                    };
+                    inicio.ArgumentList.Add("serve");
+                    inicio.Environment["OLLAMA_HOST"] = "127.0.0.1:11434";
+                    _ollama = Process.Start(inicio);
+                }
+                if (_ollama != null)
+                {
+                    for (int i = 0; i < 20 && !_detenido; i++)
+                    {
+                        await Task.Delay(500, ct);
+                        try { datos = await http.GetStringAsync(url + "/api/tags", ct); break; }
+                        catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !ct.IsCancellationRequested)) { }
+                        if (_ollama.HasExited) break;
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                UltimoError = $"Error al lanzar LucIA: {ex.Message}";
-                VisorLog.Error($"[LucIA] {UltimoError}");
-            }
+            if (datos == null)
+                return Fallar("Ollama no responde. Inicia Ollama y descarga un modelo con: ollama pull qwen2.5:3b. El visor reintentará la conexión.");
+            using var documento = JsonDocument.Parse(datos);
+            if (!documento.RootElement.TryGetProperty("models", out var modelos) || modelos.GetArrayLength() == 0)
+                return Fallar("Ollama no tiene modelos. Ejecuta: ollama pull qwen2.5:3b. El visor reintentará sin reinstalar.");
+            string? forzado = Environment.GetEnvironmentVariable("LUCIA_MODELO");
+            if (!string.IsNullOrWhiteSpace(forzado) && !modelos.EnumerateArray().Any(m =>
+                m.TryGetProperty("name", out var nombre) && string.Equals(nombre.GetString(), forzado, StringComparison.OrdinalIgnoreCase)))
+                return Fallar($"El modelo configurado en LUCIA_MODELO no está instalado: {forzado}.");
+            return true;
+        }
 
+        private void RegistrarSalida(string? linea)
+        {
+            if (string.IsNullOrWhiteSpace(linea)) return;
+            lock (_salida)
+            {
+                _salida.AppendLine(linea);
+                if (_salida.Length > 4000) _salida.Remove(0, _salida.Length - 4000);
+            }
+            VisorLog.Info("[LucIA Python] " + linea);
+        }
+
+        private bool Fallar(string mensaje)
+        {
+            UltimoError = mensaje;
+            EstaEnLinea = false;
+            VisorLog.Error("[LucIA] " + mensaje);
             return false;
         }
 
@@ -165,141 +206,41 @@ namespace Visor3D.Services
             try
             {
                 using var cliente = new TcpClient();
-                var tarea = cliente.ConnectAsync("127.0.0.1", _puerto);
-                if (!tarea.Wait(400)) return false;
-                return cliente.Connected;
+                return cliente.ConnectAsync("127.0.0.1", _puerto).Wait(400) && cliente.Connected;
             }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static void MatarServidoresLucia()
-        {
-            try
-            {
-                using var buscador = new ManagementObjectSearcher(
-                    "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name LIKE '%python%'");
-                foreach (ManagementObject proceso in buscador.Get())
-                {
-                    try
-                    {
-                        string linea = proceso["CommandLine"]?.ToString() ?? "";
-                        if (!linea.Contains("servidor_lucia.py", StringComparison.OrdinalIgnoreCase))
-                            continue;
-                        int id = Convert.ToInt32(proceso["ProcessId"]);
-                        if (id <= 0) continue;
-                        var p = Process.GetProcessById(id);
-                        p.Kill(entireProcessTree: true);
-                        VisorLog.Info($"[LucIA] Servidor zombi {id} detenido.");
-                    }
-                    catch { }
-                }
-            }
-            catch (Exception ex)
-            {
-                VisorLog.Info($"[LucIA] No se pudieron limpiar servidores previos: {ex.Message}");
-            }
-        }
-
-        /// <summary>Busca un archivo de Visor3Ddesarrollo en el árbol activo o subiendo desde el exe.</summary>
-        private static string RutaEnArbol(string nombre)
-        {
-            string? src = GodotConfig.SrcActivo();
-            if (src != null)
-            {
-                foreach (string sub in new[] { "", "HerraMientas" })
-                {
-                    string candidata = Path.Combine(src, "VSC#", "Visor3Ddesarrollo", sub, nombre);
-                    if (File.Exists(candidata)) return candidata;
-                }
-            }
-
-            string? actual = AppContext.BaseDirectory;
-            for (int i = 0; i < 10 && actual != null; i++)
-            {
-                foreach (string sub in new[] { "", "HerraMientas" })
-                {
-                    string candidata = Path.Combine(actual, "Visor3Ddesarrollo", sub, nombre);
-                    if (File.Exists(candidata)) return candidata;
-                }
-                actual = Directory.GetParent(actual)?.FullName;
-            }
-            return Path.Combine(AppContext.BaseDirectory, nombre);
-        }
-
-        private static string? BuscarPython()
-        {
-            string? pyw = GodotConfig.GetPythonwExePath();
-            if (!string.IsNullOrWhiteSpace(pyw) && File.Exists(pyw)) return pyw;
-
-            string? py = GodotConfig.GetPythonExePath();
-            if (!string.IsNullOrWhiteSpace(py) && File.Exists(py)) return py;
-
-            string? envPython = Environment.GetEnvironmentVariable("WVP_PYTHON");
-            if (!string.IsNullOrWhiteSpace(envPython) && File.Exists(envPython)) return envPython;
-
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string projectDir = GodotConfig.GetProjectPath();
-            string? srcDir = Directory.GetParent(Directory.GetParent(projectDir)?.FullName ?? "")?.FullName;
-
-            string[] candidatos =
-            {
-                srcDir != null ? Path.Combine(srcDir, "LC_STM", "python", "pythonw.exe") : "",
-                srcDir != null ? Path.Combine(srcDir, "LC_STM", "python", "python.exe") : "",
-                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "LC_STM", "python", "pythonw.exe")),
-                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "LC_STM", "python", "python.exe")),
-                Path.Combine(baseDir, "LC_STM", "python", "pythonw.exe"),
-                Path.Combine(baseDir, "LC_STM", "python", "python.exe"),
-                Path.Combine(baseDir, "python", "python.exe"),
-            };
-
-            foreach (var candidato in candidatos)
-            {
-                if (!string.IsNullOrWhiteSpace(candidato) && File.Exists(candidato))
-                    return candidato;
-            }
-            return null;
+            catch { return false; }
         }
 
         private static string? BuscarScript()
         {
-            string projectDir = GodotConfig.GetProjectPath();
-            var candidatos = new List<string>
-            {
-                Path.Combine(projectDir, "lucia3D", "GLTF_lucIA", "celebro_3D", "puente_3D", "servidor_lucia.py"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "celebro_3D", "puente_3D", "servidor_lucia.py"),
-            };
+            if (AppExtractor.EmbebeLucia) return AppExtractor.LuciaScriptPath;
             foreach (string src in GodotConfig.SrcCandidatos())
-                candidatos.Add(Path.Combine(src, "MTBGT", "WoldVirtualP2P3D",
-                    "lucia3D", "GLTF_lucIA", "celebro_3D", "puente_3D", "servidor_lucia.py"));
-
-            foreach (var candidato in candidatos)
             {
-                if (!string.IsNullOrWhiteSpace(candidato) && File.Exists(candidato))
-                    return candidato;
+                string candidato = Path.Combine(src, "MTBGT", "WoldVirtualP2P3D", "lucia3D",
+                    "GLTF_lucIA", "celebro_3D", "puente_3D", "servidor_lucia.py");
+                if (File.Exists(candidato)) return candidato;
             }
             return null;
         }
 
         public void Detener()
         {
-            try
+            _detenido = true;
+            foreach (var proceso in new[] { _proceso, _ollama })
             {
-                if (_proceso != null && !_proceso.HasExited)
+                if (proceso == null) continue;
+                try
                 {
-                    VisorLog.Info("[LucIA] Deteniendo cerebro...");
-                    _proceso.Kill(entireProcessTree: true);
-                    _proceso.WaitForExit(3000);
+                    if (!proceso.HasExited)
+                    {
+                        proceso.Kill(entireProcessTree: true);
+                        proceso.WaitForExit(3000);
+                    }
                 }
+                catch (Exception ex) { VisorLog.Info($"[LucIA] No se pudo cerrar el proceso propio: {ex.Message}"); }
+                finally { proceso.Dispose(); }
             }
-            catch { }
-            finally
-            {
-                _proceso = null;
-                EstaEnLinea = false;
-            }
+            EstaEnLinea = false;
         }
 
         public void Dispose() => Detener();

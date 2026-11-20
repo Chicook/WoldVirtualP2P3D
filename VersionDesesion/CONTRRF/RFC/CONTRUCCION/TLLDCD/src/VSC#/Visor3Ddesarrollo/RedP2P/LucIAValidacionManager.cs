@@ -3,27 +3,40 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Visor3D.RedP2P;
 
 namespace Visor3D.RedP2P
 {
     /// <summary>
-    /// Gestor de validación de conexión con LucIA.
-    /// Monitorea el directorio user:// de Godot para detectar solicitudes de validación
-    /// de conexión emitidas por LucIARecepcion.gd y responde iniciando túneles SSH efímeros.
+    /// Gestor de conexión P2P con LucIA — v2.9.3.
+    ///
+    /// ARQUITECTURA CORREGIDA: Lucía es el HOST del túnel efímero.
+    ///
+    /// Al llamar a Iniciar() se arranca automáticamente el túnel SSH efímero
+    /// (P2PTunnelManager). Cuando el túnel obtiene su URL pública, se escribe
+    /// user://tunel_lucia_url.json para que LuciaRecepcion.gd lo lea.
+    ///
+    /// El flujo es:
+    ///   C# arranca → IniciarAsync() → SSH tunnel → URL pública → archivo JSON
+    ///   Godot polling → lee JSON → botón "CONECTAR" muestra URL → "CONECTADO"
     /// </summary>
     public class LucIAValidacionManager : IDisposable
     {
         private readonly string _godotUserDir;
+        private readonly string _rutaTunelUrl;
+
+        // Compatibilidad legada (ya no se usa para el flujo principal)
         private readonly string _rutaValidacion;
         private readonly string _rutaResultado;
-        private FileSystemWatcher? _watcher;
+
+        private FileSystemWatcher? _watcherLegado;
         private P2PTunnelManager? _tunnelManager;
+        private P2PTunnelManager? _tunnelManagerDao;  // túnel Cloudflare de la DAO
+        private readonly string   _rutaTunelDaoUrl;
         private CancellationTokenSource? _cts;
         private bool _disposeado;
         private readonly object _sync = new();
 
-        /// <summary>Se dispara cuando se completa una validación de conexión.</summary>
+        /// <summary>Se dispara cuando el túnel obtiene (o pierde) URL pública.</summary>
         public event Action<bool, string>? ValidacionCompletada;
 
         /// <summary>Ruta del directorio user:// de Godot en Windows.</summary>
@@ -33,210 +46,236 @@ namespace Visor3D.RedP2P
 
         public LucIAValidacionManager()
         {
-            _godotUserDir = GodotUserDir;
-            _rutaValidacion = Path.Combine(_godotUserDir, "validacion_conexion.json");
-            _rutaResultado = Path.Combine(_godotUserDir, "validacion_resultado.json");
+            _godotUserDir    = GodotUserDir;
+            _rutaTunelUrl    = Path.Combine(_godotUserDir, "tunel_lucia_url.json");
+            _rutaTunelDaoUrl = Path.Combine(_godotUserDir, "tunel_dao_url.json");
+            _rutaValidacion  = Path.Combine(_godotUserDir, "validacion_conexion.json");
+            _rutaResultado   = Path.Combine(_godotUserDir, "validacion_resultado.json");
 
-            // Asegurar que el directorio existe
             Directory.CreateDirectory(_godotUserDir);
         }
 
         /// <summary>
-        /// Inicia el monitoreo del directorio user:// para detectar solicitudes de validación.
+        /// Inicia el túnel SSH efímero inmediatamente (Lucía = HOST).
+        /// La URL pública se publica en user://tunel_lucia_url.json.
+        /// Idempotente: si ya hay un túnel activo no hace nada.
         /// </summary>
         public void Iniciar()
         {
             lock (_sync)
             {
-                if (_disposeado || _watcher != null) return;
+                if (_disposeado || _tunnelManager != null) return;
 
-                Console.WriteLine($"[LucIAValidacion] Iniciando monitoreo en {_godotUserDir}");
+                Console.WriteLine($"[LucIAValidacion] Iniciando túnel HOST (Lucía) en {_godotUserDir}");
 
                 _cts = new CancellationTokenSource();
-                _watcher = new FileSystemWatcher(_godotUserDir)
+
+                // Lucía abre el túnel en el puerto del WebNodo (3030 o dinámico).
+                // Usamos 8545 que es el puerto del servidor blockchain (como en versiones anteriores)
+                // y coincide con el puerto configurado en P2PTunnelManager por defecto.
+                _tunnelManager = new P2PTunnelManager(puertoLocal: 8545);
+
+                // Cuando el túnel tenga URL → publicar para Godot
+                _tunnelManager.UrlObtenida += url =>
+                {
+                    Console.WriteLine($"[LucIAValidacion] Túnel HOST activo: {url}");
+                    EscribirTunelUrl(true, url, $"Túnel WebNodo activo: {url}");
+                    ValidacionCompletada?.Invoke(true, $"Túnel WebNodo activo: {url}");
+                };
+
+                // Cuando el túnel muera → marcar como inactivo en Godot
+                _tunnelManager.TunnelMuerto += host =>
+                {
+                    Console.WriteLine($"[LucIAValidacion] Túnel HOST caído ({host}), reconectando…");
+                    EscribirTunelUrl(false, "", $"Reconectando túnel (host: {host})…");
+                    ValidacionCompletada?.Invoke(false, $"Túnel desconectado (host: {host})");
+                };
+
+                // Iniciar el bucle del túnel en background
+                _ = Task.Run(() => _tunnelManager.IniciarAsync());
+
+                // ── Túnel Cloudflare de la DAO (puerto 8766) ──────────────────
+                // Mismo cloudflared, puerto diferente → URL pública propia de la DAO.
+                // Godot la lee desde user://tunel_dao_url.json.
+                _tunnelManagerDao = new P2PTunnelManager(puertoLocal: 8766);
+
+                _tunnelManagerDao.UrlObtenida += url =>
+                {
+                    Console.WriteLine($"[LucIAValidacion] Túnel DAO activo: {url}");
+                    EscribirTunelDaoUrl(true, url, $"DAO activa: {url}");
+                };
+
+                _tunnelManagerDao.TunnelMuerto += host =>
+                {
+                    Console.WriteLine($"[LucIAValidacion] Túnel DAO caído ({host}), reconectando…");
+                    EscribirTunelDaoUrl(false, "", $"Reconectando DAO (host: {host})…");
+                };
+
+                _ = Task.Run(() => _tunnelManagerDao.IniciarAsync());
+                // ─────────────────────────────────────────────────────────────
+
+                // Mantener watcher legado por compatibilidad con versiones anteriores
+                _IniciarWatcherLegado();
+            }
+        }
+
+        /// <summary>
+        /// Escribe user://tunel_lucia_url.json con el estado actual del túnel.
+        /// Godot lo lee cada 0.5 s desde _poll_conexion().
+        /// </summary>
+        private void EscribirTunelUrl(bool exito, string url, string mensaje)
+        {
+            try
+            {
+                var resultado = new TunelLuciaUrl
+                {
+                    Exito   = exito,
+                    Url     = url,
+                    Mensaje = mensaje,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                };
+
+                // Escritura atómica: temporal + rename para evitar que Godot lea a medias.
+                string temporal = _rutaTunelUrl + ".tmp";
+                string json = JsonSerializer.Serialize(resultado, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(temporal, json);
+                File.Move(temporal, _rutaTunelUrl, overwrite: true);
+
+                Console.WriteLine($"[LucIAValidacion] tunel_lucia_url.json → exito={exito}, url={url}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LucIAValidacion] Error escribiendo tunel_lucia_url.json: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Escribe user://tunel_dao_url.json con el estado del túnel Cloudflare de la DAO.
+        /// LucIA es el HOST: abre este túnel desde su máquina para que los usuarios
+        /// se conecten a la DAO como sala de reuniones/asambleas del metaverso.
+        /// Godot lo lee cada 0.5 s desde _poll_dao() en LuciaRecepcion.gd.
+        /// </summary>
+        private void EscribirTunelDaoUrl(bool exito, string url, string mensaje)
+        {
+            try
+            {
+                var resultado = new TunelLuciaUrl
+                {
+                    Exito     = exito,
+                    Url       = url,
+                    Mensaje   = mensaje,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                };
+
+                string temporal = _rutaTunelDaoUrl + ".tmp";
+                string json = JsonSerializer.Serialize(resultado, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(temporal, json);
+                File.Move(temporal, _rutaTunelDaoUrl, overwrite: true);
+
+                Console.WriteLine($"[LucIAValidacion] tunel_dao_url.json → exito={exito}, url={url}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LucIAValidacion] Error escribiendo tunel_dao_url.json: {ex.Message}");
+            }
+        }
+
+        // ─── Compatibilidad legada (validacion_conexion.json → validacion_resultado.json) ───
+
+        private void _IniciarWatcherLegado()
+        {
+            try
+            {
+                _watcherLegado = new FileSystemWatcher(_godotUserDir)
                 {
                     Filter = "validacion_conexion.json",
                     NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.CreationTime
                 };
-
-                _watcher.Created += OnValidacionSolicitada;
-                _watcher.Changed += OnValidacionSolicitada;
-                _watcher.EnableRaisingEvents = true;
-
-                // Verificar si ya existe un archivo pendiente al iniciar
-                if (File.Exists(_rutaValidacion))
-                {
-                    Task.Run(() => ProcesarValidacionAsync(_cts!.Token));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Detiene el monitoreo y libera recursos.
-        /// </summary>
-        public void Detener()
-        {
-            lock (_sync)
-            {
-                if (_disposeado) return;
-
-                Console.WriteLine("[LucIAValidacion] Deteniendo monitoreo");
-
-                if (_watcher != null)
-                {
-                    _watcher.Created -= OnValidacionSolicitada;
-                    _watcher.Changed -= OnValidacionSolicitada;
-                    _watcher.EnableRaisingEvents = false;
-                    _watcher.Dispose();
-                    _watcher = null;
-                }
-
-                _cts?.Cancel();
-                _tunnelManager?.Dispose();
-                _tunnelManager = null;
-                _cts?.Dispose();
-                _cts = null;
-            }
-        }
-
-        private void OnValidacionSolicitada(object sender, FileSystemEventArgs e)
-        {
-            Console.WriteLine($"[LucIAValidacion] Solicitud detectada: {e.FullPath}");
-
-            // Debounce: esperar un poco para asegurar que el archivo esté completamente escrito
-            Task.Delay(500).ContinueWith(_ =>
-            {
-                if (_cts != null && !_cts.IsCancellationRequested)
-                {
-                    Task.Run(() => ProcesarValidacionAsync(_cts!.Token));
-                }
-            });
-        }
-
-        /// <summary>
-        /// Procesa una solicitud de validación de conexión.
-        /// Lee validacion_conexion.json, inicia el túnel SSH y escribe validacion_resultado.json.
-        /// </summary>
-        private async Task ProcesarValidacionAsync(CancellationToken token)
-        {
-            try
-            {
-                // Leer la solicitud de validación
-                if (!File.Exists(_rutaValidacion))
-                {
-                    Console.WriteLine("[LucIAValidacion] Archivo de validación no encontrado");
-                    return;
-                }
-
-                string contenido = await File.ReadAllTextAsync(_rutaValidacion, token);
-                var datosValidacion = JsonSerializer.Deserialize<ValidacionDatos>(contenido);
-
-                if (datosValidacion == null)
-                {
-                    Console.WriteLine("[LucIAValidacion] Error al deserializar datos de validación");
-                    EscribirResultado(false, "Error al deserializar datos de validación");
-                    return;
-                }
-
-                Console.WriteLine($"[LucIAValidacion] Procesando validación para cuenta: {datosValidacion.CuentaHash.Substring(0, 16)}...");
-
-                // Validar que el token no haya expirado
-                long expira = long.Parse(datosValidacion.Expira);
-                long ahora = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                if (ahora > expira)
-                {
-                    Console.WriteLine("[LucIAValidacion] Token expirado");
-                    EscribirResultado(false, "Token de validación expirado");
-                    return;
-                }
-
-                // Iniciar túnel SSH efímero
-                Console.WriteLine("[LucIAValidacion] Iniciando túnel SSH efímero...");
-                _tunnelManager = new P2PTunnelManager(puertoLocal: 8545);
-                await _tunnelManager.IniciarAsync();
-
-                // Esperar a que el túnel esté activo
-                var timeout = Task.Delay(30000, token); // 30 segundos timeout
-                var tunnelTask = Task.Run(async () =>
-                {
-                    while (!_tunnelManager!.Activo && !token.IsCancellationRequested)
-                    {
-                        await Task.Delay(500, token);
-                    }
-                }, token);
-
-                var ganador = await Task.WhenAny(tunnelTask, timeout);
-
-                if (ganador == timeout)
-                {
-                    Console.WriteLine("[LucIAValidacion] Timeout esperando túnel SSH");
-                    EscribirResultado(false, "Timeout al iniciar túnel SSH");
-                    _tunnelManager?.Dispose();
-                    return;
-                }
-
-                if (!_tunnelManager.Activo)
-                {
-                    Console.WriteLine("[LucIAValidacion] No se pudo establecer el túnel SSH");
-                    EscribirResultado(false, "No se pudo establecer el túnel SSH");
-                    _tunnelManager?.Dispose();
-                    return;
-                }
-
-                string urlPublica = _tunnelManager.UrlPublica ?? "";
-                Console.WriteLine($"[LucIAValidacion] Túnel activo: {urlPublica}");
-
-                // Validación exitosa
-                EscribirResultado(true, $"Conexión validada correctamente. Túnel: {urlPublica}");
-
-                // Esperar un poco antes de cerrar el túnel (para dar tiempo a Godot de leer el resultado)
-                await Task.Delay(5000, token);
-
-                _tunnelManager?.Dispose();
-                _tunnelManager = null;
-
-                // Eliminar el archivo de solicitud
-                try
-                {
-                    File.Delete(_rutaValidacion);
-                }
-                catch { }
-            }
-            catch (OperationCanceledException)
-            {
-                Console.WriteLine("[LucIAValidacion] Operación cancelada");
+                _watcherLegado.Created += _OnValidacionLegadaSolicitada;
+                _watcherLegado.Changed += _OnValidacionLegadaSolicitada;
+                _watcherLegado.EnableRaisingEvents = true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[LucIAValidacion] Error procesando validación: {ex.Message}");
-                EscribirResultado(false, $"Error: {ex.Message}");
+                Console.WriteLine($"[LucIAValidacion] Watcher legado no disponible: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Escribe el resultado de la validación en validacion_resultado.json.
-        /// </summary>
-        private void EscribirResultado(bool exito, string mensaje)
+        private void _OnValidacionLegadaSolicitada(object sender, FileSystemEventArgs e)
+        {
+            // Responder con el estado actual del túnel principal
+            Task.Delay(400).ContinueWith(_ =>
+            {
+                try
+                {
+                    bool activo = _tunnelManager?.Activo ?? false;
+                    string url  = _tunnelManager?.UrlPublica ?? "";
+                    _EscribirResultadoLegado(activo, activo
+                        ? $"Conexión verificada. Túnel: {url}"
+                        : "Túnel aún no disponible. Espera un momento.");
+                }
+                catch { }
+            });
+        }
+
+        private void _EscribirResultadoLegado(bool exito, string mensaje)
         {
             try
             {
                 var resultado = new ValidacionResultado
                 {
-                    Exito = exito,
-                    Mensaje = mensaje,
+                    Exito     = exito,
+                    Mensaje   = mensaje,
                     Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
-
                 string json = JsonSerializer.Serialize(resultado, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(_rutaResultado, json);
+            }
+            catch { }
+        }
 
-                Console.WriteLine($"[LucIAValidacion] Resultado escrito: exito={exito}, mensaje={mensaje}");
-                ValidacionCompletada?.Invoke(exito, mensaje);
-            }
-            catch (Exception ex)
+        /// <summary>Detiene ambos túneles (isla + DAO) y libera recursos. LucIA es el HOST de los dos.</summary>
+        public void Detener()
+        {
+            P2PTunnelManager? tm;
+            P2PTunnelManager? tmDao;
+            FileSystemWatcher? fw;
+            CancellationTokenSource? cts;
+
+            lock (_sync)
             {
-                Console.WriteLine($"[LucIAValidacion] Error escribiendo resultado: {ex.Message}");
+                if (_disposeado) return;
+
+                Console.WriteLine("[LucIAValidacion] Deteniendo túneles HOST (isla + DAO)…");
+
+                tm    = _tunnelManager;    _tunnelManager    = null;
+                tmDao = _tunnelManagerDao; _tunnelManagerDao = null;
+                fw    = _watcherLegado;    _watcherLegado    = null;
+                cts   = _cts;              _cts              = null;
             }
+
+            try { cts?.Cancel(); } catch { }
+            try { tm?.Detener(); }    catch { }
+            try { tm?.Dispose(); }    catch { }
+            try { tmDao?.Detener(); } catch { }
+            try { tmDao?.Dispose(); } catch { }
+            try { cts?.Dispose(); }   catch { }
+
+            if (fw != null)
+            {
+                try
+                {
+                    fw.EnableRaisingEvents = false;
+                    fw.Created -= _OnValidacionLegadaSolicitada;
+                    fw.Changed -= _OnValidacionLegadaSolicitada;
+                    fw.Dispose();
+                }
+                catch { }
+            }
+
+            // Marcar ambos túneles como inactivos para Godot
+            EscribirTunelUrl(false, "", "Visor desconectado");
+            EscribirTunelDaoUrl(false, "", "DAO desconectada");
         }
 
         public void Dispose()
@@ -249,21 +288,21 @@ namespace Visor3D.RedP2P
             Detener();
         }
 
-        /// <summary>Datos de validación leídos de validacion_conexion.json</summary>
-        private class ValidacionDatos
+        // ─── DTOs ────────────────────────────────────────────────────────────
+
+        private class TunelLuciaUrl
         {
-            public string CuentaHash { get; set; } = "";
-            public string Token { get; set; } = "";
-            public string Timestamp { get; set; } = "";
-            public string Expira { get; set; } = "";
+            public bool   Exito     { get; set; }
+            public string Url       { get; set; } = "";
+            public string Mensaje   { get; set; } = "";
+            public long   Timestamp { get; set; }
         }
 
-        /// <summary>Resultado de validación escrito en validacion_resultado.json</summary>
         private class ValidacionResultado
         {
-            public bool Exito { get; set; }
-            public string Mensaje { get; set; } = "";
-            public long Timestamp { get; set; }
+            public bool   Exito     { get; set; }
+            public string Mensaje   { get; set; } = "";
+            public long   Timestamp { get; set; }
         }
     }
 }

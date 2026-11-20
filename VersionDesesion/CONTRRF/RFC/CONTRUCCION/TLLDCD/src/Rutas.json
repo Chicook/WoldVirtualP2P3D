@@ -170,7 +170,7 @@
     "python": "../../.dev/.python/python.exe",
     "lc_trabajando": "../../CONTRUCCION/LCtrabajando",
     "psnrl": "STM_CH/PSNRL",
-    "pycache": "STM_CH/pycache",
+    "pycache": "../../.dev/pycache",
     "ledger": "STM_CH/blockchain_ledger.json",
     "cache_iafree": "STM_CH/openrouter_free_cache.json",
     "stm_rfc": "../../STM_RFC",

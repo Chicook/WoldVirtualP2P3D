@@ -12,8 +12,8 @@ namespace Visor3D.Linux
     /// </summary>
     public static class RutasLinux
     {
-        public const string Version = "2.7.9";
-        public const string NombreMotor = "Godot_v4.7.2-stable_linux.x86_64";
+        public static string Version => WoldInfoVersion.Version;
+        public static string NombreMotor => $"Godot_v{WoldInfoVersion.Motor}-stable_linux.x86_64";
         public const string NombrePck = "wvp3d.pck";
 
         public static string BaseDir => AppContext.BaseDirectory;

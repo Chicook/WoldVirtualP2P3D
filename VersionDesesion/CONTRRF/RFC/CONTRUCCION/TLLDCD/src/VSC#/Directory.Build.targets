@@ -1,0 +1,46 @@
+<Project>
+  <!--
+    Materializa la tabla en una clase C# (U5.1): de WoldInfoVersion salen
+    RutasLinux.Version y el nombre del motor Godot. El fichero se genera en
+    obj/ ($(IntermediateOutputPath)) para no ensuciar el árbol fuente. Ningún
+    proyecto lo compila todavía: el cableado al Compile de VisorLinux es la
+    fase B de T1-02.
+
+    Se escribe con una tarea inline (Roslyn) y no con WriteLinesToFile, porque
+    éste recorta los ";" al interpretarlos como separadores de lista de items.
+  -->
+  <UsingTask TaskName="WoldEscribirInfoVersion"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Version ParameterType="System.String" Required="true" />
+      <Motor ParameterType="System.String" Required="true" />
+      <Salida ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs">
+      <![CDATA[
+        var contenido =
+            "// Generado por Directory.Build.targets a partir de src/VERSION.json (U5.1). No editar.\n" +
+            "namespace Visor3D;\n" +
+            "public static class WoldInfoVersion\n" +
+            "{\n" +
+            "    public const string Version = \"" + Version + "\";\n" +
+            "    public const string Motor = \"" + Motor + "\";\n" +
+            "}\n";
+        System.IO.File.WriteAllText(Salida, contenido);
+      ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="WoldGenerarInfoVersion" BeforeTargets="BeforeCompile;CoreCompile"
+          Inputs="$(MSBuildThisFileDirectory)..\VERSION.json"
+          Outputs="$(IntermediateOutputPath)WoldInfoVersion.g.cs">
+    <WoldEscribirInfoVersion Version="$(WoldVersion)" Motor="$(WoldMotor)"
+                             Salida="$(IntermediateOutputPath)WoldInfoVersion.g.cs" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)WoldInfoVersion.g.cs" />
+    </ItemGroup>
+  </Target>
+</Project>

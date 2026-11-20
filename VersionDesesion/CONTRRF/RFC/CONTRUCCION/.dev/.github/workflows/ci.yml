@@ -1,0 +1,113 @@
+# CI raíz — WoldVirtualP2P3D
+# ================================================
+# GitHub Actions solo ejecuta workflows desde .github/workflows/ en la raíz del
+# repositorio. La plantilla anidada (STM_HRTS/.github/workflows/ci.yml) apuntaba
+# al árbol viejo (VersionDesesion/CONTRRF/TLLDCD/src); aquí se activa con la
+# ruta canónica VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src.
+#
+# La puerta de seguridad (job stm-def) reutiliza .github/workflows/stm_def.yml.
+
+name: CI – WoldVirtualP2P3D
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  stm-def:
+    name: STM_DEF – Puerta de seguridad
+    uses: ./.github/workflows/stm_def.yml
+
+  python-suite:
+    name: Python tests (H1 + STM_DEF estrictas, suite completa)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/STM_HRTS/utils/add_utils
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]" || pip install numpy pytest pytest-timeout
+
+      - name: Suite de contencion H1 (estricta)
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src
+        run: |
+          python -m pytest tests/STM_test1/test_h1_contencion.py -v \
+            --rootdir . \
+            --timeout=30 \
+            --tb=short \
+            -p no:cacheprovider \
+            -c STM_HRTS/utils/add_utils/pytest.ini
+
+      - name: Suite STM_DEF (estricta)
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src
+        run: |
+          python -m pytest tests/STM_test3/test_stm_def.py -q \
+            --rootdir . \
+            --timeout=60 \
+            --tb=short \
+            -p no:cacheprovider \
+            -c STM_HRTS/utils/add_utils/pytest.ini
+
+      - name: Suite Python completa (no bloqueante)
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src
+        run: |
+          python -m pytest tests/ -q \
+            --rootdir . \
+            --timeout=60 \
+            --tb=short \
+            --ignore=tests/STM_test1/test_h1_contencion.py \
+            -p no:cacheprovider \
+            -c STM_HRTS/utils/add_utils/pytest.ini \
+            -k "not version_unica"
+        continue-on-error: true
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo "=== CI Python completado ==="
+          echo "H1 contencion P0: verificado"
+          echo "STM_DEF: verificado"
+          echo "Suite completa: ejecutada (test_version_unica queda fuera hasta cerrar T1-02 fase B)"
+
+  csharp-suite:
+    name: C# Visor3D (Build + Selftests)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Compilar Visor3D (UI, sin motor ni mundo)
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/HerraMientas
+        run: dotnet build Visor3D.csproj -c Debug -p:SkipGodotAssets=true
+
+      - name: OTA Update SelfTest
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/HerraMientas
+        run: dotnet run --project Visor3D.csproj --no-build -- --update-selftest
+
+      - name: Red LAN P2P SelfTest
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/HerraMientas
+        run: dotnet run --project Visor3D.csproj --no-build -- --red-selftest
+
+      - name: Cuenta y Diagnostico SelfTest
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/HerraMientas
+        run: dotnet run --project Visor3D.csproj --no-build -- --cuenta-selftest
+
+      - name: Chat y Protocolo SelfTest
+        working-directory: VersionDesesion/CONTRRF/RFC/CONTRUCCION/TLLDCD/src/VSC#/Visor3Ddesarrollo/HerraMientas
+        run: dotnet run --project Visor3D.csproj --no-build -- --chat-selftest

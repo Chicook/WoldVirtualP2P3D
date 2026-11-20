@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import ctypes
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,12 +18,18 @@ from typing import Any, Dict, List, Tuple
 
 from .rutas import (
     DEV_DIR,
+    DEV_GITHUB_DIR,
+    DEV_GITHUB_WORKFLOWS_DIR,
+    DEV_PYTEST_INI,
+    ESCENA_CANONICA_VISOR,
     GODOT_PROJECT_FILE,
     PYTHON_EXE,
     REPO_ROOT,
     VENV_PYTHON,
     VISOR_CSPROJ,
     VISOR_HERRAMIENTAS_DIR,
+    VSCODE_DIR,
+    localizar_dotnet,
 )
 
 DEPENDENCIAS_JSON = DEV_DIR / "dependencias.json"
@@ -60,13 +65,16 @@ def verificar_dlls_nativas() -> List[Dict[str, Any]]:
 
 def verificar_dotnet_sdk() -> Dict[str, Any]:
     """Comprueba la disponibilidad del SDK de .NET."""
-    dotnet_path = shutil.which("dotnet")
-    if not dotnet_path:
+    dotnet_exe = localizar_dotnet()
+    if dotnet_exe is None:
         return {"disponible": False, "version": "No instalado", "ruta": None}
 
     try:
+        # Fuera de .dev: su global.json fija SDK 8.0.400 y bloquea la consulta
+        # de versión si esa revisión no está instalada.
         res = subprocess.run(
-            ["dotnet", "--version"],
+            [str(dotnet_exe), "--version"],
+            cwd=str(REPO_ROOT),
             capture_output=True,
             text=True,
             timeout=5,
@@ -78,10 +86,44 @@ def verificar_dotnet_sdk() -> Dict[str, Any]:
             "disponible": True,
             "version": version,
             "compatible": es_net8_plus,
-            "ruta": dotnet_path,
+            "ruta": str(dotnet_exe),
         }
     except Exception as ex:
-        return {"disponible": False, "version": str(ex), "ruta": dotnet_path}
+        return {"disponible": False, "version": str(ex), "ruta": str(dotnet_exe)}
+
+
+def obtener_version_python_dev() -> Dict[str, Any]:
+    """Inspecciona y valida el intérprete Python canónico en .dev/.python (Python 3.15+)."""
+    if not PYTHON_EXE.is_file():
+        return {
+            "disponible": False,
+            "version": "No encontrado",
+            "ruta": str(PYTHON_EXE),
+            "es_python_315": False,
+        }
+    try:
+        res = subprocess.run(
+            [str(PYTHON_EXE), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        ver_str = (res.stdout or res.stderr).strip()
+        es_315 = "3.15" in ver_str
+        return {
+            "disponible": True,
+            "version": ver_str,
+            "ruta": str(PYTHON_EXE),
+            "es_python_315": es_315,
+        }
+    except Exception as ex:
+        return {
+            "disponible": False,
+            "version": str(ex),
+            "ruta": str(PYTHON_EXE),
+            "es_python_315": False,
+        }
 
 
 def verificar_paquetes_python() -> Dict[str, Any]:
@@ -99,6 +141,7 @@ def verificar_paquetes_python() -> Dict[str, Any]:
     return {
         "interprete_actual": sys.executable,
         "es_local_dev": str(DEV_DIR) in sys.executable,
+        "python_dev": obtener_version_python_dev(),
         "modulos": estado_modulos,
     }
 
@@ -107,6 +150,7 @@ def verificar_recursos_visor() -> Dict[str, Any]:
     """Comprueba recursos requeridos para compilar y empaquetar el Visor 3D."""
     csproj_ok = VISOR_CSPROJ.is_file()
     godot_ok = GODOT_PROJECT_FILE.is_file()
+    escena_ok = ESCENA_CANONICA_VISOR.is_file()
 
     copia_dir = VISOR_HERRAMIENTAS_DIR / "CopiaDeSeguridad"
     zip_godot = (copia_dir / "constructor_godot.zip").is_file()
@@ -115,8 +159,22 @@ def verificar_recursos_visor() -> Dict[str, Any]:
     return {
         "csproj_existe": csproj_ok,
         "godot_proy_existe": godot_ok,
+        "escena_fijada_existe": escena_ok,
         "zip_godot_existe": zip_godot,
         "zip_mundo_existe": zip_mundo,
+    }
+
+
+def verificar_centralizacion_dev() -> Dict[str, Any]:
+    """Comprueba que los artefactos de desarrollo (.github, pytest.ini, etc.) residan en .dev."""
+    workflows = list(DEV_GITHUB_WORKFLOWS_DIR.glob("*.yml")) if DEV_GITHUB_WORKFLOWS_DIR.is_dir() else []
+    return {
+        "dev_dir_existe": DEV_DIR.is_dir(),
+        "python_315_existe": PYTHON_EXE.is_file(),
+        "github_workflows_existe": DEV_GITHUB_WORKFLOWS_DIR.is_dir() and len(workflows) > 0,
+        "total_workflows_dev": len(workflows),
+        "vscode_config_existe": (VSCODE_DIR / "settings.json").is_file(),
+        "pytest_ini_existe": DEV_PYTEST_INI.is_file(),
     }
 
 
@@ -126,6 +184,7 @@ def comprobar_todas_dependencias() -> Dict[str, Any]:
         "dotnet": verificar_dotnet_sdk(),
         "dlls_nativas": verificar_dlls_nativas(),
         "python": verificar_paquetes_python(),
+        "centralizacion_dev": verificar_centralizacion_dev(),
         "recursos_visor": verificar_recursos_visor(),
     }
 
@@ -151,20 +210,32 @@ def formatear_informe_dependencias() -> str:
         st = "[OK]" if dll["disponible"] else "[FALTA]"
         lineas.append(f"  {st:<8} {dll['nombre']:<16} -> {dll['descripcion']}")
 
-    # 3. Python
+    # 3. Python (.dev/.python Python 3.15+)
     py = datos["python"]
-    lineas.append(f"\n--- [3] ENTORNO PYTHON ---")
-    lineas.append(f"  Intérprete actual: {py['interprete_actual']}")
-    lineas.append(f"  Aislado en .dev  : {'Sí' if py['es_local_dev'] else 'No (sistema host)'}")
+    py_dev = py["python_dev"]
+    st_py_dev = "[OK]" if py_dev["disponible"] and py_dev["es_python_315"] else ("[AVISO]" if py_dev["disponible"] else "[FALTA]")
+    lineas.append(f"\n--- [3] ENTORNO PYTHON CANÓNICO (.dev/.python) ---")
+    lineas.append(f"  {st_py_dev:<8} Python canónico .dev : {py_dev['version']} ({py_dev['ruta']})")
+    lineas.append(f"  Intérprete actual proceso : {py['interprete_actual']}")
+    lineas.append(f"  Aislado en .dev           : {'Sí' if py['es_local_dev'] else 'No (sistema host)'}")
     for mod, ok in py["modulos"].items():
         st = "[OK]" if ok else "[FALTA]"
         lineas.append(f"  {st:<8} Módulo: {mod}")
 
-    # 4. Recursos del Visor
+    # 4. Centralización en .dev
+    cd = datos["centralizacion_dev"]
+    st_gh = "[OK]" if cd["github_workflows_existe"] else "[FALTA]"
+    lineas.append(f"\n--- [4] ORGANIZACIÓN MODULAR Y CENTRALIZACIÓN (.dev) ---")
+    lineas.append(f"  {st_gh:<8} Workflows GitHub (.dev/.github) : {cd['total_workflows_dev']} archivos .yml centralizados")
+    lineas.append(f"  {'[OK]' if cd['pytest_ini_existe'] else '[FALTA]':<8} Config Pytest (.dev/pytest.ini)")
+    lineas.append(f"  {'[OK]' if cd['vscode_config_existe'] else '[FALTA]':<8} Config VSCode (.dev/.vscode)")
+
+    # 5. Recursos del Visor
     rc = datos["recursos_visor"]
-    lineas.append(f"\n--- [4] RECURSOS DE CONSTRUCCIÓN VISOR 3D ---")
+    lineas.append(f"\n--- [5] RECURSOS DE CONSTRUCCIÓN VISOR 3D ---")
     lineas.append(f"  {'[OK]' if rc['csproj_existe'] else '[FALTA]':<8} Proyecto C# Visor3D.csproj")
     lineas.append(f"  {'[OK]' if rc['godot_proy_existe'] else '[FALTA]':<8} Proyecto Godot 3D project.godot")
+    lineas.append(f"  {'[OK]' if rc['escena_fijada_existe'] else '[FALTA]':<8} Escena Principal res://WoldVirtual3DP2P.tscn")
     lineas.append(f"  {'[OK]' if rc['zip_godot_existe'] else '[AVISO]':<8} Paquete constructor_godot.zip")
     lineas.append(f"  {'[OK]' if rc['zip_mundo_existe'] else '[AVISO]':<8} Paquete actualizacion_v2.8.4.zip")
 

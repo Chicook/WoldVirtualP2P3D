@@ -16,11 +16,12 @@ import urllib.request
 from typing import Any, Dict, Optional, Tuple
 
 from .entorno import configurar_variables_entorno, obtener_python_activo
-from .rutas import BLOCKCHAIN_DIR, BLOCKCHAIN_SCRIPT, LEDGER_PATH, PSNRL_DIR
+from .rutas import BLOCKCHAIN_DIR, BLOCKCHAIN_SCRIPT, DEV_DIR, LEDGER_PATH, PSNRL_DIR
 
 
 PUERTO_BLOCKCHAIN_DEFECTO: int = 8545
 URL_BLOCKCHAIN_DEFECTO: str = f"http://127.0.0.1:{PUERTO_BLOCKCHAIN_DEFECTO}"
+PID_FILE_BLOCKCHAIN = DEV_DIR / ".pids" / "blockchain.pid"
 
 
 def puerto_abierto(host: str = "127.0.0.1", puerto: int = PUERTO_BLOCKCHAIN_DEFECTO, timeout: float = 0.5) -> bool:
@@ -82,19 +83,62 @@ def estado_blockchain(puerto: int = PUERTO_BLOCKCHAIN_DEFECTO) -> Dict[str, Any]
 
 
 def detener_blockchain() -> int:
-    """Detiene cualquier proceso que esté ejecutando servidor_oficial.py."""
+    """Detiene el proceso del servidor oficial mediante verificación segura de PID y ejecutable.
+    Elimina por completo el uso de comodines PowerShell para prevenir terminación no intencionada."""
     detenidos = 0
-    if sys.platform == "win32":
+    pids_a_verificar: list[int] = []
+
+    # 1. Leer PID desde archivo de tracking si existe
+    if PID_FILE_BLOCKCHAIN.is_file():
         try:
-            cmd = (
-                "Get-CimInstance Win32_Process | "
-                "Where-Object { $_.CommandLine -like '*servidor_oficial.py*' } | "
-                "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
-            )
-            subprocess.run(["powershell", "-NoProfile", "-Command", cmd], capture_output=True)
-            detenidos += 1
+            pid_txt = PID_FILE_BLOCKCHAIN.read_text(encoding="utf-8").strip()
+            if pid_txt.isdigit():
+                pids_a_verificar.append(int(pid_txt))
         except Exception:
             pass
+
+    # 2. Localizar PID escuchando en el puerto si psutil está disponible
+    try:
+        import psutil
+        for conn in psutil.net_connections(kind="tcp"):
+            if conn.laddr and conn.laddr.port == PUERTO_BLOCKCHAIN_DEFECTO and conn.status == psutil.CONN_LISTEN:
+                if conn.pid and conn.pid not in pids_a_verificar:
+                    pids_a_verificar.append(conn.pid)
+    except Exception:
+        pass
+
+    # 3. Verificar de forma estricta y terminar únicamente procesos autenticados
+    for pid in pids_a_verificar:
+        try:
+            import psutil
+            if not psutil.pid_exists(pid):
+                continue
+            proc = psutil.Process(pid)
+            nombre = proc.name().lower()
+            cmdline = " ".join(proc.cmdline()).lower()
+
+            if "python" in nombre and "servidor_oficial.py" in cmdline:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=2.0)
+                except psutil.TimeoutExpired:
+                    proc.kill()
+                detenidos += 1
+        except Exception:
+            # Fallback seguro Win32 sin comodines: únicamente por PID verificado
+            try:
+                if sys.platform == "win32":
+                    subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, check=False)
+                    detenidos += 1
+            except Exception:
+                pass
+
+    if PID_FILE_BLOCKCHAIN.is_file():
+        try:
+            PID_FILE_BLOCKCHAIN.unlink(missing_ok=True)
+        except Exception:
+            pass
+
     return detenidos
 
 
@@ -141,6 +185,13 @@ def iniciar_blockchain(
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+            # Registrar PID de forma segura
+            try:
+                PID_FILE_BLOCKCHAIN.parent.mkdir(parents=True, exist_ok=True)
+                PID_FILE_BLOCKCHAIN.write_text(f"{proceso.pid}\n", encoding="utf-8")
+            except Exception:
+                pass
+
             # Esperar hasta 4 segundos para comprobar si abrió el puerto
             for _ in range(8):
                 time.sleep(0.5)

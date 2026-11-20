@@ -137,14 +137,13 @@ def _borrar_si_existe(ruta: Path) -> bool:
 
 
 def limpiar_caches() -> dict[str, bool]:
-    """Borra las cachés de bytecode de la herramienta al cerrar el ciclo.
+    """Borra los ``__pycache__`` de la herramienta al cerrar el ciclo.
 
-    Elimina __pycache__/ de STM_RFPRMN y STM_RFPRMN_stmDL más
-    .pycache_rfprmn (se recrean solas en la próxima ejecución).
+    El bytecode real se compila en ``.dev/pycache`` (compartido, no se toca);
+    aquí sólo se eliminan ``__pycache__/`` junto al código (se recrean solos).
     """
     objetivos = [MODULO_DIR / "__pycache__",
-                 MODULO_DIR / "STM_RFPRMN_stmDL" / "__pycache__",
-                 MODULO_DIR / ".pycache_rfprmn"]
+                 MODULO_DIR / "STM_RFPRMN_stmDL" / "__pycache__"]
     estado = {p.relative_to(MODULO_DIR).as_posix(): _borrar_si_existe(p)
               for p in objetivos}
     if all(estado.values()):

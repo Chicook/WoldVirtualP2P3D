@@ -14,6 +14,7 @@
     <Platforms>x64</Platforms>
     <AssemblyName>Visor3DTests</AssemblyName>
     <RootNamespace>Visor3D.Tests</RootNamespace>
+    <Version>$(WoldVersion)</Version>
     <IsPackable>false</IsPackable>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
@@ -25,7 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Visor3D.csproj" />
+    <!-- El proyecto principal vive en HerraMientas, no en la raíz del visor. -->
+    <ProjectReference Include="..\HerraMientas\Visor3D.csproj" />
   </ItemGroup>
 
 </Project>

@@ -12,6 +12,7 @@ Centraliza y orquesta:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from typing import List, Optional
@@ -21,6 +22,10 @@ DEV_DIR_ROOT = Path(__file__).resolve().parent
 if str(DEV_DIR_ROOT) not in sys.path:
     sys.path.insert(0, str(DEV_DIR_ROOT))
 
+# Todo bytecode del ecosistema se compila dentro de .dev/pycache: nunca se
+# crean carpetas __pycache__ en el árbol de fuentes.
+sys.pycache_prefix = str(DEV_DIR_ROOT / "pycache")
+
 # Importar desde el paquete modular de .dev
 from modulos import (  # noqa: E402
     BLOCKCHAIN_DIR,
@@ -28,7 +33,12 @@ from modulos import (  # noqa: E402
     CONTRRF_DIR,
     CONTRUCCION_DIR,
     DEV_DIR,
+    DEV_GITHUB_DIR,
+    DEV_GITHUB_WORKFLOWS_DIR,
     DEV_PYTEST_INI,
+    ESCENA_CANONICA_RES,
+    ESCENA_CANONICA_UID,
+    ESCENA_CANONICA_VISOR,
     GODOT_PROJECT_FILE,
     GODOT_PROY_DIR,
     IPFS_DIR,
@@ -81,9 +91,13 @@ from modulos import (  # noqa: E402
     reconstruir_visor,
     reiniciar_blockchain,
     reiniciar_lucia,
+    sincronizar_github_workflows,
     traer_pytest_ini,
     validar_ledger_en_disco,
     validar_frontera_carpetas,
+    verificar_fijacion_escena,
+    buscar_archivos_dev_desperdigados,
+    obtener_version_python_dev,
     asegurar_ruta_en_repositorio,
     formatear_informe_dependencias,
     ValidadorFronteraSegura,
@@ -92,6 +106,12 @@ from modulos import (  # noqa: E402
     requiere_venv_activo,
     auditar_operacion_entorno,
     ARCHIVO_AUDITORIA_ENTORNO,
+    carpeta_temporal,
+    listar_temporales,
+    limpiar_temporales,
+    entorno_bundle_visor,
+    lanzar_vista_previa,
+    formatear_informe_temporales,
 )
 
 
@@ -133,6 +153,8 @@ def mostrar_informe() -> None:
         ("Config VS Code (.vscode)", VSCODE_DIR, (VSCODE_DIR / "settings.json").is_file()),
         ("Config Pytest (.dev/pytest.ini)", DEV_PYTEST_INI, DEV_PYTEST_INI.is_file()),
         ("Caché Pytest (.pytest_cache)", PYTEST_CACHE_DIR, PYTEST_CACHE_DIR.is_dir()),
+        ("Workflows CI (.dev/.github)", DEV_GITHUB_WORKFLOWS_DIR, DEV_GITHUB_WORKFLOWS_DIR.is_dir()),
+        ("Escena Visor WoldVirtual3DP2P", ESCENA_CANONICA_VISOR, ESCENA_CANONICA_VISOR.is_file()),
         ("Taller TLLDCD src", TLLDCD_SRC, TLLDCD_SRC.is_dir()),
         ("STM_RFC STM_RFPRMN", STM_RFC_DIR, STM_RFC_DIR.is_dir()),
         ("Sistema Principal PRY", PRY_DIR, PRY_DIR.is_dir()),
@@ -140,6 +162,11 @@ def mostrar_informe() -> None:
     for nombre, ruta, existe in rutas_info:
         estado = "[OK]" if existe else "[FALTA]"
         print(f"  {estado:<8} {nombre:<32} -> {ruta}")
+
+    info_py = obtener_version_python_dev()
+    if info_py["disponible"]:
+        tag_315 = "[OK]" if info_py["es_python_315"] else "[AVISO]"
+        print(f"  {tag_315:<8} {'Python 3.15 canónico (.python)':<32} -> {info_py['version']} ({info_py['ruta']})")
 
     # 2. Servidor Blockchain Oficial
     print("\n--- [2] SERVIDOR BLOCKCHAIN OFICIAL (STM_BKCH · Puerto 8545) ---")
@@ -173,15 +200,26 @@ def mostrar_informe() -> None:
     if st_visor["dll_fecha_mod"]:
         print(f"  [INFO]     Última modificación: {st_visor['dll_fecha_mod']}")
     print(f"  {'[OK]' if st_visor['godot_proy_existe'] else '[FALTA]':<10} Proyecto Godot 3D: {st_visor['ruta_godot_proy']}")
+    fij = st_visor.get("escena_fijada", {})
+    st_fij = "[OK]" if fij.get("fijada") else "[ALERTA]"
+    print(f"  {st_fij:<10} Escena Principal: {fij.get('res_path', 'res://WoldVirtual3DP2P.tscn')} (Fijada, sin acoplamiento)")
+    if not fij.get("fijada") and fij.get("detalles"):
+        for d in fij["detalles"]:
+            print(f"             [AVISO ESCENA] {d}")
     modulos_sesion = list(SEGURIDAD_SESION_UNICA_DIR.glob("*.cs")) if SEGURIDAD_SESION_UNICA_DIR.is_dir() else []
     print(f"  {'[OK]' if SEGURIDAD_SESION_UNICA_DIR.is_dir() else '[FALTA]':<10} Seguridad Sesión Única: {SEGURIDAD_SESION_UNICA_DIR} ({len(modulos_sesion)} módulos CS)")
 
     print("\n" + "=" * 76)
     print("  COMANDOS DISPONIBLES:")
-    print("    python gestor_entorno.py sincronizar          (Aplica variables y config VSCode)")
+    print("    python gestor_entorno.py sincronizar          (Aplica variables, config VSCode y CI)")
+    print("    python gestor_entorno.py github [sinc|estado] (Gestiona y centraliza .github en .dev)")
+    print("    python gestor_entorno.py escena-visor         (Valida fijación de res://WoldVirtual3DP2P.tscn)")
+    print("    python gestor_entorno.py desperdigados        (Busca configs/.yml dispersos fuera de .dev)")
     print("    python gestor_entorno.py reconstruir-visor    (Compila Visor3D con dotnet)")
     print("    python gestor_entorno.py dependencias         (Verifica .NET, DLLs nativas, Python y Godot)")
     print("    python gestor_entorno.py validar-frontera     (Comprueba que nada salga de E:\\WoldVirtualP2P3D)")
+    print("    python gestor_entorno.py temporales [listar|crear <nombre>|limpiar]")
+    print("    python gestor_entorno.py vista-previa <exe> [args]  (Extracción del paquete en .dev)")
     print("    python gestor_entorno.py blockchain [iniciar|detener|reiniciar|estado]")
     print("    python gestor_entorno.py lucia [iniciar|detener|reiniciar|estado]")
     print("    python gestor_entorno.py todo                 (Sincroniza, inicia servicios y compila)")
@@ -202,9 +240,13 @@ def comando_todo() -> int:
         return 1
     print("  [OK] Todas las rutas se mantienen confinadas dentro del repositorio.")
 
-    print("\n>>> 1/5 Sincronizando entorno y variables...")
+    print("\n>>> 1/5 Sincronizando entorno, CI y variables...")
     configurar_variables_entorno()
     traer_pytest_ini()
+    res_gh = sincronizar_github_workflows()
+    if res_gh["errores"]:
+        for err in res_gh["errores"]:
+            print(f"  [AVISO CI] {err}")
     actualizar_vscode_config()
     limpiar_cache_raiz()
 
@@ -247,9 +289,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     if sub == "sincronizar":
         configurar_variables_entorno()
         traer_pytest_ini()
+        res_gh = sincronizar_github_workflows()
         actualizar_vscode_config()
         limpiar_cache_raiz()
-        print("[OK] Entorno sincronizado y variables aplicadas.")
+        print(f"[OK] Entorno sincronizado ({len(res_gh['canonicos'])} workflows en .dev/.github).")
         mostrar_informe()
         return 0
 
@@ -318,6 +361,49 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"Acción desconocida para lucia: {accion}")
             return 1
 
+    elif sub in ("temporales", "temps", "tmp"):
+        accion = argv[1].lower() if len(argv) > 1 else "listar"
+        if accion in ("listar", "ls", "estado"):
+            print(formatear_informe_temporales())
+            return 0
+        elif accion in ("crear", "nuevo"):
+            if len(argv) < 3:
+                print("Uso: python gestor_entorno.py temporales crear <nombre> [--limpiar]")
+                return 1
+            try:
+                ruta = carpeta_temporal(argv[2], limpiar="--limpiar" in argv)
+            except (ValueError, PermissionError) as err:
+                print(f"[ERROR] {err}")
+                return 1
+            print(f"[OK] Espacio temporal listo: {ruta}")
+            return 0
+        elif accion in ("limpiar", "clean"):
+            conservar: List[str] = []
+            if "--conservar" in argv:
+                idx = argv.index("--conservar")
+                conservar = [a for a in argv[idx + 1:] if not a.startswith("-")]
+            borradas = limpiar_temporales(conservar)
+            if borradas:
+                for ruta in borradas:
+                    print(f"[OK] Eliminada: {ruta}")
+            else:
+                print("[OK] No había espacios temporales que eliminar.")
+            return 0
+        elif accion in ("bundle", "extraccion"):
+            env = entorno_bundle_visor()
+            print(f"[OK] Base de extracción single-file: {env['DOTNET_BUNDLE_EXTRACT_BASE_DIR']}")
+            return 0
+        else:
+            print(f"Acción desconocida para temporales: {accion}")
+            print("  Opciones: listar | crear <nombre> | limpiar [--conservar <n1> <n2>] | bundle")
+            return 1
+
+    elif sub in ("vista-previa", "vista_previa", "previsualizar"):
+        if len(argv) < 2:
+            print("Uso: python gestor_entorno.py vista-previa <ruta-exe> [args...]")
+            return 1
+        return lanzar_vista_previa(argv[1], argv[2:])
+
     elif sub == "todo":
         return comando_todo()
 
@@ -330,6 +416,58 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     elif sub == "vscode":
         actualizar_vscode_config()
+        return 0
+
+    elif sub in ("github", "workflows"):
+        accion = argv[1].lower() if len(argv) > 1 else "centralizar"
+        print("=" * 76)
+        print("  GESTIÓN Y CENTRALIZACIÓN DE WORKFLOWS GITHUB ACTIONS (.dev/.github)")
+        print("=" * 76)
+        exportar = accion in ("desplegar-ci", "exportar", "desplegar")
+        eliminar = not exportar and accion in ("centralizar", "sincronizar", "limpiar", "borrar-raiz")
+        res = sincronizar_github_workflows(eliminar_de_raiz=eliminar, exportar_a_raiz=exportar)
+        print(f"Directorio canónico: {DEV_GITHUB_WORKFLOWS_DIR}")
+        print(f"Workflows en .dev  : {', '.join(res['canonicos']) if res['canonicos'] else 'Ninguno'}")
+        if res["eliminados_de_raiz"]:
+            print("[OK] Carpeta .github eliminada de la raíz del repositorio (confinada en .dev).")
+        elif res["exportados_a_raiz"]:
+            print(f"[OK] Workflows desplegados temporalmente en {REPO_ROOT / '.github' / 'workflows'} para CI.")
+        else:
+            print(f"Estado en raíz     : {'Presente' if (REPO_ROOT / '.github').is_dir() else 'Limpia (sin .github en raíz)'}")
+        if res["errores"]:
+            for e in res["errores"]:
+                print(f"[ERROR] {e}")
+            return 1
+        print("[OK] Centralización de GitHub Actions completada.")
+        return 0
+
+    elif sub in ("escena", "escena-visor", "escena_visor", "fijacion"):
+        info_e = verificar_fijacion_escena()
+        print("=" * 76)
+        print("  VERIFICACIÓN DE FIJACIÓN DE ESCENA PRINCIPAL DEL VISOR")
+        print("=" * 76)
+        print(f"Escena canónica : {info_e['res_path']} ({info_e['ruta_escena']})")
+        print(f"UID asignado    : {info_e['uid']} ({'Presente' if info_e['uid_ok'] else 'FALTA'})")
+        print(f"Sin acoplamiento: {'Verificado (limpio)' if info_e['sin_acoplamiento_legado'] else 'Detectados vínculos antiguos'}")
+        print(f"project.godot   : {'Apunta correctamente' if info_e['main_scene_ok'] else 'Desincronizado'}")
+        st = "[OK] FIJADA" if info_e["fijada"] else "[ERROR] DESACOPLADA O ALTERADA"
+        print(f"\nEstado global   : {st}")
+        if info_e["detalles"]:
+            for d in info_e["detalles"]:
+                print(f"  - {d}")
+        return 0 if info_e["fijada"] else 1
+
+    elif sub in ("desperdigados", "buscar-desperdigados"):
+        print("=" * 76)
+        print("  BÚSQUEDA DE CONFIGURACIONES Y DEPENDENCIAS FUERA DE .dev")
+        print("=" * 76)
+        desp = buscar_archivos_dev_desperdigados()
+        if not desp:
+            print("[OK] No se encontraron archivos .yml ni configs de desarrollo dispersos fuera de .dev.")
+            return 0
+        print(f"Se encontraron {len(desp)} elementos dispersos:")
+        for item in desp:
+            print(f"  - {item['archivo']} ({item['tipo']}): {item['sugerencia']}")
         return 0
 
     elif sub in ("dependencias", "deps"):
@@ -363,6 +501,20 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"\nTotal registros: {len(lineas)}")
         else:
             print("No hay eventos de auditoría registrados todavía.")
+        return 0
+
+    elif sub in ("pytest-cache", "pytest_cache", "cache-pytest"):
+        limpiar_cache_raiz()
+        configurar_variables_entorno()
+        traer_pytest_ini()
+        print("=" * 76)
+        print("  CONFIGURACIÓN CENTRALIZADA DE CACHÉ PYTEST (.dev)")
+        print("=" * 76)
+        print(f"Caché canónico (.dev) : {PYTEST_CACHE_DIR} ({'Existe' if PYTEST_CACHE_DIR.is_dir() else 'No existe'})")
+        print(f"Archivo de config     : {DEV_PYTEST_INI} ({'Existe' if DEV_PYTEST_INI.is_file() else 'No existe'})")
+        print(f"Caché en raíz de repo : {'ELIMINADO / LIMPIO' if not (REPO_ROOT / '.pytest_cache').exists() else 'DETECTADO'}")
+        print(f"PYTEST_ADDOPTS        : {os.environ.get('PYTEST_ADDOPTS', 'No configurado')}")
+        print("[OK] Pytest configurado para operar exclusivamente dentro de .dev/.pytest_cache.")
         return 0
 
     elif sub == "limpiar":

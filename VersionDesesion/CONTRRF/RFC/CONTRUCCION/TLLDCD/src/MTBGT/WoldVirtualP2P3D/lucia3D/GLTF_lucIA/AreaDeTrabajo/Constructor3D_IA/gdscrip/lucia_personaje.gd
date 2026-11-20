@@ -22,6 +22,9 @@ class_name LuciaPersonaje
 ##   iniciar_gesticulacion(), detener_gesticulacion()
 
 const ALTURA_OBJETIVO := 1.75
+# Ciclo de marcha Mixamo ya retargetado al rig de LucIA (rotaciones locales).
+const BIBLIOTECA_ANDAR := preload("res://lucia3D/GLTF_lucIA/AreaDeTrabajo/LucIA3D/animaciones_avatar.tres")
+const VELOCIDAD_CLIP := 1.25       # m/s que avanza el ciclo original de Mixamo
 
 # --- Zona de la boca en espacio de malla (medida sobre el .glb riggeado)
 const BOCA_CENTRO := Vector3(0.0, 1.506, 0.096)
@@ -86,12 +89,17 @@ var _listo := false
 
 # --- locomoción / silla
 var _posicion_base := Vector3.ZERO
+var _velocidad_andar := VELOCIDAD_ANDAR
 var _destino := Vector3.ZERO
 var _caminando := false
 var _peso_caminando := 0.0
 var _fase_paso := 0.0
 var _sentado_objetivo := false
 var _peso_sentado := 0.0
+var _andar_anim: Animation
+var _andar_pistas: Array[Vector2i] = []   # x = hueso, y = pista del clip
+var _andar_tiempo := 0.0
+var _andar_duracion := 1.0
 
 func _ready() -> void:
 	_normalizar_escala()
@@ -100,6 +108,7 @@ func _ready() -> void:
 		push_warning("LucIA: el modelo no tiene skin/esqueleto; se muestra en reposo.")
 		return
 	_mapear_huesos()
+	_preparar_andar()
 	_localizar_boca()
 	_reparar_uvs_boca()
 	_crear_cavidad_boca()
@@ -152,6 +161,22 @@ func _hueso_por_sufijo(sufijo: String) -> int:
 		if str(esqueleto.get_bone_name(i)).ends_with(sufijo):
 			return i
 	return -1
+
+func _preparar_andar() -> void:
+	## La marcha de Mixamo sustituye a la pose procedural de piernas/brazos
+	## mientras LucIA camina; el idle, el gesto y el lipsync siguen intactos.
+	_andar_anim = BIBLIOTECA_ANDAR.get_animation(&"lucia_caminar")
+	if _andar_anim == null:
+		push_warning("LucIA: falta el clip lucia_caminar; se usa la marcha procedural.")
+		return
+	_andar_duracion = maxf(_andar_anim.length, 0.1)
+	for i in _andar_anim.get_track_count():
+		if _andar_anim.track_get_type(i) != Animation.TYPE_ROTATION_3D:
+			continue
+		var hueso := str(_andar_anim.track_get_path(i)).get_slice(":", 1)
+		var idx := _hueso_por_sufijo(hueso)
+		if idx >= 0:
+			_andar_pistas.append(Vector2i(idx, i))
 
 func _localizar_boca() -> void:
 	var m := malla.mesh
@@ -388,6 +413,17 @@ func caminar_adelante(metros: float) -> void:
 func volver() -> void:
 	caminar_hasta(Vector3.ZERO)
 
+## Ajusta el paso para acompañar al avatar en una cinemática.
+func fijar_velocidad_andar(velocidad: float) -> void:
+	_velocidad_andar = clampf(velocidad, 0.4, 6.0)
+
+## Coloca a LucIA en un punto local sin animar el trayecto (corte de cámara).
+func teleportar(punto: Vector3) -> void:
+	_sentado_objetivo = false
+	_destino = Vector3(punto.x, 0.0, punto.z)
+	_posicion_base = _destino
+	_caminando = false
+
 # ---------------------------------------------------------------- animación
 func _process(delta: float) -> void:
 	if not _listo:
@@ -409,14 +445,22 @@ func _actualizar_desplazamiento(delta: float) -> void:
 		var plano := Vector3(_destino.x - _posicion_base.x, 0.0, _destino.z - _posicion_base.z)
 		var distancia := plano.length()
 		if distancia > 0.02:
-			var paso := minf(VELOCIDAD_ANDAR * delta, distancia)
-			_posicion_base += plano / distancia * paso
+			var paso := minf(_velocidad_andar * delta, distancia)
+			var dir := plano / distancia
+			_posicion_base += dir * paso
+			# Mirar hacia donde se camina: sin esto avanzaba de lado o de
+			# espaldas y el ciclo de marcha se veía deslizar.
+			rotation.y = lerp_angle(rotation.y, atan2(dir.x, dir.z), clampf(delta * 7.0, 0.0, 1.0))
 			_fase_paso += delta * TAU * 1.7
 			_peso_caminando = move_toward(_peso_caminando, 1.0, delta / 0.25)
 		else:
 			_caminando = false
 	else:
 		_peso_caminando = move_toward(_peso_caminando, 0.0, delta / 0.35)
+
+	if _andar_anim != null and _peso_caminando > 0.001:
+		var ritmo := clampf(_velocidad_andar / VELOCIDAD_CLIP, 0.6, 2.4)
+		_andar_tiempo = fposmod(_andar_tiempo + delta * ritmo * (0.35 + 0.65 * _peso_caminando), _andar_duracion)
 
 	# Al sentarse retrocede PASO_CADERA para quedar sobre el asiento.
 	position = _posicion_base + Vector3(0.0, 0.0, -PASO_CADERA * _peso_sentado)
@@ -484,6 +528,17 @@ func _aplicar_pose() -> void:
 		esqueleto.set_bone_pose_position(hips_idx, rest + Vector3(0.0, -ALTURA_SENTADO * sentada + bob, 0.0))
 	_aplicar_pierna("muslo_i", "rodilla_i", "pie_i", 0.0)
 	_aplicar_pierna("muslo_d", "rodilla_d", "pie_d", PI)
+	_mezclar_andar(_peso_caminando)
+
+func _mezclar_andar(peso: float) -> void:
+	if _andar_anim == null or peso <= 0.001 or _andar_pistas.is_empty():
+		return
+	var t := fposmod(_andar_tiempo, _andar_duracion)
+	for par in _andar_pistas:
+		var idx: int = par.x
+		var q: Quaternion = _andar_anim.rotation_track_interpolate(par.y, t)
+		var actual := esqueleto.get_bone_pose_rotation(idx)
+		esqueleto.set_bone_pose_rotation(idx, actual.slerp(q, clampf(peso, 0.0, 1.0)))
 
 func _aplicar_pierna(muslo: String, rodilla: String, pie: String, desfase: float) -> void:
 	var s := sin(_fase_paso + desfase)

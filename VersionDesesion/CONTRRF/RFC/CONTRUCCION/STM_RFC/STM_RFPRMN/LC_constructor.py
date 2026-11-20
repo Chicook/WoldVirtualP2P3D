@@ -10,6 +10,11 @@ y la ejecuta pasando por la red neuronal completa de ``LCBS_NEURONAL``
 Acepta texto etiquetado (una o varias líneas), dict o JSON; la CLI responde
 en texto legible, no en JSON.
 
+Raíz de ejecución: el sistema autónomo trabaja siempre dentro de
+``CONTRRF/RFC/CONTRUCCION/LCtrabajando``.  La CLI cambia ahí su directorio de
+trabajo y toda ruta relativa de una orden se resuelve contra esa carpeta,
+nunca contra el directorio desde el que se lanzó Python.
+
 Acciones disponibles:
 - ``crear todo``          : ejecuta las tres siguientes en secuencia (explícito).
 - ``crear carpeta``       : ``LCtrabajando/src`` con **toda** la jerarquía de
@@ -76,6 +81,10 @@ _TLLDCD_SRC = (
 RUTA_PREDETERMINADA = str(_LCTRABAJANDO)
 NOMBRE_PREDETERMINADO = "src"
 
+#: Raíz de ejecución del sistema autónomo: cwd de la CLI y base de las
+#: rutas relativas que lleguen en una orden.
+RUTA_EJECUCION: Path = _LCTRABAJANDO
+
 #: Segunda acción: ``LCtrabajando/src/LC_STM/RedNeuronal`` y sus familias.
 RUTA_RED_PREDETERMINADA = str(_LCTRABAJANDO / "src" / "LC_STM")
 NOMBRE_RED_PREDETERMINADO = "RedNeuronal"
@@ -117,6 +126,21 @@ _EXCLUIR_CARPETAS = {
     "__pycache__", "pycache", ".git", ".godot", ".ruff_cache",
     ".pytest_cache", ".mypy_cache", "node_modules",
 }
+
+
+def _resolver_ruta_ejecucion(ruta_texto: str) -> Path:
+    """Resuelve la ruta de una orden: si es relativa, dentro de LCtrabajando."""
+    ruta = Path(os.path.expandvars(os.path.expanduser(ruta_texto)))
+    if not ruta.is_absolute():
+        ruta = RUTA_EJECUCION / ruta
+    return ruta.resolve()
+
+
+def activar_ruta_ejecucion() -> Path:
+    """Crea LCtrabajando y fija ahí el directorio de trabajo del sistema autónomo."""
+    RUTA_EJECUCION.mkdir(parents=True, exist_ok=True)
+    os.chdir(RUTA_EJECUCION)
+    return RUTA_EJECUCION
 
 
 def descubrir_subcarpetas_src(
@@ -667,7 +691,7 @@ class ConstructorLucIA:
         ``archivos`` permite crear ficheros vacíos dentro de la raíz.
         """
         ruta_texto = str(ruta or "").strip().strip("\"'") or RUTA_PREDETERMINADA
-        base = Path(os.path.expandvars(os.path.expanduser(ruta_texto))).resolve()
+        base = _resolver_ruta_ejecucion(ruta_texto)
         nombre = str(nombre or NOMBRE_PREDETERMINADO).strip()
         if subcarpetas is None:
             subcarpetas = (descubrir_subcarpetas_src()
@@ -755,8 +779,7 @@ class ConstructorLucIA:
     ) -> dict[str, Any]:
         """Tercera acción: ``MTBGT`` con sus carpetas (sin archivos por ahora)."""
         ruta_texto = str(ruta or RUTA_MTBGT_PREDETERMINADA).strip().strip("\"'")
-        root = Path(os.path.expandvars(
-            os.path.expanduser(ruta_texto))).resolve()
+        root = _resolver_ruta_ejecucion(ruta_texto)
         resultado = self.crear_carpeta(
             root.parent, root.name,
             SUBCARPETAS_MTBGT if subcarpetas is None else subcarpetas,
@@ -961,10 +984,11 @@ def formatear_resultado(resultado: Mapping[str, Any]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Punto de entrada CLI: por argumentos o con los valores predeterminados."""
+    """Punto de entrada CLI: ejecuta desde LCtrabajando, por argumentos o por defecto."""
     argumentos = list(sys.argv[1:] if argv is None else argv)
     pausa = "--pausa" in argumentos
     argumentos = [argumento for argumento in argumentos if argumento != "--pausa"]
+    activar_ruta_ejecucion()
     if argumentos:
         resultado = ejecutar_orden(" ".join(argumentos))
     else:
@@ -994,6 +1018,7 @@ __all__ = [
     "SUBCARPETAS_SRC_BASE", "descubrir_subcarpetas_src",
     "descubrir_jerarquia_src",
     "RUTA_PREDETERMINADA", "NOMBRE_PREDETERMINADO",
+    "RUTA_EJECUCION", "activar_ruta_ejecucion",
     "RUTA_FUENTE_PREDETERMINADA",
     "RUTA_RED_PREDETERMINADA", "NOMBRE_RED_PREDETERMINADO",
     "RUTA_MTBGT_PREDETERMINADA", "NOMBRE_MTBGT_PREDETERMINADO",

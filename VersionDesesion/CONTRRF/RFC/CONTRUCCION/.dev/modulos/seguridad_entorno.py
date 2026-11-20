@@ -88,12 +88,18 @@ class GestorVenvSeguro:
     """Administra y valida los entornos virtuales e intérpretes de Python aislados dentro de .dev."""
 
     @staticmethod
-    def obtener_interprete_seguro() -> Path:
-        """Devuelve el intérprete canónico preferido ubicado dentro de .dev (.dev/venv o .dev/.python)."""
+    def obtener_interprete_seguro(estricto: bool = False) -> Path:
+        """Devuelve el intérprete canónico preferido ubicado dentro de .dev (.dev/venv o .dev/.python).
+        Si estricto=True, lanza RuntimeError si no se encuentra un intérprete contenido en .dev."""
         if VENV_PYTHON.is_file():
             return VENV_PYTHON
         if PYTHON_EXE.is_file():
             return PYTHON_EXE
+        if estricto:
+            raise RuntimeError(
+                f"[VIOLACIÓN DE AISLAMIENTO ZERO TRUST] No se localizó un intérprete de Python contenido en .dev "
+                f"({VENV_PYTHON} o {PYTHON_EXE}). Ejecución bloqueada por política de aislamiento estricto."
+            )
         return Path(sys.executable)
 
     @staticmethod
@@ -121,42 +127,57 @@ class GestorVenvSeguro:
 
 
 def asegurar_frontera(func: F) -> F:
-    """Decorador que inspecciona los argumentos de tipo Path o str y el resultado.
-    Garantiza que ninguna ruta escape fuera de REPO_ROOT."""
+    """Decorador que inspecciona exhaustivamente los argumentos posicionales y nombrados de tipo Path o str.
+    Garantiza que ninguna ruta escape fuera de REPO_ROOT ni mediante path traversal.
+    NUNCA suprime excepciones de validación de frontera."""
     validador = ValidadorFronteraSegura()
+
+    def _inspeccionar(valor: Any, desc: str) -> None:
+        if isinstance(valor, Path):
+            validador.exigir_frontera(valor, desc)
+        elif isinstance(valor, str):
+            # Filtrar cadenas vacías o textos largos no relacionados con rutas
+            if not valor or "\n" in valor or "\r" in valor or len(valor) > 1024:
+                return
+            # Si contiene separadores, traversal o indicadores de ruta
+            es_candidato_ruta = any(c in valor for c in ("\\", "/", ":", ".."))
+            if es_candidato_ruta:
+                try:
+                    candidato = Path(valor)
+                    # Si es relativa, resolverla contra REPO_ROOT para validar contención
+                    if not candidato.is_absolute():
+                        candidato = (REPO_ROOT / candidato).resolve()
+                    validador.exigir_frontera(candidato, desc)
+                except PermissionError:
+                    # NUNCA suprimir violaciones de frontera de seguridad
+                    raise
+                except (ValueError, OSError):
+                    # Ignorar cadenas no interpretables como rutas sintácticas
+                    pass
+        elif isinstance(valor, (list, tuple)):
+            for i, elem in enumerate(valor):
+                _inspeccionar(elem, f"{desc}[{i}]")
+        elif isinstance(valor, dict):
+            for k, elem in valor.items():
+                _inspeccionar(elem, f"{desc}['{k}']")
 
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        # Inspeccionar args posicionales
+        # Inspeccionar todos los argumentos posicionales
         for idx, arg in enumerate(args):
-            if isinstance(arg, Path):
-                validador.exigir_frontera(arg, f"Parámetro {idx} en '{func.__name__}'")
-            elif isinstance(arg, str) and (":" in arg or "\\" in arg or "/" in arg):
-                # Candidato a ruta absoluta o relativa sospechosa
-                try:
-                    candidato = Path(arg)
-                    if candidato.is_absolute():
-                        validador.exigir_frontera(candidato, f"Parámetro str {idx} en '{func.__name__}'")
-                except Exception:
-                    pass
+            _inspeccionar(arg, f"Parámetro {idx} en '{func.__name__}'")
 
-        # Inspeccionar kwargs
+        # Inspeccionar todos los argumentos nombrados (kwargs)
         for k, v in kwargs.items():
-            if isinstance(v, Path):
-                validador.exigir_frontera(v, f"Parámetro '{k}' en '{func.__name__}'")
-            elif isinstance(v, str) and (":" in v or "\\" in v or "/" in v):
-                try:
-                    candidato = Path(v)
-                    if candidato.is_absolute():
-                        validador.exigir_frontera(candidato, f"Parámetro str '{k}' en '{func.__name__}'")
-                except Exception:
-                    pass
+            _inspeccionar(v, f"Parámetro kwarg '{k}' en '{func.__name__}'")
 
         resultado = func(*args, **kwargs)
 
-        # Si el resultado es un Path, validarlo también
+        # Si el resultado es un Path o str de ruta, validarlo también
         if isinstance(resultado, Path):
-            validador.exigir_frontera(resultado, f"Resultado devuelto por '{func.__name__}'")
+            validador.exigir_frontera(resultado, f"Resultado Path devuelto por '{func.__name__}'")
+        elif isinstance(resultado, str) and any(c in resultado for c in ("\\", "/", "..")):
+            _inspeccionar(resultado, f"Resultado str devuelto por '{func.__name__}'")
 
         return resultado
 

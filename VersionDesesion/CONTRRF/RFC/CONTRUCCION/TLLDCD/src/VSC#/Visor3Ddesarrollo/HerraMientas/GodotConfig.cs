@@ -133,9 +133,12 @@ namespace Visor3D
             return lista.ToArray();
         }
 
-        /// <summary>Python en el nuevo sistema de desarrollo (.dev) o embebido en el activo/archivo.</summary>
+        /// <summary>Python autónomo de LucIA o, en desarrollo, el del entorno/repositorio.</summary>
         public static string? GetPythonExePath()
         {
+            if (AppExtractor.EmbebeLucia)
+                return File.Exists(AppExtractor.LuciaPythonPath) ? AppExtractor.LuciaPythonPath : null;
+
             string? envPython = Environment.GetEnvironmentVariable("WVP_PYTHON");
             if (!string.IsNullOrWhiteSpace(envPython) && File.Exists(envPython)) return envPython;
 
@@ -169,6 +172,12 @@ namespace Visor3D
 
         public static string? GetPythonwExePath()
         {
+            if (AppExtractor.EmbebeLucia)
+            {
+                string pythonw = Path.Combine(AppExtractor.LuciaDir, "python", "pythonw.exe");
+                return File.Exists(pythonw) ? pythonw : null;
+            }
+
             string? repo = RepoRoot();
             if (repo != null)
             {
@@ -192,7 +201,7 @@ namespace Visor3D
 
         public static string GetGodotExePath()
         {
-            const string godotName = "Godot_v4.7.2-stable_win64.exe";
+            string godotName = $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe";
 
             // 1. Recursos extraidos al LocalAppData (exe standalone)
             if (File.Exists(AppExtractor.GodotExePath)) return AppExtractor.GodotExePath;
@@ -275,6 +284,14 @@ namespace Visor3D
         /// </summary>
         public static string GetMainPackPath()
         {
+            // La build 2.8.7 embebe el mundo completo y es autónoma. Si la
+            // extracción falló no se cae a un PCK de desarrollo o a la base 2.8.6:
+            // abriría un mundo viejo y el avatar aparecería sin suelo.
+            if (AppExtractor.EmbebeMundoCompleto)
+                return File.Exists(AppExtractor.PckPath) ? AppExtractor.PckPath : "";
+            if (AppExtractor.EmbebeDeltaDao)
+                return File.Exists(AppExtractor.DaoPatchPath) ? AppExtractor.DaoPatchPath : "";
+
             // 1. Paquete volátil (embebido en el .exe, materializado en %TEMP%)
             string? volatil = Visor3D.CargaVolatil.VolatilePackage.PckVolatilPath;
             if (!string.IsNullOrEmpty(volatil) && File.Exists(volatil)) return volatil;

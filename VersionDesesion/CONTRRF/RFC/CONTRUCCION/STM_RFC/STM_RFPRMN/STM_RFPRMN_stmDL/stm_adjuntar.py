@@ -23,7 +23,7 @@ from .stm_base import (
 
 # ─── CONSTANTES ──────────────────────────────────────────────────────────────
 SRC_DIR: Final[Path] = MODULO_DIR.parents[1] / "TLLDCD" / "src"
-LCTRABAJANDO_DIR: Final[Path] = MODULO_DIR.parents[1] / "CONTRUCCION" / "LCtrabajando"
+LCTRABAJANDO_DIR: Final[Path] = MODULO_DIR.parents[1] / "LCtrabajando"
 
 EXTENSIONES_VALIDAS: Final[tuple] = (
     ".py", ".gd", ".cs", ".md", ".json", ".tscn", ".tres",

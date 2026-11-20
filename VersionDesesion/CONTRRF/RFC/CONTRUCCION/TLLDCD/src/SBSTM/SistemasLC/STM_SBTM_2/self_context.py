@@ -17,9 +17,9 @@ _cache: Dict[str, Any] = {"ts": 0.0, "texto": ""}
 
 
 def _ruta_lctrabajando() -> Optional[Path]:
-    """Localiza el directorio de trabajo evolutivo CONTRRF/CONTRUCCION/LCtrabajando."""
+    """Localiza el directorio de trabajo evolutivo CONTRRF/RFC/CONTRUCCION/LCtrabajando."""
     try:
-        base = Path(__file__).resolve().parents[4] / "CONTRUCCION" / "LCtrabajando"
+        base = Path(__file__).resolve().parents[5] / "LCtrabajando"
         if base.is_dir():
             return base
     except Exception:

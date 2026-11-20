@@ -14,26 +14,102 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .entorno import configurar_variables_entorno
 from .rutas import (
+    ESCENA_CANONICA_RES,
+    ESCENA_CANONICA_UID,
+    ESCENA_CANONICA_VISOR,
     GODOT_PROJECT_FILE,
     GODOT_PROY_DIR,
     LANZAR_BAT,
+    REPO_ROOT,
     VISOR_BASE_DIR,
     VISOR_CSPROJ,
     VISOR_HERRAMIENTAS_DIR,
     VISOR_OUTPUT_DLL,
     VISOR_OUTPUT_EXE,
+    localizar_dotnet,
 )
 
 
 def comprobar_dotnet() -> Tuple[bool, str]:
-    """Comprueba si el comando 'dotnet' está disponible en el sistema."""
+    """Comprueba si dotnet está disponible (PATH o instalación habitual)."""
+    exe = localizar_dotnet()
+    if exe is None:
+        return False, "dotnet no encontrado en PATH ni en ubicaciones habituales"
     try:
-        res = subprocess.run(["dotnet", "--version"], capture_output=True, text=True, check=False)
+        # Se consulta fuera de .dev: su global.json fija SDK 8.0.400 y bloquea
+        # cualquier lectura de versión si esa revisión no está instalada.
+        res = subprocess.run(
+            [str(exe), "--version"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         if res.returncode == 0:
             return True, res.stdout.strip()
+        return False, (res.stdout or res.stderr).strip() or f"dotnet devolvió código {res.returncode}"
     except Exception as e:
         return False, str(e)
-    return False, "dotnet no encontrado en PATH"
+
+
+def verificar_fijacion_escena() -> Dict[str, Any]:
+    """Verifica que la escena principal res://WoldVirtual3DP2P.tscn permanezca fijada
+    y sin acoplamiento a versiones o árboles anteriores.
+    """
+    existe = ESCENA_CANONICA_VISOR.is_file()
+    uid_ok = False
+    sin_acoplamiento_legado = True
+    main_scene_ok = False
+    detalles = []
+
+    if existe:
+        try:
+            contenido = ESCENA_CANONICA_VISOR.read_text(encoding="utf-8")
+            if ESCENA_CANONICA_UID in contenido:
+                uid_ok = True
+            else:
+                detalles.append(f"UID canónico {ESCENA_CANONICA_UID} no encontrado en la escena")
+
+            # Verificar que no contenga referencias a carpetas de versiones de sesión archivadas
+            marcadores_legados = [
+                "actualizacion_",
+                "VersionDesesion/SistemaPrincipal/PRY/Archivo",
+                "LCDMWoldVirtualP2P3Dv2.8",
+            ]
+            for m in marcadores_legados:
+                if m in contenido:
+                    sin_acoplamiento_legado = False
+                    detalles.append(f"Detectado marcador de versión anterior: '{m}'")
+        except Exception as ex:
+            detalles.append(f"Error al leer la escena: {ex}")
+    else:
+        detalles.append(f"No existe el archivo de escena: {ESCENA_CANONICA_VISOR}")
+
+    if GODOT_PROJECT_FILE.is_file():
+        try:
+            proj_text = GODOT_PROJECT_FILE.read_text(encoding="utf-8")
+            if (f'run/main_scene="{ESCENA_CANONICA_UID}"' in proj_text or
+                f'run/main_scene="{ESCENA_CANONICA_RES}"' in proj_text):
+                main_scene_ok = True
+            else:
+                detalles.append("project.godot no apunta a res://WoldVirtual3DP2P.tscn ni a su UID")
+        except Exception as ex:
+            detalles.append(f"Error al leer project.godot: {ex}")
+    else:
+        detalles.append("project.godot no existe")
+
+    fijada = existe and uid_ok and sin_acoplamiento_legado and main_scene_ok
+    return {
+        "fijada": fijada,
+        "ruta_escena": str(ESCENA_CANONICA_VISOR),
+        "res_path": ESCENA_CANONICA_RES,
+        "uid": ESCENA_CANONICA_UID,
+        "existe": existe,
+        "uid_ok": uid_ok,
+        "sin_acoplamiento_legado": sin_acoplamiento_legado,
+        "main_scene_ok": main_scene_ok,
+        "detalles": detalles,
+    }
 
 
 def estado_visor() -> Dict[str, Any]:
@@ -58,6 +134,7 @@ def estado_visor() -> Dict[str, Any]:
         "dll_fecha_mod": dll_mod_time,
         "godot_proy_existe": GODOT_PROJECT_FILE.is_file(),
         "ruta_godot_proy": str(GODOT_PROY_DIR),
+        "escena_fijada": verificar_fijacion_escena(),
         "lanzar_bat_existe": LANZAR_BAT.is_file(),
     }
 
@@ -81,6 +158,8 @@ def reconstruir_visor(
     if not dotnet_ok:
         return False, f"El compilador dotnet no está disponible: {version}"
 
+    dotnet_exe = str(localizar_dotnet())
+
     env = os.environ.copy()
     env["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1"
     env["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1"
@@ -89,13 +168,13 @@ def reconstruir_visor(
 
     if limpiar:
         print("[Visor3D] Limpiando compilación previa...")
-        cmd_clean = ["dotnet", "clean", str(VISOR_CSPROJ), "-c", configuracion]
+        cmd_clean = [dotnet_exe, "clean", str(VISOR_CSPROJ), "-c", configuracion]
         subprocess.run(cmd_clean, cwd=str(VISOR_HERRAMIENTAS_DIR), env=env, capture_output=True)
 
     if publicar_single_file:
         print(f"[Visor3D] Publicando ejecutable único standalone (-c {configuracion})...")
         cmd = [
-            "dotnet",
+            dotnet_exe,
             "publish",
             str(VISOR_CSPROJ),
             "-c", configuracion,
@@ -107,7 +186,7 @@ def reconstruir_visor(
     else:
         print(f"[Visor3D] Compilando ensamblado del visor (-c {configuracion})...")
         cmd = [
-            "dotnet",
+            dotnet_exe,
             "build",
             str(VISOR_CSPROJ),
             "-c", configuracion,
@@ -144,7 +223,12 @@ def lanzar_visor(args: Optional[List[str]] = None) -> int:
     env = os.environ.copy()
     env["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1"
 
-    cmd = ["dotnet", "run", "--project", str(VISOR_CSPROJ), "-c", "Debug", "--"]
+    dotnet_exe = localizar_dotnet()
+    if dotnet_exe is None:
+        print("[Visor3D] dotnet no encontrado en PATH ni en ubicaciones habituales.")
+        return 1
+
+    cmd = [str(dotnet_exe), "run", "--project", str(VISOR_CSPROJ), "-c", "Debug", "--"]
     if args:
         cmd.extend(args)
 

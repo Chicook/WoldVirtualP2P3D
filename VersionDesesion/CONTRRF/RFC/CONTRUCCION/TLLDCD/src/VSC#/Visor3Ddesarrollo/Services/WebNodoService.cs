@@ -68,6 +68,9 @@ namespace Visor3D.Services
             set => _publicTunnelUrl = value;
         }
 
+        /// <summary>True si el túnel del portal corre en modo degradado (SSH gratuito) vs Cloudflare (T2-06).</summary>
+        public bool IsDegradedMode { get; set; }
+
         /// <summary>Puerto local del relay de chat; /chat se proxya aquí.</summary>
         public int ChatLocalPort { get; set; } = 8920;
 
@@ -86,19 +89,92 @@ namespace Visor3D.Services
         {
             var info = typeof(WebNodoService).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            if (string.IsNullOrWhiteSpace(info)) return "2.8.0";
+            if (string.IsNullOrWhiteSpace(info))
+                return typeof(WebNodoService).Assembly.GetName().Version?.ToString() ?? "0.0.0";
             int plus = info.IndexOf('+');
             return (plus >= 0 ? info.Substring(0, plus) : info).Trim();
         }
 
-        private static string ExeNameFallback => $"DMWoldVirtualP2P3Dv{ObtenerVersionEnsamblado()}.exe";
-        private static string ExeUrlFallback =>
-            $"https://github.com/Chicook/WoldVirtualP2P3D/releases/download/v{ObtenerVersionEnsamblado()}/{ExeNameFallback}";
+        private static string ExeNameFallback =>
+            (Assembly.GetEntryAssembly()?.GetName().Name ?? typeof(WebNodoService).Assembly.GetName().Name ?? "Visor3D") + ".exe";
+        // Sin un asset publicado conocido no se inventa una URL de release.
+        private static string ExeUrlFallback => "";
+
+        private static bool ParseVersion(string text, out Version? version) =>
+            Version.TryParse(text.Trim().TrimStart('v', 'V'), out version);
+
+        internal static bool EsVersionInstalada(string anunciada, string instalada) =>
+            ParseVersion(anunciada, out var a) && ParseVersion(instalada, out var i) && a == i;
+
+        internal static (string Name, string Url, string SizeMb, string Version) SeleccionarRelease(
+            (string Name, string Url, string SizeMb, string Version) actual,
+            (string Name, string Url, string SizeMb, string Version) remota, string instalada)
+        {
+            if (!ParseVersion(instalada, out var i) || !ParseVersion(remota.Version, out var r) || r < i ||
+                string.IsNullOrWhiteSpace(remota.Name) || string.IsNullOrWhiteSpace(remota.Url)) return actual;
+            if (ParseVersion(actual.Version, out var a) && r < a) return actual;
+            return remota;
+        }
+
+        internal static (string Name, string Url, string SizeMb, string Version) NormalizarReleaseLocal(
+            (string Name, string Url, string SizeMb, string Version) local) =>
+            ParseVersion(local.Version, out var l) && ParseVersion(VersionInstalada, out var i) && l >= i
+                ? local : (ExeNameFallback, ExeUrlFallback, "—", VersionInstalada);
+
+        private static (string Name, string Url, string SizeMb, string Version) SnapshotRelease()
+        {
+            lock (_releaseLock) return ReleaseActiva;
+        }
+
+        private static readonly object _portalLock = new object();
+        private static string? _rutaReleasePortal;
+
+        /// <summary>Publica únicamente el anuncio y el token API para el portal auxiliar.</summary>
+        public static void GuardarReleasePortal(string ruta)
+        {
+            lock (_portalLock)
+            {
+                _rutaReleasePortal = Path.GetFullPath(ruta);
+                EmitirReleasePortal();
+            }
+        }
+
+        private static void EmitirReleasePortal()
+        {
+            lock (_portalLock)
+            {
+                if (_rutaReleasePortal == null) return;
+                var release = SnapshotRelease(); // El cerrojo de release se libera antes de escribir.
+                string temporal = _rutaReleasePortal + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                try
+                {
+                    var payload = new
+                    {
+                        nombre = release.Name,
+                        url = release.Url,
+                        version = release.Version,
+                        tamano_mb = release.SizeMb,
+                        version_instalada = VersionInstalada,
+                        api_token = _apiToken
+                    };
+                    File.WriteAllBytes(temporal, JsonSerializer.SerializeToUtf8Bytes(payload));
+                    File.Move(temporal, _rutaReleasePortal, true);
+                }
+                catch (Exception ex)
+                {
+                    VisorLog.Info($"WebNodo: no se pudo publicar el anuncio auxiliar: {ex.Message}");
+                }
+                finally
+                {
+                    try { if (File.Exists(temporal)) File.Delete(temporal); } catch { }
+                }
+            }
+        }
 
         // Valor de arranque: el release.json empaquetado junto al .exe. En cuanto el
         // nodo arranca, RefrescarReleaseVigente() lo sustituye por la release vigente
         // real consultada a GitHub.
-        private static readonly (string Name, string Url, string SizeMb, string Version) ReleaseLocal = LeerReleaseLocal();
+        private static readonly (string Name, string Url, string SizeMb, string Version) ReleaseLocal = NormalizarReleaseLocal(LeerReleaseLocal());
         private static (string Name, string Url, string SizeMb, string Version) ReleaseActiva = ReleaseLocal;
         private static readonly object _releaseLock = new object();
 
@@ -217,9 +293,10 @@ namespace Visor3D.Services
                             ? (info.AssetSize / 1048576.0).ToString("0.0", CultureInfo.InvariantCulture)
                             : "—";
                         var nueva = (Name: info.AssetName!, Url: info.AssetUrl!, SizeMb: mb,
-                                     Version: string.IsNullOrWhiteSpace(info.Version)
-                                              ? ObtenerVersionEnsamblado() : info.Version!);
-                        lock (_releaseLock) ReleaseActiva = nueva;
+                                     Version: info.Version ?? "");
+                        lock (_releaseLock)
+                            ReleaseActiva = SeleccionarRelease(ReleaseActiva, nueva, VersionInstalada);
+                        EmitirReleasePortal();
                         VisorLog.Info($"WebNodo: release vigente → {nueva.Name} ({nueva.SizeMb} MB, v{nueva.Version})");
                         return;
                     }
@@ -308,7 +385,7 @@ namespace Visor3D.Services
             return (ExeNameFallback, ExeUrlFallback, "—", ObtenerVersionEnsamblado());
         }
 
-        private static string IndexHtml =>
+        private static string IndexHtml(string nombre) =>
             $@"<html lang=""es"">
 <head>
   <meta charset=""UTF-8""/>
@@ -369,11 +446,11 @@ namespace Visor3D.Services
           <h2>Descargar Visor 3D</h2>
           <p>Ejecutable portable Windows 64-bit · Sin instalación requerida</p>
         </div>
-        <button class=""copy-btn"" id=""btn-copy-link"" onclick=""copiarEnlace()""> Copiar Enlace de Invitado</button>
+        <button class=""copy-btn"" id=""btn-copy-link"" onclick=""copiarEnlace()""> Compartir WebNodo</button>
       </div>
       <a href=""/descargar"" class=""btn-download-hero"" id=""btn-descarga"">
         <span></span>
-        <span id=""lbl-descarga"">Descargar {ExeName}</span>
+        <span id=""lbl-descarga"">Descargar {WebUtility.HtmlEncode(nombre)}</span>
       </a>
       <div class=""session-grid"">
         <div class=""info-box"">
@@ -381,7 +458,7 @@ namespace Visor3D.Services
           <div class=""val"" id=""val-host"">P2P Host</div>
         </div>
         <div class=""info-box"">
-          <div class=""label""> Enlace P2P de Conexión (túnel efímero)</div>
+          <div class=""label""> Compartir WebNodo — en LucIA DAO elige tu nick y conexión</div>
           <div class=""val"" id=""link-p2p"">{{TUNNEL_URL}}</div>
         </div>
       </div>
@@ -669,7 +746,7 @@ namespace Visor3D.Services
             }
         }
 
-        private static string ObtenIndexHtml()
+        private static string ObtenIndexHtml(string nombre)
         {
             // 1. Probar desde disco
             var pathOnDisk = Path.Combine(AppContext.BaseDirectory, "webnodo", "public", "index.html");
@@ -694,7 +771,7 @@ namespace Visor3D.Services
             catch { }
 
             // 3. Fallback inline HTML
-            return IndexHtml;
+            return IndexHtml(nombre);
         }
 
         private static byte[]? ObtenMetaversoJpg()
@@ -812,13 +889,18 @@ namespace Visor3D.Services
                     reservaDescarga = true;
                 }
 
+                if (path == "/" || path == "/index.html" || esDescarga ||
+                    path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+                    RefrescarReleaseVigente();
+                var release = SnapshotRelease();
+
                 if (path == "/" || path == "/index.html")
                 {
                     res.ContentType = "text/html; charset=utf-8";
                     var tunnel = string.IsNullOrWhiteSpace(_publicTunnelUrl)
                         ? $"http://localhost:{ActivePort}/"
                         : _publicTunnelUrl;
-                    var html = ObtenIndexHtml();
+                    var html = ObtenIndexHtml(release.Name);
                     html = html.Replace("{{TUNNEL_URL}}", tunnel);
                     html = html.Replace("{{API_TOKEN}}", _apiToken);
                     if (!string.IsNullOrWhiteSpace(_publicTunnelUrl))
@@ -848,50 +930,40 @@ namespace Visor3D.Services
                 }
                 else if (path == "/descargar" || path.StartsWith("/descargar/"))
                 {
-                    VisorLog.Info($"WebNodo: descarga solicitada desde {req.RemoteEndPoint} ({ExeName})");
+                    VisorLog.Info($"WebNodo: descarga solicitada desde {req.RemoteEndPoint} ({release.Name})");
 
-                    // Tras un OTA el propio .exe en ejecución YA es la release vigente,
-                    // aunque en disco conserve el nombre antiguo. Se entregan sus bytes
-                    // bajo el nombre anunciado, sin renombrar en disco (no rompe accesos
-                    // directos ni el paso de reemplazo del .bat).
-                    string? origen = BinarioEnEjecucion();
-                    if (origen == null)
-                    {
-                        // Sin apphost localizable: se busca la copia empaquetada junto al visor.
-                        foreach (var carpeta in new[]
-                        {
-                            Path.Combine(AppContext.BaseDirectory, "webnodo", "descargas"),
-                            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "webnodo", "descargas"),
-                            AppContext.BaseDirectory
-                        })
-                        {
-                            string candidato = Path.Combine(carpeta, ExeName);
-                            if (File.Exists(candidato)) { origen = candidato; break; }
-                        }
-                    }
+                    // Solo la misma versión puede entregar bytes locales; tras OTA el
+                    // fichero puede conservar el nombre antiguo sin cambiar esta regla.
+                    string? origen = EsVersionInstalada(release.Version, VersionInstalada)
+                        ? BinarioEnEjecucion() : null;
 
                     if (origen != null)
                     {
                         res.ContentType = "application/octet-stream";
-                        res.AddHeader("Content-Disposition", $"attachment; filename=\"{ExeName}\"");
+                        res.AddHeader("Content-Disposition", $"attachment; filename=\"{release.Name}\"");
                         using var fs = File.OpenRead(origen);
                         res.ContentLength64 = fs.Length;
                         await fs.CopyToAsync(res.OutputStream);
                     }
                     else
                     {
-                        res.Redirect(ExeUrl);
+                        if (!string.IsNullOrWhiteSpace(release.Url)) res.Redirect(release.Url);
+                        else res.StatusCode = 503;
                     }
                 }
                 else if (path == "/api/info")
                 {
+                    var binarioLocal = EsVersionInstalada(release.Version, VersionInstalada)
+                        ? BinarioEnEjecucion() : null;
                     var payload = new
                     {
-                        disponible = true,
-                        nombre = ExeName,
-                        version = ExeVersion,
+                        disponible = !string.IsNullOrWhiteSpace(release.Url) || binarioLocal != null,
+                        nombre = release.Name,
+                        version = release.Version,
                         version_instalada = VersionInstalada,
-                        tamano_mb = ExeSizeMb,
+                        tamano_mb = binarioLocal != null
+                            ? (new FileInfo(binarioLocal).Length / 1048576.0).ToString("0.0", CultureInfo.InvariantCulture)
+                            : release.SizeMb,
                         url_descarga = "/descargar"
                     };
                     var bytes = JsonSerializer.SerializeToUtf8Bytes(payload);
