@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -81,8 +80,6 @@ namespace Visor3D
 
         // ── Servidor Oficial Blockchain & Cuentas (STM_BKCH puerto 8545) ─
         private readonly ServidorBlockchainOficial _servidorBlockchain = new();
-        private readonly object _candadoBlockchain = new();
-        private Task<bool>? _tareaBlockchain;
         private readonly ServidorLucIAOficial _servidorLucia = new();
         private System.Diagnostics.Process? _webNodoHelper;
         private GodotHwndHost? _constructorHost;
@@ -152,7 +149,6 @@ namespace Visor3D
                 _p2pServicio?.Dispose();
                 DetenerTunelWebNodo();
                 _timerValidacionTunel?.Stop();
-                _ctsIpcDao?.Cancel();
                 _timerLucia?.Stop();
                 try { _webNodoHelper?.Kill(entireProcessTree: true); } catch { }
             };
@@ -228,17 +224,10 @@ namespace Visor3D
             // Vigilar solicitudes de validación de túnel SSH desde LucIA (Godot)
             _timerValidacionTunel = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(250)  // Poll cada 250 ms
+                Interval = TimeSpan.FromSeconds(1)  // Poll cada segundo
             };
-            _timerValidacionTunel.Tick += (s, e) =>
-            {
-                PollSolicitudValidacionTunel();
-                PollIpcDao();   // v2.9.4: responder llamadas IPC del ServicioConexionModular
-            };
+            _timerValidacionTunel.Tick += (s, e) => PollSolicitudValidacionTunel();
             _timerValidacionTunel.Start();
-
-            // v2.9.4: Iniciar bucle en segundo plano para respuesta IPC ultrarrápida (100 ms)
-            IniciarBucleIpcDao();
 
             // Vigilar el cerebro de LucIA: si se cae (o lo cierra el .bat),
             // el visor lo vuelve a levantar solo.
@@ -248,12 +237,20 @@ namespace Visor3D
             };
             _timerLucia.Tick += async (s, e) =>
             {
-                if (_iniciandoLucia) return;
+                if (_iniciandoLucia || _servidorLucia.EstaListo()) return;
                 _iniciandoLucia = true;
                 try { await IniciarServidorLuciaAsync(); }
                 finally { _iniciandoLucia = false; }
             };
             _timerLucia.Start();
+
+            // Determinar ruta de datos de Godot (user://)
+            _rutaDatosGodot = Directory.Exists(PerfilUsuario.GodotUserDataDir)
+                ? PerfilUsuario.GodotUserDataDir
+                : Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Godot", "app_userdata", "WoldVirtualP2P3D"
+                );
         }
 
         public void AbrirInvitacion(string enlace)
@@ -315,11 +312,8 @@ namespace Visor3D
                 : $"[WebNodo] No se pudo abrir: {App.WebNodo.StartError ?? "sin detalle"}");
 
             ActualizarEstadoCuentaUI();
-            _ = IniciarBlockchainUnaVezAsync();
+            _ = IniciarServidorBlockchainAsync();
             _ = IniciarServidorLuciaAsync();
-            // ── v2.9.4: mostrar el banner inmediatamente (⏳ generando…) y lanzar túnel ──
-            Dispatcher.Invoke(() => MostrarDireccionAnfitrion());
-            _ = EstablecerTunelEfimeroAsync();
 
             // Arranque directo en el despacho: no mostrar la antigua ventana
             // de bienvenida ni siquiera durante un frame.
@@ -341,61 +335,9 @@ namespace Visor3D
             // anteriores en el próximo arranque.
             RuntimeCleaner.MarcarArranqueCorrecto();
 
-            // Un perfil oficial completo entra como jugador, con su avatar, en
-            // el vestíbulo común de la DAO. Los perfiles nuevos siguen llegando
-            // a la recepción interactiva de LucIA.
-            bool perfilDaoListo = PerfilUsuario.TieneCuentaOficial && TieneAvatarGuardadoValido();
-            bool recepcionSolicitada = File.Exists(Path.Combine(_rutaDatosGodot, "abrir_recepcion.flag"));
-            _ = Dispatcher.BeginInvoke(new Action(() =>
-            {
-#if GODOT_SOURCE_PREVIEW
-                if (string.IsNullOrWhiteSpace(_urlAmigoPendiente)) EntrarAlMetaverso();
-                else if (perfilDaoListo && !recepcionSolicitada) EntrarAlMetaverso();
-                else AbrirOficinaLucia();
-#else
-                if (perfilDaoListo && !recepcionSolicitada) EntrarAlMetaverso();
-                else AbrirOficinaLucia();
-#endif
-            }));
-        }
-
-        private bool TieneAvatarGuardadoValido()
-        {
-            try
-            {
-                string ruta = Path.Combine(PerfilUsuario.GodotUserDataDir, "registro.cfg");
-                if (!File.Exists(ruta)) return false;
-                string nick = "";
-                string escena = "";
-                bool enJugador = false;
-                foreach (string linea in File.ReadLines(ruta))
-                {
-                    string texto = linea.Trim();
-                    if (texto.StartsWith("[", StringComparison.Ordinal) && texto.EndsWith("]", StringComparison.Ordinal))
-                    {
-                        enJugador = texto.Equals("[jugador]", StringComparison.OrdinalIgnoreCase);
-                        continue;
-                    }
-                    if (!enJugador) continue;
-                    int separador = texto.IndexOf('=');
-                    if (separador < 0) continue;
-                    string clave = texto[..separador].Trim();
-                    string valor = texto[(separador + 1)..].Trim().Trim('"');
-                    if (clave.Equals("nick", StringComparison.OrdinalIgnoreCase)) nick = valor;
-                    else if (clave.Equals("avatar_scene", StringComparison.OrdinalIgnoreCase)) escena = valor;
-                }
-                if (nick.Length == 0 || !escena.StartsWith("res://avatares/", StringComparison.Ordinal)) return false;
-                string nombre = Path.GetFileNameWithoutExtension(escena);
-                string[] ids = { "AVH1", "AVH2", "AVH3", "AVH4", "AVMJ1", "AVMJ2", "AVMJ3", "AVMJ4" };
-                if (!ids.Contains(nombre, StringComparer.OrdinalIgnoreCase)) return false;
-                string proyecto = GodotConfig.GetProjectPath();
-                return File.Exists(Path.Combine(proyecto, "avatares", nombre + ".tscn"));
-            }
-            catch (Exception ex)
-            {
-                Log($"[DAO] No se pudo validar el avatar guardado: {ex.Message}");
-                return false;
-            }
+            // La nueva experiencia empieza siempre en la oficina de LucIA:
+            // recepción, registro, conexión de túnel y avatares viven allí.
+            _ = Dispatcher.BeginInvoke(new Action(AbrirOficinaLucia));
         }
 
         /// <summary>
@@ -750,22 +692,7 @@ namespace Visor3D
 
         #region Actualización Oficial: Lucía 3D y Servidor Blockchain
 
-        /// <summary>
-        /// Comparte una sola inicialización entre el arranque y la entrada al
-        /// mundo; si la anterior falló, el siguiente intento vuelve a probar.
-        /// </summary>
-        private Task<bool> IniciarBlockchainUnaVezAsync()
-        {
-            lock (_candadoBlockchain)
-            {
-                if (_tareaBlockchain is { IsCompleted: false }) return _tareaBlockchain;
-                if (_tareaBlockchain is { Status: TaskStatus.RanToCompletion } t && t.Result) return t;
-                _tareaBlockchain = IniciarServidorBlockchainAsync();
-                return _tareaBlockchain;
-            }
-        }
-
-        private async Task<bool> IniciarServidorBlockchainAsync()
+        private async Task IniciarServidorBlockchainAsync()
         {
             try
             {
@@ -773,10 +700,6 @@ namespace Visor3D
                 IndicadorServidorLed.Fill = new SolidColorBrush(Color.FromRgb(245, 158, 11));
 
                 bool ok = await _servidorBlockchain.IniciarAsync();
-                // Segunda opinión antes de pintar: si el puerto responde, está en línea
-                // aunque la ruta del script no se haya podido resolver.
-                if (!ok)
-                    ok = await _servidorBlockchain.ConsultarSaludAsync();
                 if (ok)
                 {
                     TxtEstadoServidorBlockchain.Text = $"⚡ Servidor Blockchain Oficial: Puerto 8545 ACTIVO ({_servidorBlockchain.TotalBloques} bloques)";
@@ -792,12 +715,10 @@ namespace Visor3D
                     TxtEstadoBlockchainTop.Text = "⚠️ Blockchain: Offline";
                     BordeEstadoBlockchainTop.Background = new SolidColorBrush(Color.FromRgb(127, 29, 29));
                 }
-                return ok;
             }
             catch (Exception ex)
             {
                 Log($"[Blockchain] Error en IniciarServidorBlockchainAsync: {ex.Message}");
-                return false;
             }
         }
 
@@ -806,9 +727,7 @@ namespace Visor3D
             try
             {
                 bool ok = await _servidorLucia.IniciarAsync();
-                TxtEstadoLuciaTop.Text = ok ? "LucIA: conectada" :
-                    (_servidorLucia.UltimoError?.Contains("Ollama", StringComparison.OrdinalIgnoreCase) == true
-                        ? "LucIA: revisar Ollama/modelo" : "LucIA: error de arranque");
+                TxtEstadoLuciaTop.Text = ok ? "🧠 LucIA: 8765" : "🔴 LucIA: parada";
                 TxtEstadoLuciaTop.ToolTip = ok
                     ? "Cerebro de LucIA escuchando en 127.0.0.1:8765"
                     : (_servidorLucia.UltimoError ?? "No se pudo arrancar LucIA");
@@ -864,7 +783,7 @@ namespace Visor3D
                 if (!_servidorBlockchain.EstaEnLinea)
                 {
                     TxtEstadoP2P.Text = "⚡ Encendiendo servidor blockchain oficial...";
-                    await IniciarBlockchainUnaVezAsync();
+                    await IniciarServidorBlockchainAsync();
                 }
 
                 BarraInferiorLogin.Visibility = Visibility.Collapsed;
@@ -895,7 +814,6 @@ namespace Visor3D
                 AjustarBarraResponsive();
 
                 IniciarGodotMain();
-                _ = EstablecerTunelEfimeroAsync();
                 IniciarP2P(usuario);
                 string uuid = ObtenerUuidDelPerfil(usuario);
                 IniciarChatSesion(usuario, uuid);
@@ -920,8 +838,6 @@ namespace Visor3D
             {
                 Log($"[Lucía 3D] Error al escribir flag de recepción: {ex.Message}");
             }
-
-            _ = EstablecerTunelEfimeroAsync();
 
             if (_godotHostMain != null)
             {
@@ -1705,47 +1621,6 @@ namespace Visor3D
                     string scenePath  = GodotConfig.GetScenePath();
                     string mainPack   = GodotConfig.GetMainPackPath();
 
-                    // ── v2.9.4: si el árbol de desarrollo activo existe, cargamos SIEMPRE desde fuente
-                    // para que los cambios en los scripts GDScript surtan efecto (nunca el wvp3d.pck viejo).
-                    string? srcActivo = GodotConfig.SrcActivo();
-                    string srcProjectDir = string.IsNullOrWhiteSpace(srcActivo)
-                        ? ""
-                        : System.IO.Path.Combine(srcActivo, "MTBGT", "WoldVirtualP2P3D");
-                    if (!string.IsNullOrWhiteSpace(srcProjectDir)
-                        && System.IO.File.Exists(System.IO.Path.Combine(srcProjectDir, "project.godot")))
-                    {
-                        projectDir = srcProjectDir;
-                        mainPack   = "";   // nunca cargar el PCK empaquetado en versiones anteriores
-                        // Buscar el Godot del árbol de desarrollo (si está disponible)
-                        string? godotSrc = System.IO.Path.Combine(srcActivo!, "..", "Servidor3D", $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe");
-                        if (!System.IO.File.Exists(godotSrc))
-                            godotSrc = System.IO.Path.Combine(srcActivo!, "VSC#", "Servidor3D", $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe");
-                        if (System.IO.File.Exists(godotSrc ?? ""))
-                            godotExe = godotSrc!;
-                        string? envGodot = System.Environment.GetEnvironmentVariable("WVP_GODOT_EXE");
-                        if (!string.IsNullOrWhiteSpace(envGodot) && System.IO.File.Exists(envGodot))
-                            godotExe = envGodot;
-                    }
-
-#if GODOT_SOURCE_PREVIEW
-                    // Esta configuración solo se usa en la vista previa de
-                    // desarrollo. Carga el árbol Godot activo, nunca un PCK
-                    // antiguo empacado dentro de una actualización publicada.
-                    if (!string.IsNullOrWhiteSpace(srcActivo))
-                        projectDir = System.IO.Path.Combine(srcActivo, "MTBGT", "WoldVirtualP2P3D");
-                    mainPack = "";
-                    string? godotPreview = Environment.GetEnvironmentVariable("WVP_GODOT_EXE");
-                    if (!string.IsNullOrWhiteSpace(godotPreview) && File.Exists(godotPreview))
-                        godotExe = godotPreview;
-                    else
-                    {
-                        string godotFuente = Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                            "Desktop", "AreaDeTrabajo", $"Godot_v{WoldInfoVersion.Motor}-stable_win64.exe");
-                        if (File.Exists(godotFuente)) godotExe = godotFuente;
-                    }
-#endif
-
                     // Guardar p2p_session.json para que Godot siempre lo tenga accesible
                     GuardarP2PSessionConfig();
 
@@ -1753,16 +1628,7 @@ namespace Visor3D
                     // de que Godot arranque, para que su recepción la envíe en el alta.
                     await GuardarUbicacionSmtplcAsync();
 
-                    // La escena principal SIEMPRE es res://WoldVirtual3DP2P.tscn.
-                    // Esta escena ya integra la Sede de la DAO (IslaUnicaLucIA) y el mundo P2P
-                    // (ISLA3Dblock / ChunkManager). En ella todos los vecinos se ven en la DAO
-                    // y pueden moverse entre la DAO y sus islas sin desconexión.
-                    scenePath = GodotConfig.GetScenePath();
-
-                    string userArgs = "--dao-lobby";
-#if GODOT_SOURCE_PREVIEW
-                    userArgs += " --dao-preview";
-#endif
+                    string userArgs = "";
                     string rolLog = "";
                     if (!string.IsNullOrWhiteSpace(_urlAmigoPendiente))
                     {
@@ -1778,7 +1644,7 @@ namespace Visor3D
                         if (TryParseConnectionTarget(destino, out string targetHost, out int targetPort))
                         {
                             // Inyectar rol explícito de cliente hacia el destino remoto
-                            userArgs += $" --client --ip={targetHost} --port={targetPort} --peer-url=\"{peerUrl}\"";
+                            userArgs = $"--client --ip={targetHost} --port={targetPort} --peer-url=\"{peerUrl}\"";
                             rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO -> {targetHost}:{targetPort} (peer-url={peerUrl})";
                             if (!destino.Equals(_urlAmigoPendiente, StringComparison.OrdinalIgnoreCase))
                             {
@@ -1797,7 +1663,7 @@ namespace Visor3D
                         }
                         else
                         {
-                            userArgs += $" --peer-url=\"{peerUrl}\"";
+                            userArgs = $"--peer-url=\"{peerUrl}\"";
                             rolLog = $"[Visor3D -> Godot] Rol: CLIENTE_REMOTO (URL sin parsear: {peerUrl})";
                             Console.WriteLine($"[Visor3D -> Godot] Parámetros inyectados (URL sin parsear): {userArgs}");
                             System.Diagnostics.Debug.WriteLine($"[Visor3D -> Godot] Parámetros inyectados (URL sin parsear): {userArgs}");
@@ -1809,9 +1675,8 @@ namespace Visor3D
                         Console.WriteLine("[Visor3D -> Godot] Sin destino remoto previo. Modo autónomo/local por defecto.");
                         System.Diagnostics.Debug.WriteLine("[Visor3D -> Godot] Sin destino remoto previo. Modo autónomo/local por defecto.");
 
-                        // Somos el anfitrión (LucIA): mostrar IP LAN y levantar túnel efímero público automáticamente
+                        // Somos el anfitrión: mostrar la IP LAN + WebSocket 8911 como alternativa local.
                         MostrarDireccionAnfitrion();
-                        _ = EstablecerTunelEfimeroAsync();
                     }
                     Console.WriteLine(rolLog);
                     System.Diagnostics.Debug.WriteLine(rolLog);
@@ -1850,7 +1715,6 @@ namespace Visor3D
             _godotHostMain = null;
             BtnReiniciar3D.Visibility = Visibility.Collapsed;
             TxtEstadoP2P.Text = "🔄 Reiniciando motor 3D…";
-            _ = EstablecerTunelEfimeroAsync();
             IniciarGodotMain();
         }
 
@@ -2151,7 +2015,7 @@ namespace Visor3D
             TxtEtiquetaEnlace.Visibility = amplio ? Visibility.Visible : Visibility.Collapsed;
             string enlace = !string.IsNullOrEmpty(_enlaceCompartible) ? _enlaceCompartible : _urlPublica;
             if (!string.IsNullOrEmpty(enlace))
-                TxtUrlP2P.Text = enlace;
+                TxtUrlP2P.Text = amplio ? enlace : "enlace listo";
 
             if (!string.IsNullOrEmpty(_llaveHashActual))
             {
@@ -2184,39 +2048,6 @@ namespace Visor3D
             }
             catch { }
             return resultado;
-        }
-
-        private string GuardarWebNodoRelay()
-        {
-            string dir = Path.Combine(TestUserDataDir, "user");
-            Directory.CreateDirectory(dir);
-            string ruta = Path.Combine(dir, "webnodo_relay.json");
-            string temporal = ruta + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            try
-            {
-                File.WriteAllBytes(temporal, JsonSerializer.SerializeToUtf8Bytes(new
-                {
-                    invitacion = App.WebNodo.TokenInvitacion,
-                    chat_enabled = App.WebNodo.ChatEnabled,
-                    chat_port = App.WebNodo.ChatLocalPort
-                }));
-                File.Move(temporal, ruta, true);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[WebNodo] No se pudo guardar el estado del relay: {ex.Message}");
-            }
-            catch (IOException ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[WebNodo] No se pudo guardar el estado del relay: {ex.Message}");
-            }
-            finally
-            {
-                try { if (File.Exists(temporal)) File.Delete(temporal); }
-                catch (IOException) { }
-                catch (UnauthorizedAccessException) { }
-            }
-            return ruta;
         }
 
         private void GuardarP2PSessionConfig()
@@ -2391,13 +2222,10 @@ namespace Visor3D
 
                 await _p2pServicio.IniciarAsync();
 
-                // El anfitrión abre un túnel efímero propio. Un usuario registrado que
-                // llega desde una invitación reutiliza el túnel activo de Lucía y no crea
-                // un segundo endpoint para la misma sesión.
-                if (string.IsNullOrWhiteSpace(_urlAmigoPendiente))
-                    _ = EstablecerTunelEfimeroAsync();
+                // Levantar túnel público efímero para WebNodo (cloudflared / SSH)
+                _ = EstablecerTunelEfimeroAsync();
 
-                // Si había URL de invitación, preparar el enlace al anfitrión raíz.
+                // Si había URL de amigo ingresada en el login, conectarse automáticamente
                 if (!string.IsNullOrWhiteSpace(_urlAmigoPendiente))
                 {
                     bool ok = await _p2pServicio.ConectarConParAsync(_urlAmigoPendiente);
@@ -2466,7 +2294,6 @@ namespace Visor3D
 
             App.WebNodo.ChatEnabled = _chatServer?.IsRunning == true;
             App.WebNodo.ChatLocalPort = _chatServer?.Port ?? 0;
-            GuardarWebNodoRelay();
 
             _chatVoice = new ChatVoice();
             _chatVoice.MicFrame += OnMicrofonoChat;
@@ -2520,7 +2347,6 @@ namespace Visor3D
 
             App.WebNodo.ChatEnabled = false;
             App.WebNodo.ChatLocalPort = 0;
-            GuardarWebNodoRelay();
 
             _nombresChat.Clear();
             _tilesChat.Clear();
@@ -4250,7 +4076,7 @@ namespace Visor3D
                 var inicio = new ProcessStartInfo
                 {
                     FileName = python,
-                    Arguments = $"\"{script}\" --puerto 3030 --exe \"{exe}\" --release \"{releasePortal}\" --sesion \"{sesion}\" --relay \"{relay}\"",
+                    Arguments = $"\"{script}\" --puerto 3030 --exe \"{exe}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
@@ -4376,22 +4202,6 @@ namespace Visor3D
         // ═══════════════════════════════════════════════════════════
         private async Task EstablecerTunelEfimeroAsync()
         {
-            await _semaforoTunelWebNodo.WaitAsync();
-            try
-            {
-                await EstablecerTunelEfimeroCoreAsync();
-            }
-            finally
-            {
-                _semaforoTunelWebNodo.Release();
-            }
-        }
-
-        private async Task EstablecerTunelEfimeroCoreAsync()
-        {
-            _ultimoErrorTunelPublico = "";
-            var fallosProveedor = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
             // Idempotente: si ya hay un túnel activo con URL, no volver a levantarlo
             if (_tunnelProcess != null && !_tunnelProcess.HasExited && !string.IsNullOrWhiteSpace(App.WebNodo.PublicTunnelUrl))
             {
@@ -4662,8 +4472,7 @@ namespace Visor3D
             string exe, string args, string urlPattern, int timeoutMs, CancellationToken token,
             Action<string>? onDiagnostic = null)
         {
-            return await Visor3D.Services.P2PIPFS.EphemeralTunnelRunner.StartAsync(
-                exe, args, urlPattern, timeoutMs, token, onDiagnostic);
+            return await Visor3D.Services.P2PIPFS.EphemeralTunnelRunner.StartAsync(exe, args, urlPattern, timeoutMs, token);
         }
 
         private async Task<string?> BuscarODescargarCloudflaredAsync(CancellationToken token)
@@ -4673,10 +4482,8 @@ namespace Visor3D
             string appBase = AppDomain.CurrentDomain.BaseDirectory;
             string localAppDataWold = Path.Combine(localApp, "WoldVirtualP2P3D");
             string tempDir = Path.GetTempPath();
-            string? cloudflaredConfigurado = Environment.GetEnvironmentVariable("CLOUDFLARED_EXE");
 
             string[] candidateLocations = {
-                cloudflaredConfigurado ?? "",
                 "cloudflared",
                 Path.Combine(appBase, "cloudflared.exe"),
                 Path.Combine(localAppDataWold, "cloudflared.exe"),
@@ -5055,8 +4862,7 @@ namespace Visor3D
                 EscribirResultadoValidacion(ok, mensaje, tunnelOnly: true);
                 Dispatcher.Invoke(() =>
                 {
-                    TxtEstadoP2P.Text = ok ? $"🟢 Conectado · {url}" : $"🔴 {mensaje}";
-                    if (ok) MostrarEnlacePublico(url);
+                    TxtEstadoP2P.Text = ok ? $"🟢 Conectado · {_urlPublica}" : "🔴 Sin túnel WebNodo";
                 });
             }
             catch (Exception ex)
@@ -5140,12 +4946,11 @@ namespace Visor3D
 
                 if (_p2pServicio.TunnelActivo)
                 {
-                    // Escribir resultado exitoso (T2-06: reportar modo degradado SSH vs Cloudflare)
-                    string modoDesc = _p2pServicio.Tunel.EsModoDegradado ? "Modo degradado (SSH gratuito)" : "Cloudflare Túnel";
-                    EscribirResultadoValidacion(true, $"Túnel activo ({modoDesc})");
+                    // Escribir resultado exitoso
+                    EscribirResultadoValidacion(true, "Túnel SSH iniciado correctamente");
                     Dispatcher.Invoke(() =>
                     {
-                        TxtEstadoP2P.Text = $"🟢 {modoDesc}: {_p2pServicio.UrlPublicaPropia}";
+                        TxtEstadoP2P.Text = $"🟢 Túnel SSH activo: {_p2pServicio.UrlPublicaPropia}";
                     });
                 }
                 else
@@ -5174,16 +4979,6 @@ namespace Visor3D
                     return;
 
                 var rutaResultado = Path.Combine(_rutaDatosGodot, "validacion_resultado.json");
-                string urlFinal = !string.IsNullOrWhiteSpace(_urlPublica)
-                    ? _urlPublica
-                    : (App.WebNodo.PublicTunnelUrl ?? (_p2pServicio != null ? _p2pServicio.UrlPublicaPropia : null) ?? "");
-                string enlaceFinal = !string.IsNullOrWhiteSpace(_enlaceCompartible)
-                    ? _enlaceCompartible
-                    : (!string.IsNullOrWhiteSpace(urlFinal) ? EnlaceInvitacion(urlFinal) : "");
-
-                bool esDegradado = (_p2pServicio != null && _p2pServicio.Tunel.EsModoDegradado) || (App.WebNodo != null && App.WebNodo.IsDegradedMode);
-                string modoGlobal = esDegradado ? "Modo degradado (SSH gratuito)" : "Cloudflare Túnel";
-
                 var datos = new
                 {
                     exito = exito,
