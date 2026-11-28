@@ -57,6 +57,7 @@ var _fase: StringName = &""
 var _regreso := false
 var _contenedor_miembros_dao: Node3D = null
 var _avatares_miembros_dao: Dictionary = {}
+var _servicio_conexion_modular: Node = null
 
 # Sistema Blockchain DAO de 4 bloques en estaciones
 var _bloques_dao: Array = []
@@ -156,10 +157,14 @@ func _ready() -> void:
 		_recepcion_ciudadano()
 	else:
 		_secuencia()
-	if ServicioConexionModular.habilitado():
-		if not ServicioConexionModular.miembros_actualizados.is_connected(_actualizar_miembros_dao):
-			ServicioConexionModular.miembros_actualizados.connect(_actualizar_miembros_dao)
-		await ServicioConexionModular.refrescar_miembros(_sonda)
+	var servicio := _obtener_servicio_conexion_modular()
+	if servicio != null and servicio.has_method("habilitado") and servicio.call("habilitado"):
+		if servicio.has_signal("miembros_actualizados"):
+			var senal: Signal = Signal(servicio, "miembros_actualizados")
+			if not senal.is_connected(_actualizar_miembros_dao):
+				senal.connect(_actualizar_miembros_dao)
+		if servicio.has_method("refrescar_miembros"):
+			await servicio.call("refrescar_miembros", _sonda)
 
 
 # ---------------------------------------------------------------------------
@@ -690,8 +695,9 @@ func _solicitar_nick() -> void:
 	if sonda == null:
 		sonda = get_parent().get_node_or_null("Sonda")
 	_sonda = sonda
-	if ServicioConexionModular.has_method("establecer_sonda"):
-		ServicioConexionModular.establecer_sonda(_sonda)
+	var servicio_sonda := _obtener_servicio_conexion_modular()
+	if servicio_sonda != null and servicio_sonda.has_method("establecer_sonda"):
+		servicio_sonda.call("establecer_sonda", _sonda)
 	_lucia_dice("Pincha en conectar para ver a tus vecinos en la DAO.", 5.0)
 	if autoprueba:
 		conectar.call_deferred("emit_signal", "pressed")
@@ -705,21 +711,22 @@ func _solicitar_nick() -> void:
 		var objetivo_red: Dictionary = RedSesion.resolver_objetivo()
 		var tunel: Dictionary
 		if bool(objetivo_red.get("is_client", false)):
-			estado.text = "Enlace de invitación detectado. Conectando con el anfitrión…"
-			tunel = {"exito": true, "mensaje": "Conectando con el anfitrión de la invitación."}
+			estado.text = "Conectando con la DAO anfitriona…"
+			tunel = {"exito": true, "mensaje": "Usando la sesión de la DAO anfitriona."}
+		elif bool(objetivo_red.get("force_host", false)):
+			estado.text = "Validando la DAO anfitriona local…"
+			tunel = {"exito": true, "mensaje": "Validando la sesión única de LucIA."}
 		else:
-			estado.text = "Abriendo el túnel efímero de invitación…"
+			estado.text = "Solicitando la sesión interna al visor…"
 			tunel = await _solicitar_tunel_invitacion()
 		if not bool(tunel.get("exito", false)):
 			estado.text = str(tunel.get("mensaje", "El visor no pudo abrir el túnel efímero."))
 			conectar.disabled = false
 			continue
-		_enlace_invitacion = str(tunel.get("enlace", tunel.get("url", ""))).strip_edges()
-		if not _enlace_invitacion.is_empty():
-			DisplayServer.clipboard_set(_enlace_invitacion)
-			estado.text = "Túnel activo. Enlace de invitación copiado. Validando la sesión P2P…"
-		else:
-			estado.text = "Túnel activo. Validando la sesión P2P…"
+		# El enlace deja de ser la vía para que LucIA entre en la isla: el visor
+		# mantiene la sesión internamente y la recepción valida ese mismo mundo.
+		_enlace_invitacion = ""
+		estado.text = str(tunel.get("mensaje", "Túnel activo. Validando la sesión P2P interna…"))
 		var resultado: Dictionary = {"ok": false, "error": "No hay Sonda de sesión"}
 		if sonda != null:
 			resultado = await sonda.validar_conexion()
@@ -728,15 +735,16 @@ func _solicitar_nick() -> void:
 			conectar.disabled = false
 			continue
 		_ocupados = resultado.get("ocupados", []).duplicate()
-		if ServicioConexionModular.habilitado():
+		var servicio_conexion := _obtener_servicio_conexion_modular()
+		if servicio_conexion != null and servicio_conexion.has_method("habilitado") and servicio_conexion.call("habilitado"):
 			estado.text = "Sesión P2P lista. Conectando el registro con la DAO…"
-			var conexion: Dictionary = await ServicioConexionModular.conectar(_nick, _sonda)
+			var conexion: Dictionary = await servicio_conexion.call("conectar", _nick, _sonda)
 			if not bool(conexion.get("ok", false)):
 				estado.text = str(conexion.get("body", {}).get("error", "No se pudo conectar con el servidor DAO."))
 				conectar.disabled = false
 				continue
 			_modular_token = str(conexion.get("body", {}).get("token", ""))
-		estado.text = "Conectado con LucIA. El enlace efímero está copiado para invitar a otra persona."
+		estado.text = "DAO única conectada. LucIA está lista para recibirte en esta sesión."
 		await get_tree().create_timer(1.2).timeout
 		break
 	_carrusel.call("set_ocupados", _ocupados)
@@ -746,8 +754,8 @@ func _solicitar_nick() -> void:
 
 
 func _solicitar_tunel_invitacion() -> Dictionary:
-	# MainWindow.xaml.cs vigila este buzón en user:// y levanta el mismo túnel
-	# efímero que se usa al crear/copiar un enlace de invitación.
+	# MainWindow.xaml.cs valida el host actual de la DAO. Solo inicia el WebNodo
+	# si hace falta; la sesión no crea otra Lucía ni una DAO paralela.
 	var ruta_solicitud := ProjectSettings.globalize_path("user://tunel_solicitud.json")
 	var ruta_temporal := ruta_solicitud + ".tmp"
 	var ruta_resultado := ProjectSettings.globalize_path("user://validacion_resultado.json")
@@ -756,7 +764,7 @@ func _solicitar_tunel_invitacion() -> Dictionary:
 	var solicitud := FileAccess.open("user://tunel_solicitud.json.tmp", FileAccess.WRITE)
 	if solicitud == null:
 		return {"exito": false, "mensaje": "No se pudo solicitar el túnel al visor."}
-	solicitud.store_string(JSON.stringify({"accion": "conectar", "nick": _nick}))
+	solicitud.store_string(JSON.stringify({"accion": "conectar", "nick": _nick, "uso_interno": true}))
 	solicitud.close()
 	var renombrar := DirAccess.rename_absolute(ruta_temporal, ruta_solicitud)
 	if renombrar != OK:
@@ -929,12 +937,13 @@ func _inicializar_bloques_dao() -> void:
 
 
 func _registrar_en_servidor_modular() -> bool:
-	if not ServicioConexionModular.habilitado():
+	var servicio := _obtener_servicio_conexion_modular()
+	if servicio == null or not servicio.has_method("habilitado") or not servicio.call("habilitado"):
 		return true
 	if _modular_token.is_empty():
 		_lucia_dice("La conexión DAO no quedó preparada. Vuelve a validar tu nick para continuar.", 5.0)
 		return false
-	var respuesta: Dictionary = await ServicioConexionModular.registrar(
+	var respuesta: Dictionary = await servicio.call("registrar",
 		_modular_token, _nick, _avatar_id, _sonda)
 	if not bool(respuesta.get("ok", false)):
 		var cuerpo: Dictionary = respuesta.get("body", {})
@@ -942,10 +951,34 @@ func _registrar_en_servidor_modular() -> bool:
 		return false
 	var miembro: Dictionary = respuesta.get("body", {}).get("miembro", {})
 	var miembro_id := str(miembro.get("id", ""))
-	ServicioConexionModular.activar_presencia(miembro_id)
-	await ServicioConexionModular.refrescar_miembros(_sonda)
+	if servicio.has_method("activar_presencia"):
+		servicio.call("activar_presencia", miembro_id)
+	if servicio.has_method("refrescar_miembros"):
+		await servicio.call("refrescar_miembros", _sonda)
 	print("[OnboardingDAO] Registro modular confirmado para ", _nick)
 	return true
+
+
+func _obtener_servicio_conexion_modular() -> Node:
+	if is_instance_valid(_servicio_conexion_modular):
+		return _servicio_conexion_modular
+	_servicio_conexion_modular = get_node_or_null("/root/ServicioConexionModular")
+	if _servicio_conexion_modular == null:
+		var recurso: Script = load("res://gdscrip/ServicioConexionModular.gd") as Script
+		if recurso == null:
+			return null
+		var nuevo_servicio := recurso.new() as Node
+		if nuevo_servicio == null:
+			return null
+		nuevo_servicio.name = "ServicioConexionModular"
+		var arbol := get_tree()
+		if arbol == null:
+			return null
+		arbol.root.add_child(nuevo_servicio)
+		_servicio_conexion_modular = nuevo_servicio
+	if _servicio_conexion_modular.has_method("establecer_sonda"):
+		_servicio_conexion_modular.call("establecer_sonda", _sonda)
+	return _servicio_conexion_modular
 
 
 ## Representa en la sede a los miembros presentes que vienen del servidor modular.

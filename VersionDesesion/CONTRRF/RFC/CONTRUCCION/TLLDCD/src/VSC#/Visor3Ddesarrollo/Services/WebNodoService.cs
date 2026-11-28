@@ -458,7 +458,7 @@ namespace Visor3D.Services
           <div class=""val"" id=""val-host"">P2P Host</div>
         </div>
         <div class=""info-box"">
-          <div class=""label""> Compartir WebNodo — en LucIA DAO elige tu nick y conexión</div>
+          <div class=""label""> Invitación para entrar en la sesión de Lucía</div>
           <div class=""val"" id=""link-p2p"">{{TUNNEL_URL}}</div>
         </div>
       </div>
@@ -474,18 +474,41 @@ namespace Visor3D.Services
         btn.innerHTML='OK ¡Copiado!';setTimeout(()=>{{btn.innerHTML=orig;}},2500);
       }}).catch(()=>alert('Enlace: '+url));
     }}
+    const enlaceActual=new URL(window.location.href);
+    const raizSesion=enlaceActual.searchParams.get('host')||enlaceActual.origin;
+    const tokenSesion=enlaceActual.searchParams.get('invitacion');
+    function enlaceApp(){{
+      if(!tokenSesion)return '';
+      const app=new URL('woldvirtual://join');
+      app.searchParams.set('host',raizSesion);app.searchParams.set('invitacion',tokenSesion);
+      return app.toString();
+    }}
     document.getElementById('link-p2p').innerText=window.location.href;
+    if(tokenSesion){{
+      const boton=document.createElement('a');boton.className='btn-download-hero';
+      boton.href=enlaceApp();boton.innerText='Entrar en el mundo con Lucía';
+      document.querySelector('.download-card').appendChild(boton);
+    }}
     fetch('/api/info?token='+WT).then(r=>r.json()).then(d=>{{
       if(d.disponible){{
         document.getElementById('lbl-descarga').innerText=`Descargar ${{d.nombre}} (${{d.tamano_mb}} MB)`;
         document.getElementById('btn-descarga').href=d.url_descarga;
       }}
     }}).catch(()=>{{}});
-    fetch('/api/p2p-status?token='+WT).then(r=>r.json()).then(d=>{{
-      // Si la página se abrió desde un enlace de invitación (?host=...&invitacion=...)
-      // se conserva tal cual: es el enlace que hay que reenviar.
-      if(!window.location.search && d.online && d.tunnel_url)
-        document.getElementById('link-p2p').innerText=d.tunnel_url;
+    const parametros=new URLSearchParams(window.location.search);parametros.set('token',WT);
+    fetch('/api/p2p-status?'+parametros.toString()).then(r=>r.json()).then(d=>{{
+      // El enlace compartible usa este portal como puente WebSocket y apunta
+      // al anfitrión raíz dentro de host=.
+      if(d.online && d.invitacion_url){{
+        document.getElementById('link-p2p').innerText=d.invitacion_url;
+        const btn=document.createElement('a');btn.className='btn-download-hero';
+        const url=new URL(d.invitacion_url);
+        const app=new URL('woldvirtual://join');
+        app.searchParams.set('host',url.searchParams.get('host')||url.origin);
+        app.searchParams.set('invitacion',url.searchParams.get('invitacion'));
+        btn.href=app.toString();btn.innerText='Entrar en el mundo con Lucía';
+        document.querySelector('.download-card').appendChild(btn);
+      }}
     }}).catch(()=>{{}});
   </script>
 </body>
@@ -974,10 +997,16 @@ namespace Visor3D.Services
                 else if (path == "/api/p2p-status")
                 {
                     var tunnel = string.IsNullOrWhiteSpace(_publicTunnelUrl) ? "" : _publicTunnelUrl;
+                    string? hostRaiz = req.QueryString["host"];
+                    string? invitacionRecibida = req.QueryString["invitacion"];
+                    string invitacion = EsTokenInvitacion(invitacionRecibida)
+                        ? invitacionRecibida!
+                        : TokenInvitacion;
                     var payload = new
                     {
                         online = !string.IsNullOrWhiteSpace(tunnel),
                         tunnel_url = tunnel,
+                        invitacion_url = ConstruirEnlaceInvitacion(tunnel, hostRaiz, invitacion),
                         timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
                     };
                     var bytes = JsonSerializer.SerializeToUtf8Bytes(payload);
@@ -1003,6 +1032,34 @@ namespace Visor3D.Services
                 }
                 try { ctx.Response.OutputStream.Close(); } catch { }
             }
+        }
+
+        private static bool EsTokenInvitacion(string? token)
+        {
+            if (token == null || token.Length != 32) return false;
+            foreach (char c in token)
+            {
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
+            }
+            return true;
+        }
+
+        private static string ConstruirEnlaceInvitacion(string tunnel, string? hostRaiz, string token)
+        {
+            if (string.IsNullOrWhiteSpace(tunnel)) return "";
+            var enlace = new StringBuilder(tunnel.TrimEnd('/', '?', '&'));
+            char separador = '?';
+            if (Uri.TryCreate(hostRaiz, UriKind.Absolute, out var hostUri) &&
+                (hostUri.Scheme == Uri.UriSchemeHttp || hostUri.Scheme == Uri.UriSchemeHttps) &&
+                !string.Equals(hostUri.GetLeftPart(UriPartial.Path).TrimEnd('/'),
+                    tunnel.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+            {
+                enlace.Append(separador).Append("host=")
+                    .Append(Uri.EscapeDataString(hostUri.GetLeftPart(UriPartial.Path).TrimEnd('/')));
+                separador = '&';
+            }
+            enlace.Append(separador).Append("invitacion=").Append(Uri.EscapeDataString(token));
+            return enlace.ToString();
         }
 
         /// <summary>

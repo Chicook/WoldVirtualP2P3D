@@ -66,7 +66,7 @@ try {
     if (-not $SkipLucia) {
         $luciaDir = Join-Path $Staging "lucia"
         $mapas = @(
-            @{ Origen = "STM_IA\modelosIAlocal";  Destino = "IALOCAL" },
+            @{ Origen = "STM_IA\STM_Informacion\modelosIAlocal\IALOCAL"; Destino = "IALOCAL" },
             @{ Origen = "LC_STM\seq2seq";         Destino = "seq2seq" },
             @{ Origen = "LC_STM\red_neuronal";    Destino = "red_neuronal" },
             @{ Origen = "STM_BKCH";               Destino = "STM_BKCH" },

@@ -28,6 +28,11 @@ Visor autónomo **C# / WPF (.NET 8)** que embebe **Godot 4.7.2** y el mundo 3D, 
 |:---:|:---:|:---:|
 | **Construcción** · pincel Playa | **Prims y edición** · cubo, esfera, cilindro, cono y toro | **Isla ajena** · solo lectura |
 
+Nuevo canal de Telegram: https://t.me/WoldVirtualP2P3D
+
+<img width="814" height="878" alt="Screenshot_2026-11-22-02-53-00-313-edit_org telegram messenger" src="https://github.com/user-attachments/assets/64b8cea3-921d-4526-8c4b-7e070a9227fd" />
+
+
 > **Fase actual: prueba de conexión P2P 3D (v2.8.1, 2026-11-10).** El objetivo es validar que varias personas se encuentren en el mundo, elijan avatar, lo personalicen y compartan sesión por túnel o LAN. **No es todavía un metaverso completo:** no hay economía ni blockchain, y LucIA no está integrada. La serie **2.6.x** consolidó chat de texto, voz y webcam, amigos, perfil persistente por PC, identidad con SMTPLC y actualizador OTA con verificación SHA-256. La **2.7.0** rehízo el selector de avatares (ratón, rueda, teclado), añadió siete *shape keys* analíticas y compartió las animaciones del avatar principal con las 24 plazas. La **2.7.1** trajo la construcción modular. La **2.7.2** reempaquetó el mundo a **1K** (PCK de 114,6 MB, −89 %). La **2.7.3** respeta el avatar elegido y retira las islas fantasma. La **2.7.4** arregló el **404 del portal en Linux** y publicó el visor nativo para Linux. La **2.7.8** añade el **subsistema defensivo `STM_DEF`** (escaneo estático e historial, entropía de Shannon, integridad HMAC, cuarentena firmada, arranque *fail-closed* y firma Ed25519) y retira el vector R-01.b. La **2.8.1** introduce el **empaquetado volátil**: el mundo 3D, los modelos de Lucía y la configuración viajan dentro de un único `.zip` embebido en el `.exe`, y la configuración de cuenta/sesión se carga **solo en RAM** (ver [§11.1](#111-empaquetado-vol%C3%A1til-v281)). La sincronización entre dos máquinas sigue **sin prueba real**. Todo lo demás está en la hoja de ruta como **Planificado** (ver [§3](#3-visi%C3%B3n-del-metaverso-alcance-planificado)).
 
 ## Índice

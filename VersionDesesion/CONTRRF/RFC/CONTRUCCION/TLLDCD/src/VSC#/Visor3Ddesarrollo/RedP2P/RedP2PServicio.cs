@@ -60,6 +60,9 @@ namespace Visor3D.RedP2P
             await Tunel.IniciarAsync().ConfigureAwait(false);
         }
 
+        /// <summary>Reinicia solo el túnel público y deja el nodo local atendiendo.</summary>
+        public Task ReiniciarTunelAsync() => Tunel.ReiniciarAsync();
+
         /// <summary>
         /// Si el usuario pegó la URL de un amigo, intenta hacer ping y luego anuncio.
         /// </summary>

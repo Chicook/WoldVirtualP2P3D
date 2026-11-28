@@ -114,6 +114,23 @@ namespace Visor3D.RedP2P
             return Task.CompletedTask;
         }
 
+        /// <summary>Reinicia el administrador del túnel auxiliar y espera el cierre del bucle anterior.</summary>
+        public async Task ReiniciarAsync()
+        {
+            Task? bucleAnterior;
+            lock (_sync) bucleAnterior = _bucle;
+            Detener();
+
+            if (bucleAnterior != null)
+            {
+                try { await bucleAnterior.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false); }
+                catch (TimeoutException) { }
+                catch (OperationCanceledException) { }
+            }
+
+            await IniciarAsync().ConfigureAwait(false);
+        }
+
         /// <summary>Bucle de vigilancia: intenta mantener un túnel vivo y se reconecta si cae.</summary>
         private async Task BucleAsync(CancellationToken token)
         {
@@ -269,7 +286,7 @@ namespace Visor3D.RedP2P
             var ssh = CandidatosSsh;
 
             if (preferencia.Equals("cloudflare", StringComparison.OrdinalIgnoreCase))
-                return new[] { cloudflare }.Concat(ssh).ToArray();
+                return new[] { cloudflare };
             if (preferencia.Equals("ssh", StringComparison.OrdinalIgnoreCase))
                 return ssh;
             return (EncontrarCloudflared() is not null ? new[] { cloudflare } : Array.Empty<(string, string, string)>())

@@ -51,16 +51,22 @@ namespace Visor3D
             BtnConstruir.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         }
 
-        private void BtnSecciones_WebNodo_Click(object sender, RoutedEventArgs e)
+        private async void BtnSecciones_ReiniciarConexion_Click(object sender, RoutedEventArgs e)
         {
             PopupSecciones.IsOpen = false;
-            BtnWebNodo.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await ReiniciarConexionAsync();
         }
 
         private void BtnSecciones_Chat_Click(object sender, RoutedEventArgs e)
         {
             PopupSecciones.IsOpen = false;
-            BtnChat.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            AlternarPanelChat();
+        }
+
+        private void BtnSecciones_Log_Click(object sender, RoutedEventArgs e)
+        {
+            PopupSecciones.IsOpen = false;
+            OnDiagnosticoClicked(sender, e);
         }
     }
 }

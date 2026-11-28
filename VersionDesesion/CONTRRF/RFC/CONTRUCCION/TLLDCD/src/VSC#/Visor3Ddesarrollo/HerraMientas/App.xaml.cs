@@ -1,5 +1,8 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
+using Microsoft.Win32;
 using Visor3D.Chat;
 using Visor3D.Seguridad.SesionUnica;
 using Visor3D.Services;
@@ -9,8 +12,17 @@ namespace Visor3D
     {
         // WebNodo embebido — accesible globalmente para que MainWindow sincronice la URL del túnel P2P
         public static WebNodoService WebNodo { get; } = new WebNodoService();
+        public App()
+        {
+            DispatcherUnhandledException += (_, e) =>
+                VisorLog.Error("[Inicio] Excepción no controlada en el dispatcher.", e.Exception);
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+                VisorLog.Error($"[Inicio] Excepción no controlada del proceso (terminando={e.IsTerminating}).", e.ExceptionObject as Exception);
+        }
+
         private void OnStartup(object sender, StartupEventArgs e)
         {
+            VisorLog.Info($"[Inicio] OnStartup; ejecutable={Environment.ProcessPath ?? "desconocido"}; argumentos={string.Join(" ", e.Args)}.");
             if (Array.Exists(e.Args, a => a.Equals("--seguridad-selftest", StringComparison.OrdinalIgnoreCase)))
             {
                 Environment.Exit(SeguridadSelfTest.Run());
@@ -115,11 +127,14 @@ namespace Visor3D
             bool reiniciarCuenta = Array.Exists(e.Args,
                 a => a.Equals("--reset-cuenta", StringComparison.OrdinalIgnoreCase));
 
+            RegistrarProtocoloInvitacion();
+
             // ── UNA SOLA VENTANA ────────────────────────────────────────────────
             // Abrir el visor otra vez debe mostrar la sesión que ya está en
             // marcha (avatar incluido), no un segundo inicio de sesión.
             if (!InstanciaUnica.EsPrimeraInstancia())
             {
+                VisorLog.Warn("[Inicio] Ya existe una instancia; se enfoca la ventana activa y se cierra este proceso.");
                 if (reiniciarCuenta)
                 {
                     MessageBox.Show(
@@ -128,12 +143,16 @@ namespace Visor3D
                 }
                 else
                 {
+                    string? enlaceInvitacion = ParseCommandLineArgs(e.Args);
+                    if (EsInvitacionValida(enlaceInvitacion) && enlaceInvitacion != null)
+                        InstanciaUnica.EnviarInvitacionAInstanciaExistente(enlaceInvitacion);
                     InstanciaUnica.EnfocarInstanciaExistente();
                 }
 
                 Shutdown(0);
                 return;
             }
+            VisorLog.Info("[Inicio] Instancia única adquirida.");
 
             // ── PUERTA DE ARRANQUE STM_DEF (fail-closed) ────────────────────────
             // Antes de abrir el visor se corre el hook del subsistema defensivo
@@ -143,6 +162,7 @@ namespace Visor3D
             // comprobar; aqui no se abre ventana sin comprobar antes).
             if (Visor3D.Seguridad.ArranqueSeguro.Bloquea())
             {
+                VisorLog.Error("[Inicio] STM_DEF bloqueó el arranque.");
                 MessageBox.Show(
                     "El analisis de seguridad (STM_DEF) ha detenido el arranque.\n" +
                     "Revisa los registros en %LOCALAPPDATA%\\WoldVirtualP2P3D\\logs.",
@@ -150,6 +170,7 @@ namespace Visor3D
                 Shutdown(1);
                 return;
             }
+            VisorLog.Info("[Inicio] STM_DEF permitió continuar.");
 
             // ── PERSISTENCIA DE USUARIO ─────────────────────────────────────────
             // El perfil vive fuera de runtime\<versión>, así que una actualización
@@ -210,10 +231,12 @@ namespace Visor3D
             // motor nuevo no registre la isla (el avatar cae al vacío). Se termina
             // antes de tocar el runtime.
             GodotHwndHost.TerminarMotoresHuerfanos(AppExtractor.GodotExePath);
+            VisorLog.Info("[Inicio] Limpieza de motores Godot terminada.");
 
             // Recolector de runtimes antiguos: sólo purga si el arranque anterior
             // terminó bien, y conserva la versión vigente y la última buena.
             RuntimeCleaner.EjecutarAlArrancar();
+            VisorLog.Info("[Inicio] Limpieza de runtime terminada.");
 
             // Extraer Godot + mundo al LocalAppData si no está ya. La build que
             // embebe el mundo completo no puede arrancar sin él: abrir un PCK de
@@ -229,6 +252,7 @@ namespace Visor3D
                 Shutdown(1);
                 return;
             }
+            VisorLog.Info($"[Inicio] Preparación de recursos terminada; runtime={AppExtractor.RuntimeDir}.");
 
             // Montar el paquete volátil (mundo + Lucía + config) desde el .exe.
             // Si el .zip no está embebido (build de desarrollo), se cae al flujo
@@ -250,6 +274,61 @@ namespace Visor3D
 
             var mainWindow = new MainWindow(initialConnectionUrl, estadoGlobal.FaltaTodo);
             mainWindow.Show();
+            VisorLog.Info("[Inicio] MainWindow.Show ejecutado.");
+            InstanciaUnica.EscucharInvitaciones(enlace =>
+                mainWindow.Dispatcher.BeginInvoke(new Action(() => mainWindow.AbrirInvitacion(enlace))));
+        }
+
+        private static void RegistrarProtocoloInvitacion()
+        {
+            try
+            {
+                string ejecutable = Environment.ProcessPath
+                    ?? Process.GetCurrentProcess().MainModule?.FileName
+                    ?? "";
+                if (string.IsNullOrWhiteSpace(ejecutable) ||
+                    !Path.GetExtension(ejecutable).Equals(".exe", StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                const string rutaProtocolo = @"Software\Classes\woldvirtual";
+                using (var comandoExistente = Registry.CurrentUser.OpenSubKey(rutaProtocolo + @"\shell\open\command"))
+                {
+                    string? valor = comandoExistente?.GetValue(null) as string;
+                    if (!string.IsNullOrWhiteSpace(valor) &&
+                        !valor.Contains(ejecutable, StringComparison.OrdinalIgnoreCase))
+                        return; // No reemplazar el manejador de otro programa.
+                }
+
+                using var protocolo = Registry.CurrentUser.CreateSubKey(rutaProtocolo);
+                protocolo.SetValue(null, "URL: Wold Virtual invitation");
+                protocolo.SetValue("URL Protocol", "");
+                using var comando = protocolo.CreateSubKey(@"shell\open\command");
+                comando.SetValue(null, $"\"{ejecutable}\" \"%1\"");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Invitaciones] No se registró woldvirtual://: {ex.Message}");
+            }
+        }
+
+        private static bool EsInvitacionValida(string? enlace)
+        {
+            if (string.IsNullOrWhiteSpace(enlace)) return false;
+            string limpia = enlace.Trim().Trim('"', '\'');
+            if (!Uri.TryCreate(limpia, UriKind.Absolute, out var enlaceUri)) return false;
+            string? token = null;
+            foreach (string parte in enlaceUri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                int igual = parte.IndexOf('=');
+                if (igual <= 0 || !Uri.UnescapeDataString(parte[..igual])
+                        .Equals("invitacion", StringComparison.OrdinalIgnoreCase)) continue;
+                token = Uri.UnescapeDataString(parte[(igual + 1)..]);
+                break;
+            }
+            return token != null && token.Length == 32 &&
+                Array.TrueForAll(token.ToCharArray(), c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) &&
+                ((enlaceUri.Scheme == Uri.UriSchemeHttp || enlaceUri.Scheme == Uri.UriSchemeHttps) ||
+                 enlaceUri.Scheme.Equals("woldvirtual", StringComparison.OrdinalIgnoreCase));
         }
 
         private static string? ParseCommandLineArgs(string[]? args)
