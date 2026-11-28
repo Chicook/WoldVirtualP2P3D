@@ -20,9 +20,6 @@ Codigos de salida: 0 = limpio, 1 = hallazgos/alertas, 2 = error de uso.
 """
 from __future__ import annotations
 
-import utils.net
-import utils.clients
-import utils.http_session
 import utils.session
 import argparse
 import json

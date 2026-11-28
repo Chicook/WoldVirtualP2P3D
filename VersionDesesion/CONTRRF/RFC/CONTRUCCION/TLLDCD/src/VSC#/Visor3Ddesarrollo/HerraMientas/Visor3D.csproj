@@ -21,16 +21,16 @@
 
     <NoWarn>$(NoWarn);NU1701</NoWarn>
 
-    <AssemblyName>DAOLCDMWoldVirtualP2P3Dv$(WoldVersion)</AssemblyName>
-    <Product>DAOLCDMWoldVirtualP2P3Dv$(WoldVersion)</Product>
+    <AssemblyName>DAOLCDMWoldVirtualP2P3Dv2.9.6</AssemblyName>
+    <Product>DAOLCDMWoldVirtualP2P3Dv2.9.6</Product>
     <RootNamespace>Visor3D</RootNamespace>
 
-    <Version>$(WoldVersion)</Version>
-    <AssemblyVersion>$(WoldVersionFull)</AssemblyVersion>
-    <FileVersion>$(WoldVersionFull)</FileVersion>
+    <Version>2.9.6</Version>
+    <AssemblyVersion>2.9.6.0</AssemblyVersion>
+    <FileVersion>2.9.6.0</FileVersion>
 
-    <Title>DAOLCDMWoldVirtualP2P3Dv$(WoldVersion)</Title>
-    <Description>Visor 3D — DAOLCDMWoldVirtualP2P3Dv$(WoldVersion) (DAO 3D con runtime de LucIA integrado; túnel efímero y URL visible al arrancar; conexión DAO activa)</Description>
+    <Title>DAOLCDMWoldVirtualP2P3Dv2.9.6</Title>
+    <Description>Visor 3D — DAOLCDMWoldVirtualP2P3Dv2.9.6 (conexión P2P interna en la DAO, menú Secciones con chat y diagnóstico, reconexión del túnel y blockchain local)</Description>
     <LuciaRuntimePath Condition="'$(LuciaRuntimePath)' == ''">$(MSBuildThisFileDirectory)..\..\..\..\..\.dev\rebuild287\lucia_runtime.zip</LuciaRuntimePath>
     <DefineConstants Condition="'$(GodotSourcePreview)' == 'true'">$(DefineConstants);GODOT_SOURCE_PREVIEW</DefineConstants>
   </PropertyGroup>
@@ -64,6 +64,26 @@
     <Compile Include="..\STM_actualizar\**\*.cs" Link="STM_actualizar\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Remove="..\**\bin\**\*.cs" />
     <Compile Remove="..\**\obj\**\*.cs" />
+  </ItemGroup>
+
+  <!-- El servicio blockchain Python debe viajar junto al visor publicado para
+       que no dependa de que el checkout del repositorio siga instalado. -->
+  <ItemGroup>
+    <Content Include="..\..\..\STM_BKCH\stm_bkch1\**\*">
+      <Link>STM_BKCH\stm_bkch1\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\..\STM_BKCH\__init__.py">
+      <Link>STM_BKCH\__init__.py</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\..\STM_CH\**\*.py">
+      <Link>STM_CH\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
   <!-- Excluir subcarpetas que son proyectos hermanos o carpetas de descargas -->

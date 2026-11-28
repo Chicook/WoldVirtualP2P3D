@@ -44,8 +44,10 @@ func habilitado() -> bool:
 func solicitar(metodo: String, ruta: String, datos: Dictionary = {}, sonda: Node = null) -> Dictionary:
 	if not habilitado():
 		return {"ok": false, "status": 503, "body": {"error": "Servicio modular desactivado."}}
-	if multiplayer.multiplayer_peer != null and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
-		if multiplayer.is_server():
+	var api_multijugador: MultiplayerAPI = get_tree().get_multiplayer() if is_inside_tree() else null
+	var peer: MultiplayerPeer = api_multijugador.multiplayer_peer if api_multijugador != null else null
+	if peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		if api_multijugador.is_server():
 			return await solicitud_local(metodo, ruta, datos)
 		var transporte := sonda if sonda != null else _sonda_actual()
 		if transporte != null and transporte.has_method("solicitar_modular"):
@@ -73,6 +75,8 @@ func solicitud_local(metodo: String, ruta: String, datos: Dictionary = {}) -> Di
 	var ruta_respuesta := _raiz_ipc.path_join("responses").path_join(id + ".res")
 	var limite := Time.get_ticks_msec() + TIEMPO_ESPERA_MS
 	while Time.get_ticks_msec() < limite:
+		if not is_inside_tree() or get_tree() == null:
+			return {"ok": false, "status": 503, "body": {"error": "El servicio DAO todavía no está conectado al árbol de escena."}}
 		if FileAccess.file_exists(ruta_respuesta):
 			var respuesta: Variant = JSON.parse_string(FileAccess.get_file_as_string(ruta_respuesta))
 			DirAccess.remove_absolute(ruta_respuesta)
@@ -80,7 +84,10 @@ func solicitud_local(metodo: String, ruta: String, datos: Dictionary = {}) -> Di
 				return {"ok": false, "status": 502, "body": {"error": "Respuesta IPC mal formada."}}
 			var estado := int(respuesta.get("status", 500))
 			return {"ok": estado >= 200 and estado < 300, "status": estado, "body": respuesta.get("body", {})}
-		await get_tree().create_timer(0.05).timeout
+		var arbol := get_tree()
+		if arbol == null:
+			return {"ok": false, "status": 503, "body": {"error": "El servicio DAO perdió el árbol de escena durante la solicitud."}}
+		await arbol.create_timer(0.05).timeout
 	return {"ok": false, "status": 504, "body": {"error": "El servidor modular DAO no respondió a tiempo."}}
 
 

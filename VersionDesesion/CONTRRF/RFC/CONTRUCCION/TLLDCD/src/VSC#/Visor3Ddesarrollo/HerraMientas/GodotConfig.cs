@@ -136,8 +136,11 @@ namespace Visor3D
         /// <summary>Python autónomo de LucIA o, en desarrollo, el del entorno/repositorio.</summary>
         public static string? GetPythonExePath()
         {
-            if (AppExtractor.EmbebeLucia)
-                return File.Exists(AppExtractor.LuciaPythonPath) ? AppExtractor.LuciaPythonPath : null;
+            // La distribución prioriza su runtime embebido. En una vista previa
+            // desde el checkout puede no existir aún; en ese caso continuar con
+            // WVP_PYTHON y las rutas de desarrollo conocidas.
+            if (AppExtractor.EmbebeLucia && File.Exists(AppExtractor.LuciaPythonPath))
+                return AppExtractor.LuciaPythonPath;
 
             string? envPython = Environment.GetEnvironmentVariable("WVP_PYTHON");
             if (!string.IsNullOrWhiteSpace(envPython) && File.Exists(envPython)) return envPython;
