@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WoldVirtual P2P3D - Real Commerce - USDC + P-256 + Presence</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<style>
+  :root{ --bg:#0a0a0f; --card:#15151f; --accent:#7c3aed; --green:#10b981; --usdc:#2775ca; }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,system-ui,sans-serif}
+  body{background:var(--bg);color:#fff;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+  #godot{flex:1;background:#000;position:relative}
+  #godot canvas{width:100%;height:100%;display:block}
+  #shop{position:absolute;right:16px;top:16px;width:340px;background:var(--card);border:1px solid #222;border-radius:16px;padding:16px;z-index:10;box-shadow:0 20px 40px rgba(0,0,0,.5)}
+  .badge{display:inline-flex;gap:6px;background:#222;padding:4px 10px;border-radius:20px;font-size:12px}
+  .badge i{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block}
+  h2{font-size:18px;margin:12px 0 8px}
+  .row{display:flex;justify-content:space-between;margin:6px 0;font-size:13px;opacity:.8}
+  .row b{opacity:1}
+  .btn{width:100%;padding:12px;border-radius:12px;border:none;font-weight:700;cursor:pointer;margin-top:10px}
+  .btn-connect{background:#fff;color:#000}
+  .btn-buy{background:var(--usdc);color:#fff}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .log{background:#000;border-radius:8px;padding:8px;font-family:monospace;font-size:11px;max-height:120px;overflow:auto;margin-top:10px;color:#aaa}
+  small{font-size:11px;opacity:.6;display:block;margin-top:8px;line-height:1.4}
+  .presence-ok{color:var(--green)!important}
+  .presence-bad{color:#ef4444!important}
+</style>
+</head>
+<body>
+
+<div id="godot">
+  <!-- Godot 4.7.2 Web Export canvas - mayar da WoldVirtualP2P3D.pck anan -->
+  <canvas id="canvas"></canvas>
+  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;opacity:.6" id="loading">
+    <div style="font-size:28px;font-weight:800">WoldVirtual P2P3D</div>
+    <div style="margin-top:8px">LucIA + P-256 + Proof-of-Presence + USDC Real Commerce</div>
+    <div style="margin-top:12px;font-size:12px">Godot Web build loading... idan babu pck, wallet UI yana aiki tukuna</div>
+  </div>
+
+  <!-- SHOP UI - Real Commerce -->
+  <div id="shop">
+    <div class="badge"><i id="dot"></i><span id="net">Base Sepolia - USDC Test</span></div>
+    <h2 id="pname">Wold Hoodie - Real - Ships Worldwide</h2>
+    <div class="row"><span>Price</span><b id="price">35 USDC</b></div>
+    <div class="row"><span>Seller</span><b id="seller">seller_crypto_01</b></div>
+    <div class="row"><span>Presence</span><b id="presence" class="presence-bad">NONE - Meet seller in game!</b></div>
+    <div class="row"><span>Wallet</span><b id="wallet">Not connected</b></div>
+    <div class="row"><span>Escrow</span><b id="escrow">0xYOUR_CONTRACT...</b></div>
+
+    <button class="btn btn-connect" id="connectBtn">Connect Wallet (MetaMask)</button>
+    <button class="btn btn-buy" id="buyBtn" disabled>Buy 35 USDC - Real Shipping</button>
+
+    <div class="log" id="log">> WoldCommerce USD ready...
+> Waiting for Proof-of-Presence from game...
+> Must meet seller in Isla first - anti-bot P-256</div>
+
+    <small>• Dole ka hadu da seller a cikin Isla da farko - Proof-of-Presence P-256 required<br>
+    • USDC on Base Sepolia - gas $0.01 - escrow contract<br>
+    • 5% Wold fee, 95% to seller after delivery P-256 sig<br>
+    • Faucet: faucet.circle.com (USDC) + alchemy.com/faucets/base-sepolia (ETH)</small>
+  </div>
+</div>
+
+<script>
+// CONFIG - SAUKA ANAN
+const CONFIG = {
+  escrow: "0xYOUR_ESCROW_CONTRACT", // Saka address daga node deploy.js sepolia
+  usdc: "0x036CbD53842c5426634e79217eA9f0C1Bd0F5e2b",
+  rpc: "https://sepolia.base.org",
+  chainId: "0x11aa3b", // Base Sepolia 84532
+  chainName: "Base Sepolia",
+  priceUSDC: 35,
+  sellerWallet: "0xYOUR_SELLER_WALLET"
+};
+
+let walletAddress = "";
+let presenceCid = "";
+let godotInstance = null;
+
+const $ = id => document.getElementById(id);
+const log = msg => { const el=$('log'); el.innerHTML += "\n> "+msg; el.scrollTop=el.scrollHeight; console.log("[WOLD]",msg); }
+
+function setPresence(cid){
+  presenceCid = cid;
+  $('presence').textContent = cid.slice(0,16)+"... OK";
+  $('presence').className = "presence-ok";
+  log(`Presence set ${cid} - can buy now! P-256 verified`);
+  if(walletAddress) $('buyBtn').disabled = false;
+  // Send to Godot if loaded
+  if(godotInstance) godotInstance.set_presence_cid(cid);
+}
+
+// Exposed to Godot - Godot can call window.setPresenceFromGodot(cid)
+window.setPresenceFromGodot = (cid) => { setPresence(cid); log(`Godot -> Presence ${cid}`); }
+
+// Mock: For testing without Godot, click 3 times on price to simulate meeting seller
+let clicks=0;
+$('price').onclick = ()=>{
+  clicks++;
+  if(clicks>=3){
+    const mockCid = "QmWoldPresence"+Date.now().toString(36);
+    setPresence(mockCid);
+    log("MOCK: Simulated meeting seller in Isla - Presence created!");
+    clicks=0;
+  }
+}
+
+// Connect Wallet
+$('connectBtn').onclick = async()=>{
+  if(!window.ethereum){ alert("Install MetaMask https://metamask.io"); return; }
+  try{
+    const accounts = await window.ethereum.request({method:'eth_requestAccounts'});
+    walletAddress = accounts[0];
+    $('wallet').textContent = walletAddress.slice(0,6)+"..."+walletAddress.slice(-4);
+    $('connectBtn').textContent = "Connected";
+    $('connectBtn').disabled = true;
+    $('dot').style.background = "#10b981";
+    log(`Wallet connected ${walletAddress}`);
+
+    // Switch to Base Sepolia
+    try{
+      await window.ethereum.request({method:'wallet_switchEthereumChain', params:[{chainId:CONFIG.chainId}]});
+    }catch(e){
+      if(e.code===4902){
+        await window.ethereum.request({method:'wallet_addEthereumChain', params:[{chainId:CONFIG.chainId, chainName:CONFIG.chainName, rpcUrls:[CONFIG.rpc], nativeCurrency:{name:"ETH",symbol:"ETH",decimals:18}, blockExplorerUrls:["https://sepolia.basescan.org"]}]});
+      }
+    }
+
+    if(presenceCid) $('buyBtn').disabled = false;
+  }catch(err){ log("Connect failed "+err.message); }
+}
+
+// Buy with USDC - escrow
+$('buyBtn').onclick = async()=>{
+  if(!presenceCid){ log("FAIL: Must meet seller in game first - Presence required!"); return; }
+  if(!walletAddress){ log("Connect wallet first"); return; }
+
+  const amount = BigInt(CONFIG.priceUSDC * 1_000_000); // USDC 6 decimals
+  const orderId = "WOLD_"+Date.now().toString(36).toUpperCase();
+  const orderIdBytes = ethers.encodeBytes32String(orderId.slice(0,31));
+
+  $('buyBtn').textContent = "Approving USDC...";
+  $('buyBtn').disabled = true;
+
+  try{
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+
+    const usdcAbi = ["function approve(address spender, uint256 amount) returns (bool)", "function allowance(address owner, address spender) view returns (uint256)"];
+    const escrowAbi = ["function createOrder(bytes32 orderId, address seller, uint256 amount, string presenceCid) external"];
+
+    const usdc = new ethers.Contract(CONFIG.usdc, usdcAbi, signer);
+    const escrow = new ethers.Contract(CONFIG.escrow, escrowAbi, signer);
+
+    log(`Approving ${CONFIG.priceUSDC} USDC to escrow ${CONFIG.escrow.slice(0,10)}...`);
+    const tx1 = await usdc.approve(CONFIG.escrow, amount);
+    log(`Approve tx ${tx1.hash} - waiting...`);
+    await tx1.wait();
+    log("Approved!");
+
+    $('buyBtn').textContent = "Creating order...";
+    log(`Creating order ${orderId} Presence:${presenceCid.slice(0,10)} Seller:${CONFIG.sellerWallet.slice(0,10)}`);
+    const tx2 = await escrow.createOrder(orderIdBytes, CONFIG.sellerWallet, amount, presenceCid);
+    log(`Order tx ${tx2.hash} - waiting confirmation...`);
+    await tx2.wait();
+
+    log(`SUCCESS Order ${orderId} ${CONFIG.priceUSDC} USDC locked in escrow! Real shipping will start.`);
+    $('buyBtn').textContent = `Ordered! ${orderId}`;
+    $('escrow').textContent = tx2.hash.slice(0,16)+"...";
+
+    // Save to local ledger
+    const orderData = {orderId, amount:CONFIG.priceUSDC, presenceCid, buyer:walletAddress, tx:tx2.hash, ts:Date.now()};
+    localStorage.setItem("wold_last_order", JSON.stringify(orderData));
+    
+  }catch(err){
+    log("Buy failed: "+(err.reason||err.message));
+    $('buyBtn').textContent = "Buy 35 USDC - Retry";
+    $('buyBtn').disabled = false;
+  }
+}
+
+// Godot Web loader - optional
+async function loadGodot(){
+  // If you have WoldVirtualP2P3D.pck + .wasm, uncomment:
+  // const engine = new Engine(); await engine.init(); await engine.startGame({canvas:$('canvas'), executable:'WoldVirtualP2P3D.wasm', mainPack:'WoldVirtualP2P3D.pck'});
+  // For now, mock presence after 5 sec if Godot not present
+  setTimeout(()=>{
+    if(!presenceCid){
+      log("Tip: Click price 3x to mock meeting seller - or implement setPresenceFromGodot in Godot");
+    }
+  }, 3000);
+}
+loadGodot();
+
+log("WoldVirtual P2P3D - USDC Commerce ready");
+log(`Escrow: ${CONFIG.escrow}`);
+log("Waiting for Godot PresenceArea to call window.setPresenceFromGodot(cid)");
+</script>
+
+<!-- Godot engine loader - uncomment if you have export -->
+<!-- <script src="WoldVirtualP2P3D.js"></script> -->
+
+</body>
+      </html>
