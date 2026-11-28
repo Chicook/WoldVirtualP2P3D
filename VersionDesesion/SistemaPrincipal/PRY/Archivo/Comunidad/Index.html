@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WoldVirtualP2P3D</title>
+<style>
+:root{--bg:#070b14;--panel:#0f1729;--ink:#e6edf7;--mut:#8b9bb4;--gold:#f0b429;--cyan:#22d3ee;--line:#1f2b45;--ok:#4ade80;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#eef2f8;--panel:#fff;--ink:#101828;--mut:#52607a;--gold:#a86b00;--cyan:#0e7490;--line:#d3dbe8;--ok:#15803d}}
+:root[data-theme="dark"]{--bg:#070b14;--panel:#0f1729;--ink:#e6edf7;--mut:#8b9bb4;--gold:#f0b429;--cyan:#22d3ee;--line:#1f2b45;--ok:#4ade80}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,Arial,sans-serif}
+header{padding:18px 16px 8px;max-width:1100px;margin:0 auto}
+h1{font-size:clamp(26px,6vw,40px);letter-spacing:.5px;color:var(--gold)}
+header p{color:var(--mut);font-size:14px}
+main{max-width:1100px;margin:0 auto;padding:8px 16px 40px;display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:900px){main{grid-template-columns:1.3fr 1fr}}
+#stage{position:relative;height:min(62vh,520px);border-radius:18px;overflow:hidden;border:2px solid var(--gold);background:radial-gradient(circle at 50% 30%,#12304a,#070b14);touch-action:none}
+#stage canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;left:12px;bottom:10px;font-size:13px;color:#cfe;text-shadow:0 1px 3px #000}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.steps{display:grid;gap:10px}
+.step{border:1px solid var(--line);border-radius:12px;padding:12px}
+.step h3{font-size:16px;margin-bottom:2px}
+.step p{color:var(--mut);font-size:13px;margin-bottom:8px}
+.step[data-done="1"]{border-color:var(--ok)}
+button,input{font:inherit}
+button{background:var(--gold);color:#1a1200;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;min-height:44px}
+button:disabled{opacity:.35;cursor:not-allowed}
+button.alt{background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+input{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-bottom:8px;min-height:44px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sw{width:34px;height:34px;border-radius:50%;border:2px solid var(--ink)}
+.out{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--mut);word-break:break-all;margin-top:8px}
+.out a{color:var(--cyan)}
+#logs{grid-column:1/-1;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;max-height:240px;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.l-ok{color:var(--ok)}.l-warn{color:var(--gold)}.l-info{color:var(--cyan)}
+#final{font-weight:700;color:var(--ok);margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+<h1>WoldVirtualP2P3D</h1>
+<p>Isla 3D en relieve. Recepción, alta, ZIP real, carrusel, ledger con hash SHA-256 y portal.</p>
+</header>
+<main>
+<div id="stage"><div id="hud">Arrastra para girar. Rueda o pellizco para acercar.</div></div>
+<div class="panel steps">
+<div class="step" id="s1"><h3>1. Recepción</h3><p>Crea la bandera de entrada y abre el ledger.</p><button id="b1">Iniciar recepción</button></div>
+<div class="step" id="s2"><h3>2. Alta y cuenta</h3><p>Genera cuenta.json y lo empaqueta en un .zip real.</p>
+<input id="nm" placeholder="Nombre del viajero" maxlength="24" autocomplete="off"><button id="b2" disabled>Crear cuenta</button><div class="out" id="o2"></div></div>
+<div class="step" id="s3"><h3>3. Carrusel de avatares</h3><p>Elige una de 12 variantes. Se muestra en la isla.</p>
+<div class="row"><button class="alt" id="prev" disabled aria-label="Anterior">‹</button><div class="sw" id="sw"></div><b id="an">-</b><button class="alt" id="next" disabled aria-label="Siguiente">›</button></div>
+<div class="row" style="margin-top:8px"><button id="b3" disabled>Confirmar avatar</button></div><div class="out" id="o3"></div></div>
+<div class="step" id="s4"><h3>4. Registro y portal</h3><p>Registra en el ledger y cruza hacia la isla.</p><button id="b4" disabled>Cruzar portal</button><div class="out" id="o4"></div></div>
+<div class="row"><button class="alt" id="all">Ejecutar todo</button><button class="alt" id="rst">Reiniciar</button></div>
+<div id="final" aria-live="polite"></div>
+</div>
+<div id="logs" aria-live="polite"></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id), enc=new TextEncoder();
+const logs=$('logs');
+function log(m,t='info'){const d=document.createElement('div');d.className='l-'+t;d.textContent='['+new Date().toLocaleTimeString()+'] '+m;logs.appendChild(d);while(logs.children.length>60)logs.removeChild(logs.firstChild);logs.scrollTop=logs.scrollHeight}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- Utilidades reales: SHA-256 y ZIP ---------- */
+async function sha(bytes){const h=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+const CT=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;CT[n]=c>>>0}
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+function makeZip(files){
+  const parts=[],cd=[];let off=0;
+  for(const f of files){
+    const nm=enc.encode(f.name),c=crc32(f.data),n=f.data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,0,true);lh.setUint16(10,0,true);lh.setUint16(12,33,true);
+    lh.setUint32(14,c,true);lh.setUint32(18,n,true);lh.setUint32(22,n,true);lh.setUint16(26,nm.length,true);lh.setUint16(28,0,true);
+    parts.push(new Uint8Array(lh.buffer),nm,f.data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(10,0,true);ch.setUint16(12,0,true);ch.setUint16(14,33,true);
+    ch.setUint32(16,c,true);ch.setUint32(20,n,true);ch.setUint32(24,n,true);ch.setUint16(28,nm.length,true);ch.setUint32(42,off,true);
+    cd.push(new Uint8Array(ch.buffer),nm);
+    off+=30+nm.length+n;
+  }
+  const cdSize=cd.reduce((a,b)=>a+b.length,0);
+  const e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cdSize,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cd,new Uint8Array(e.buffer)],{type:'application/zip'});
+}
+function fileLink(blob,name,label){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.textContent=label||name;return a}
+
+/* ---------- Ledger con cadena de hashes ---------- */
+let mem=[];
+function ledgerLoad(){try{return JSON.parse(localStorage.getItem('wv_ledger')||'[]')}catch(e){return mem}}
+function ledgerSave(l){mem=l;try{localStorage.setItem('wv_ledger',JSON.stringify(l))}catch(e){}}
+async function ledgerAdd(tipo,datos){
+  const l=ledgerLoad(),prev=l.length?l[l.length-1].hash:'0'.repeat(64);
+  const e={i:l.length,tipo,ts:new Date().toISOString(),datos,prev};
+  e.hash=await sha(enc.encode(prev+JSON.stringify([e.i,tipo,e.ts,datos])));
+  l.push(e);ledgerSave(l);return e;
+}
+
+/* ---------- Escena 3D en relieve ---------- */
+const stage=$('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));stage.prepend(renderer.domElement);
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,1,.1,300);
+scene.add(new THREE.HemisphereLight(0xbfe6ff,0x1a2233,.7));
+const sun=new THREE.DirectionalLight(0xfff0c8,1.1);sun.position.set(-30,40,20);scene.add(sun);
+function hs(x,y){const s=Math.sin(x*127.1+y*311.7)*43758.5453;return s-Math.floor(s)}
+function vn(x,y){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);return hs(xi,yi)*(1-u)*(1-v)+hs(xi+1,yi)*u*(1-v)+hs(xi,yi+1)*(1-u)*v+hs(xi+1,yi+1)*u*v}
+function fbm(x,y){let a=1,f=1,s=0;for(let i=0;i<4;i++){s+=vn(x*f,y*f)*a;a/=2;f*=2}return s/1.875}
+function ground(x,z){const r=Math.hypot(x,z)/19,m=Math.max(0,1-Math.pow(r,2.2));let h=m*(fbm(x*.1+3,z*.1+7)*8.5+1.2)-1.4;return Math.round(h/.6)*.6}
+const N=120,geo=new THREE.PlaneGeometry(44,44,N,N);geo.rotateX(-Math.PI/2);
+const pos=geo.attributes.position,col=new Float32Array(pos.count*3),C=new THREE.Color();
+for(let i=0;i<pos.count;i++){
+  const x=pos.getX(i),z=pos.getZ(i),r=Math.hypot(x,z);let h=ground(x,z);
+  if(r>21){h=-6;C.set(0x070b14)}
+  else if(h<0.1)C.set(0x0b5d78);else if(h<.7)C.set(0xe3cd8c);else if(h<3.2)C.setHSL(.3,.5,.3+h*.03);else if(h<5.2)C.set(0x7b7f8a);else C.set(0xf4f7fb);
+  pos.setY(i,h);col.set([C.r,C.g,C.b],i*3);
+}
+geo.setAttribute('color',new THREE.BufferAttribute(col,3));geo.computeVertexNormals();
+scene.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.85,metalness:.05})));
+const water=new THREE.Mesh(new THREE.CylinderGeometry(21,21,.2,64),new THREE.MeshStandardMaterial({color:0x0e7490,transparent:true,opacity:.72,roughness:.2,metalness:.4}));
+water.position.y=-.05;scene.add(water);
+const plinth=new THREE.Mesh(new THREE.CylinderGeometry(21.6,22.4,2.6,64),new THREE.MeshStandardMaterial({color:0xf0b429,metalness:.8,roughness:.3}));
+plinth.position.y=-1.4;scene.add(plinth);
+const portal=new THREE.Mesh(new THREE.TorusGeometry(2.4,.28,16,48),new THREE.MeshStandardMaterial({color:0x22d3ee,emissive:0x0a5566,transparent:true,opacity:.35}));
+const cy=Math.max(0,ground(0,0));portal.position.set(0,cy+2.8,0);scene.add(portal);
+const pl=new THREE.PointLight(0x22d3ee,0,18);pl.position.copy(portal.position);scene.add(pl);
+
+/* ---------- Avatares ---------- */
+const AV=[["Marino","#ef4444"],["Cobalto","#3b82f6"],["Jade","#10b981"],["Ámbar","#f59e0b"],["Violeta","#8b5cf6"],["Coral","#fb7185"],["Menta","#2dd4bf"],["Ocre","#b45309"],["Plata","#cbd5e1"],["Lima","#a3e635"],["Rosa","#ec4899"],["Noche","#334155"]].map((a,i)=>({id:i+1,nombre:a[0],color:a[1],sombrero:["ninguno","cono","caja","esfera"][i%4]}));
+function buildAvatar(v){
+  const g=new THREE.Group(),m=new THREE.MeshStandardMaterial({color:v.color,roughness:.6});
+  const b=new THREE.Mesh(new THREE.CylinderGeometry(.5,.65,1.5,16),m);b.position.y=.75;g.add(b);
+  const h=new THREE.Mesh(new THREE.SphereGeometry(.45,16,12),new THREE.MeshStandardMaterial({color:0xf3d5b5}));h.position.y=1.95;g.add(h);
+  let t=null;
+  if(v.sombrero==="cono")t=new THREE.Mesh(new THREE.ConeGeometry(.4,.7,12),m);
+  if(v.sombrero==="caja")t=new THREE.Mesh(new THREE.BoxGeometry(.8,.35,.8),m);
+  if(v.sombrero==="esfera")t=new THREE.Mesh(new THREE.SphereGeometry(.3,12,8),m);
+  if(t){t.position.y=2.55;g.add(t)}
+  return g;
+}
+let avatar=null,idx=0;const spawn=new THREE.Vector3(-12,0,6);spawn.y=Math.max(0,ground(spawn.x,spawn.z));
+function showAvatar(){if(avatar)scene.remove(avatar);avatar=buildAvatar(AV[idx]);avatar.position.copy(spawn);scene.add(avatar);$('sw').style.background=AV[idx].color;$('an').textContent=AV[idx].id+'/12 '+AV[idx].nombre}
+
+/* ---------- Cámara orbital ---------- */
+let cur={t:.6,p:1.0,d:62},goal={t:.6,p:1.0,d:62},auto=true,drag=null;
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+const el=renderer.domElement;
+el.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};auto=false;el.setPointerCapture(e.pointerId)});
+el.addEventListener('pointermove',e=>{if(!drag)return;goal.t-=(e.clientX-drag.x)*.006;goal.p=Math.min(1.45,Math.max(.3,goal.p-(e.clientY-drag.y)*.005));drag={x:e.clientX,y:e.clientY}});
+el.addEventListener('pointerup',()=>drag=null);
+el.addEventListener('wheel',e=>{e.preventDefault();goal.d=Math.min(90,Math.max(18,goal.d+e.deltaY*.04))},{passive:false});
+let walk=null;
+function frame(){
+  requestAnimationFrame(frame);
+  if(auto)goal.t+=.002;
+  for(const k in cur)cur[k]+=(goal[k]-cur[k])*.06;
+  camera.position.set(Math.sin(cur.t)*Math.sin(cur.p)*cur.d,Math.cos(cur.p)*cur.d,Math.cos(cur.t)*Math.sin(cur.p)*cur.d);
+  camera.lookAt(0,1.5,0);
+  portal.rotation.z+=.01;
+  if(avatar){avatar.rotation.y+=.01;
+    if(walk){const d=walk.clone().sub(avatar.position);if(d.length()<.15){avatar.position.copy(walk);walk=null}else avatar.position.add(d.setLength(.12))}}
+  renderer.render(scene,camera);
+}
+frame();
+
+/* ---------- Flujo E2E real ---------- */
+const S={r:0,a:0,c:0,p:0};let cuenta=null,zipHash='';
+function ui(){
+  $('b1').disabled=!!S.r;$('b2').disabled=!S.r||!!S.a;
+  $('prev').disabled=$('next').disabled=!S.a||!!S.c;$('b3').disabled=!S.a||!!S.c;
+  $('b4').disabled=!S.c||!!S.p;
+  ['s1','s2','s3','s4'].forEach((id,i)=>$(id).dataset.done=[S.r,S.a,S.c,S.p][i]?1:0);
+}
+async function recepcion(){
+  if(S.r)return;const flag={abrir_recepcion:true,ts:Date.now()};
+  const e=await ledgerAdd('recepcion',flag);S.r=1;log('Recepción OK. Bloque #'+e.i+' '+e.hash.slice(0,12),'ok');ui();
+}
+async function alta(){
+  if(!S.r||S.a)return;
+  const rid=[...crypto.getRandomValues(new Uint8Array(4))].map(b=>b.toString(16).padStart(2,'0')).join('');
+  cuenta={id:rid,nombre:$('nm').value.trim()||'Viajero',red:'P2P',creado:new Date().toISOString()};
+  const data=enc.encode(JSON.stringify(cuenta,null,2)),zip=makeZip([{name:'cuenta.json',data}]);
+  zipHash=await sha(new Uint8Array(await zip.arrayBuffer()));
+  const o=$('o2');o.textContent='SHA-256: '+zipHash.slice(0,32)+'… ';o.appendChild(fileLink(zip,'cuenta_'+rid+'.zip','Descargar cuenta_'+rid+'.zip'));
+  const e=await ledgerAdd('alta',{id:rid,zip:zipHash});S.a=1;
+  log('Alta OK. cuenta_'+rid+'.zip ('+zip.size+' bytes). Bloque #'+e.i,'ok');ui();showAvatar();
+}
+async function carrusel(){
+  if(!S.a||S.c)return;
+  const v=AV[idx],json=new Blob([JSON.stringify(AV,null,2)],{type:'application/json'});
+  const o=$('o3');o.textContent='Elegido: '+v.nombre+' ';o.appendChild(fileLink(json,'avatares_variantes.json'));
+  const e=await ledgerAdd('avatar',{id:v.id,nombre:v.nombre});S.c=1;
+  log('Carrusel OK. Variante '+v.id+' de '+AV.length+'. Bloque #'+e.i,'ok');ui();
+}
+async function cruzar(){
+  if(!S.c||S.p)return;
+  portal.material.opacity=1;portal.material.emissive.set(0x22d3ee);pl.intensity=2.5;
+  goal.d=30;goal.p=1.1;auto=false;
+  walk=new THREE.Vector3(0,cy,0);log('Cruzando el portal…','warn');
+  await sleep(1800);
+  const e=await ledgerAdd('portal',{id:cuenta.id,destino:'isla'});S.p=1;
+  const l=ledgerLoad();let okc=true;
+  for(let i=1;i<l.length;i++)if(l[i].prev!==l[i-1].hash)okc=false;
+  $('o4').textContent='Bloques: '+l.length+'. Cadena '+(okc?'válida':'ROTA')+'. Último: '+e.hash.slice(0,24)+'…';
+  const lb=fileLink(new Blob([JSON.stringify(l,null,2)],{type:'application/json'}),'ledger_e2e.json','Descargar ledger_e2e.json');$('o4').append(' ',lb);
+  $('final').textContent='E2E OK. Llegaste a la isla.';log('E2E OK. Flujo completo hasta la isla.','ok');ui();
+}
+function reset(){
+  S.r=S.a=S.c=S.p=0;cuenta=null;try{localStorage.removeItem('wv_ledger')}catch(e){}mem=[];
+  ['o2','o3','o4','final'].forEach(i=>$(i).textContent='');
+  portal.material.opacity=.35;portal.material.emissive.set(0x0a5566);pl.intensity=0;walk=null;
+  if(avatar){scene.remove(avatar);avatar=null}$('sw').style.background='';$('an').textContent='-';
+  goal.d=62;goal.p=1;auto=true;log('Ledger reiniciado.','warn');ui();
+}
+$('b1').onclick=recepcion;$('b2').onclick=alta;$('b3').onclick=carrusel;$('b4').onclick=cruzar;$('rst').onclick=reset;
+$('prev').onclick=()=>{idx=(idx+AV.length-1)%AV.length;showAvatar()};
+$('next').onclick=()=>{idx=(idx+1)%AV.length;showAvatar()};
+$('all').onclick=async()=>{log('Ejecutando E2E completo…','warn');await recepcion();await sleep(500);await alta();await sleep(500);await carrusel();await sleep(500);await cruzar()};
+log('Listo. Ledger con '+ledgerLoad().length+' bloques guardados.','info');
+if(!ledgerLoad().length)ledgerSave([]);
+ui();
+</script>
+</body>
+                                                                                    </html>
