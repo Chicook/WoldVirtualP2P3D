@@ -1,4 +1,4 @@
-[gd_resource type="AnimationLibrary" format=3]
+[gd_resource type="AnimationLibrary" format=3 uid="uid://22hekbvwd58l"]
 
 [sub_resource type="Animation" id="Animation_j6q7i"]
 resource_name = "caminarMJ1_2"

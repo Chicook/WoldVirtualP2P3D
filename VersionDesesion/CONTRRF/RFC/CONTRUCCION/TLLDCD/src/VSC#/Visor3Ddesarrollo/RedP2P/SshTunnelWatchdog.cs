@@ -160,12 +160,11 @@ namespace Visor3D.RedP2P
 
         // ── Rutas de log ──────────────────────────────────────
 
-        /// <summary>Ruta completa del fichero de log de watchdog (T2-04).</summary>
+        /// <summary>Ruta completa del fichero de log de watchdog.</summary>
         private static readonly string RutaLog = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WoldVirtualP2P3D",
-            "logs",
-            "tunnel.log");
+            "tunnel-watchdog.log");
 
         // ── Estado interno ────────────────────────────────────
 
@@ -342,7 +341,6 @@ namespace Visor3D.RedP2P
         /// </summary>
         private async Task BucleSlotAsync(SlotContext slot, CancellationToken token)
         {
-            TunnelProcessRegistry.BarrerHuerfano(slot.Nombre);
             Log($"[{slot.Nombre}] Bucle iniciado (puerto local {slot.PuertoLocal}).");
             int intento = 0;
             int candidatoIdx = 0;
@@ -468,7 +466,6 @@ namespace Visor3D.RedP2P
                 }
 
                 lock (_sync) slot.Proceso = proc;
-                TunnelProcessRegistry.Persistir(slot.Nombre, proc.Id);
 
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
@@ -514,7 +511,6 @@ namespace Visor3D.RedP2P
             {
                 tcsUrl.TrySetCanceled();
                 MatarProceso(proc);
-                TunnelProcessRegistry.Olvidar(slot.Nombre);
                 lock (_sync)
                 {
                     if (ReferenceEquals(slot.Proceso, proc))

@@ -141,6 +141,11 @@ func _declarar_avatar(ruta: String) -> void:
 	if id == 0 or id == multiplayer.get_unique_id():
 		return
 	_asignar_avatar(id, ruta, true)
+	# El invitado ya terminó el onboarding en la DAO anfitriona. Avisar para
+	# incorporarlo a la sede única; el mundo conserva su isla personal alrededor.
+	var dao := get_tree().get_first_node_in_group("isla_unica_lucia")
+	if dao != null and dao.has_method("incorporar_vecino_remoto"):
+		dao.call("incorporar_vecino_remoto", id, ruta)
 
 
 ## Respuesta del anfitrion: avatar definitivo (puede ser un sustituto).
@@ -222,6 +227,9 @@ func _limpiar_turnos_obsoletos() -> void:
 	for pid in _reciclados.keys():
 		if not vivos.has(int(pid)):
 			_reciclados.erase(pid)
+	var dao := get_tree().get_first_node_in_group("isla_unica_lucia")
+	if dao != null and dao.has_method("sincronizar_vecinos_p2p"):
+		dao.call("sincronizar_vecinos_p2p", vivos)
 
 
 ## No inicializar la caché RPC del mundo mientras el peer siga en la sonda.

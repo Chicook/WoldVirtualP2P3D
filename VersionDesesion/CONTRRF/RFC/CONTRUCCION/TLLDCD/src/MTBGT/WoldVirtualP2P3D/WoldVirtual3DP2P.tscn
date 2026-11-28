@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://5bh8su08n101"]
 
 [ext_resource type="Script" uid="uid://dpfqoxsjo1hji" path="res://gdscrip/Boot.gd" id="1_boot"]
-[ext_resource type="Environment" uid="uid://cvncieloislaenv" path="res://gdshader/cielo_isla_env.tres" id="2_cielo"]
+[ext_resource type="Environment" uid="uid://bhucxb1socg1t" path="res://gdshader/cielo_isla_env.tres" id="2_cielo"]
 [ext_resource type="PackedScene" path="res://lucia3D/IslaUnicaLucIA/ESCENAS/IslaUnicaLucIA.tscn" id="3_dao"]
 
 [node name="WoldVirtual3DP2P" type="Node3D" unique_id=1218821308]
@@ -16,4 +16,6 @@ light_color = Color(1, 0.98, 0.93, 1)
 light_energy = 1.15
 shadow_enabled = true
 
-[node name="IslaUnicaLucIA" parent="." instance=ExtResource("3_dao")]
+[node name="IslaUnicaLucIA" parent="." unique_id=1927353506 instance=ExtResource("3_dao")]
+
+[editable path="IslaUnicaLucIA"]

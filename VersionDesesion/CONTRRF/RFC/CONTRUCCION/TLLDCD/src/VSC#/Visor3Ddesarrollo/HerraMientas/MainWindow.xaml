@@ -465,26 +465,26 @@
                                     <!-- Separador visual -->
                                     <Border Height="1" Background="#2A3A5C" Margin="8,4"/>
 
-                                    <!-- BtnSecciones_WebNodo -->
-                                    <Button x:Name="BtnSecciones_WebNodo"
+                                    <!-- Reiniciar la sesión pública y renovar la invitación -->
+                                    <Button x:Name="BtnSecciones_ReiniciarConexion"
                                             Height="30" HorizontalAlignment="Stretch" Padding="12,0"
                                             FontSize="11" FontWeight="SemiBold"
-                                            Foreground="#00D9FF" BorderThickness="0"
+                                            Foreground="#FCD34D" BorderThickness="0"
                                             Cursor="Hand"
-                                            Click="BtnSecciones_WebNodo_Click"
-                                            ToolTip="Abre el portal de descarga del visor (WebNodo) para compartirlo con tus amigos">
+                                            Click="BtnSecciones_ReiniciarConexion_Click"
+                                            ToolTip="Reinicia el túnel Cloudflare y copia una invitación nueva">
                                         <Button.Style>
                                             <Style TargetType="Button">
                                                 <Setter Property="Background" Value="Transparent"/>
                                                 <Setter Property="Template">
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="Button">
-                                                            <Border x:Name="BordeBtnWN" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                            <Border x:Name="BordeBtnRC" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
                                                                 <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="BordeBtnWN" Property="Background" Value="#1A2340"/>
+                                                                    <Setter TargetName="BordeBtnRC" Property="Background" Value="#1A2340"/>
                                                                 </Trigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
@@ -492,7 +492,7 @@
                                                 </Setter>
                                             </Style>
                                         </Button.Style>
-                                        <TextBlock Text="🌐 WebNodo"/>
+                                        <TextBlock Text="⟳ Reiniciar conexión"/>
                                     </Button>
 
                                     <!-- BtnSecciones_Chat -->
@@ -525,9 +525,55 @@
                                         <TextBlock Text="💬 Chat"/>
                                     </Button>
 
+                                    <!-- Acceso al diagnóstico y últimas líneas del log -->
+                                    <Button x:Name="BtnSecciones_Log"
+                                            Height="30" HorizontalAlignment="Stretch" Padding="12,0"
+                                            FontSize="11" FontWeight="SemiBold"
+                                            Foreground="#CBD5E1" BorderThickness="0"
+                                            Cursor="Hand"
+                                            Click="BtnSecciones_Log_Click"
+                                            ToolTip="Copiar diagnóstico y últimas líneas del log">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="BordeBtnLog" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="BordeBtnLog" Property="Background" Value="#1A2340"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="ⓘ Logs"/>
+                                    </Button>
+
                                 </StackPanel>
                             </Border>
                         </Popup>
+
+                        <!-- WebNodo visible junto al menú Secciones -->
+                        <Button x:Name="BtnWebNodo"
+                                Content="🌐 WebNodo"
+                                Height="24" Padding="8,1"
+                                FontSize="10.5" FontWeight="SemiBold"
+                                Foreground="#00D9FF" Background="#0F2744"
+                                BorderBrush="#00D9FF" BorderThickness="1"
+                                Cursor="Hand" Margin="6,0,0,0"
+                                ToolTip="Abre el portal WebNodo para compartir el visor">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="3"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
 
                         <!-- Botones originales ocultos (preservados para el code-behind) -->
                         <Button x:Name="BtnVolverLucia"
@@ -592,7 +638,7 @@
                         </Button>
                     </StackPanel>
 
-                    <!-- Centro: enlace P2P propio + WebNodo -->
+                    <!-- Centro libre: el enlace de invitación ya no ocupa la barra -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Border x:Name="BannerP2P" Visibility="Collapsed"
                                 Background="#0D2137" BorderBrush="#00D9FF" BorderThickness="1"
@@ -620,40 +666,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- WebNodo: portal de descarga del visor para amigos -->
-                        <Button x:Name="BtnWebNodo"
-                                Content="🌐 WebNodo"
-                                Height="24" Padding="8,1"
-                                FontSize="10" FontWeight="SemiBold"
-                                Foreground="#00D9FF" Background="#0F2744"
-                                BorderBrush="#00D9FF" BorderThickness="1"
-                                Cursor="Hand"
-                                Margin="10,0,0,0"
-                                ToolTip="Abre el portal de descarga del visor (WebNodo) para compartirlo con tus amigos">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="3"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
-
-                        <!-- Chat de texto, voz y webcam del metaverso -->
-                        <Button x:Name="BtnChat"
-                                Content="💬 Chat"
-                                Height="24" Padding="8,1"
-                                FontSize="10" FontWeight="SemiBold"
-                                Foreground="#7CE7C0" Background="#0F2A24"
-                                BorderBrush="#2DD4BF" BorderThickness="1"
-                                Cursor="Hand"
-                                Margin="6,0,0,0"
-                                ToolTip="Abrir el chat del metaverso (texto, voz y webcam)">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="3"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
-
                         <!-- Solo aparece si el proceso de Godot muere: reincrustar sin cerrar el visor -->
                         <Button x:Name="BtnReiniciar3D"
                                 Content="⟳ Reiniciar 3D"
@@ -672,22 +684,6 @@
                             </Button.Resources>
                         </Button>
 
-                        <!-- Diagnóstico: copia versión, estado y log al portapapeles -->
-                        <Button x:Name="BtnDiagnostico"
-                                Content="ⓘ"
-                                Width="24" Height="24" Padding="0"
-                                FontSize="12" FontWeight="Bold"
-                                Foreground="#94A3B8" Background="Transparent"
-                                BorderBrush="#1D3A5C" BorderThickness="1"
-                                Cursor="Hand"
-                                Margin="8,0,0,0"
-                                ToolTip="Copiar diagnóstico (versión, estado y últimas líneas del log)">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="12"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
                     </StackPanel>
 
                     <!-- Derecha: actualización, llave y cerrar sesión -->

@@ -45,7 +45,9 @@ func _ready() -> void:
 		return
 	_cargar_datos()
 	_cargar_malla()
-	_conectar_servicio_modular()
+	# Añadir el servicio a /root desde _ready puede coincidir con el montaje
+	# recursivo de hijos de la escena y fallar con "Parent node is busy".
+	call_deferred("_conectar_servicio_modular")
 	_montar_terminal_dao()
 	var perfil := ConfigFile.new()
 	if perfil.load("user://registro.cfg") == OK and FileAccess.file_exists("user://cuenta.json"):
@@ -89,7 +91,7 @@ func _realizar_conexion_dao() -> Dictionary:
 		DirAccess.remove_absolute(ruta_resultado)
 	var f := FileAccess.open("user://tunel_solicitud.json.tmp", FileAccess.WRITE)
 	if f != null:
-		f.store_string(JSON.stringify({"accion": "conectar", "nick": nick}))
+		f.store_string(JSON.stringify({"accion": "conectar", "nick": nick, "uso_interno": true}))
 		f.close()
 		DirAccess.rename_absolute(ruta_temporal, ruta_solicitud)
 
@@ -116,10 +118,7 @@ func _realizar_conexion_dao() -> Dictionary:
 			tunel_url = str(res_lucia.get("url", "")).strip_edges()
 			tunel_enlace = str(res_lucia.get("enlace", tunel_url)).strip_edges()
 
-	if not tunel_enlace.is_empty():
-		DisplayServer.clipboard_set(tunel_enlace)
-	elif not tunel_url.is_empty():
-		DisplayServer.clipboard_set(tunel_url)
+	# El mecanismo actual es interno: no copiar ni exponer una invitación antigua.
 
 	# 2. Conectar y registrar en ServicioConexionModular
 	var ok_dao := false
@@ -131,9 +130,20 @@ func _realizar_conexion_dao() -> Dictionary:
 		if bool(conn.get("ok", false)):
 			var token: String = str(conn.get("body", {}).get("token", ""))
 			if not token.is_empty():
-				await sm.registrar(token, nick, avatar_scene)
-				sm.activar_presencia(token)
-				ok_dao = true
+				var registro: Dictionary = await sm.registrar(token, nick, avatar_scene)
+				if bool(registro.get("ok", false)):
+					var cuerpo: Dictionary = registro.get("body", {})
+					var miembro: Dictionary = cuerpo.get("miembro", {})
+					var id_miembro := str(miembro.get("id", "")).strip_edges()
+					if not id_miembro.is_empty():
+						# El heartbeat identifica al miembro creado; el token solo autoriza
+						# el registro y no existe en la tabla de presencia del servidor.
+						sm.activar_presencia(id_miembro)
+						ok_dao = true
+					else:
+						push_warning("[DAO modular] El alta respondió correctamente, pero no devolvió el id del miembro.")
+				else:
+					push_warning("[DAO modular] No se pudo registrar el miembro: %s" % str(registro.get("body", {})))
 		await sm.refrescar_miembros()
 
 	print("[IslaUnicaLucIA] DAO conectada al metaverso. Túnel: %s, DAO modular: %s" % [tunel_url, ok_dao])
@@ -189,6 +199,48 @@ func _conectar_servicio_modular() -> void:
 		if not sm.miembros_actualizados.is_connected(_actualizar_miembros_dao):
 			sm.miembros_actualizados.connect(_actualizar_miembros_dao)
 		sm.refrescar_miembros()
+
+
+## Incorpora a la DAO única a un peer real del mundo compartido. El avatar
+## queda alrededor de la sede; su isla personal la administra ChunkManager.
+func incorporar_vecino_remoto(peer_id: int, avatar_scene: String) -> void:
+	if peer_id <= 0 or avatar_scene.is_empty():
+		return
+	var lista: Array = []
+	if _contenedor_miembros_dao != null and is_instance_valid(_contenedor_miembros_dao):
+		for miembro_id in _avatares_miembros_dao.keys():
+			var avatar: Node3D = _avatares_miembros_dao[miembro_id]
+			var placa := avatar.get_node_or_null("NombreDAO") as Label3D
+			lista.append({"id": str(miembro_id), "avatar": avatar.scene_file_path,
+				"nick": placa.text if placa != null else "Vecino"})
+	var id := "p2p-%d" % peer_id
+	var encontrado := false
+	for i in lista.size():
+		if str(lista[i].get("id", "")) == id:
+			lista[i]["avatar"] = avatar_scene
+			encontrado = true
+			break
+	if not encontrado:
+		lista.append({"id": id, "avatar": avatar_scene, "nick": "Vecino %d" % peer_id})
+	_actualizar_miembros_dao(lista)
+
+
+## La presencia visual P2P se reconcilia con los peers aún conectados.
+func sincronizar_vecinos_p2p(peer_ids: Dictionary) -> void:
+	if _contenedor_miembros_dao == null or not is_instance_valid(_contenedor_miembros_dao):
+		return
+	var lista: Array = []
+	for miembro_id in _avatares_miembros_dao.keys():
+		var id := str(miembro_id)
+		if id.begins_with("p2p-"):
+			var peer := int(id.trim_prefix("p2p-"))
+			if not peer_ids.has(peer):
+				continue
+		var avatar: Node3D = _avatares_miembros_dao[miembro_id]
+		var placa := avatar.get_node_or_null("NombreDAO") as Label3D
+		lista.append({"id": id, "avatar": avatar.scene_file_path,
+			"nick": placa.text if placa != null else "Vecino"})
+	_actualizar_miembros_dao(lista)
 
 
 func _actualizar_miembros_dao(miembros: Array) -> void:

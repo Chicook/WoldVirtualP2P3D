@@ -331,14 +331,15 @@
           <div class="label">Versión del visor</div>
           <div class="val" id="version-visor">Consultando versión…</div>
         </div>
-        <div class="info-box">
-          <div class="label">WebNodo para tus contactos</div>
+      <div class="info-box">
+          <div class="label">Invitación para entrar con Lucía</div>
           <div class="val" id="link-p2p">Comprobando enlace público…</div>
         </div>
       </div>
-      <button type="button" class="copy-btn" id="btn-copy-link" disabled>Compartir WebNodo</button>
+      <button type="button" class="copy-btn" id="btn-copy-link" disabled>Copiar invitación de sesión</button>
+      <a href="#" class="btn-download-hero" id="btn-entrar-visor" hidden>Entrar en el mundo con Lucía</a>
       <p class="share-feedback" id="share-feedback" role="status" aria-live="polite"></p>
-      <p class="portal-note">Comparte esta web mientras tu visor y su túnel efímero estén activos. El enlace puede cambiar al iniciar otra sesión. La conexión al mundo se valida dentro de la DAO; no necesitas pegar una invitación.</p>
+      <p class="portal-note">Comparte esta invitación mientras tu visor y su túnel estén activos. Lleva al anfitrión Lucía y la credencial de esta sesión; el enlace puede cambiar cuando inicies otra sesión.</p>
     </div>
 
     <!-- Pasos para Invitados -->
@@ -365,7 +366,7 @@
         <div class="step-badge">3</div>
         <div class="step-content">
           <strong>Valida tu nick y conexión con LucIA</strong>
-          <p>En la sede de la DAO, escribe tu nick y pulsa «Validar nick y conexión». Solo después de confirmar la conexión comienza la selección de avatar.</p>
+          <p>Abre la invitación en el visor, escribe tu nick y pulsa «Validar nick y conexión». Lucía te recibirá en la misma sesión antes de elegir avatar.</p>
         </div>
       </div>
       <div class="step-item">
@@ -392,24 +393,39 @@
   <script>
     const WT = '{{API_TOKEN}}';
     const botonCompartir = document.getElementById('btn-copy-link');
+    const botonEntrar = document.getElementById('btn-entrar-visor');
     const enlaceNodo = document.getElementById('link-p2p');
     const estadoNodo = document.getElementById('estado-nodo');
     const textoEstado = document.getElementById('txt-status-pill');
     const respuestaCompartir = document.getElementById('share-feedback');
     let enlacePublico = '';
 
+    function crearEnlaceDeAplicacion(enlaceSesion) {
+      const invitacion = new URL(enlaceSesion);
+      const raiz = invitacion.searchParams.get('host') || invitacion.origin;
+      const token = invitacion.searchParams.get('invitacion');
+      if (!token) return '';
+      const destino = new URL('woldvirtual://join');
+      destino.searchParams.set('host', raiz);
+      destino.searchParams.set('invitacion', token);
+      return destino.toString();
+    }
+
     botonCompartir.addEventListener('click', async () => {
       if (!enlacePublico) return;
       try {
         await navigator.clipboard.writeText(enlacePublico);
-        respuestaCompartir.textContent = 'WebNodo copiado. Puedes enviarlo a tus contactos.';
+        respuestaCompartir.textContent = 'Invitación copiada. Compártela para entrar en esta sesión.';
       } catch {
         respuestaCompartir.textContent = 'Selecciona y copia el enlace público que aparece arriba.';
       }
     });
 
     async function consultar(ruta) {
-      const respuesta = await fetch(ruta + '?token=' + encodeURIComponent(WT), { cache: 'no-store' });
+      const parametros = new URLSearchParams(window.location.search);
+      parametros.set('token', WT);
+      const endpoint = ruta.split('?')[0];
+      const respuesta = await fetch(endpoint + '?' + parametros.toString(), { cache: 'no-store' });
       if (!respuesta.ok) throw new Error('WebNodo no disponible');
       return respuesta.json();
     }
@@ -432,14 +448,17 @@
         if (!datos.online || !datos.tunnel_url) throw new Error('Sin túnel público');
         const destino = new URL(datos.tunnel_url);
         if (!['http:', 'https:'].includes(destino.protocol)) throw new Error('Enlace no válido');
-        enlacePublico = destino.origin + '/';
+        enlacePublico = datos.invitacion_url || (destino.origin + '/');
         enlaceNodo.textContent = enlacePublico;
         botonCompartir.disabled = false;
+        botonEntrar.href = crearEnlaceDeAplicacion(enlacePublico);
+        botonEntrar.hidden = !botonEntrar.href;
         estadoNodo.className = 'pill pill-green';
         textoEstado.textContent = 'WEBNODO PÚBLICO ACTIVO';
       } catch {
         enlacePublico = '';
         botonCompartir.disabled = true;
+        botonEntrar.hidden = true;
         enlaceNodo.textContent = 'Sin enlace público disponible';
         estadoNodo.className = 'pill pill-cyan';
         textoEstado.textContent = 'SIN TÚNEL PÚBLICO CONFIRMADO';
